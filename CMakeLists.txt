@@ -37,6 +37,9 @@ ADD_EXECUTABLE(
 ADD_EXECUTABLE(
   fetch
   src/fetch.cc)
+ADD_EXECUTABLE(
+  calculate
+  src/calculate.cc)
 
 
 TARGET_LINK_LIBRARIES(sandbox

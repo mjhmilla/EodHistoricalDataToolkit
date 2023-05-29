@@ -55,6 +55,7 @@ int main (int argc, char* argv[]) {
   std::string eodUrl;
   std::string exchangeCode;
   std::string outputFolder;
+  bool verbose;
 
   try{
     TCLAP::CmdLine cmd("The command fetch will download json data from "
@@ -82,9 +83,13 @@ int main (int argc, char* argv[]) {
     cmd.add(exchangeCodeInput);
 
     TCLAP::ValueArg<std::string> outputFolderInput("f","folder", 
-      "folder that stores the downloaded json files",true,"","string");
+      "path to the folder that will store the downloaded json files",true,"","string");
 
     cmd.add(outputFolderInput);
+
+    TCLAP::SwitchArg verboseInput("v","verbose",
+      "Verbose output printed to screen", false);
+    cmd.add(verboseInput);    
 
     cmd.parse(argc,argv);
 
@@ -92,19 +97,21 @@ int main (int argc, char* argv[]) {
     eodUrl        = eodUrlInput.getValue();
     exchangeCode  = exchangeCodeInput.getValue();
     outputFolder  = outputFolderInput.getValue();
+    verbose       = verboseInput.getValue();
 
-    std::cout << "  API Key" << std::endl;
-    std::cout << "    " << apiKey << std::endl;
+    if(verbose){
+      std::cout << "  API Key" << std::endl;
+      std::cout << "    " << apiKey << std::endl;
 
-    std::cout << "  EOD Url" << std::endl;
-    std::cout << "    " << eodUrl << std::endl;
+      std::cout << "  EOD Url" << std::endl;
+      std::cout << "    " << eodUrl << std::endl;
 
-    std::cout << "  Exchange Code" << std::endl;
-    std::cout << "    " << exchangeCode << std::endl;
+      std::cout << "  Exchange Code" << std::endl;
+      std::cout << "    " << exchangeCode << std::endl;
 
-    std::cout << "  Output Folder" << std::endl;
-    std::cout << "    " << outputFolder << std::endl;
-
+      std::cout << "  Output Folder" << std::endl;
+      std::cout << "    " << outputFolder << std::endl;
+    }
   } catch (TCLAP::ArgException &e)  // catch exceptions
 	{ 
     std::cerr << "error: "    << e.error() 
@@ -114,10 +121,11 @@ int main (int argc, char* argv[]) {
   findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);
   findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
-  std::cout << std::endl;
-  std::cout << "    Contacting" << std::endl;
-  std::cout << "    " << eodUrl << std::endl;
-
+  if(verbose){
+    std::cout << std::endl;
+    std::cout << "    Contacting" << std::endl;
+    std::cout << "    " << eodUrl << std::endl;
+  }
   //use libcurl to get AAPL.US
   //const std::string url("https://eodhistoricaldata.com/api/fundamentals/AAPL.US?api_token=demo");
 
@@ -152,8 +160,10 @@ int main (int argc, char* argv[]) {
   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
   curl_easy_cleanup(curl);
 
-  std::cout << "    http response code" << std::endl;
-  std::cout << "    " << httpCode << std::endl;
+  if(verbose){
+    std::cout << "    http response code" << std::endl;
+    std::cout << "    " << httpCode << std::endl;
+  }
 
   if (httpCode == 200)
   {
@@ -174,9 +184,10 @@ int main (int argc, char* argv[]) {
     //Write the file
     std::ofstream file(fileName);
     file << jsonData;
-    
-    std::cout << "    Wrote json to" << std::endl;
-    std::cout << "    " << fileName << std::endl;
+    if(verbose){    
+      std::cout << "    Wrote json to" << std::endl;
+      std::cout << "    " << fileName << std::endl;
+    }
 
   }else{
     std::cout << "Error" << std::endl;
