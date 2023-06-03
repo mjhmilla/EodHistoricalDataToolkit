@@ -10,7 +10,27 @@
 
 unsigned int COLUMN_WIDTH = 30;
 
+const char *FIN = "Financials";
+const char *BAL = "Balance_Sheet";
+const char *CF  = "Cash_Flow";
 
+const char *Y = "yearly";
+const char *Q = "quarterly";
+
+
+double getJsonFloat(nlohmann::ordered_json &jsonEntry){
+  if(  jsonEntry.is_null()){
+    return std::nan("1");
+  }else{
+    if(  jsonEntry.is_number_float()){
+      return jsonEntry.get<double>();
+    }else if (jsonEntry.is_string()){
+      return std::atof(jsonEntry.get<std::string>().c_str());
+    }else{
+      throw std::invalid_argument("json entry is not a float or string");      
+    }
+  }
+}
 
 int main (int argc, char* argv[]) {
 
@@ -88,8 +108,41 @@ int main (int argc, char* argv[]) {
       std::ifstream inputJsonFileStream(entry.path().c_str());
       json jsonData = json::parse(inputJsonFileStream);
 
+      json analysis = json::array();
 
-      //Evaluate the ROI
+      std::vector< std::string > entryDates;
+
+      for(auto& el : jsonData[FIN][BAL][Q].items()){
+        entryDates.push_back(el.key());
+      }
+
+
+
+
+      for( auto& it : entryDates){
+        std::string date = it;
+
+        double longTermDebt = 
+          getJsonFloat(jsonData[FIN][BAL][Q][it.c_str()]["longTermDebt"]);       
+        double totalShareholderEquity = 
+          getJsonFloat(jsonData[FIN][BAL][Q][it.c_str()]["totalStockholderEquity"]);
+        double  netIncome = 
+          getJsonFloat(jsonData[FIN][CF][Q][it.c_str()]["netIncome"]);
+
+        double roceValue = netIncome / (longTermDebt+totalShareholderEquity);
+
+        if(!std::isnan(roceValue)){
+          json roce = {date.c_str(),{ "roce", roceValue }};
+          analysis.push_back(roce);
+        }
+
+      }
+
+
+
+      //Evaluate the ROCE
+      // I'm going to use a conservative definition:
+      // netIncome / (totalStockholderEquity + longTermDebt)
 
       //Equity growth
 
@@ -101,9 +154,6 @@ int main (int argc, char* argv[]) {
 
 
 
-      json analysis = json::array();
-      json j = {{"A", M_PI},{"B", M_PI*2.0},{"C", M_PI*3.0}};
-      analysis.push_back(j);
 
       std::string outputFilePath(outputFolder);
       std::string outputFileName(entry.path().filename().c_str());
@@ -125,7 +175,6 @@ int main (int argc, char* argv[]) {
 
 
 
-  std::cout << "Here" << std::endl;
 
   //For each file in the list
     //Open it
