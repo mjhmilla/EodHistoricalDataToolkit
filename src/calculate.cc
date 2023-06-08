@@ -8,29 +8,9 @@
 
 #include <filesystem>
 
+#include "FinancialAnalysisToolkit.h"
+
 unsigned int COLUMN_WIDTH = 30;
-
-const char *FIN = "Financials";
-const char *BAL = "Balance_Sheet";
-const char *CF  = "Cash_Flow";
-
-const char *Y = "yearly";
-const char *Q = "quarterly";
-
-
-double getJsonFloat(nlohmann::ordered_json &jsonEntry){
-  if(  jsonEntry.is_null()){
-    return std::nan("1");
-  }else{
-    if(  jsonEntry.is_number_float()){
-      return jsonEntry.get<double>();
-    }else if (jsonEntry.is_string()){
-      return std::atof(jsonEntry.get<std::string>().c_str());
-    }else{
-      throw std::invalid_argument("json entry is not a float or string");      
-    }
-  }
-}
 
 int main (int argc, char* argv[]) {
 
@@ -122,17 +102,15 @@ int main (int argc, char* argv[]) {
       for( auto& it : entryDates){
         std::string date = it;
 
-        double longTermDebt = 
-          getJsonFloat(jsonData[FIN][BAL][Q][it.c_str()]["longTermDebt"]);       
-        double totalShareholderEquity = 
-          getJsonFloat(jsonData[FIN][BAL][Q][it.c_str()]["totalStockholderEquity"]);
-        double  netIncome = 
-          getJsonFloat(jsonData[FIN][CF][Q][it.c_str()]["netIncome"]);
+        double roce = FinancialAnalysisToolkit::
+                        calcReturnOnCapitalDeployed(jsonData,it);
+        double roa = FinancialAnalysisToolkit::
+                        calcReturnOnAssets(jsonData,it);
+        double roit = FinancialAnalysisToolkit::
+                        calcReturnOnInvestedCapital(jsonData,it);
 
-        double roceValue = netIncome / (longTermDebt+totalShareholderEquity);
-
-        if(!std::isnan(roceValue)){
-          json roce = {date.c_str(),{ "roce", roceValue }};
+        if(!std::isnan(roce)){
+          json roce = {it.c_str(),{ "roce", roce}};
           analysis.push_back(roce);
         }
 
