@@ -49,11 +49,91 @@ void findAndReplaceString(std::string& str,
   }
 }
 
+bool downloadJsonFile(std::string &eodUrl, 
+                std::string &outputFolder, 
+                std::string &outputFileName, 
+                bool verbose){
+
+    bool success = true;
+
+    if(verbose){
+      std::cout << std::endl;
+      std::cout << "    Contacting" << std::endl;
+      std::cout << "    " << eodUrl << std::endl;
+    }
+
+    CURL* curl = curl_easy_init();
+
+    // Set remote URL.
+    curl_easy_setopt(curl, CURLOPT_URL, eodUrl.c_str());
+
+    // Don't bother trying IPv6, which would increase DNS resolution time.
+    curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+
+    // Don't wait forever, time out after 10 seconds.
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
+
+    // Follow HTTP redirects if necessary.
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+    // Response information.
+    long httpCode(0);
+    std::unique_ptr<std::string> httpData(new std::string());
+
+    // Hook up data handling function.
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
+
+    // Hook up data container (will be passed as the last parameter to the
+    // callback handling function).  Can be any pointer type, since it will
+    // internally be passed as a void pointer.
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, httpData.get());
+
+    // Run our HTTP GET command, capture the HTTP response code, and clean up.
+    curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+    curl_easy_cleanup(curl);
+
+    if(verbose){
+      std::cout << "    http response code" << std::endl;
+      std::cout << "    " << httpCode << std::endl;
+    }
+
+    if (httpCode == 200)
+    {
+      //read out all of the json keys
+      using json = nlohmann::ordered_json;
+      //std::ifstream f("../json/AAPL.US.json");
+      json jsonData = json::parse(*httpData.get());
+
+
+      std::stringstream ss;
+      ss << outputFolder << outputFileName;
+      std::string outputFilePathName = ss.str();
+      std::string removeStr("\"");
+      removeFromString(outputFilePathName,removeStr);    
+
+      //Write the file
+      std::ofstream file(outputFilePathName);
+      file << jsonData;
+      file.close();
+      if(verbose){    
+        std::cout << "    Wrote json to" << std::endl;
+        std::cout << "    " << outputFileName << std::endl;
+      }
+
+    }else{
+      success=false;
+    }
+    return success;
+
+}
+
 int main (int argc, char* argv[]) {
 
   std::string apiKey;
-  std::string eodUrl;
+  std::string eodUrlTemplate;
   std::string exchangeCode;
+  std::string tickerFileListPath;
   std::string outputFolder;
   std::string outputFileName;
   bool verbose;
@@ -83,13 +163,20 @@ int main (int argc, char* argv[]) {
 
     cmd.add(exchangeCodeInput);
 
+    TCLAP::ValueArg<std::string> tickerFileListPathInput("t","ticker_list_file", 
+      "Download the data for the list of tickers contained in this json file",
+      false,"","string");
+
+    cmd.add(tickerFileListPathInput);
+
     TCLAP::ValueArg<std::string> outputFolderInput("f","folder", 
-      "path to the folder that will store the downloaded json files",true,"","string");
+      "path to the folder that will store the downloaded json files",
+      true,"","string");
 
     cmd.add(outputFolderInput);
 
     TCLAP::ValueArg<std::string> outputFileNameInput("n","file_name", 
-      "name of the output file",true,"","string");
+      "name of the output file",false,"","string");
 
     cmd.add(outputFileNameInput);
 
@@ -99,22 +186,32 @@ int main (int argc, char* argv[]) {
 
     cmd.parse(argc,argv);
 
-    apiKey        = apiKeyInput.getValue();
-    eodUrl        = eodUrlInput.getValue();
-    exchangeCode  = exchangeCodeInput.getValue();
-    outputFolder  = outputFolderInput.getValue();
-    outputFileName= outputFileNameInput.getValue();
-    verbose       = verboseInput.getValue();
+    apiKey              = apiKeyInput.getValue();
+    eodUrlTemplate      = eodUrlInput.getValue();
+    exchangeCode        = exchangeCodeInput.getValue();
+    tickerFileListPath  = tickerFileListPathInput.getValue();
+    outputFolder        = outputFolderInput.getValue();
+    outputFileName      = outputFileNameInput.getValue();
+    verbose             = verboseInput.getValue();
+
+    if(tickerFileListPath.length()==0 && outputFileName.length()==0){
+      throw std::invalid_argument(
+        "An output file_name (-n) must be provided when"
+        " a ticker_file_list (-t) is not provided");         
+    }
 
     if(verbose){
       std::cout << "  API Key" << std::endl;
       std::cout << "    " << apiKey << std::endl;
 
-      std::cout << "  EOD Url" << std::endl;
-      std::cout << "    " << eodUrl << std::endl;
+      std::cout << "  EOD Url Template" << std::endl;
+      std::cout << "    " << eodUrlTemplate << std::endl;
 
       std::cout << "  Exchange Code" << std::endl;
       std::cout << "    " << exchangeCode << std::endl;
+
+      std::cout << "  Ticker list file" << std::endl;
+      std::cout << "    " << tickerFileListPath << std::endl;
 
       std::cout << "  Output Folder" << std::endl;
       std::cout << "    " << outputFolder << std::endl;
@@ -123,92 +220,58 @@ int main (int argc, char* argv[]) {
       std::cout << "    " << outputFileName << std::endl;
 
     }
-  } catch (TCLAP::ArgException &e)  // catch exceptions
-	{ 
-    std::cerr << "error: "    << e.error() 
-              << " for arg "  << e.argId() << std::endl; 
+  } catch (TCLAP::ArgException &e){ 
+    std::cerr << "TCLAP::ArgException: "   << e.error() 
+              << " for arg "  << e.argId() << std::endl;
+    abort();
+  } catch (std::invalid_argument &e){
+    std::cerr << "std::invalid_argument: " << e.what() << std::endl; 
+    abort();
   }
 
-  findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);
-  findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
-  if(verbose){
-    std::cout << std::endl;
-    std::cout << "    Contacting" << std::endl;
-    std::cout << "    " << eodUrl << std::endl;
-  }
-  //use libcurl to get AAPL.US
-  //const std::string url("https://eodhistoricaldata.com/api/fundamentals/AAPL.US?api_token=demo");
 
-  CURL* curl = curl_easy_init();
 
-  // Set remote URL.
-  curl_easy_setopt(curl, CURLOPT_URL, eodUrl.c_str());
+  if(tickerFileListPath.length() > 0){
 
-  // Don't bother trying IPv6, which would increase DNS resolution time.
-  curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+    std::ifstream tickerFileListPathStream(tickerFileListPath.c_str());
 
-  // Don't wait forever, time out after 10 seconds.
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
-
-  // Follow HTTP redirects if necessary.
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-
-  // Response information.
-  long httpCode(0);
-  std::unique_ptr<std::string> httpData(new std::string());
-
-  // Hook up data handling function.
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
-
-  // Hook up data container (will be passed as the last parameter to the
-  // callback handling function).  Can be any pointer type, since it will
-  // internally be passed as a void pointer.
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, httpData.get());
-
-  // Run our HTTP GET command, capture the HTTP response code, and clean up.
-  curl_easy_perform(curl);
-  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-  curl_easy_cleanup(curl);
-
-  if(verbose){
-    std::cout << "    http response code" << std::endl;
-    std::cout << "    " << httpCode << std::endl;
-  }
-
-  if (httpCode == 200)
-  {
-    //read out all of the json keys
     using json = nlohmann::ordered_json;
-    //std::ifstream f("../json/AAPL.US.json");
-    json jsonData = json::parse(*httpData.get());
+    json tickerListData = json::parse(tickerFileListPathStream);
 
-    //Make the file name {EXCHANGE}_{TICKER}.json
-    //std::stringstream ss;
-    //ss  << outputFolder << jsonData["General"]["PrimaryTicker"] << ".json";
-    //Remove the quote ("") characters
-    //std::string fileName = ss.str();
-    //std::string removeStr("\"");
-    //removeFromString(fileName,removeStr);    
+    for(auto& it : tickerListData){
+      std::string eodUrl = eodUrlTemplate;
+      std::string ticker = it["Code"];
+      findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+      findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
+      findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
 
-    std::stringstream ss;
-    ss << outputFolder << outputFileName;
-    std::string outputFilePathName = ss.str();
-    std::string removeStr("\"");
-    removeFromString(outputFilePathName,removeStr);    
+      std::string fileName = ticker;
+      fileName.append(".");
+      fileName.append(exchangeCode);
+      fileName.append(".json");
+      bool success = downloadJsonFile(eodUrl,outputFolder,fileName,verbose);
+      if( success == false){
+        std::cerr << "Error: downloadJsonFile: " << eodUrl << std::endl;
+      }
 
-    //Write the file
-    std::ofstream file(outputFilePathName);
-    file << jsonData;
-    file.close();
-    if(verbose){    
-      std::cout << "    Wrote json to" << std::endl;
-      std::cout << "    " << outputFileName << std::endl;
+    }
+    
+  }else{
+
+    std::string eodUrl = eodUrlTemplate;
+    findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+    findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
+
+    bool success = downloadJsonFile(eodUrl,outputFolder,outputFileName,verbose);
+    if( success == false){
+      std::cerr << "Error: downloadJsonFile" << std::endl;
     }
 
-  }else{
-    std::cout << "Error" << std::endl;
   }
 
+
+
+  
   return 0;
 }
