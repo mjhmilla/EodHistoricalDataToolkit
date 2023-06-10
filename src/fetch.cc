@@ -55,6 +55,7 @@ int main (int argc, char* argv[]) {
   std::string eodUrl;
   std::string exchangeCode;
   std::string outputFolder;
+  std::string outputFileName;
   bool verbose;
 
   try{
@@ -87,6 +88,11 @@ int main (int argc, char* argv[]) {
 
     cmd.add(outputFolderInput);
 
+    TCLAP::ValueArg<std::string> outputFileNameInput("n","file_name", 
+      "name of the output file",true,"","string");
+
+    cmd.add(outputFileNameInput);
+
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
     cmd.add(verboseInput);    
@@ -97,6 +103,7 @@ int main (int argc, char* argv[]) {
     eodUrl        = eodUrlInput.getValue();
     exchangeCode  = exchangeCodeInput.getValue();
     outputFolder  = outputFolderInput.getValue();
+    outputFileName= outputFileNameInput.getValue();
     verbose       = verboseInput.getValue();
 
     if(verbose){
@@ -111,6 +118,10 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Output Folder" << std::endl;
       std::cout << "    " << outputFolder << std::endl;
+
+      std::cout << "  Output File Name" << std::endl;
+      std::cout << "    " << outputFileName << std::endl;
+
     }
   } catch (TCLAP::ArgException &e)  // catch exceptions
 	{ 
@@ -173,20 +184,26 @@ int main (int argc, char* argv[]) {
     json jsonData = json::parse(*httpData.get());
 
     //Make the file name {EXCHANGE}_{TICKER}.json
-    std::stringstream ss;
-    ss  << outputFolder << jsonData["General"]["PrimaryTicker"] << ".json";
+    //std::stringstream ss;
+    //ss  << outputFolder << jsonData["General"]["PrimaryTicker"] << ".json";
     //Remove the quote ("") characters
-    std::string fileName = ss.str();
-    std::string removeStr("\"");
-    removeFromString(fileName,removeStr);    
+    //std::string fileName = ss.str();
+    //std::string removeStr("\"");
+    //removeFromString(fileName,removeStr);    
 
-    
+    std::stringstream ss;
+    ss << outputFolder << outputFileName;
+    std::string outputFilePathName = ss.str();
+    std::string removeStr("\"");
+    removeFromString(outputFilePathName,removeStr);    
+
     //Write the file
-    std::ofstream file(fileName);
+    std::ofstream file(outputFilePathName);
     file << jsonData;
+    file.close();
     if(verbose){    
       std::cout << "    Wrote json to" << std::endl;
-      std::cout << "    " << fileName << std::endl;
+      std::cout << "    " << outputFileName << std::endl;
     }
 
   }else{

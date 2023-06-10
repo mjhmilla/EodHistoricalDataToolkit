@@ -14,30 +14,40 @@ unsigned int COLUMN_WIDTH = 30;
 
 int main (int argc, char* argv[]) {
 
-  std::string inputFolder;
-  std::string outputFolder;
+  std::string fundamentalFolder;
+  std::string eodFolder;
+  std::string analyseFolder;
   bool verbose;
 
   try{
-    TCLAP::CmdLine cmd("The command will analyze the json files "
-    "(from https://eodhistoricaldata.com/) in an input directory and "
+    TCLAP::CmdLine cmd("The command will analyze fundamental and end-of-data"
+    "data (from https://eodhistoricaldata.com/) and "
     "write the results of the analysis to a json file in an output directory"
     ,' ', "0.0");
 
 
-    TCLAP::ValueArg<std::string> inputFolderInput("i","input_folder_path", 
-      "The path to the folder that contains the json files from "
+    TCLAP::ValueArg<std::string> fundamentalFolderInput("f",
+      "fundamental_data_folder_path", 
+      "The path to the folder that contains the fundamental data json files from "
       "https://eodhistoricaldata.com/ to analyze",
       true,"","string");
 
-    cmd.add(inputFolderInput);
+    cmd.add(fundamentalFolderInput);
 
-    TCLAP::ValueArg<std::string> outputFolderInput("o","output_folder_path", 
+    TCLAP::ValueArg<std::string> eodFolderInput("f",
+      "eod_data_folder_path", 
+      "The path to the folder that contains the end-of-day data csv files from "
+      "https://eodhistoricaldata.com/ to analyze",
+      true,"","string");
+
+    cmd.add(eodFolderInput);
+
+    TCLAP::ValueArg<std::string> analyseFolderOutput("o","output_folder_path", 
       "The path to the folder that will contain the output json files "
       "produced by this analysis",
       true,"","string");
 
-    cmd.add(outputFolderInput);
+    cmd.add(analyseFolderOutput);
 
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
@@ -45,16 +55,20 @@ int main (int argc, char* argv[]) {
 
     cmd.parse(argc,argv);
 
-    inputFolder   = inputFolderInput.getValue();
-    outputFolder  = outputFolderInput.getValue();
-    verbose       = verboseInput.getValue();
+    fundamentalFolder   = fundamentalFolderInput.getValue();
+    eodFolder           = fundamentalFolderInput.getValue();
+    analyseFolder       = analyseFolderOutput.getValue();
+    verbose             = verboseInput.getValue();
 
     if(verbose){
-      std::cout << "  Input Folder" << std::endl;
-      std::cout << "    " << inputFolder << std::endl;
+      std::cout << "  Fundamental Data Folder" << std::endl;
+      std::cout << "    " << fundamentalFolder << std::endl;
 
-      std::cout << "  Output Folder" << std::endl;
-      std::cout << "    " << outputFolder << std::endl;
+      std::cout << "  End-Of-Day Data Folder" << std::endl;
+      std::cout << "    " << eodFolder << std::endl;
+
+      std::cout << "  Analyse Folder" << std::endl;
+      std::cout << "    " << analyseFolder << std::endl;
     }
   } catch (TCLAP::ArgException &e)  // catch exceptions
 	{ 
@@ -63,12 +77,13 @@ int main (int argc, char* argv[]) {
   }
 
   auto startingDirectory = std::filesystem::current_path();
-  std::filesystem::current_path(inputFolder);
+  std::filesystem::current_path(fundamentalFolder);
 
 
   //Get a list of the json files in the input folder
 
-  for ( const auto & entry : std::filesystem::directory_iterator(inputFolder)){
+  for ( const auto & entry 
+          : std::filesystem::directory_iterator(fundamentalFolder)){
 
     //Check to see if the input json file is valid
     bool validInput = false;
@@ -133,7 +148,7 @@ int main (int argc, char* argv[]) {
 
 
 
-      std::string outputFilePath(outputFolder);
+      std::string outputFilePath(analyseFolder);
       std::string outputFileName(entry.path().filename().c_str());
       
       //Update the extension 
