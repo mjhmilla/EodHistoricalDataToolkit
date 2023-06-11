@@ -134,6 +134,8 @@ int main (int argc, char* argv[]) {
   std::string eodUrlTemplate;
   std::string exchangeCode;
   std::string tickerFileListPath;
+  int firstListEntry;
+  int lastListEntry;
   std::string outputFolder;
   std::string outputFileName;
   bool verbose;
@@ -157,17 +159,29 @@ int main (int argc, char* argv[]) {
 
     cmd.add(eodUrlInput);
 
-    TCLAP::ValueArg<std::string> exchangeCodeInput("e","EXCHANGE_CODE", 
+    TCLAP::ValueArg<std::string> exchangeCodeInput("x","EXCHANGE_CODE", 
       "The exchange code. For example: US",
       false,"","string");
 
-    cmd.add(exchangeCodeInput);
+    cmd.add(exchangeCodeInput);    
 
     TCLAP::ValueArg<std::string> tickerFileListPathInput("t","ticker_list_file", 
       "Download the data for the list of tickers contained in this json file",
       false,"","string");
 
     cmd.add(tickerFileListPathInput);
+
+    TCLAP::ValueArg<int> firstListEntryInput("s","ticker_list_start", 
+      "The index of the first entry on the list to download",
+      false,-1,"int");
+
+    cmd.add(firstListEntryInput);
+
+    TCLAP::ValueArg<int> lastListEntryInput("e","ticker_list_end", 
+      "The index of the last entry on the list to download",
+      false,-1,"int");
+
+    cmd.add(lastListEntryInput);    
 
     TCLAP::ValueArg<std::string> outputFolderInput("f","folder", 
       "path to the folder that will store the downloaded json files",
@@ -190,15 +204,26 @@ int main (int argc, char* argv[]) {
     eodUrlTemplate      = eodUrlInput.getValue();
     exchangeCode        = exchangeCodeInput.getValue();
     tickerFileListPath  = tickerFileListPathInput.getValue();
+    firstListEntry      = firstListEntryInput.getValue();
+    lastListEntry       = lastListEntryInput.getValue();
     outputFolder        = outputFolderInput.getValue();
     outputFileName      = outputFileNameInput.getValue();
     verbose             = verboseInput.getValue();
 
     if(tickerFileListPath.length()==0 && outputFileName.length()==0){
       throw std::invalid_argument(
-        "An output file_name (-n) must be provided when"
-        " a ticker_file_list (-t) is not provided");         
+        "Missing an output file_name (-n). An output file name must"
+        " be provided when a ticker_file_list (-t) is not provided");         
     }
+
+    if(tickerFileListPath.length()==0 && 
+        firstListEntry != -1 && lastListEntry != -1){
+          if(lastListEntry < firstListEntry){
+            throw std::invalid_argument(
+              "The last list entry (-e) is smaller than the"
+              " first list entry (-s).");         
+          }
+    }    
 
     if(verbose){
       std::cout << "  API Key" << std::endl;
@@ -210,15 +235,27 @@ int main (int argc, char* argv[]) {
       std::cout << "  Exchange Code" << std::endl;
       std::cout << "    " << exchangeCode << std::endl;
 
-      std::cout << "  Ticker list file" << std::endl;
-      std::cout << "    " << tickerFileListPath << std::endl;
+      if(tickerFileListPath.length()>0){
+        std::cout << "  Ticker list file" << std::endl;
+        std::cout << "    " << tickerFileListPath << std::endl;
+
+        if(firstListEntry != -1){
+          std::cout << "  First list entry" << std::endl;
+          std::cout << "    " << firstListEntry << std::endl;
+        }
+        if(lastListEntry != -1){
+          std::cout << "  Last list entry" << std::endl;
+          std::cout << "    " << lastListEntry << std::endl;
+        }
+      }
 
       std::cout << "  Output Folder" << std::endl;
       std::cout << "    " << outputFolder << std::endl;
 
-      std::cout << "  Output File Name" << std::endl;
-      std::cout << "    " << outputFileName << std::endl;
-
+      if(tickerFileListPath.length()==0){
+        std::cout << "  Output File Name" << std::endl;
+        std::cout << "    " << outputFileName << std::endl;
+      }
     }
   } catch (TCLAP::ArgException &e){ 
     std::cerr << "TCLAP::ArgException: "   << e.error() 
@@ -238,23 +275,43 @@ int main (int argc, char* argv[]) {
 
     using json = nlohmann::ordered_json;
     json tickerListData = json::parse(tickerFileListPathStream);
-
+    int count = 0;
+    if(verbose){
+      std::cout << std::endl;
+      std::cout << "Fetching data on the list ..." << std::endl;
+    }
+    
     for(auto& it : tickerListData){
-      std::string eodUrl = eodUrlTemplate;
-      std::string ticker = it["Code"];
-      findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-      findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
-      findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
-
-      std::string fileName = ticker;
-      fileName.append(".");
-      fileName.append(exchangeCode);
-      fileName.append(".json");
-      bool success = downloadJsonFile(eodUrl,outputFolder,fileName,verbose);
-      if( success == false){
-        std::cerr << "Error: downloadJsonFile: " << eodUrl << std::endl;
+      bool processEntry=true;
+      if(count < firstListEntry && firstListEntry != -1){
+        processEntry=false;
+      }      
+      if(count > lastListEntry && lastListEntry != -1){
+        processEntry=false;
       }
 
+      if(processEntry){
+        std::string eodUrl = eodUrlTemplate;
+        std::string ticker = it["Code"];
+        findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+        findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
+        findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
+
+        std::string fileName = ticker;
+        fileName.append(".");
+        fileName.append(exchangeCode);
+        fileName.append(".json");
+        bool success = downloadJsonFile(eodUrl,outputFolder,fileName,false);
+        if( success == false){
+          std::cerr << "Error: downloadJsonFile: " << std::endl;
+          std::cerr << '\t' << fileName << std::endl;
+          std::cerr << '\t' << eodUrl << std::endl;
+        }
+        if(verbose && success == true){
+          std::cout << count << "." << '\t' << fileName << std::endl;
+        }        
+      }
+      ++count;
     }
     
   }else{
@@ -264,8 +321,13 @@ int main (int argc, char* argv[]) {
     findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
     bool success = downloadJsonFile(eodUrl,outputFolder,outputFileName,verbose);
+    if(verbose && success == true){
+      std::cout << '\t' << outputFileName << std::endl;
+    }    
     if( success == false){
-      std::cerr << "Error: downloadJsonFile" << std::endl;
+      std::cerr << "Error: downloadJsonFile failed to get" << std::endl;
+      std::cerr << '\t' << eodUrl << std::endl;
+      std::cerr << '\t' << outputFileName << std::endl;
     }
 
   }
