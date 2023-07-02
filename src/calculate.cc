@@ -118,11 +118,11 @@ int main (int argc, char* argv[]) {
         std::string date = it;
 
         double roce = FinancialAnalysisToolkit::
-                        calcReturnOnCapitalDeployed(jsonData,it);
+                        calcReturnOnCapitalDeployed(jsonData,it,Q);
         double roa = FinancialAnalysisToolkit::
-                        calcReturnOnAssets(jsonData,it);
+                        calcReturnOnAssets(jsonData,it,Q);
         double roit = FinancialAnalysisToolkit::
-                        calcReturnOnInvestedCapital(jsonData,it);
+                        calcReturnOnInvestedCapital(jsonData,it,Q);
 
         if(!std::isnan(roce)){
           json roce = {it.c_str(),{ "roce", roce}};
