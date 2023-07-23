@@ -314,6 +314,8 @@ class FinancialAnalysisToolkit {
 
      Damodaran, A.(2011). The Little Book of Valuation. Wiley.
     */
+
+    
     static double calcFreeCashFlowToEquity(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      const char *timeUnit){
@@ -366,5 +368,145 @@ class FinancialAnalysisToolkit {
       return fcfeIP;
     }
 
+    /**
+     Warren Buffets definition for owners earnings is a bit more conservative
+     than free-cash-flow-to-equity and has the additional benefit of not using
+     any fields in EODs data that are null. 
+
+     Free cash flow to equity is a quantity that estimates how much money
+     could have been returned to investors from a company. This quantity is
+     an input needed to value a company following the methodology described
+     in Ch. 3 of Damodaran.
+
+    ----------
+     From the book                           
+     FCFE =  net Income                     | netIncome 
+           + depreciation                   | + depreciation
+           - cap. expenditures              | - capitalExpenditures
+           - change in non-cash capital     | - otherNonCashItems
+           - (principal repaid - new debt)  | + (netDebt)
+
+    ----------
+  
+    Unfortunately the netDebt field seems to be populated with null entries as
+    of 23/07/2023. Instead if I use the more conservative 'owners earnings' 
+    I have
+
+    ----------
+     From the book                           
+     FCFE =  net Income                     | netIncome 
+           + depreciation                   | + depreciation
+           - cap. expenditures              | - capitalExpenditures
+           - change in non-cash capital     | - otherNonCashItems
+    ----------
+
+    which makes use of fields that are populated, and I have hand checked
+    for one company, Alphabet.
+
+     * */
+    static double calcOwnersEarnings(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     const char *timeUnit){
+
+    
+      //Damodaran definition (page 40/172 22%)     
+      double  netIncome = 
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["netIncome"]);
+      double depreciation =                                            
+       getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["depreciation"]);
+      double capitalExpenditures = 
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+                      ["capitalExpenditures"]);             
+      double otherNonCashItems = 
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["otherNonCashItems"]);
+
+      double ownersEarnings =  netIncome
+                              + depreciation
+                              - capitalExpenditures
+                              - otherNonCashItems;      
+      return ownersEarnings;
+    }    
+
+    static double calcReinvestmentRate(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     const char *timeUnit){
+
+    
+      //Damodaran definition (page 40/172 22%)     
+
+      double totalCashFromOperatingActivities =
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+                      ["totalCashFromOperatingActivities"]); 
+
+      double taxRate = calcTaxRate(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     const char *timeUnit);
+
+      double afterTaxOperatingIncome = 
+        totalCashFromOperatingActivities*(1-taxRate);
+
+      double capitalExpenditures = 
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+                      ["capitalExpenditures"]);             
+      double otherNonCashItems = 
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["otherNonCashItems"]);
+
+      double reinvestmentRate =  
+        (capitalExpenditures + otherNonCashItems)/afterTaxOperatingIncome;
+      return reinvestmentRate;
+    }   
+
+    static double calcTaxRate(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     const char *timeUnit){
+      double taxProvision = 
+        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]["taxProvision"]);
+
+      double incomeBeforeTaxes = 
+        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]["incomeBeforeTax"]);
+
+      double taxRate = taxProvision/incomeBeforeTaxes;
+
+    }
+
+    static double calcFreeCashFlowToFirm(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     const char *timeUnit){
+
+      double totalCashFromOperatingActivities =
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+                      ["totalCashFromOperatingActivities"]); 
+
+      double taxRate = calcTaxRate(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     const char *timeUnit);
+
+      double operatingIncomeAfterTax = 
+              totalCashFromOperatingActivities*(1-taxRate);
+
+      double capitalExpenditures = 
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+                      ["capitalExpenditures"]); 
+
+      double reinvestmentRate = 
+        calcReinvestmentRate(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     const char *timeUnit);      
+
+      double otherNonCashItems = 
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["otherNonCashItems"]);
+
+
+      double fcff =   operatingIncomeAfterTax 
+                    - capitalExpenditures
+                    - otherNonCashItems;
+
+      return fcff;
+    }
 
 };
