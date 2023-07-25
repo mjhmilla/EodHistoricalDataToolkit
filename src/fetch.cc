@@ -144,8 +144,10 @@ void getPrimaryTickerName(std::string &folder,
 
   if( jsonData.contains("General") ){
     if(jsonData["General"].contains("PrimaryTicker")){
+      if(jsonData["General"]["PrimaryTicker"].is_null() == false){
         updPrimaryTickerName = 
           jsonData["General"]["PrimaryTicker"].get<std::string>();
+      }
     }
   }
 }
