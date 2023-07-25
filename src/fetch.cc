@@ -7,6 +7,7 @@
 #include <tclap/CmdLine.h>
 #include <curl/curl.h>
 
+#include "FinancialAnalysisToolkit.h"
 
 unsigned int COLUMN_WIDTH = 30;
 
@@ -128,6 +129,27 @@ bool downloadJsonFile(std::string &eodUrl,
 
 }
 
+void getPrimaryTickerName(std::string &folder, 
+                          std::string &fileName, 
+                          std::string &updPrimaryTickerName){
+
+  //Create the path and file name                          
+  std::stringstream ss;
+  ss << folder << fileName;
+  std::string filePathName = ss.str();
+  
+  using json = nlohmann::ordered_json;
+  std::ifstream jsonFileStream(filePathName.c_str());
+  json jsonData = json::parse(jsonFileStream);  
+
+  if( jsonData.contains("General") ){
+    if(jsonData["General"].contains("PrimaryTicker")){
+        updPrimaryTickerName = 
+          jsonData["General"]["PrimaryTicker"].get<std::string>();
+    }
+  }
+}
+
 int main (int argc, char* argv[]) {
 
   std::string apiKey;
@@ -138,6 +160,7 @@ int main (int argc, char* argv[]) {
   int lastListEntry;
   std::string outputFolder;
   std::string outputFileName;
+  std::string outputPrimaryTickerFileName;
   bool verbose;
 
   try{
@@ -188,6 +211,7 @@ int main (int argc, char* argv[]) {
       true,"","string");
 
     cmd.add(outputFolderInput);
+
 
     TCLAP::ValueArg<std::string> outputFileNameInput("n","file_name", 
       "name of the output file",false,"","string");
@@ -309,7 +333,45 @@ int main (int argc, char* argv[]) {
         }
         if(verbose && success == true){
           std::cout << count << "." << '\t' << fileName << std::endl;
-        }        
+        }         
+
+
+        std::string primaryEodTickerName("");
+        getPrimaryTickerName(outputFolder, fileName, primaryEodTickerName);
+
+        //If this is not the primary ticker, then we need to download the 
+        //primary ticker file  
+        std::string eodTicker=ticker;
+        eodTicker.append(".").append(exchangeCode);
+
+        if(std::strcmp(eodTicker.c_str(),primaryEodTickerName.c_str()) != 0 
+          && primaryEodTickerName.length() > 0){
+          std::string eodUrlPrimary = eodUrlTemplate;        
+          unsigned int idx = primaryEodTickerName.find(".");
+          std::string tickerPrimary =primaryEodTickerName.substr(0,idx);          
+          std::string exchangeCodePrimary =
+            primaryEodTickerName.substr(idx+1,primaryEodTickerName.length()-1);
+
+          findAndReplaceString(eodUrlPrimary,"{YOUR_API_TOKEN}",apiKey);  
+          findAndReplaceString(eodUrlPrimary,"{EXCHANGE_CODE}",exchangeCodePrimary);
+          findAndReplaceString(eodUrlPrimary,"{TICKER_CODE}",tickerPrimary);
+
+          std::string fileNamePrimary = primaryEodTickerName; //This will include the exchange code
+          fileNamePrimary.append(".json");
+          success = downloadJsonFile(eodUrlPrimary,outputFolder,fileNamePrimary,
+                                    false);          
+          if( success == false){
+            std::cerr << "Error: downloadJsonFile: " << std::endl;
+            std::cerr << '\t' << fileNamePrimary << std::endl;
+            std::cerr << '\t' << eodUrlPrimary << std::endl;
+          }                          
+          if(verbose && success == true){
+            std::cout << count << "." << '\t' << fileNamePrimary << std::endl;
+          }  
+        }
+        
+
+               
       }
       ++count;
     }

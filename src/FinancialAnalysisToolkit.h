@@ -14,7 +14,23 @@ const char *Q = "quarterly";
 class FinancialAnalysisToolkit {
 
   public:
-
+/*
+    static void getJsonString(nlohmann::ordered_json &jsonEntry,
+                              std::string &updString){
+      if(  jsonEntry.is_null()){
+        updString="";
+      }else{
+        if(  jsonEntry.is_number_float()){
+          double value = jsonEntry.get<double>();
+          updString = std::to_string(value);
+        }else if (jsonEntry.is_string()){
+          updString = jsonEntry.get<std::string>();
+        }else{
+          throw std::invalid_argument("json entry is not a float or string");      
+        }
+      }
+    };
+*/
     static double getJsonFloat(nlohmann::ordered_json &jsonEntry){
       if(  jsonEntry.is_null()){
         return std::nan("1");
@@ -366,7 +382,7 @@ class FinancialAnalysisToolkit {
       //              + (totalCashFromFinancingActivities-salePurchaseOfStock);
       
       return fcfeIP;
-    }
+    };
 
     /**
      Warren Buffets definition for owners earnings is a bit more conservative
@@ -428,37 +444,7 @@ class FinancialAnalysisToolkit {
                               - capitalExpenditures
                               - otherNonCashItems;      
       return ownersEarnings;
-    }    
-
-    static double calcReinvestmentRate(nlohmann::ordered_json &jsonData, 
-                                     std::string &date,
-                                     const char *timeUnit){
-
-    
-      //Damodaran definition (page 40/172 22%)     
-
-      double totalCashFromOperatingActivities =
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
-                      ["totalCashFromOperatingActivities"]); 
-
-      double taxRate = calcTaxRate(nlohmann::ordered_json &jsonData, 
-                                     std::string &date,
-                                     const char *timeUnit);
-
-      double afterTaxOperatingIncome = 
-        totalCashFromOperatingActivities*(1-taxRate);
-
-      double capitalExpenditures = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
-                      ["capitalExpenditures"]);             
-      double otherNonCashItems = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["otherNonCashItems"]);
-
-      double reinvestmentRate =  
-        (capitalExpenditures + otherNonCashItems)/afterTaxOperatingIncome;
-      return reinvestmentRate;
-    }   
+    };
 
     static double calcTaxRate(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
@@ -471,7 +457,38 @@ class FinancialAnalysisToolkit {
 
       double taxRate = taxProvision/incomeBeforeTaxes;
 
-    }
+      return taxRate;
+    };
+
+
+    static double calcReinvestmentRate(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     const char *timeUnit){
+
+    
+      //Damodaran definition (page 40/172 22%)     
+
+      double totalCashFromOperatingActivities =
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+                      ["totalCashFromOperatingActivities"]); 
+
+      double taxRate = calcTaxRate(jsonData,date,timeUnit);
+
+      double afterTaxOperatingIncome = 
+        totalCashFromOperatingActivities*(1.0-taxRate);
+
+      double capitalExpenditures = 
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+                      ["capitalExpenditures"]);             
+      double otherNonCashItems = 
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["otherNonCashItems"]);
+
+      double reinvestmentRate =  
+        (capitalExpenditures + otherNonCashItems)/afterTaxOperatingIncome;
+      return reinvestmentRate;
+    };   
+
 
     static double calcFreeCashFlowToFirm(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
@@ -481,25 +498,20 @@ class FinancialAnalysisToolkit {
         getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
                       ["totalCashFromOperatingActivities"]); 
 
-      double taxRate = calcTaxRate(nlohmann::ordered_json &jsonData, 
-                                     std::string &date,
-                                     const char *timeUnit);
+      double taxRate = calcTaxRate(jsonData, date, timeUnit);
 
       double operatingIncomeAfterTax = 
-              totalCashFromOperatingActivities*(1-taxRate);
+              totalCashFromOperatingActivities*(1.0-taxRate);
 
       double capitalExpenditures = 
         getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
                       ["capitalExpenditures"]); 
 
       double reinvestmentRate = 
-        calcReinvestmentRate(nlohmann::ordered_json &jsonData, 
-                                     std::string &date,
-                                     const char *timeUnit);      
+        calcReinvestmentRate(jsonData,date,timeUnit);      
 
       double otherNonCashItems = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["otherNonCashItems"]);
+        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
 
 
       double fcff =   operatingIncomeAfterTax 
@@ -507,6 +519,6 @@ class FinancialAnalysisToolkit {
                     - otherNonCashItems;
 
       return fcff;
-    }
+    };
 
 };
