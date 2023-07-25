@@ -368,7 +368,7 @@ int main (int argc, char* argv[]) {
             std::cerr << '\t' << eodUrlPrimary << std::endl;
           }                          
           if(verbose && success == true){
-            std::cout << count << "a." << '\t' << fileNamePrimary << std::endl;
+            std::cout << count << ". (PrimaryTicker)" << '\t' << fileNamePrimary << std::endl;
           }  
         }
         
