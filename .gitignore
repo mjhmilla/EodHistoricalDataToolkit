@@ -1,5 +1,6 @@
 *.json
 *.png
 *.svg
+*.log
 build/*
 !build/.gitkeep

@@ -282,51 +282,18 @@ class FinancialAnalysisToolkit {
            + depreciation                   | + depreciation
            - cap. expenditures              | - capitalExpenditures
            - change in non-cash capital     | - otherNonCashItems
-           - (principal repaid - new debt)  | + (totalCashFromFinancingActivities -salePurchaseOfStock)
+           - (principal repaid - new debt)  | + ?
 
-     I'm approximating (principlal repaid - new debt) using 
-     (totalCashFromFinancingActivities -salePurchaseOfStock) because
+     The only difficulty I have is the last line. The suggestion from EOD
+     was to use the netDebt field. According to investopedia
 
-       Net payments related to stock-based award activities
-     + *Repurchase of stock
-     + Proceeds from the issuance of debt, net of costs
-     + Repayment of debt
-     + Proceeds from sale of interest in consolidated entities
-     = *net cash used in financing activities                    
+      netDebt = (shortTermDebt+longTermDebt)-cashAndCashEquivalents
 
-     Of these items I have only the * quantities in EOD, and so
+      This is not at all the same as the change in debt. I could instead look
+      at the change in longTermDebt between two years. This would exclude 
+      shortTermDebt, but perhaps that's fine.
 
-     + Proceeds from the issuance of debt, net of costs
-     + Repayment of debt
-       
-       is approximately 
-
-     + Proceeds from the issuance of debt, net of costs
-     + Repayment of debt
-     + Proceeds from sale of interest in consolidated entities
-        
-      which is equal to
-
-      (totalCashFromFinancingActivities -salePurchaseOfStock)
-    ----------
-     This definition of free-cash-flow-to-equity as defined by investopedia
-     is a little easier to work with given EODs data
-
-     https://www.investopedia.com/terms/f/freecashflowtoequity.asp
-
-     FCFE = cash from operations | totalCashFromOperatingActivities
-           -capital expenditure  | - capitalExpenditures
-           +net debt issued      | + (totalCashFromFinancingActivities 
-                                      -salePurchaseOfStock)
-
-     This formula also requires the same approximation needed to get at
-     net debut issued from EODs limited list of items. The definition from 
-     Investopedia will include stock-based compensation (a big line item in 
-     some tech companies), deferred income tax, along with changes in assets 
-     and liabilities net of acquisitions. 
-     
-     For the time being I'm implementing Investopedia's definition because
-     I'm more confident that I've implemented this correctly.
+      https://www.investopedia.com/terms/n/netdebt.asp
 
      Damodaran, A.(2011). The Little Book of Valuation. Wiley.
     */
@@ -400,13 +367,14 @@ class FinancialAnalysisToolkit {
            + depreciation                   | + depreciation
            - cap. expenditures              | - capitalExpenditures
            - change in non-cash capital     | - otherNonCashItems
-           - (principal repaid - new debt)  | + (netDebt)
+           - (principal repaid - new debt)  | + ?
 
     ----------
   
-    Unfortunately the netDebt field seems to be populated with null entries as
-    of 23/07/2023. Instead if I use the more conservative 'owners earnings' 
-    I have
+    Unfortunately I cannot find the fields within EOD that I could use
+    to evaluate the change in debt. Perhaps if I took the change in short
+    and long term debt from year to year. An alternative is to use the more
+    conservative owners earnings:
 
     ----------
      From the book                           
