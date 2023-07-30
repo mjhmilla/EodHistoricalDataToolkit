@@ -14,7 +14,9 @@ unsigned int COLUMN_WIDTH = 30;
 
 int main (int argc, char* argv[]) {
 
+  std::string exchangeCode;
   std::string fundamentalFolder;
+  std::string historicalFolder;
   std::string eodFolder;
   std::string analyseFolder;
   bool verbose;
@@ -34,13 +36,19 @@ int main (int argc, char* argv[]) {
 
     cmd.add(fundamentalFolderInput);
 
-    TCLAP::ValueArg<std::string> eodFolderInput("f",
-      "eod_data_folder_path", 
-      "The path to the folder that contains the end-of-day data csv files from "
-      "https://eodhistoricaldata.com/ to analyze",
+    TCLAP::ValueArg<std::string> historicalFolderInput("p",
+      "historical_data_folder_path", 
+      "The path to the folder that contains the historical (price)"
+      " data json files from https://eodhistoricaldata.com/ to analyze",
       true,"","string");
 
-    cmd.add(eodFolderInput);
+    cmd.add(historicalFolderInput);
+
+    TCLAP::ValueArg<std::string> exchangeCodeInput("x","EXCHANGE_CODE", 
+      "The exchange code. For example: US",
+      false,"","string");
+
+    cmd.add(exchangeCodeInput);  
 
     TCLAP::ValueArg<std::string> analyseFolderOutput("o","output_folder_path", 
       "The path to the folder that will contain the output json files "
@@ -56,7 +64,8 @@ int main (int argc, char* argv[]) {
     cmd.parse(argc,argv);
 
     fundamentalFolder   = fundamentalFolderInput.getValue();
-    eodFolder           = fundamentalFolderInput.getValue();
+    historicalFolder    = historicalFolderInput.getValue();
+    exchangeCode        = exchangeCodeInput.getValue();    
     analyseFolder       = analyseFolderOutput.getValue();
     verbose             = verboseInput.getValue();
 
@@ -64,8 +73,11 @@ int main (int argc, char* argv[]) {
       std::cout << "  Fundamental Data Folder" << std::endl;
       std::cout << "    " << fundamentalFolder << std::endl;
 
-      std::cout << "  End-Of-Day Data Folder" << std::endl;
-      std::cout << "    " << eodFolder << std::endl;
+      std::cout << "  Historical Data Folder" << std::endl;
+      std::cout << "    " << historicalFolder << std::endl;
+      
+      std::cout << "  Exchange Code" << std::endl;
+      std::cout << "    " << exchangeCode << std::endl;
 
       std::cout << "  Analyse Folder" << std::endl;
       std::cout << "    " << analyseFolder << std::endl;
@@ -76,34 +88,61 @@ int main (int argc, char* argv[]) {
               << " for arg "  << e.argId() << std::endl; 
   }
 
+
+  std::string validFileExtension = exchangeCode;
+  validFileExtension.append(".json");
+
   auto startingDirectory = std::filesystem::current_path();
   std::filesystem::current_path(fundamentalFolder);
 
+  unsigned int count=0;
 
   //Get a list of the json files in the input folder
-
   for ( const auto & entry 
           : std::filesystem::directory_iterator(fundamentalFolder)){
 
-    //Check to see if the input json file is valid
+    //Check to see if the input json file is valid and is for the primary
+    //ticker
+
     bool validInput = false;
-    if(entry.path().has_extension()){
-      if( entry.path().extension().compare("json")){
+
+    std::string fileName=entry.path().filename();
+    size_t lastIndex = fileName.find_last_of(".");
+    std::string tickerName = fileName.substr(0,lastIndex);
+    std::size_t foundExtension = fileName.find(validFileExtension);
+
+    if( foundExtension != std::string::npos ){
         validInput=true;
+        std::string updTickerName = tickerName;
+        FinancialAnalysisToolkit::getPrimaryTickerName(fundamentalFolder, 
+                                                      fileName,
+                                                      updTickerName);
         if(verbose){
-          std::cout << "    " << entry.path() << std::endl;
+          std::cout << count << ".    " << fileName << std::endl;
+          if(updTickerName.compare(tickerName) != 0){
+            std::cout << "    " << updTickerName 
+                      << " (PrimaryTicker) " << std::endl;
+          }
         }
-      }      
+        if(updTickerName.compare(tickerName) != 0){
+          fileName = updTickerName;
+          fileName.append(".json");
+          tickerName = updTickerName;
+        }                                                            
     }
 
+      
     //Process the file if its valid;
     if(validInput){
       //Load the json file
+      std::stringstream ss;
+      ss << fundamentalFolder << fileName;
+      std::string filePathName = ss.str();
       using json = nlohmann::ordered_json;
-      std::ifstream inputJsonFileStream(entry.path().c_str());
+      std::ifstream inputJsonFileStream(filePathName.c_str());
       json jsonData = json::parse(inputJsonFileStream);
 
-      json analysis = json::array();
+      json analysis;
 
       std::vector< std::string > entryDates;
 
@@ -119,37 +158,35 @@ int main (int argc, char* argv[]) {
 
         double roce = FinancialAnalysisToolkit::
                         calcReturnOnCapitalDeployed(jsonData,it,Q);
-        double roa = FinancialAnalysisToolkit::
-                        calcReturnOnAssets(jsonData,it,Q);
-        double roit = FinancialAnalysisToolkit::
-                        calcReturnOnInvestedCapital(jsonData,it,Q);
+        double grossMargin = FinancialAnalysisToolkit::
+                        calcGrossMargin(jsonData,it,Q);
+        double operatingMargin = FinancialAnalysisToolkit::
+                        calcOperatingMargin(jsonData,it,Q);
+        double cashConversion = FinancialAnalysisToolkit::
+                        calcCashConversionRatio(jsonData,it,Q);
+        double debtToCapital = FinancialAnalysisToolkit::
+                        calcDebtToCapitalizationRatio(jsonData,it,Q);   
+        double interestCover = FinancialAnalysisToolkit::
+                        calcInterestCover(jsonData,it,Q);  
 
-        if(!std::isnan(roce)){
-          json roce = {it.c_str(),{ "roce", roce}};
-          analysis.push_back(roce);
-        }
+        //it.c_str(), 
+        json analysisEntry = json::object( 
+                          { 
+                            {"returnOnCapitalDeployed", roce},
+                            {"grossMargin",grossMargin},
+                            {"operatingMargin",operatingMargin},
+                            {"cashConversionRatio",cashConversion},
+                            {"debtToCapitalRatio",debtToCapital},
+                            {"interestCover",interestCover}
+                          }
+                        );
 
+        analysis[it]= analysisEntry;
       }
 
 
-
-      //Evaluate the ROCE
-      // I'm going to use a conservative definition:
-      // netIncome / (totalStockholderEquity + longTermDebt)
-
-      //Equity growth
-
-      //Earnings growth
-
-      //Sales growth
-
-      //free-cash-flow growth
-
-
-
-
       std::string outputFilePath(analyseFolder);
-      std::string outputFileName(entry.path().filename().c_str());
+      std::string outputFileName(fileName.c_str());
       
       //Update the extension 
       std::string oldExt = ".json";
@@ -164,6 +201,8 @@ int main (int argc, char* argv[]) {
       outputFileStream << analysis;
       outputFileStream.close();
     }
+
+    ++count;
   }
 
 

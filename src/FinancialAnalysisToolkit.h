@@ -11,6 +11,7 @@ const char *IS  = "Income_Statement";
 const char *Y = "yearly";
 const char *Q = "quarterly";
 
+
 class FinancialAnalysisToolkit {
 
   public:
@@ -44,6 +45,30 @@ class FinancialAnalysisToolkit {
         }
       }
     };
+
+    static void getPrimaryTickerName(std::string &folder, 
+                              std::string &fileName, 
+                              std::string &updPrimaryTickerName){
+
+      //Create the path and file name                          
+      std::stringstream ss;
+      ss << folder << fileName;
+      std::string filePathName = ss.str();
+      
+      using json = nlohmann::ordered_json;
+      std::ifstream jsonFileStream(filePathName.c_str());
+      json jsonData = json::parse(jsonFileStream);  
+
+      if( jsonData.contains("General") ){
+        if(jsonData["General"].contains("PrimaryTicker")){
+          if(jsonData["General"]["PrimaryTicker"].is_null() == false){
+            updPrimaryTickerName = 
+              jsonData["General"]["PrimaryTicker"].get<std::string>();
+          }
+        }
+      }
+    };
+
 
     static double calcReturnOnCapitalDeployed( nlohmann::ordered_json &jsonData, 
                                               std::string &date, 
@@ -152,7 +177,7 @@ class FinancialAnalysisToolkit {
     /**
      * https://www.investopedia.com/terms/o/operatingmargin.asp
     */
-    static double calcOperatingProfitMargin(nlohmann::ordered_json &jsonData, 
+    static double calcOperatingMargin(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      const char *timeUnit){
       double  operatingIncome = 
@@ -227,7 +252,7 @@ class FinancialAnalysisToolkit {
         Reflections
         -----------                
         This is a little concerning, as I have no idea whether their figures are
-        trust worthy. I would like more transparency in the least. It's a pity
+        trustworthy. I would like more transparency in the least. It's a pity
         that SimFin doesn't have better coverage, as their service is remarkably
         transparent. In any case, I'm tempted to avoid fields that don't 
         actually show up in a quaterly or yearly report.
@@ -265,6 +290,49 @@ class FinancialAnalysisToolkit {
       return (freeCashFlowCalc)/netIncome;
 
     };
+
+    /**
+       https://www.investopedia.com/terms/l/leverageratio.asp
+    */
+    static double calcDebtToCapitalizationRatio(
+                                    nlohmann::ordered_json &jsonData, 
+                                    std::string &date,
+                                    const char *timeUnit){
+
+      double shortTermDebt = 
+              getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+                      ["shortTermDebt"]);
+      double longTermDebt = 
+              getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+                      ["longTermDebt"]);      
+      double shareHoldersEquity = 
+              getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+                      ["totalStockholderEquity"]);
+
+      double debtToCapitalization=(shortTermDebt+longTermDebt)
+                    /(shortTermDebt+longTermDebt+shareHoldersEquity);
+
+      return debtToCapitalization;                    
+    };
+
+    /**
+     https://www.investopedia.com/terms/i/interestcoverageratio.asp
+    */
+    static double calcInterestCover(nlohmann::ordered_json &jsonData, 
+                                    std::string &date,
+                                    const char *timeUnit){
+      double  ebit = 
+        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+                      ["operatingIncome"]);
+      double interestExpense = 
+        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+                      ["interestExpense"]);
+
+      double interestCover=ebit/interestExpense;
+
+      return interestCover;
+
+    };    
 
     /**
      Free cash flow to equity is a quantity that estimates how much money

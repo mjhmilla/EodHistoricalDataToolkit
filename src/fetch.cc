@@ -129,28 +129,6 @@ bool downloadJsonFile(std::string &eodUrl,
 
 }
 
-void getPrimaryTickerName(std::string &folder, 
-                          std::string &fileName, 
-                          std::string &updPrimaryTickerName){
-
-  //Create the path and file name                          
-  std::stringstream ss;
-  ss << folder << fileName;
-  std::string filePathName = ss.str();
-  
-  using json = nlohmann::ordered_json;
-  std::ifstream jsonFileStream(filePathName.c_str());
-  json jsonData = json::parse(jsonFileStream);  
-
-  if( jsonData.contains("General") ){
-    if(jsonData["General"].contains("PrimaryTicker")){
-      if(jsonData["General"]["PrimaryTicker"].is_null() == false){
-        updPrimaryTickerName = 
-          jsonData["General"]["PrimaryTicker"].get<std::string>();
-      }
-    }
-  }
-}
 
 int main (int argc, char* argv[]) {
 
@@ -339,7 +317,8 @@ int main (int argc, char* argv[]) {
 
 
         std::string primaryEodTickerName("");
-        getPrimaryTickerName(outputFolder, fileName, primaryEodTickerName);
+        FinancialAnalysisToolkit::getPrimaryTickerName(outputFolder, 
+                                      fileName, primaryEodTickerName);
 
         //If this is not the primary ticker, then we need to download the 
         //primary ticker file  
