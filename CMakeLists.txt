@@ -34,17 +34,23 @@ INCLUDE_DIRECTORIES(
 ADD_EXECUTABLE(
   sandbox
   src/sandbox.cc)
+  
 ADD_EXECUTABLE(
   fetch
   src/fetch.cc)
+  
 ADD_EXECUTABLE(
   calculate
   src/calculate.cc)
 
+ADD_EXECUTABLE(
+  scan
+  src/scan.cc)
 
 TARGET_LINK_LIBRARIES(sandbox
   ${CURL_LIBRARIES}
 )
+
 TARGET_LINK_LIBRARIES(fetch
   ${CURL_LIBRARIES}
 )

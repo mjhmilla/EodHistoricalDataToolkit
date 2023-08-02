@@ -3,6 +3,8 @@
 #include <nlohmann/json.hpp>
 #include <stdlib.h>
 
+
+const char *GEN = "General";
 const char *FIN = "Financials";
 const char *BAL = "Balance_Sheet";
 const char *CF  = "Cash_Flow";
@@ -44,6 +46,15 @@ class FinancialAnalysisToolkit {
           throw std::invalid_argument("json entry is not a float or string");      
         }
       }
+    };
+
+    static void getJsonString(nlohmann::ordered_json &jsonEntry,
+                              std::string &updString){
+      if( jsonEntry.is_null()){
+        updString="";
+      }else{
+        updString=jsonEntry.get<std::string>();
+      }                            
     };
 
     static void getPrimaryTickerName(std::string &folder, 
