@@ -190,9 +190,9 @@ int main (int argc, char* argv[]) {
                         }
                       );
 
-      if(primaryTickerMissing || currencySymbolMissing){
+      //if(primaryTickerMissing || currencySymbolMissing){
         scanResults[code]= tickerEntry;
-      }
+      //}
 
     }
 

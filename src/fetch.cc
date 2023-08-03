@@ -305,52 +305,58 @@ int main (int argc, char* argv[]) {
         fileName.append(".");
         fileName.append(exchangeCode);
         fileName.append(".json");
-        bool success = downloadJsonFile(eodUrl,outputFolder,fileName,false);
-        if( success == false){
+        bool successTickerDownload = downloadJsonFile(eodUrl,outputFolder,fileName,false);
+        if( successTickerDownload == false){
           std::cerr << "Error: downloadJsonFile: " << std::endl;
           std::cerr << '\t' << fileName << std::endl;
           std::cerr << '\t' << eodUrl << std::endl;
         }
-        if(verbose && success == true){
+        if(verbose && successTickerDownload == true){
           std::cout << count << "." << '\t' << fileName << std::endl;
         }         
+        if(verbose && successTickerDownload == false){
+          std::cout << count << "." << '\t' << fileName 
+                    << " (error: failed to download) "<< std::endl;
+        }         
 
+        if(successTickerDownload==true){
+          std::string primaryEodTickerName("");
+          FinancialAnalysisToolkit::getPrimaryTickerName(outputFolder, 
+                                        fileName, primaryEodTickerName);
 
-        std::string primaryEodTickerName("");
-        FinancialAnalysisToolkit::getPrimaryTickerName(outputFolder, 
-                                      fileName, primaryEodTickerName);
+          //If this is not the primary ticker, then we need to download the 
+          //primary ticker file  
+          std::string eodTicker=ticker;
+          eodTicker.append(".").append(exchangeCode);
 
-        //If this is not the primary ticker, then we need to download the 
-        //primary ticker file  
-        std::string eodTicker=ticker;
-        eodTicker.append(".").append(exchangeCode);
+          if(std::strcmp(eodTicker.c_str(),primaryEodTickerName.c_str()) != 0 
+            && primaryEodTickerName.length() > 0){
+            std::string eodUrlPrimary = eodUrlTemplate;        
+            unsigned int idx = primaryEodTickerName.find(".");
+            std::string tickerPrimary =primaryEodTickerName.substr(0,idx);          
+            std::string exchangeCodePrimary =
+              primaryEodTickerName.substr(idx+1,primaryEodTickerName.length()-1);
 
-        if(std::strcmp(eodTicker.c_str(),primaryEodTickerName.c_str()) != 0 
-          && primaryEodTickerName.length() > 0){
-          std::string eodUrlPrimary = eodUrlTemplate;        
-          unsigned int idx = primaryEodTickerName.find(".");
-          std::string tickerPrimary =primaryEodTickerName.substr(0,idx);          
-          std::string exchangeCodePrimary =
-            primaryEodTickerName.substr(idx+1,primaryEodTickerName.length()-1);
+            findAndReplaceString(eodUrlPrimary,"{YOUR_API_TOKEN}",apiKey);  
+            findAndReplaceString(eodUrlPrimary,"{EXCHANGE_CODE}",exchangeCodePrimary);
+            findAndReplaceString(eodUrlPrimary,"{TICKER_CODE}",tickerPrimary);
 
-          findAndReplaceString(eodUrlPrimary,"{YOUR_API_TOKEN}",apiKey);  
-          findAndReplaceString(eodUrlPrimary,"{EXCHANGE_CODE}",exchangeCodePrimary);
-          findAndReplaceString(eodUrlPrimary,"{TICKER_CODE}",tickerPrimary);
-
-          std::string fileNamePrimary = primaryEodTickerName; //This will include the exchange code
-          fileNamePrimary.append(".json");
-          success = downloadJsonFile(eodUrlPrimary,outputFolder,fileNamePrimary,
-                                    false);          
-          if( success == false){
-            std::cerr << "Error: downloadJsonFile: " << std::endl;
-            std::cerr << '\t' << fileNamePrimary << std::endl;
-            std::cerr << '\t' << eodUrlPrimary << std::endl;
-          }                          
-          if(verbose && success == true){
-            std::cout << count << ". (PrimaryTicker)" << '\t' << fileNamePrimary << std::endl;
-          }  
+            std::string fileNamePrimary = primaryEodTickerName; //This will include the exchange code
+            fileNamePrimary.append(".json");
+            bool successPrimaryDownload = 
+            downloadJsonFile(eodUrlPrimary,outputFolder,fileNamePrimary,
+                                      false);          
+            if( successPrimaryDownload == false){
+              std::cerr << "Error: downloadJsonFile: " << std::endl;
+              std::cerr << '\t' << fileNamePrimary << std::endl;
+              std::cerr << '\t' << eodUrlPrimary << std::endl;
+            }                          
+            if(verbose && successPrimaryDownload == true){
+              std::cout << count << ". (PrimaryTicker)" << '\t' 
+                        << fileNamePrimary << std::endl;
+            }  
+          }
         }
-        
 
                
       }
