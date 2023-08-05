@@ -10,8 +10,8 @@
 #include "FinancialAnalysisToolkit.h"
 
 unsigned int COLUMN_WIDTH = 30;
-
-unsigned int RETRY_ATTEMPTS=2;
+unsigned int CURL_TIMEOUT_TIME_SECONDS = 20;
+unsigned int DOWNLOAD_ATTEMPTS=2;
 
 namespace
 {
@@ -56,84 +56,88 @@ void findAndReplaceString(std::string& str,
 bool downloadJsonFile(std::string &eodUrl, 
                 std::string &outputFolder, 
                 std::string &outputFileName, 
-                unsigned int retryAttempts,
                 bool verbose){
 
-    bool success = true;
+    bool success = false;
+    unsigned int downloadAttempts=0;
 
-    if(verbose){
-      std::cout << std::endl;
-      std::cout << "    Contacting" << std::endl;
-      std::cout << "    " << eodUrl << std::endl;
-    }
+    while(downloadAttempts < DOWNLOAD_ATTEMPTS && success == false){
 
-    CURL* curl = curl_easy_init();
+      if(verbose){
+        std::cout << std::endl;
+        std::cout << "    Contacting" << std::endl;
+        std::cout << "    " << eodUrl << std::endl;
+      }
 
-    // Set remote URL.
-    curl_easy_setopt(curl, CURLOPT_URL, eodUrl.c_str());
+      CURL* curl = curl_easy_init();
 
-    // Don't bother trying IPv6, which would increase DNS resolution time.
-    curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+      // Set remote URL.
+      curl_easy_setopt(curl, CURLOPT_URL, eodUrl.c_str());
 
-    // Don't wait forever, time out after 10 seconds.
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
+      // Don't bother trying IPv6, which would increase DNS resolution time.
+      curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
-    // Follow HTTP redirects if necessary.
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+      // Don't wait forever, time out after 20 seconds.
+      curl_easy_setopt(curl, CURLOPT_TIMEOUT, CURL_TIMEOUT_TIME_SECONDS);
 
-    // Response information.
-    long httpCode(0);
-    std::unique_ptr<std::string> httpData(new std::string());
+      // Follow HTTP redirects if necessary.
+      curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
-    // Hook up data handling function.
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
+      // Response information.
+      long httpCode(0);
+      std::unique_ptr<std::string> httpData(new std::string());
 
-    // Hook up data container (will be passed as the last parameter to the
-    // callback handling function).  Can be any pointer type, since it will
-    // internally be passed as a void pointer.
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, httpData.get());
+      // Hook up data handling function.
+      curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
 
-    // Run our HTTP GET command, capture the HTTP response code, and clean up.
-    unsigned int retryAttemptCount = 0;
+      // Hook up data container (will be passed as the last parameter to the
+      // callback handling function).  Can be any pointer type, since it will
+      // internally be passed as a void pointer.
+      curl_easy_setopt(curl, CURLOPT_WRITEDATA, httpData.get());
 
-    do{
+      // Run our HTTP GET command, capture the HTTP response code, and clean up.
+      unsigned int retryAttemptCount = 0;
+
       curl_easy_perform(curl);
       curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
       curl_easy_cleanup(curl);
-    }while(retryAttemptCount < (retryAttempts+1) && httpCode != 200);
 
-
-    if(verbose){
-      std::cout << "    http response code" << std::endl;
-      std::cout << "    " << httpCode << std::endl;
-    }
-
-    if (httpCode == 200)
-    {
-      //read out all of the json keys
-      using json = nlohmann::ordered_json;
-      //std::ifstream f("../json/AAPL.US.json");
-      json jsonData = json::parse(*httpData.get());
-
-
-      std::stringstream ss;
-      ss << outputFolder << outputFileName;
-      std::string outputFilePathName = ss.str();
-      std::string removeStr("\"");
-      removeFromString(outputFilePathName,removeStr);    
-
-      //Write the file
-      std::ofstream file(outputFilePathName);
-      file << jsonData;
-      file.close();
-      if(verbose){    
-        std::cout << "    Wrote json to" << std::endl;
-        std::cout << "    " << outputFileName << std::endl;
+      if(verbose){
+        std::cout << "    http response code" << std::endl;
+        std::cout << "    " << httpCode << std::endl;
       }
 
-    }else{
-      success=false;
+      if (httpCode == 200)
+      {
+        success=true;
+        //read out all of the json keys
+        using json = nlohmann::ordered_json;
+        //std::ifstream f("../json/AAPL.US.json");
+        json jsonData = json::parse(*httpData.get());
+
+
+        std::stringstream ss;
+        ss << outputFolder << outputFileName;
+        std::string outputFilePathName = ss.str();
+        std::string removeStr("\"");
+        removeFromString(outputFilePathName,removeStr);    
+
+        //Write the file
+        std::ofstream file(outputFilePathName);
+        file << jsonData;
+        file.close();
+        if(verbose){    
+          std::cout << "    Wrote json to" << std::endl;
+          std::cout << "    " << outputFileName << std::endl;
+        }
+
+      }else{
+        success=false;
+      }
+
+      ++downloadAttempts;
     }
+
     return success;
 
 }
@@ -339,21 +343,20 @@ int main (int argc, char* argv[]) {
         bool successTickerDownload=false;
         if( (fileExists == false && gapFillPartialDownload == true) 
                                  || gapFillPartialDownload == false){ 
+                                  
           successTickerDownload = 
-            downloadJsonFile(eodUrl,outputFolder,fileName,RETRY_ATTEMPTS,false);
+            downloadJsonFile(eodUrl,outputFolder,fileName,false);
 
-          if( successTickerDownload == false){
-            std::cerr << "Error: downloadJsonFile: " << std::endl;
-            std::cerr << '\t' << fileName << std::endl;
-            std::cerr << '\t' << eodUrl << std::endl;
-          }
+          if(successTickerDownload == false){
+            std::cout << count << "." 
+                      << '\t' << fileName << std::endl 
+                      << '\t' << "Error: failed to download" << std::endl
+                      << '\t' << eodUrl << std::endl;
+          } 
           if(verbose && successTickerDownload == true){
             std::cout << count << "." << '\t' << fileName << std::endl;
           }         
-          if(verbose && successTickerDownload == false){
-            std::cout << count << "." << '\t' << fileName 
-                      << " (error: failed to download) "<< std::endl;
-          }         
+        
         }
 
         if( (fileExists == true && gapFillPartialDownload == true) 
@@ -395,7 +398,7 @@ int main (int argc, char* argv[]) {
                 || gapFillPartialDownload == false){           
               bool successPrimaryDownload = 
                 downloadJsonFile(eodUrlPrimary,outputFolder,fileNamePrimary,
-                                 RETRY_ATTEMPTS,false);  
+                                 false);  
                  
 
               if( successPrimaryDownload == false ){
@@ -423,7 +426,7 @@ int main (int argc, char* argv[]) {
     findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
     bool success = 
-      downloadJsonFile(eodUrl,outputFolder,outputFileName,RETRY_ATTEMPTS,verbose);
+      downloadJsonFile(eodUrl,outputFolder,outputFileName,verbose);
 
     if(verbose && success == true){
       std::cout << '\t' << outputFileName << std::endl;
@@ -436,7 +439,9 @@ int main (int argc, char* argv[]) {
 
   }
 
-
+  if(verbose){
+    std::cout << "success" << std::endl;
+  }
 
   
   return 0;
