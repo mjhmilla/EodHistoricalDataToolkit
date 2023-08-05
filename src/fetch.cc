@@ -1,4 +1,4 @@
-
+#include <sys/stat.h>
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -10,6 +10,8 @@
 #include "FinancialAnalysisToolkit.h"
 
 unsigned int COLUMN_WIDTH = 30;
+
+unsigned int RETRY_ATTEMPTS=2;
 
 namespace
 {
@@ -24,6 +26,7 @@ namespace
     return totalBytes;
   }
 }
+
 
 void removeFromString(std::string& str,
                const std::string& removeStr)
@@ -53,6 +56,7 @@ void findAndReplaceString(std::string& str,
 bool downloadJsonFile(std::string &eodUrl, 
                 std::string &outputFolder, 
                 std::string &outputFileName, 
+                unsigned int retryAttempts,
                 bool verbose){
 
     bool success = true;
@@ -90,9 +94,14 @@ bool downloadJsonFile(std::string &eodUrl,
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, httpData.get());
 
     // Run our HTTP GET command, capture the HTTP response code, and clean up.
-    curl_easy_perform(curl);
-    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-    curl_easy_cleanup(curl);
+    unsigned int retryAttemptCount = 0;
+
+    do{
+      curl_easy_perform(curl);
+      curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+      curl_easy_cleanup(curl);
+    }while(retryAttemptCount < (retryAttempts+1) && httpCode != 200);
+
 
     if(verbose){
       std::cout << "    http response code" << std::endl;
@@ -141,6 +150,7 @@ int main (int argc, char* argv[]) {
   std::string outputFolder;
   std::string outputFileName;
   std::string outputPrimaryTickerFileName;
+  bool gapFillPartialDownload;
   bool verbose;
 
   try{
@@ -198,6 +208,11 @@ int main (int argc, char* argv[]) {
 
     cmd.add(outputFileNameInput);
 
+    TCLAP::SwitchArg gapFillPartialDownloadInput("g","gapfill",
+      "Download the missing files to fill the gaps from an incomplete download",
+       false);
+    cmd.add(gapFillPartialDownloadInput); 
+
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
     cmd.add(verboseInput);    
@@ -212,6 +227,7 @@ int main (int argc, char* argv[]) {
     lastListEntry       = lastListEntryInput.getValue();
     outputFolder        = outputFolderInput.getValue();
     outputFileName      = outputFileNameInput.getValue();
+    gapFillPartialDownload=gapFillPartialDownloadInput.getValue();
     verbose             = verboseInput.getValue();
 
     if(tickerFileListPath.length()==0 && outputFileName.length()==0){
@@ -252,6 +268,9 @@ int main (int argc, char* argv[]) {
           std::cout << "    " << lastListEntry << std::endl;
         }
       }
+
+      std::cout << "  Fill the gaps in an incomplete download" << std::endl;
+      std::cout << "    " << gapFillPartialDownload << std::endl;
 
       std::cout << "  Output Folder" << std::endl;
       std::cout << "    " << outputFolder << std::endl;
@@ -294,6 +313,8 @@ int main (int argc, char* argv[]) {
         processEntry=false;
       }
 
+
+
       if(processEntry){
         std::string eodUrl = eodUrlTemplate;
         std::string ticker = it["Code"];
@@ -305,21 +326,38 @@ int main (int argc, char* argv[]) {
         fileName.append(".");
         fileName.append(exchangeCode);
         fileName.append(".json");
-        bool successTickerDownload = downloadJsonFile(eodUrl,outputFolder,fileName,false);
-        if( successTickerDownload == false){
-          std::cerr << "Error: downloadJsonFile: " << std::endl;
-          std::cerr << '\t' << fileName << std::endl;
-          std::cerr << '\t' << eodUrl << std::endl;
-        }
-        if(verbose && successTickerDownload == true){
-          std::cout << count << "." << '\t' << fileName << std::endl;
-        }         
-        if(verbose && successTickerDownload == false){
-          std::cout << count << "." << '\t' << fileName 
-                    << " (error: failed to download) "<< std::endl;
-        }         
 
-        if(successTickerDownload==true){
+        bool fileExists=false;
+
+        if(gapFillPartialDownload == true){
+          //Check if the file has been downloaded already.
+          std::string existingFilePath = outputFolder;
+          existingFilePath.append(fileName);
+          fileExists = std::filesystem::exists(existingFilePath.c_str());
+        }
+
+        bool successTickerDownload=false;
+        if( (fileExists == false && gapFillPartialDownload == true) 
+                                 || gapFillPartialDownload == false){ 
+          successTickerDownload = 
+            downloadJsonFile(eodUrl,outputFolder,fileName,RETRY_ATTEMPTS,false);
+
+          if( successTickerDownload == false){
+            std::cerr << "Error: downloadJsonFile: " << std::endl;
+            std::cerr << '\t' << fileName << std::endl;
+            std::cerr << '\t' << eodUrl << std::endl;
+          }
+          if(verbose && successTickerDownload == true){
+            std::cout << count << "." << '\t' << fileName << std::endl;
+          }         
+          if(verbose && successTickerDownload == false){
+            std::cout << count << "." << '\t' << fileName 
+                      << " (error: failed to download) "<< std::endl;
+          }         
+        }
+
+        if( (fileExists == true && gapFillPartialDownload == true) 
+           || successTickerDownload==true){
           std::string primaryEodTickerName("");
           FinancialAnalysisToolkit::getPrimaryTickerName(outputFolder, 
                                         fileName, primaryEodTickerName);
@@ -343,18 +381,33 @@ int main (int argc, char* argv[]) {
 
             std::string fileNamePrimary = primaryEodTickerName; //This will include the exchange code
             fileNamePrimary.append(".json");
-            bool successPrimaryDownload = 
-            downloadJsonFile(eodUrlPrimary,outputFolder,fileNamePrimary,
-                                      false);          
-            if( successPrimaryDownload == false){
-              std::cerr << "Error: downloadJsonFile: " << std::endl;
-              std::cerr << '\t' << fileNamePrimary << std::endl;
-              std::cerr << '\t' << eodUrlPrimary << std::endl;
-            }                          
-            if(verbose && successPrimaryDownload == true){
-              std::cout << count << ". (PrimaryTicker)" << '\t' 
-                        << fileNamePrimary << std::endl;
-            }  
+
+            bool filePrimaryExists=false;
+            if(gapFillPartialDownload == true){
+              //Check if the file has been downloaded already.
+              std::string existingPrimaryFilePath = outputFolder;
+              existingPrimaryFilePath.append(fileNamePrimary);
+              filePrimaryExists 
+                = std::filesystem::exists(existingPrimaryFilePath.c_str());
+            } 
+
+            if((filePrimaryExists==false && gapFillPartialDownload==true) 
+                || gapFillPartialDownload == false){           
+              bool successPrimaryDownload = 
+                downloadJsonFile(eodUrlPrimary,outputFolder,fileNamePrimary,
+                                 RETRY_ATTEMPTS,false);  
+                 
+
+              if( successPrimaryDownload == false ){
+                std::cerr << "Error: downloadJsonFile: " << std::endl;
+                std::cerr << '\t' << fileNamePrimary << std::endl;
+                std::cerr << '\t' << eodUrlPrimary << std::endl;
+              }                          
+              if(verbose && successPrimaryDownload == true){
+                std::cout << count << ". (PrimaryTicker)" << '\t' 
+                          << fileNamePrimary << std::endl;
+              }  
+            }
           }
         }
 
@@ -369,7 +422,9 @@ int main (int argc, char* argv[]) {
     findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
     findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
-    bool success = downloadJsonFile(eodUrl,outputFolder,outputFileName,verbose);
+    bool success = 
+      downloadJsonFile(eodUrl,outputFolder,outputFileName,RETRY_ATTEMPTS,verbose);
+
     if(verbose && success == true){
       std::cout << '\t' << outputFileName << std::endl;
     }    
