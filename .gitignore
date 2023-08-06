@@ -2,5 +2,6 @@
 *.png
 *.svg
 *.log
+data/STU_test/*
 build/*
 !build/.gitkeep
