@@ -46,6 +46,10 @@ ADD_EXECUTABLE(
 ADD_EXECUTABLE(
   scan
   src/scan.cc)
+  
+ADD_EXECUTABLE(
+  generatePatch
+  src/generatePatch.cc)  
 
 TARGET_LINK_LIBRARIES(sandbox
   ${CURL_LIBRARIES}
