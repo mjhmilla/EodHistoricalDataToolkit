@@ -17,14 +17,6 @@
 
 unsigned int COLUMN_WIDTH = 30;
 
-struct primaryTickerPatchData {
-  std::string currency;
-  std::vector< std::string > exchanges;
-  std::vector< std::string > tickersInError;
-  std::vector< bool > patchFound;
-};
-
-
 void trim(std::string& str,
           const std::string& whitespace)
 {
@@ -36,54 +28,151 @@ void trim(std::string& str,
     }
 
 }
-// Function to find Levenshtein distance between string `X` and `Y`.
-// `m` and `n` is the total number of characters in `X` and `Y`, respectively
-// This source code comes from:
-//    https://www.techiedelight.com/levenshtein-distance-edit-distance-problem/
-// which was described in
-//    https://en.wikipedia.org/wiki/Levenshtein_distance
-unsigned int calcLevenshteinDistance(std::string& x, std::string& y)
-{
-    unsigned int m = x.length();
-    unsigned int n = y.length();  
 
-    // For all pairs of `i` and `j`, `T[i, j]` will hold the Levenshtein distance
-    // between the first `i` characters of `X` and the first `j` characters of `Y`.
-    // Note that `T` holds `(m+1)×(n+1)` values.
-    int T[m + 1][n + 1];
- 
-    // initialize `T` by all 0's
-    std::memset(T, 0, sizeof(T));
- 
-    // we can transform source prefixes into an empty string by
-    // dropping all characters 
-    for (int i = 1; i <= m; ++i){
-        T[i][0] = i;                // (case 1)
-    }
- 
-    // we can reach target prefixes from empty source prefix
-    // by inserting every character 
-    for (int j = 1; j <= n; ++j){
-        T[0][j] = j;                // (case 1)
-    }
- 
-    int substitutionCost;
- 
-    // fill the lookup table in a bottom-up manner
-    for (int i = 1; i <= m; ++i){
-        for (int j = 1; j <= n; ++j){
-            if (x[i - 1] == y[j - 1]) {                 // (case 2)
-                substitutionCost = 0;                   // (case 2)
-            } else{
-                substitutionCost = 1;                   // (case 3c)
-            }
-            T[i][j] = std::min(std::min(T[i - 1][j] + 1,      // deletion (case 3b)
-                                        T[i][j - 1] + 1),     // insertion (case 3a)
-                      T[i - 1][j - 1] + substitutionCost);    // replace (case 2 & 3c)
+struct primaryTickerPatchData {
+  std::string currency;
+  std::vector< std::string > exchanges;
+  std::vector< std::string > tickersInError;
+  std::vector< bool > patchFound;
+};
+
+struct TextSimilarity{
+  double score=0;
+  bool firstWordsMatch;
+  bool allWordsFound;
+  bool exactMatch;
+};
+
+struct WordData{
+  std::string raw;
+  std::string lowercase;
+  std::vector<std::string> words;
+  double alphaLength;
+  WordData(std::string& str){
+    raw=str;
+    lowercase=str;
+    std::transform( lowercase.begin(),
+                lowercase.end(),
+                lowercase.begin(),
+                [](unsigned char c){return std::tolower(c);});
+
+    //Remove extra additions that are not a part of any company name
+    //Remove text between pairs of ( ) and - -
+    lowercase = std::regex_replace(lowercase, 
+                            std::regex("-.*-.*\\(.*\\)"), "");
+    //Remove non-alphanumeric characters                                                
+    lowercase = std::regex_replace(lowercase, 
+                            std::regex("[^a-zA-Z\\d\\s:]"), "");
+    //Trim leading and following whitespace
+    trim(lowercase," ");        
+
+    //Break the company name into an std::vector of words
+    boost::split(words, lowercase, boost::is_any_of(" "), 
+                boost::token_compress_on);
+    alphaLength= std::count_if(
+                    lowercase.begin(),
+                    lowercase.end(),
+                    [](unsigned char c){
+                        return std::isalpha(c);});
+
+  };
+};
+
+
+
+struct TextData{
+  std::string raw;
+  std::string lowercase;
+  std::vector<std::string> words;
+  double alphaLength;
+  TextData(std::string& str){
+    raw=str;
+    lowercase=str;
+    std::transform( lowercase.begin(),
+                lowercase.end(),
+                lowercase.begin(),
+                [](unsigned char c){return std::tolower(c);});
+    alphaLength= std::count_if(
+                    lowercase.begin(),
+                    lowercase.end(),
+                    [](unsigned char c){
+                        return std::isalpha(c);});
+
+  }
+};
+
+void evaluateSimilarity(WordData &textA,
+                        TextData &textB,
+                        TextSimilarity &result){
+
+  double scoreA=0.;
+  double scoreB=0.;                          
+
+  //Evaluate the similarity score
+  if(textA.raw.compare(textB.raw)==0){
+    scoreA = 1.0;
+    scoreB = 1.0;
+    result.exactMatch=true;
+    
+  }else if(textB.raw.find(textA.raw) != std::string::npos){
+    result.allWordsFound = true;
+    scoreA = ( textA.alphaLength / textA.alphaLength );
+    scoreB = ( textA.alphaLength / textB.alphaLength );  
+
+  }else if(textA.raw.find(textB.raw) != std::string::npos){
+    result.allWordsFound = true;
+    scoreA = ( textB.alphaLength / textA.alphaLength );
+    scoreB = ( textB.alphaLength / textB.alphaLength );  
+
+  }else{
+
+    size_t pos =0;
+    size_t loc = 0;
+    unsigned int lengthOfMatchingWords=0;            
+    result.allWordsFound = true;
+
+    for(unsigned int i=0; i < textA.words.size();++i){
+      pos = 0;
+      bool wordValid = false;
+      while(loc != std::string::npos && wordValid==false){
+
+        loc = textB.lowercase.find(textA.words[i],pos);                
+        pos += loc + textA.words[i].length();
+
+        if(loc != std::string::npos){
+          char prev = ' ';
+          if(i>0){
+            prev = textB.lowercase[loc-1];
+          }
+          char next = ' ';
+          if(loc+textA.words[i].length()<textB.lowercase.length()){
+              next = textB.lowercase[loc+textA.words[i].length()];
+          }                  
+          if( !std::isalpha(prev) && !std::isalpha(next)){
+            wordValid=true;
+          }
         }
+      }
+      if(!wordValid){
+        result.allWordsFound=false;
+      }
+      if(wordValid){                
+        double wordLength = textA.words[i].length();
+        scoreA+= ( wordLength / textA.alphaLength );
+        scoreB+= ( wordLength / textB.alphaLength );
+        if(i==0 && loc == 0){
+          result.firstWordsMatch=true;
+        }
+      }              
     }
-    return T[m][n];
+    
+  }
+
+  result.score = std::min(scoreA,scoreB);
+  
 }
+
+
 
 int main (int argc, char* argv[]) {
 
@@ -221,7 +310,7 @@ int main (int argc, char* argv[]) {
   for(auto& i : scanResults){
 
     if(i["MissingPrimaryTicker"].get<bool>()){
-
+     
       json patchEntry = 
         json::object( 
             { 
@@ -234,11 +323,9 @@ int main (int argc, char* argv[]) {
               {"PatchName",""},
               {"PatchNameSimilarityScore",0.},
               {"PatchNameExactMatch",false},
-              {"PatchNameFirstWordsMatch",false},
-              {"PatchNameLengthAcceptable",true},
-              {"PatchSecondCandidateName",""},
-              {"PatchSecondCandidateCode",""},
-              {"PatchSecondCandidateScore",0},
+              {"PatchNameClosest",""},
+              {"PatchCodeClosest",""},
+              {"PatchNameSimilarityScoreClosest",0},
             }
           );
 
@@ -256,7 +343,7 @@ int main (int argc, char* argv[]) {
           std::string code;
           FinancialAnalysisToolkit::getJsonString(i["Code"],code);            
           j.tickersInError.push_back(code);
-          j.patchFound.push_back(false);
+          j.patchFound.push_back(false);          
         }
       }
 
@@ -286,10 +373,21 @@ int main (int argc, char* argv[]) {
     }
   }
 
+  unsigned int numElementsToProcess=0;
+  for(auto& j : primaryTickerPatchDataVector){
+    numElementsToProcess += j.tickersInError.size()*j.exchanges.size();
+  }
+
+
   //The data in primaryTickerPatchDataVector has been organized so that
   //the file for a specific exchange only needs to be opened once to 
   //reduce the run time.
+  if(verbose){
+    std::cout << "Processing "  << std::endl;
+  }
+  unsigned int tickerCount = 0;
   for (auto& itPatchData : primaryTickerPatchDataVector){
+
     for (auto& itExc : itPatchData.exchanges ){
       //load the exchange-symbol-list
       std::string exchangeSymbolListPath = exchangeSymbolListFolder;
@@ -303,128 +401,63 @@ int main (int argc, char* argv[]) {
             indexTicker<itPatchData.tickersInError.size();  ++indexTicker){
 
         //Get the company name
-        std::string nameARaw,nameA;
+        ++tickerCount;
+        if(verbose){
+          std::string code=itPatchData.tickersInError[indexTicker];
+          std::cout << tickerCount << '\t' <<"/" << numElementsToProcess << std::endl;
+          std::cout << '\t' << scanResults[code]["Code"].get<std::string>() 
+                    << std::endl;
+          std::cout << '\t' << scanResults[code]["Name"].get<std::string>() 
+                    << std::endl;
+          std::cout << std::endl;
+        }        
+
+        std::string nameARaw;
         std::string tickerName = itPatchData.tickersInError[indexTicker];
         FinancialAnalysisToolkit::
           getJsonString(scanResults[tickerName]["Name"],nameARaw);
-        nameA=nameARaw;
 
-        //Remove extra additions that are not a part of any company name
-        //Remove text between pairs of ( ) and - -
-        nameA = std::regex_replace(nameA, 
-                                                std::regex("-.*-.*\\(.*\\)"), "");
-        //Remove non-alphanumeric characters                                                
-        nameA = std::regex_replace(nameA, 
-                                                std::regex("[^a-zA-Z\\d\\s:]"), "");
-        //Trim leading and following whitespace
-        trim(nameA," ");
+        WordData textA(nameARaw);
 
-        //Break the company name into an std::vector of words
-        std::vector<std::string> wordsA;
-        boost::split(wordsA, nameA, boost::is_any_of(" "), 
-                    boost::token_compress_on);
-
-        //Convert it all to lower case
-        std::transform(wordsA.begin(), wordsA.end(), wordsA.begin(),
-            [](std::string &stringA)
-            {
-                std::transform(stringA.begin(), stringA.end(), stringA.begin(),
-                    [](unsigned char c) { return std::tolower(c); });
-                return stringA;
-            });
-
-        //Get the length of the sum of strings in wordsA
-        unsigned int wordsALength = 
-            std::accumulate(wordsA.begin(), wordsA.end(), 0,
-                            [](unsigned int sum, const std::string& elem) {
-                                return sum + elem.size();
-                            });
 
         //Calculate the minimum acceptable score
-        double minMatchingWordFraction=0.5;                            
-
-        unsigned int maxLength = wordsALength + (wordsA.size()-1);
-        maxLength = maxLength*2;
-
-        unsigned int minScore = 
-          (double)(minMatchingWordFraction*((double)wordsALength));
-
-        if(minScore < 3){
-          minScore = 3;
-        }
+        double minMatchingWordFraction=0.3;                            
 
         bool candidateFound = false;
-        unsigned int score  = 0;
-        double bestScore    = patchResults[tickerName]["PatchNameSimilarityScore"];
+        double bestScore    = 
+          patchResults[tickerName]["PatchNameSimilarityScore"].get<double>();
 
         std::string bestName;
         std::string bestCode;
-        std::string nameB,nameBRaw;
-
-        unsigned int smallWord = 3;
 
         for(auto& itSym : exchangeSymbolList){
-          bool exactMatch=false;
+
+  
+          std::string nameBRaw;
           FinancialAnalysisToolkit::getJsonString(itSym["Name"],nameBRaw);
-          nameB=nameBRaw;
-          //convert to lower case
-          std::transform(nameB.begin(),nameB.end(),nameB.begin(),
-            [](unsigned char c){return std::tolower(c);});
+          TextData textB(nameBRaw);
 
-          bool firstWordsMatch = false;
-          bool lengthAcceptable= (nameB.length() < maxLength) ? true:false;
-
-          //Evaluate the similarity score
-          if(nameARaw.compare(nameBRaw)==0){
-            score = nameA.size();
-            exactMatch=true;
-          }else{
-            if(nameARaw.compare("Beyond Meat Inc")==0 &&
-               nameBRaw.find("Beyond Minerals Inc") != std::string::npos ){
-                bool here=true;
-               }
-
-            score=0;
-            size_t pos =0;
-            size_t loc = 0;
-            unsigned int lengthOfMatchingWords=0;            
-
-            for(unsigned int i=0; i < wordsA.size();++i){
-
-              loc = nameB.find(wordsA[i],pos);
-
-              if(loc != std::string::npos){
-
-                char prev = ' ';
-                if(i>0){
-                  prev = nameB[loc-1];
-                }
-                char next = ' ';
-                if(loc+wordsA[i].length()<nameB.length()){
-                    next = nameB[loc+wordsA[i].length()];
-                }
-
-                bool wordValid = false;
-                if( !std::isalpha(prev) && !std::isalpha(next)){
-                  wordValid=true;
-                }
-
-                if(wordValid){
-                  pos += loc + wordsA[i].length();
-                  score+=wordsA[i].length();
-                  if(i==0 && loc == 0){
-                    firstWordsMatch=true;
-                  }
-                }
+          if(nameARaw.find("Osisko") != std::string::npos &&
+              nameBRaw.find("Osisko") != std::string::npos ){
+              bool here=true;
               }
-            }
-          }
+
+          TextSimilarity simAB;
+
+          simAB.score=0;
+          simAB.firstWordsMatch=false;
+          simAB.allWordsFound=false;
+          simAB.exactMatch=false;
+
+          evaluateSimilarity(textA,textB,simAB);
 
 
 
-          if((score > bestScore && score > minScore 
-              && firstWordsMatch && lengthAcceptable) || exactMatch){// && score > minScoreA && score > minScoreB ){
-            bestScore=score;
+          if( ( simAB.score > bestScore &&
+                simAB.score > minMatchingWordFraction)  ||
+              ( simAB.exactMatch || simAB.allWordsFound)) {
+
+            bestScore=simAB.score;
             candidateFound=true;
             FinancialAnalysisToolkit::
               getJsonString(itSym["Name"],bestName);            
@@ -432,21 +465,20 @@ int main (int argc, char* argv[]) {
               getJsonString(itSym["Code"],bestCode);
               bestCode.append(".");
               bestCode.append(itExc);
+
               patchResults[tickerName]["PatchFound"] = true;
               patchResults[tickerName]["PatchPrimaryTicker"] = bestCode;
               patchResults[tickerName]["PatchName"]=bestName;
               patchResults[tickerName]["PatchNameSimilarityScore"] = bestScore;
-              patchResults[tickerName]["PatchNameFirstWordsMatch"]=true;
-              patchResults[tickerName]["PatchNameLengthAcceptable"]=true;
 
               itPatchData.patchFound[indexTicker]=true;
 
-            if(exactMatch){
+            if(simAB.exactMatch){
               patchResults[tickerName]["PatchNameExactMatch"]=true;
               break;
             }
-          }else if( score > 
-            patchResults[tickerName]["PatchSecondCandidateScore"].get<unsigned int>()){
+          }else if( simAB.score > 
+            patchResults[tickerName]["PatchNameSimilarityScoreClosest"].get<double>()){
             std::string secondCode,secondName;
             FinancialAnalysisToolkit::
               getJsonString(itSym["Name"],secondName);            
@@ -456,9 +488,10 @@ int main (int argc, char* argv[]) {
             secondCode.append(itExc);
 
 
-            patchResults[tickerName]["PatchSecondCandidateName"]=secondName;
-            patchResults[tickerName]["PatchSecondCandidateCode"]=secondCode;
-            patchResults[tickerName]["PatchSecondCandidateScore"]=score;
+            patchResults[tickerName]["PatchNameClosest"]=secondName;
+            patchResults[tickerName]["PatchCodeClosest"]=secondCode;
+            patchResults[tickerName]["PatchNameSimilarityScoreClosest"] 
+              = simAB.score;
           } 
         }
 
@@ -466,70 +499,161 @@ int main (int argc, char* argv[]) {
 
     }
   }
+
+  //Split patchResults into:
+  // patch.json            : exact match
+  // patch.candidate.json  : not exact, but met the conditions
+  // patch.missing.json    : did not meet conditions
+
+json patchExactList;
+json patchCandidateList;
+json patchMissingList;
+
+for(auto& it : patchResults){
+  bool patchFound = it["PatchFound"].get<bool>();
+  bool patchExact = it["PatchNameExactMatch"].get<bool>();
+  std::string code;
+  FinancialAnalysisToolkit::getJsonString(it["Code"],code);        
+
+  if(patchExact){
+    json patchExactEntry = 
+      json::object( 
+          { 
+            {"Code", it["Code"].get<std::string>()},
+            {"Name", it["Name"].get<std::string>()},
+            {"Exchange", it["Exchange"].get<std::string>()},
+            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
+            {"PatchName",it["PatchName"]},
+          }
+        );
+    patchExactList[code]=patchExactEntry;  
+  }
+   
+  if(!patchExact && patchFound){
+    json patchCandidateEntry = 
+      json::object( 
+          { 
+            {"Code", it["Code"].get<std::string>()},
+            {"Name", it["Name"].get<std::string>()},
+            {"Exchange", it["Exchange"].get<std::string>()},
+            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
+            {"PatchName",it["PatchName"]},
+            {"PatchNameSimilarityScore", it["PatchNameSimilarityScore"].get<double>()},
+          }
+        );
+    patchCandidateList[code]=patchCandidateEntry;  
+
+  }
+
+  if(!patchExact && !patchFound){
+    json patchMissingEntry = 
+      json::object( 
+          { 
+            {"Code", it["Code"].get<std::string>()},
+            {"Name", it["Name"].get<std::string>()},
+            {"Exchange", it["Exchange"].get<std::string>()},
+            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
+            {"PatchNameClosest",it["PatchNameClosest"]},
+            {"PatchNameSimilarityScoreClosest", 
+              it["PatchNameSimilarityScoreClosest"].get<double>()},
+          }
+        );
+    patchMissingList[code]=patchMissingEntry;  
+  }
+
+
+
+  }
+
   //Report on the items that were patched and not.
   if(verbose){
-    std::cout << std::endl;
-    
+    std::cout << std::endl;    
     std::cout << "Patches found for : " << std::endl;
-    unsigned int  countPatches = 0;
-    for(auto& itData : primaryTickerPatchDataVector){
-      for(unsigned int i=0; i<itData.patchFound.size();++i){
-        if(itData.patchFound[i]==true){
-          std::string nameA("");
-          FinancialAnalysisToolkit::
-            getJsonString(scanResults[itData.tickersInError[i]]["Name"],
-                          nameA);
-          ++countPatches;
-          std::cout << countPatches 
-              << ".  " << itData.tickersInError[i] << std::endl
-              << "  " << patchResults[itData.tickersInError[i]]["PatchNameSimilarityScore"].get<unsigned int>() 
-              << "/" << nameA.size() << std::endl
-              << "  " << nameA << std::endl
-              << "  " << patchResults[itData.tickersInError[i]]
-                                     ["PatchName"].get<std::string>() 
-              << std::endl;
-        }
-      }
+    std::cout << std::endl;
+
+    unsigned int count = 1;
+    for(auto& it : patchExactList){
+      std::cout << count << "." << '\t' 
+                << it["Code"].get<std::string>() << '\t' << '\t'   
+                << it["Name"].get<std::string>() << std::endl
+                << '\t' << it["PrimaryTicker"].get<std::string>() 
+        << '\t' << '\t' << it["PatchName"].get<std::string>() << std::endl;
+      std::cout << std::endl;
+
+      ++count;
     }
-    std::cout << std::endl << std::endl;
-    std::cout << "Patches could not be found for : " << std::endl;
-    unsigned int  countMissingPatches = 0;
-    for(auto& itData : primaryTickerPatchDataVector){
-      for(unsigned int i=0; i<itData.patchFound.size();++i){
-        if(itData.patchFound[i]==false){
-          std::string nameA("");
-          FinancialAnalysisToolkit::
-            getJsonString(scanResults[itData.tickersInError[i]]["Name"],
-                          nameA);
-          ++countMissingPatches;
-          std::cout << countMissingPatches 
-              << ".  " << itData.tickersInError[i] << std::endl
-              << "  " << nameA  << std::endl;
-          std::cout << "  " << itData.currency << ": ";
-          for(unsigned int j=0; j<itData.exchanges.size();++j){
-            std::cout << itData.exchanges[j] << " " ;
-          }
-          std::cout << std::endl;
-        }
-      }
+
+    std::cout << std::endl;    
+    std::cout << "Patch candidates found for : " << std::endl;
+    std::cout << std::endl;
+
+    count =1;
+    for(auto& it : patchCandidateList){
+      std::cout << count << "." << '\t' 
+                << it["Code"].get<std::string>() << '\t' 
+                << it["PrimaryTicker"].get<std::string>() << std::endl
+                << '\t' << it["Name"].get<std::string>() << std::endl                
+                << '\t' << it["PatchName"].get<std::string>() << std::endl;
+
+      std::cout << '\t' << it["PatchNameSimilarityScore"].get<double>() 
+                << std::endl << std::endl;
+      ++count;
     }
+
+
+    std::cout << std::endl;    
+    std::cout << "Patch missing for : " << std::endl;
+    std::cout << std::endl;
+
+    count =1;
+    for(auto& it : patchMissingList){
+      std::cout << count << "." << '\t' 
+                << it["Code"].get<std::string>() << std::endl  
+                << '\t' << it["Name"].get<std::string>() << std::endl
+                << '\t' << it["PatchNameClosest"].get<std::string>() << std::endl
+                << '\t' << it["PatchNameSimilarityScoreClosest"].get<double>();                 
+      std::cout << std::endl;
+      std::cout << std::endl;
+      ++count;
+    }
+
   }
     
 
 
-
+  //Output the list of exact patches
   std::string outputFilePath(outputFolder);
   std::string outputFileName(exchangeCode);
-  outputFileName.append(".patch");
-  outputFileName.append(".json");
-  
-  //Update the extension 
+  outputFileName.append(".patch.json");
   outputFilePath.append(outputFileName);
 
   std::ofstream outputFileStream(outputFilePath,
       std::ios_base::trunc | std::ios_base::out);
-  outputFileStream << patchResults;
+  outputFileStream << patchExactList;
   outputFileStream.close();
+
+  //Output the list of candidate patches
+  outputFilePath = outputFolder;
+  outputFileName = exchangeCode;
+  outputFileName.append(".patch.candidate.json");
+  outputFilePath.append(outputFileName);
+
+  outputFileStream.open(outputFilePath,
+      std::ios_base::trunc | std::ios_base::out);
+  outputFileStream << patchCandidateList;
+  outputFileStream.close();
+
+  //Output the list of missing patches
+  outputFilePath = outputFolder;
+  outputFileName = exchangeCode;
+  outputFileName.append(".patch.missing.json");
+  outputFilePath.append(outputFileName);
+
+  outputFileStream.open(outputFilePath,
+      std::ios_base::trunc | std::ios_base::out);
+  outputFileStream << patchMissingList;
+  outputFileStream.close();
+
 
   std::cout << "success" << std::endl;
 
