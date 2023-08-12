@@ -8,144 +8,14 @@
 #include <curl/curl.h>
 
 #include "FinancialAnalysisToolkit.h"
-
-unsigned int COLUMN_WIDTH = 30;
-unsigned int CURL_TIMEOUT_TIME_SECONDS = 20;
-unsigned int DOWNLOAD_ATTEMPTS=2;
+#include "JsonFunctions.h"
+#include "CurlToolkit.h"
 
 unsigned int MODE_FETCH_SINGLE_FILE               = 0;
 unsigned int MODE_FETCH_MULTIPLE_TICKER_FILES     = 1;
 unsigned int MODE_FETCH_MULTIPLE_EXCHANGE_FILES   = 2;
 
 
-namespace
-{
-  std::size_t callback(
-    const char* in,
-    std::size_t size,
-    std::size_t num,
-    std::string* out)
-  {
-    const std::size_t totalBytes(size * num);
-    out->append(in, totalBytes);
-    return totalBytes;
-  }
-}
-
-
-void removeFromString(std::string& str,
-               const std::string& removeStr)
-{
-  std::string::size_type pos = 0u;
-  pos = str.find(removeStr, pos);
-  while(pos != std::string::npos){
-     str.erase(pos, removeStr.length());
-     pos += removeStr.length();
-     pos = str.find(removeStr, pos);
-  }
-}
-
-void findAndReplaceString(std::string& str,
-               const std::string& findStr,
-               const std::string& replaceStr)
-{
-  std::string::size_type pos = 0u;
-  pos = str.find(findStr, pos);
-  while(pos != std::string::npos){
-     str.replace(pos, findStr.length(),replaceStr);
-     pos += replaceStr.length();
-     pos = str.find(findStr, pos);
-  }
-}
-
-bool downloadJsonFile(std::string &eodUrl, 
-                std::string &outputFolder, 
-                std::string &outputFileName, 
-                bool verbose){
-
-    bool success = false;
-    unsigned int downloadAttempts=0;
-
-    while(downloadAttempts < DOWNLOAD_ATTEMPTS && success == false){
-
-      if(verbose){
-        std::cout << std::endl;
-        std::cout << "    Contacting" << std::endl;
-        std::cout << "    " << eodUrl << std::endl;
-      }
-
-      CURL* curl = curl_easy_init();
-
-      // Set remote URL.
-      curl_easy_setopt(curl, CURLOPT_URL, eodUrl.c_str());
-
-      // Don't bother trying IPv6, which would increase DNS resolution time.
-      curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-
-      // Don't wait forever, time out after 20 seconds.
-      curl_easy_setopt(curl, CURLOPT_TIMEOUT, CURL_TIMEOUT_TIME_SECONDS);
-
-      // Follow HTTP redirects if necessary.
-      curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-
-      // Response information.
-      long httpCode(0);
-      std::unique_ptr<std::string> httpData(new std::string());
-
-      // Hook up data handling function.
-      curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
-
-      // Hook up data container (will be passed as the last parameter to the
-      // callback handling function).  Can be any pointer type, since it will
-      // internally be passed as a void pointer.
-      curl_easy_setopt(curl, CURLOPT_WRITEDATA, httpData.get());
-
-      // Run our HTTP GET command, capture the HTTP response code, and clean up.
-      unsigned int retryAttemptCount = 0;
-
-      curl_easy_perform(curl);
-      curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-      curl_easy_cleanup(curl);
-
-      if(verbose){
-        std::cout << "    http response code" << std::endl;
-        std::cout << "    " << httpCode << std::endl;
-      }
-
-      if (httpCode == 200)
-      {
-        success=true;
-        //read out all of the json keys
-        using json = nlohmann::ordered_json;
-        //std::ifstream f("../json/AAPL.US.json");
-        json jsonData = json::parse(*httpData.get());
-
-
-        std::stringstream ss;
-        ss << outputFolder << outputFileName;
-        std::string outputFilePathName = ss.str();
-        std::string removeStr("\"");
-        removeFromString(outputFilePathName,removeStr);    
-
-        //Write the file
-        std::ofstream file(outputFilePathName);
-        file << jsonData;
-        file.close();
-        if(verbose){    
-          std::cout << "    Wrote json to" << std::endl;
-          std::cout << "    " << outputFileName << std::endl;
-        }
-
-      }else{
-        success=false;
-      }
-
-      ++downloadAttempts;
-    }
-
-    return success;
-
-}
 
 
 int main (int argc, char* argv[]) {
@@ -348,17 +218,17 @@ int main (int argc, char* argv[]) {
   if(mode == MODE_FETCH_SINGLE_FILE){
 
     std::string eodUrl = eodUrlTemplate;
-    findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-    findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
+    StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+    StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
     bool success = 
-      downloadJsonFile(eodUrl,outputFolder,outputFileName,verbose);
+      CurlToolkit::downloadJsonFile(eodUrl,outputFolder,outputFileName,verbose);
 
     if(verbose && success == true){
       std::cout << '\t' << outputFileName << std::endl;
     }    
     if( success == false){
-      std::cerr << "Error: downloadJsonFile failed to get" << std::endl;
+      std::cerr << "Error: CurlToolkit::downloadJsonFile failed to get" << std::endl;
       std::cerr << '\t' << eodUrl << std::endl;
       std::cerr << '\t' << outputFileName << std::endl;
     }
@@ -391,9 +261,9 @@ int main (int argc, char* argv[]) {
       if(processEntry){
         std::string eodUrl = eodUrlTemplate;
         std::string ticker = it["Code"];
-        findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-        findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
-        findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
+        StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+        StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
+        StringToolkit::findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
 
         std::string fileName = ticker;
         fileName.append(".");
@@ -414,7 +284,7 @@ int main (int argc, char* argv[]) {
                                  || gapFillPartialDownload == false){ 
                                   
           successTickerDownload = 
-            downloadJsonFile(eodUrl,outputFolder,fileName,false);
+            CurlToolkit::downloadJsonFile(eodUrl,outputFolder,fileName,false);
 
           if(successTickerDownload == false){
             std::cout << count << "." 
@@ -431,7 +301,7 @@ int main (int argc, char* argv[]) {
         if( (fileExists == true && gapFillPartialDownload == true) 
            || successTickerDownload==true){
           std::string primaryEodTickerName("");
-          FinancialAnalysisToolkit::getPrimaryTickerName(outputFolder, 
+          JsonFunctions::getPrimaryTickerName(outputFolder, 
                                         fileName, primaryEodTickerName);
 
           //If this is not the primary ticker, then we need to download the 
@@ -447,9 +317,9 @@ int main (int argc, char* argv[]) {
             std::string exchangeCodePrimary =
               primaryEodTickerName.substr(idx+1,primaryEodTickerName.length()-1);
 
-            findAndReplaceString(eodUrlPrimary,"{YOUR_API_TOKEN}",apiKey);  
-            findAndReplaceString(eodUrlPrimary,"{EXCHANGE_CODE}",exchangeCodePrimary);
-            findAndReplaceString(eodUrlPrimary,"{TICKER_CODE}",tickerPrimary);
+            StringToolkit::findAndReplaceString(eodUrlPrimary,"{YOUR_API_TOKEN}",apiKey);  
+            StringToolkit::findAndReplaceString(eodUrlPrimary,"{EXCHANGE_CODE}",exchangeCodePrimary);
+            StringToolkit::findAndReplaceString(eodUrlPrimary,"{TICKER_CODE}",tickerPrimary);
 
             std::string fileNamePrimary = primaryEodTickerName; //This will include the exchange code
             fileNamePrimary.append(".json");
@@ -466,12 +336,12 @@ int main (int argc, char* argv[]) {
             if((filePrimaryExists==false && gapFillPartialDownload==true) 
                 || gapFillPartialDownload == false){           
               bool successPrimaryDownload = 
-                downloadJsonFile(eodUrlPrimary,outputFolder,fileNamePrimary,
+                CurlToolkit::downloadJsonFile(eodUrlPrimary,outputFolder,fileNamePrimary,
                                  false);  
                  
 
               if( successPrimaryDownload == false ){
-                std::cerr << "Error: downloadJsonFile: " << std::endl;
+                std::cerr << "Error: CurlToolkit::downloadJsonFile: " << std::endl;
                 std::cerr << '\t' << fileNamePrimary << std::endl;
                 std::cerr << '\t' << eodUrlPrimary << std::endl;
               }                          
@@ -513,8 +383,8 @@ int main (int argc, char* argv[]) {
       if(processEntry){
         std::string eodUrl = eodUrlTemplate;
         std::string exchangeCode = it["Code"];
-        findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-        findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
+        StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+        StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
         std::string fileName = exchangeCode;
         fileName.append(".json");
@@ -533,7 +403,7 @@ int main (int argc, char* argv[]) {
                                  || gapFillPartialDownload == false){ 
                                   
           successTickerDownload = 
-            downloadJsonFile(eodUrl,outputFolder,fileName,false);
+            CurlToolkit::downloadJsonFile(eodUrl,outputFolder,fileName,false);
 
           if(successTickerDownload == false){
             std::cout << count << "." 

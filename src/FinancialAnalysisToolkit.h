@@ -1,7 +1,11 @@
+#ifndef FINANCIAL_ANALYSIS_TOOLKIT
+#define FINANCIAL_ANALYSIS_TOOLKIT
 
 #include <string>
-#include <nlohmann/json.hpp>
 #include <stdlib.h>
+
+#include <nlohmann/json.hpp>
+#include "JsonFunctions.h"
 
 
 const char *GEN = "General";
@@ -17,68 +21,6 @@ const char *Q = "quarterly";
 class FinancialAnalysisToolkit {
 
   public:
-/*
-    static void getJsonString(nlohmann::ordered_json &jsonEntry,
-                              std::string &updString){
-      if(  jsonEntry.is_null()){
-        updString="";
-      }else{
-        if(  jsonEntry.is_number_float()){
-          double value = jsonEntry.get<double>();
-          updString = std::to_string(value);
-        }else if (jsonEntry.is_string()){
-          updString = jsonEntry.get<std::string>();
-        }else{
-          throw std::invalid_argument("json entry is not a float or string");      
-        }
-      }
-    };
-*/
-    static double getJsonFloat(nlohmann::ordered_json &jsonEntry){
-      if(  jsonEntry.is_null()){
-        return std::nan("1");
-      }else{
-        if(  jsonEntry.is_number_float()){
-          return jsonEntry.get<double>();
-        }else if (jsonEntry.is_string()){
-          return std::atof(jsonEntry.get<std::string>().c_str());
-        }else{
-          throw std::invalid_argument("json entry is not a float or string");      
-        }
-      }
-    };
-
-    static void getJsonString(nlohmann::ordered_json &jsonEntry,
-                              std::string &updString){
-      if( jsonEntry.is_null()){
-        updString="";
-      }else{
-        updString=jsonEntry.get<std::string>();
-      }                            
-    };
-
-    static void getPrimaryTickerName(std::string &folder, 
-                              std::string &fileName, 
-                              std::string &updPrimaryTickerName){
-
-      //Create the path and file name                          
-      std::stringstream ss;
-      ss << folder << fileName;
-      std::string filePathName = ss.str();
-      
-      using json = nlohmann::ordered_json;
-      std::ifstream jsonFileStream(filePathName.c_str());
-      json jsonData = json::parse(jsonFileStream);  
-
-      if( jsonData.contains("General") ){
-        if(jsonData["General"].contains("PrimaryTicker")){
-          if(jsonData["General"]["PrimaryTicker"].is_null() == false){
-            updPrimaryTickerName = 
-              jsonData["General"]["PrimaryTicker"].get<std::string>();
-          }
-        }
-      }
-    };
 
 
     static double calcReturnOnCapitalDeployed( nlohmann::ordered_json &jsonData, 
@@ -87,15 +29,15 @@ class FinancialAnalysisToolkit {
       // Return On Capital Deployed
       //  Source: https://www.investopedia.com/terms/r/roce.asp
       double longTermDebt = 
-        getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["longTermDebt"]);       
 
       double totalShareholderEquity = 
-        getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["totalStockholderEquity"]);
 
       double  ebit = 
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["operatingIncome"]);
 
       //There are two definitions for capital depoloyed, and they should
@@ -113,21 +55,21 @@ class FinancialAnalysisToolkit {
       // Return On Invested Capital
       //  Source: https://www.investopedia.com/terms/r/returnoninvestmentcapital.asp
       double longTermDebt = 
-        getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["longTermDebt"]);       
 
       double totalShareholderEquity = 
-        getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["totalStockholderEquity"]);
 
       double  netIncome = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["netIncome"]);
 
       //Interesting fact: dividends paid can be negative. This would have
       //the effect of increasing the ROIC for a misleading reason.
       double  dividendsPaid = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["dividendsPaid"]);
       
       //Some companies don't pay dividends: if this field does not appear as
@@ -150,11 +92,11 @@ class FinancialAnalysisToolkit {
                                      const char *timeUnit){
 
       double  netIncome = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["netIncome"]);
 
       double totalAssets = 
-        getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["totalAssets"]);
 
       //There are two definitions for capital depoloyed, and they should
@@ -175,10 +117,10 @@ class FinancialAnalysisToolkit {
                                      const char *timeUnit){
       
       double totalRevenue =
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["totalRevenue"]);
       double costOfRevenue = 
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["costOfRevenue"]);
 
       return (totalRevenue-costOfRevenue)/totalRevenue;
@@ -192,10 +134,10 @@ class FinancialAnalysisToolkit {
                                      std::string &date,
                                      const char *timeUnit){
       double  operatingIncome = 
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["operatingIncome"]);      
       double totalRevenue =
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["totalRevenue"]);
 
       return operatingIncome/totalRevenue;
@@ -269,19 +211,19 @@ class FinancialAnalysisToolkit {
         actually show up in a quaterly or yearly report.
       */
       double  freeCashFlow = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["freeCashFlow"]);
 
       double totalCashFromOperatingActivities = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["totalCashFromOperatingActivities"]);
 
       double netIncome = 
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["netIncome"]);
 
       double capitalExpenditures = 
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["capitalExpenditures"]);
 
       double freeCashFlowCalc = 
@@ -311,13 +253,13 @@ class FinancialAnalysisToolkit {
                                     const char *timeUnit){
 
       double shortTermDebt = 
-              getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+              JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["shortTermDebt"]);
       double longTermDebt = 
-              getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+              JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["longTermDebt"]);      
       double shareHoldersEquity = 
-              getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+              JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["totalStockholderEquity"]);
 
       double debtToCapitalization=(shortTermDebt+longTermDebt)
@@ -333,10 +275,10 @@ class FinancialAnalysisToolkit {
                                     std::string &date,
                                     const char *timeUnit){
       double  ebit = 
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["operatingIncome"]);
       double interestExpense = 
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["interestExpense"]);
 
       double interestCover=ebit/interestExpense;
@@ -385,19 +327,19 @@ class FinancialAnalysisToolkit {
       
       //Investopedia definition
       double totalCashFromOperatingActivities = 
-      getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+      JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                     ["totalCashFromOperatingActivities"]);
 
       double capitalExpenditures = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["capitalExpenditures"]);
 
       double totalCashFromFinancingActivities = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["totalCashFromFinancingActivities"]);
 
       double salePurchaseOfStock = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["salePurchaseOfStock"]);
 
 
@@ -413,13 +355,13 @@ class FinancialAnalysisToolkit {
 
       //Damodaran definition      
       //double  netIncome = 
-      //  getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+      //  JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
       //                ["netIncome"]);
       //double depreciation =                                            
-      // getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+      // JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
       //                ["depreciation"]);
       //double otherNonCashItems = 
-      //  getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+      //  JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
       //                ["otherNonCashItems"]);
       //double fcfeD =  netIncome
       //              + depreciation
@@ -474,16 +416,16 @@ class FinancialAnalysisToolkit {
     
       //Damodaran definition (page 40/172 22%)     
       double  netIncome = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["netIncome"]);
       double depreciation =                                            
-       getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+       JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["depreciation"]);
       double capitalExpenditures = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
                       ["capitalExpenditures"]);             
       double otherNonCashItems = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["otherNonCashItems"]);
 
       double ownersEarnings =  netIncome
@@ -497,10 +439,10 @@ class FinancialAnalysisToolkit {
                                      std::string &date,
                                      const char *timeUnit){
       double taxProvision = 
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]["taxProvision"]);
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]["taxProvision"]);
 
       double incomeBeforeTaxes = 
-        getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]["incomeBeforeTax"]);
+        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]["incomeBeforeTax"]);
 
       double taxRate = taxProvision/incomeBeforeTaxes;
 
@@ -516,7 +458,7 @@ class FinancialAnalysisToolkit {
       //Damodaran definition (page 40/172 22%)     
 
       double totalCashFromOperatingActivities =
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
                       ["totalCashFromOperatingActivities"]); 
 
       double taxRate = calcTaxRate(jsonData,date,timeUnit);
@@ -525,10 +467,10 @@ class FinancialAnalysisToolkit {
         totalCashFromOperatingActivities*(1.0-taxRate);
 
       double capitalExpenditures = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
                       ["capitalExpenditures"]);             
       double otherNonCashItems = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["otherNonCashItems"]);
 
       double reinvestmentRate =  
@@ -542,7 +484,7 @@ class FinancialAnalysisToolkit {
                                      const char *timeUnit){
 
       double totalCashFromOperatingActivities =
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
                       ["totalCashFromOperatingActivities"]); 
 
       double taxRate = calcTaxRate(jsonData, date, timeUnit);
@@ -551,14 +493,14 @@ class FinancialAnalysisToolkit {
               totalCashFromOperatingActivities*(1.0-taxRate);
 
       double capitalExpenditures = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
                       ["capitalExpenditures"]); 
 
       double reinvestmentRate = 
         calcReinvestmentRate(jsonData,date,timeUnit);      
 
       double otherNonCashItems = 
-        getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
 
 
       double fcff =   operatingIncomeAfterTax 
@@ -569,3 +511,5 @@ class FinancialAnalysisToolkit {
     };
 
 };
+
+#endif

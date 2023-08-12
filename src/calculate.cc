@@ -9,6 +9,7 @@
 #include <filesystem>
 
 #include "FinancialAnalysisToolkit.h"
+#include "JsonFunctions.h"
 
 unsigned int COLUMN_WIDTH = 30;
 
@@ -114,9 +115,9 @@ int main (int argc, char* argv[]) {
     if( foundExtension != std::string::npos ){
         validInput=true;
         std::string updTickerName = tickerName;
-        FinancialAnalysisToolkit::getPrimaryTickerName(fundamentalFolder, 
-                                                      fileName,
-                                                      updTickerName);
+        JsonFunctions::getPrimaryTickerName(fundamentalFolder, 
+                                            fileName,
+                                            updTickerName);
         if(verbose){
           std::cout << count << ".    " << fileName << std::endl;
           if(updTickerName.compare(tickerName) != 0){

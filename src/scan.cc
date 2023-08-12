@@ -8,6 +8,7 @@
 
 #include <filesystem>
 
+#include "JsonFunctions.h"
 #include "FinancialAnalysisToolkit.h"
 
 unsigned int COLUMN_WIDTH = 30;
@@ -132,23 +133,17 @@ int main (int argc, char* argv[]) {
 
     
 
-      FinancialAnalysisToolkit::
-        getJsonString(jsonData[GEN]["Name"], name);
-      FinancialAnalysisToolkit::
-        getJsonString(jsonData[GEN]["Code"], code);
-      FinancialAnalysisToolkit::
-        getJsonString(jsonData[GEN]["PrimaryTicker"], primaryTicker);
-      FinancialAnalysisToolkit::
-        getJsonString(jsonData[GEN]["Exchange"], exchange);
-      FinancialAnalysisToolkit::
-        getJsonString(jsonData[GEN]["CurrencyCode"], currencyCode);
+      JsonFunctions::getJsonString(jsonData[GEN]["Name"], name);
+      JsonFunctions::getJsonString(jsonData[GEN]["Code"], code);
+      JsonFunctions::getJsonString(jsonData[GEN]["PrimaryTicker"], primaryTicker);
+      JsonFunctions::getJsonString(jsonData[GEN]["Exchange"], exchange);
+      JsonFunctions::getJsonString(jsonData[GEN]["CurrencyCode"], currencyCode);
 
 
       auto it= jsonData[FIN][BAL][Q].begin();
 
       if(it != jsonData[FIN][BAL][Q].end()){
-        FinancialAnalysisToolkit::
-          getJsonString(
+        JsonFunctions::getJsonString(
               jsonData[FIN][BAL][Q][it.key().c_str()]["currency_symbol"], 
               currencySymbol);
       }else{

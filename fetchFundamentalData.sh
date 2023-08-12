@@ -11,6 +11,6 @@ mkdir ${EOD_TOOLKIT_HOME}/data/"$EX"/fundamentalData/
 
 
 cd build
-./fetch -f ${EOD_TOOLKIT_HOME}/data/"$EX"/fundamentalData/ -u ${EOD_FUNDAMENTAL_DATA} -k ${EOD_API_TOKEN} -t ${EOD_TOOLKIT_HOME}/data/"$EX".json -x "$EX" -v | tee ${EOD_TOOLKIT_HOME}/data/"$EX"/fundamentalData."$EX".log
+./fetch -f ${EOD_TOOLKIT_HOME}/data/"$EX"/fundamentalData/ -u ${EOD_FUNDAMENTAL_DATA} -k ${EOD_API_TOKEN} -t ${EOD_TOOLKIT_HOME}/data/"$EX".json -x "$EX" -g -v | tee ${EOD_TOOLKIT_HOME}/data/"$EX"/fundamentalData."$EX".log
 cd ..
 
