@@ -112,6 +112,24 @@ int main (int argc, char* argv[]) {
   }
 
 
+  std::ifstream patchFileStream(patchFileName.c_str());
+
+  using json = nlohmann::ordered_json;
+  json patchListData = json::parse(patchFileStream);
+
+  unsigned int patchCount = 0;
+  for(auto& patchData : patchListData){
+    ++patchCount;
+    if(verbose){
+      std::cout << patchCount << ". " 
+        << '\t' << patchData["Code"].get<std::string>() << std::endl
+        << '\t' << patchData["Name"].get<std::string>() << std::endl
+        << '\t' << "PrimaryTicker" << std::endl
+        << '\t' << '\t' << patchData["PrimaryTicker"].get<std::string>();
+
+    }
+
+  }
 
   std::cout << "success" << std::endl;
 
