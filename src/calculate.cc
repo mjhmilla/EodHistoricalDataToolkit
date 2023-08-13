@@ -11,8 +11,6 @@
 #include "FinancialAnalysisToolkit.h"
 #include "JsonFunctions.h"
 
-unsigned int COLUMN_WIDTH = 30;
-
 int main (int argc, char* argv[]) {
 
   std::string exchangeCode;

@@ -11,8 +11,6 @@
 #include "JsonFunctions.h"
 #include "FinancialAnalysisToolkit.h"
 
-unsigned int COLUMN_WIDTH = 30;
-
 
 int main (int argc, char* argv[]) {
 

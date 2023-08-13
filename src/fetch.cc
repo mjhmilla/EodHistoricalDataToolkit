@@ -5,7 +5,7 @@
 
 #include <nlohmann/json.hpp>
 #include <tclap/CmdLine.h>
-#include <curl/curl.h>
+
 
 #include "FinancialAnalysisToolkit.h"
 #include "JsonFunctions.h"

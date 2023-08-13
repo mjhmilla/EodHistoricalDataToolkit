@@ -1,14 +1,14 @@
 #ifndef CURL_TOOLKIT
 #define CURL_TOOLKIT
 
-#include "StringToolkit.h"
+#include <curl/curl.h>
 
 #include <nlohmann/json.hpp>
 #include <stdlib.h>
 
+#include "StringToolkit.h"
 
 
-unsigned int COLUMN_WIDTH = 30;
 unsigned int CURL_TIMEOUT_TIME_SECONDS = 20;
 unsigned int DOWNLOAD_ATTEMPTS=2;
 
@@ -17,8 +17,8 @@ class CurlToolkit {
 
   public:
 
-//namespace
-//{
+//  namespace
+//  {
     static std::size_t callBack(const char* in,
                                 std::size_t size,
                                 std::size_t num,
@@ -28,7 +28,7 @@ class CurlToolkit {
       out->append(in, totalBytes);
       return totalBytes;
     };
-//}
+//  }
 
 
 

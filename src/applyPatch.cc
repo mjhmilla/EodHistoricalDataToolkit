@@ -8,12 +8,10 @@
 #include <tclap/CmdLine.h>
 
 #include <filesystem>
-#include "FinancialAnalysisToolkit.h"
+#include "StringToolkit.h"
+#include "CurlToolkit.h"
 
-unsigned int COLUMN_WIDTH = 30;
-
-
-
+unsigned int COLUMN_WIDTH=30;
 
 int main (int argc, char* argv[]) {
 
@@ -121,14 +119,70 @@ int main (int argc, char* argv[]) {
   for(auto& patchData : patchListData){
     ++patchCount;
     if(verbose){
+      std::cout << std::endl;
       std::cout << patchCount << ". " 
-        << '\t' << patchData["Code"].get<std::string>() << std::endl
+        << '\t' << patchData["Code"].get<std::string>() 
+        << "."  << patchData["Exchange"].get<std::string>() 
+        << std::endl
         << '\t' << patchData["Name"].get<std::string>() << std::endl
-        << '\t' << "PrimaryTicker" << std::endl
-        << '\t' << '\t' << patchData["PrimaryTicker"].get<std::string>();
-
+        << '\t' << patchData["PatchName"].get<std::string>() 
+        << '\t' <<"(PrimaryTicker)" << std::endl
+        << '\t' << patchData["PrimaryTicker"].get<std::string>() 
+        << std::endl;
     }
 
+    //Update the primary ticker field
+    std::string updFileName = fundamentalFolder;
+    updFileName.append(patchData["Code"].get<std::string>());
+    updFileName.append(".");
+    updFileName.append(patchData["Exchange"].get<std::string>());
+    updFileName.append(".json");
+
+    std::ifstream updFileInputStream(updFileName.c_str());
+    json updFileData = json::parse(updFileInputStream);    
+    updFileInputStream.close();
+
+    updFileData["General"]["PrimaryTicker"]=patchData["PrimaryTicker"].get<std::string>();
+
+    std::ofstream updFileOutputStream(updFileName.c_str(), 
+                std::ios_base::trunc | std::ios_base::out);
+    updFileOutputStream << updFileData;
+    updFileOutputStream.close();
+
+    if(verbose){
+      std::cout  << '\t' 
+                 << patchData["Code"].get<std::string>()
+                 << "."  
+                 << patchData["Exchange"].get<std::string>() 
+                 << " updated"
+                 << std::endl;
+    }
+
+    //Download the primary ticker
+    std::string eodUrl = eodUrlTemplate;
+    std::string eodTicker = patchData["PrimaryTicker"].get<std::string>();
+    unsigned int indexPoint = eodTicker.find('.');
+    std::string eodExchange = eodTicker.substr(indexPoint+1,eodTicker.length());
+    std::string ticker = eodTicker.substr(0,indexPoint);
+
+    StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+    StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",eodExchange);
+    StringToolkit::findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
+
+    std::string primaryFileName = eodTicker;
+    primaryFileName.append(".json");
+
+    bool successTickerDownload = 
+      CurlToolkit::downloadJsonFile(eodUrl,fundamentalFolder,primaryFileName,false);
+
+    if(verbose){
+      if(successTickerDownload){
+        std::cout   << '\t' 
+                    << eodTicker << " downloaded" << std::endl;
+      }else{
+        std::cout   << '\t' 
+                    << eodTicker  << "failed to download" << std::endl;      }      
+    }
   }
 
   std::cout << "success" << std::endl;

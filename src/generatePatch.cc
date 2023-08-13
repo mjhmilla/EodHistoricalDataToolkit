@@ -13,10 +13,6 @@
 #include "StringToolkit.h"
 
 
-unsigned int COLUMN_WIDTH = 30;
-
-
-
 struct primaryTickerPatchData {
   std::string currency;
   std::vector< std::string > exchanges;
