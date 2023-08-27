@@ -167,10 +167,13 @@ int main (int argc, char* argv[]) {
               {"Code", i["Code"].get<std::string>()},
               {"Name", i["Name"].get<std::string>()},
               {"Exchange", i["Exchange"].get<std::string>()},
+              {"ISIN", i["ISIN"].get<std::string>()},
               {"PrimaryTicker", i["PrimaryTicker"].get<std::string>()},
               {"PatchFound",false},
               {"PatchPrimaryTicker", ""},
+              {"PatchPrimaryExchange", ""},
               {"PatchName",""},
+              {"PatchISIN",""},
               {"PatchNameSimilarityScore",0.},
               {"PatchNameExactMatch",false},
               {"PatchNameClosest",""},
@@ -276,6 +279,7 @@ int main (int argc, char* argv[]) {
 
         std::string bestName;
         std::string bestCode;
+        std::string bestIsin;
 
         for(auto& itSym : exchangeSymbolList){
 
@@ -308,12 +312,16 @@ int main (int argc, char* argv[]) {
             candidateFound=true;
             JsonFunctions::getJsonString(itSym["Name"],bestName);            
             JsonFunctions::getJsonString(itSym["Code"],bestCode);
-            bestCode.append(".");
-            bestCode.append(itExc);
+            JsonFunctions::getJsonString(itSym["ISIN"],bestIsin);
+
+            //bestCode.append(".");
+            //bestCode.append(itExc);
 
             patchResults[tickerName]["PatchFound"] = true;
-            patchResults[tickerName]["PatchPrimaryTicker"] = bestCode;
+            patchResults[tickerName]["PatchPrimaryTicker"]    = bestCode;
+            patchResults[tickerName]["PatchPrimaryExchange"]  = itExc;
             patchResults[tickerName]["PatchName"]=bestName;
+            patchResults[tickerName]["PatchISIN"]=bestIsin;
             patchResults[tickerName]["PatchNameSimilarityScore"] = bestScore;
 
             itPatchData.patchFound[indexTicker]=true;
@@ -362,11 +370,16 @@ for(auto& it : patchResults){
     json patchExactEntry = 
       json::object( 
           { 
-            {"Code", it["Code"].get<std::string>()},
             {"Name", it["Name"].get<std::string>()},
+            {"Code", it["Code"].get<std::string>()},
             {"Exchange", it["Exchange"].get<std::string>()},
+            {"ISIN", it["ISIN"].get<std::string>()},            
+            {"PatchName",it["PatchName"]},            
+            {"PatchISIN", it["PatchISIN"].get<std::string>()},            
             {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
-            {"PatchName",it["PatchName"]},
+            {"PrimaryExchange", it["PatchPrimaryExchange"].get<std::string>()},            
+
+
           }
         );
     patchExactList[code]=patchExactEntry;  
@@ -376,11 +389,14 @@ for(auto& it : patchResults){
     json patchCandidateEntry = 
       json::object( 
           { 
-            {"Code", it["Code"].get<std::string>()},
             {"Name", it["Name"].get<std::string>()},
+            {"Code", it["Code"].get<std::string>()},
             {"Exchange", it["Exchange"].get<std::string>()},
-            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
+            {"ISIN", it["ISIN"].get<std::string>()},            
             {"PatchName",it["PatchName"]},
+            {"PatchISIN", it["PatchISIN"].get<std::string>()},            
+            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
+            {"PrimaryExchange", it["PatchPrimaryExchange"].get<std::string>()},            
             {"PatchNameSimilarityScore", it["PatchNameSimilarityScore"].get<double>()},
           }
         );
@@ -392,11 +408,14 @@ for(auto& it : patchResults){
     json patchMissingEntry = 
       json::object( 
           { 
-            {"Code", it["Code"].get<std::string>()},
             {"Name", it["Name"].get<std::string>()},
+            {"Code", it["Code"].get<std::string>()},
             {"Exchange", it["Exchange"].get<std::string>()},
-            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
+            {"ISIN", it["ISIN"].get<std::string>()},
             {"PatchNameClosest",it["PatchNameClosest"]},
+            {"PatchISIN", it["PatchISIN"].get<std::string>()},
+            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
+            {"PrimaryExchange", it["PatchPrimaryExchange"].get<std::string>()},            
             {"PatchNameSimilarityScoreClosest", 
               it["PatchNameSimilarityScoreClosest"].get<double>()},
           }

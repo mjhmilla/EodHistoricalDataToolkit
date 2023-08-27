@@ -56,6 +56,11 @@ ADD_EXECUTABLE(
   src/applyPatch.cc)  
 
 
+ADD_EXECUTABLE(
+  utilities
+  src/utilities.cc)
+
+
 TARGET_LINK_LIBRARIES(sandbox
   ${CURL_LIBRARIES}
 )

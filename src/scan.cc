@@ -125,14 +125,16 @@ int main (int argc, char* argv[]) {
       std::string exchange("");
       std::string currencyCode("");
       std::string currencySymbol("");
+      std::string isin("");
       bool primaryTickerMissing=false;
       bool currencySymbolMissing=false;
-
+      bool isinMissing = false;
 
     
 
       JsonFunctions::getJsonString(jsonData[GEN]["Name"], name);
       JsonFunctions::getJsonString(jsonData[GEN]["Code"], code);
+      JsonFunctions::getJsonString(jsonData[GEN]["ISIN"], isin);
       JsonFunctions::getJsonString(jsonData[GEN]["PrimaryTicker"], primaryTicker);
       JsonFunctions::getJsonString(jsonData[GEN]["Exchange"], exchange);
       JsonFunctions::getJsonString(jsonData[GEN]["CurrencyCode"], currencyCode);
@@ -164,12 +166,24 @@ int main (int argc, char* argv[]) {
         }
       }
 
-      if(verbose && primaryTickerMissing){
+      if(isin.length()==0){
+        isinMissing = true;
+      }
+
+      if(verbose && (primaryTickerMissing || isinMissing)){
         ++errorCount;
-        std::cout   << errorCount 
-                    << ". Missing: PrimaryTicker " << std::endl  
-                    << "    " 
-                    << fileName << " " << exchange << " " << name << std::endl;
+        if(primaryTickerMissing){
+          std::cout   << errorCount 
+                      << ". Missing: PrimaryTicker " << std::endl  
+                      << "    " 
+                      << fileName << " " << exchange << " " << name << std::endl;
+        }
+        if(isinMissing){
+          std::cout   << errorCount 
+                      << ". Missing: ISIN " << std::endl  
+                      << "    " 
+                      << fileName << " " << exchange << " " << name << std::endl;
+        }
       }
 
       json tickerEntry = json::object( 
@@ -177,9 +191,11 @@ int main (int argc, char* argv[]) {
                           {"Code", code},
                           {"Name", name},
                           {"Exchange", exchange},
+                          {"ISIN",isin},
                           {"PrimaryTicker", primaryTicker},
                           {"CurrencyCode", currencyCode},
                           {"currency_symbol", currencySymbol},
+                          {"MissingISIN", isinMissing},
                           {"MissingPrimaryTicker", primaryTickerMissing},
                           {"MissingCurrencySymbol", currencySymbolMissing},
                         }
