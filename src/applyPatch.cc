@@ -181,7 +181,7 @@ int main (int argc, char* argv[]) {
                     << eodTicker << " downloaded" << std::endl;
       }else{
         std::cout   << '\t' 
-                    << eodTicker  << "failed to download" << std::endl;      }      
+                    << eodTicker  << " failed to download" << std::endl;      }      
     }
   }
 

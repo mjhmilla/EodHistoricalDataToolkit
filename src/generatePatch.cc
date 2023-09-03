@@ -178,7 +178,8 @@ int main (int argc, char* argv[]) {
               {"PatchNameExactMatch",false},
               {"PatchNameClosest",""},
               {"PatchCodeClosest",""},
-              {"PatchNameSimilarityScoreClosest",0},
+              {"PatchExchangeClosest",""},
+              {"PatchNameSimilarityScoreClosest",0.},
             }
           );
 
@@ -288,8 +289,12 @@ int main (int argc, char* argv[]) {
           JsonFunctions::getJsonString(itSym["Name"],nameBRaw);
           StringToolkit::TextData textB(nameBRaw);
 
-          if(nameARaw.find("Osisko") != std::string::npos &&
-              nameBRaw.find("Osisko") != std::string::npos ){
+          if(nameBRaw.compare("I")==0){
+            bool here=1;
+          }
+
+          if(nameARaw.find("Direct Line Insurance Group PLC") != std::string::npos &&
+              nameBRaw.find("Direct Line Insurance Group plc") != std::string::npos ){
               bool here=true;
               }
 
@@ -306,8 +311,8 @@ int main (int argc, char* argv[]) {
 
           if( ( simAB.score > bestScore &&
                 simAB.score > minMatchingWordFraction)  ||
-              ( simAB.exactMatch || simAB.allWordsFound)) {
-
+              ( simAB.exactMatch)) {
+ 
             bestScore=simAB.score;
             candidateFound=true;
             JsonFunctions::getJsonString(itSym["Name"],bestName);            
@@ -335,12 +340,10 @@ int main (int argc, char* argv[]) {
             std::string secondCode,secondName;
             JsonFunctions::getJsonString(itSym["Name"],secondName);            
             JsonFunctions::getJsonString(itSym["Code"],secondCode);            
-            secondCode.append(".");
-            secondCode.append(itExc);
-
 
             patchResults[tickerName]["PatchNameClosest"]=secondName;
             patchResults[tickerName]["PatchCodeClosest"]=secondCode;
+            patchResults[tickerName]["PatchExchangeClosest"]=itExc;
             patchResults[tickerName]["PatchNameSimilarityScoreClosest"] 
               = simAB.score;
           } 
@@ -405,6 +408,17 @@ for(auto& it : patchResults){
   }
 
   if(!patchExact && !patchFound){
+
+    std::string patchNameClosest;
+    std::string patchCodeClosest;
+    std::string patchExchangeClosest;
+    double patchSimilarityScoreClosest=0;
+    JsonFunctions::getJsonString(it["PatchNameClosest"],patchNameClosest);
+    JsonFunctions::getJsonString(it["PatchCodeClosest"],patchCodeClosest);
+    JsonFunctions::getJsonString(it["PatchExchangeClosest"],patchExchangeClosest);
+    patchSimilarityScoreClosest= 
+      JsonFunctions::getJsonFloat( it["PatchNameSimilarityScoreClosest"]);
+
     json patchMissingEntry = 
       json::object( 
           { 
@@ -412,12 +426,10 @@ for(auto& it : patchResults){
             {"Code", it["Code"].get<std::string>()},
             {"Exchange", it["Exchange"].get<std::string>()},
             {"ISIN", it["ISIN"].get<std::string>()},
-            {"PatchNameClosest",it["PatchNameClosest"]},
-            {"PatchISIN", it["PatchISIN"].get<std::string>()},
-            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
-            {"PrimaryExchange", it["PatchPrimaryExchange"].get<std::string>()},            
-            {"PatchNameSimilarityScoreClosest", 
-              it["PatchNameSimilarityScoreClosest"].get<double>()},
+            {"PatchNameClosest", patchNameClosest},
+            {"PatchCodeClosest", patchCodeClosest},
+            {"PatchExchangeClosest",patchExchangeClosest},            
+            {"PatchNameSimilarityScoreClosest", patchSimilarityScoreClosest},
           }
         );
     patchMissingList[code]=patchMissingEntry;  

@@ -178,12 +178,12 @@ int main (int argc, char* argv[]) {
                       << "    " 
                       << fileName << " " << exchange << " " << name << std::endl;
         }
-        if(isinMissing){
-          std::cout   << errorCount 
-                      << ". Missing: ISIN " << std::endl  
-                      << "    " 
-                      << fileName << " " << exchange << " " << name << std::endl;
-        }
+        //if(isinMissing){
+        //  std::cout   << errorCount 
+        //              << ". Missing: ISIN " << std::endl  
+        //              << "    " 
+        //              << fileName << " " << exchange << " " << name << std::endl;
+        //}
       }
 
       json tickerEntry = json::object( 
