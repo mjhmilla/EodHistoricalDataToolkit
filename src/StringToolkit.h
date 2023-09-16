@@ -126,13 +126,8 @@ class StringToolkit {
       double scoreA=0.;
       double scoreB=0.;                          
 
-      //Evaluate the similarity score
-      if(textA.lowercase.compare(textB.lowercase)==0){
-        scoreA = 1.0;
-        scoreB = 1.0;
-        result.exactMatch=true;
-        
-      }else if(textB.lowercase.find(textA.lowercase) != std::string::npos){
+      /*
+      else if(textB.lowercase.find(textA.lowercase) != std::string::npos){
         result.allWordsFound = true;
         scoreA = ( textA.alphaLength / textA.alphaLength );
         scoreB = ( textA.alphaLength / textB.alphaLength );  
@@ -141,7 +136,15 @@ class StringToolkit {
         result.allWordsFound = true;
         scoreA = ( textB.alphaLength / textA.alphaLength );
         scoreB = ( textB.alphaLength / textB.alphaLength );  
+        */
 
+
+      //Evaluate the similarity score
+      if(textA.lowercase.compare(textB.lowercase)==0){
+        scoreA = 1.0;
+        scoreB = 1.0;
+        result.exactMatch=true;
+        
       }else{
 
         size_t pos =0;

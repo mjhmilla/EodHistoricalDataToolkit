@@ -134,7 +134,17 @@ int main (int argc, char* argv[]) {
 
       JsonFunctions::getJsonString(jsonData[GEN]["Name"], name);
       JsonFunctions::getJsonString(jsonData[GEN]["Code"], code);
+
+      //The spelling of ISIN in the json files is not always consistent      
       JsonFunctions::getJsonString(jsonData[GEN]["ISIN"], isin);
+      if(isin.length()==0){
+        JsonFunctions::getJsonString(jsonData[GEN]["Isin"], isin);
+      }
+      if(isin.length()==0){
+        JsonFunctions::getJsonString(jsonData[GEN]["isin"], isin);
+      }
+
+
       JsonFunctions::getJsonString(jsonData[GEN]["PrimaryTicker"], primaryTicker);
       JsonFunctions::getJsonString(jsonData[GEN]["Exchange"], exchange);
       JsonFunctions::getJsonString(jsonData[GEN]["CurrencyCode"], currencyCode);

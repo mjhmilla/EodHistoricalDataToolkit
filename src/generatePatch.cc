@@ -179,6 +179,7 @@ int main (int argc, char* argv[]) {
               {"PatchNameClosest",""},
               {"PatchCodeClosest",""},
               {"PatchExchangeClosest",""},
+              {"PatchISINClosest",""},
               {"PatchNameSimilarityScoreClosest",0.},
             }
           );
@@ -319,6 +320,15 @@ int main (int argc, char* argv[]) {
             JsonFunctions::getJsonString(itSym["Code"],bestCode);
             JsonFunctions::getJsonString(itSym["ISIN"],bestIsin);
 
+            //The spelling of ISIN in the json files is not always consistent      
+            if(bestIsin.length()==0){
+              JsonFunctions::getJsonString(itSym["Isin"], bestIsin);
+            }
+            if(bestIsin.length()==0){
+              JsonFunctions::getJsonString(itSym["isin"], bestIsin);
+            }
+            
+
             //bestCode.append(".");
             //bestCode.append(itExc);
 
@@ -337,13 +347,22 @@ int main (int argc, char* argv[]) {
             }
           }else if( simAB.score > 
             patchResults[tickerName]["PatchNameSimilarityScoreClosest"].get<double>()){
-            std::string secondCode,secondName;
+            std::string secondCode,secondName,secondIsin;
             JsonFunctions::getJsonString(itSym["Name"],secondName);            
             JsonFunctions::getJsonString(itSym["Code"],secondCode);            
+            JsonFunctions::getJsonString(itSym["ISIN"],secondIsin);
+
+            if(secondIsin.length()==0){
+              JsonFunctions::getJsonString(itSym["Isin"], secondIsin);
+            }
+            if(secondIsin.length()==0){
+              JsonFunctions::getJsonString(itSym["isin"], secondIsin);
+            }
 
             patchResults[tickerName]["PatchNameClosest"]=secondName;
             patchResults[tickerName]["PatchCodeClosest"]=secondCode;
             patchResults[tickerName]["PatchExchangeClosest"]=itExc;
+            patchResults[tickerName]["PatchISINClosest"]=secondIsin;
             patchResults[tickerName]["PatchNameSimilarityScoreClosest"] 
               = simAB.score;
           } 
@@ -412,10 +431,12 @@ for(auto& it : patchResults){
     std::string patchNameClosest;
     std::string patchCodeClosest;
     std::string patchExchangeClosest;
+    std::string patchIsinClosest;
     double patchSimilarityScoreClosest=0;
     JsonFunctions::getJsonString(it["PatchNameClosest"],patchNameClosest);
     JsonFunctions::getJsonString(it["PatchCodeClosest"],patchCodeClosest);
     JsonFunctions::getJsonString(it["PatchExchangeClosest"],patchExchangeClosest);
+    JsonFunctions::getJsonString(it["PatchISINClosest"],patchIsinClosest);
     patchSimilarityScoreClosest= 
       JsonFunctions::getJsonFloat( it["PatchNameSimilarityScoreClosest"]);
 
@@ -428,7 +449,8 @@ for(auto& it : patchResults){
             {"ISIN", it["ISIN"].get<std::string>()},
             {"PatchNameClosest", patchNameClosest},
             {"PatchCodeClosest", patchCodeClosest},
-            {"PatchExchangeClosest",patchExchangeClosest},            
+            {"PatchExchangeClosest",patchExchangeClosest},    
+            {"PatchISINClosest",patchIsinClosest},        
             {"PatchNameSimilarityScoreClosest", patchSimilarityScoreClosest},
           }
         );
