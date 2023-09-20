@@ -6,3 +6,6 @@ data/STU_test/*
 build/*
 !build/.gitkeep
 *.txt
+data/countryCodeExchangeMap.csv
+data/countryCodeList.ods
+

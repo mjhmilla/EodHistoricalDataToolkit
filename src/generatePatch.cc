@@ -21,7 +21,7 @@ struct primaryTickerPatchData {
 };
 
 
-
+const double MIN_MATCHING_WORD_FRACTION = 0.3;
 
 
 int main (int argc, char* argv[]) {
@@ -29,6 +29,7 @@ int main (int argc, char* argv[]) {
   std::string exchangeCode;
   std::string scanFileName;
   std::string exchangeListFileName;
+  std::string mainExchangeListFileName;
   std::string exchangeSymbolListFolder;
   std::string outputFolder;
   bool verbose;
@@ -37,13 +38,12 @@ int main (int argc, char* argv[]) {
     TCLAP::CmdLine cmd("The command will read the output from the scan "
     "function and will try to find patches for the problems identified "
     "by scan. For example, a company that is on a German "
-    "exchange, does its accounting in USD, yet does not have a "
-    "PrimaryTicker entry is probably in error: this company does not "
-    "reside in Germany if it does its accounting in USD and so it must "
-    "have a missing PrimaryTicker. Information from the exchange list, "
-    "and exchange-symbol-lists is searched to find a company that resides"
-    "on an exchange with the same currency (USD in this example) and has "
-    "a very similar company name."
+    "exchange, but has an ISIN from another country, its PrimaryTicker should"
+    "also be from that country. If the ISIN is missing, the currency used for "
+    "accounting should be the currency of the exchange listed in the "
+    "PrimaryTicker. If these consistency checks fail, then the appropriate"
+    "exchange-symbol-lists to find either a company with a matching ISIN, "
+    "or a company with a very similar name."
     ,' ', "0.0");
 
 
@@ -57,12 +57,11 @@ int main (int argc, char* argv[]) {
 
     cmd.add(scanFileNameInput);
 
-    TCLAP::ValueArg<std::string> exchangeCodeInput("x","EXCHANGE_CODE", 
+    TCLAP::ValueArg<std::string> exchangeCodeInput("x","exchange_code", 
       "The exchange code. For example: US",
       true,"","string");
 
     cmd.add(exchangeCodeInput);  
-
 
     TCLAP::ValueArg<std::string> exchangeSymbolListFolderInput("s",
       "exchange_symbol_list", "A folder that contains json files, one per "
@@ -77,6 +76,16 @@ int main (int argc, char* argv[]) {
       true,"","string");
 
     cmd.add(exchangeListFileNameInput); 
+
+    TCLAP::ValueArg<std::string> mainExchangeListFileNameInput("m","main_exchange_list", 
+      "The main/largest exchange for this country. For example, in Germany the "
+      "Frankfurt Exchange is the largest and can be used as a reference for "
+      "entries that are missing in the smaller exchanges in Germany "
+      "(e.g. Stuttgart)",
+      false,"","string");
+
+    cmd.add(mainExchangeListFileNameInput);  
+
 
     TCLAP::ValueArg<std::string> outputFolderInput("o","output_folder_path", 
       "The path to the folder that will contain the output json files "
@@ -93,6 +102,7 @@ int main (int argc, char* argv[]) {
 
     scanFileName              = scanFileNameInput.getValue();
     exchangeCode              = exchangeCodeInput.getValue();
+    mainExchangeListFileName  = mainExchangeListFileNameInput.getValue();
     exchangeListFileName      = exchangeListFileNameInput.getValue(); 
     exchangeSymbolListFolder  = exchangeSymbolListFolderInput.getValue();   
     outputFolder              = outputFolderInput.getValue();
@@ -107,6 +117,9 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Exchange List File" << std::endl;
       std::cout << "    " << exchangeListFileName << std::endl;
+
+      std::cout << "  Main Exchange List File" << std::endl;
+      std::cout << "    " << mainExchangeListFileName << std::endl;
 
       std::cout << "  Exchange Symbol List" << std::endl;
       std::cout << "    " << exchangeSymbolListFolder << std::endl;
@@ -138,14 +151,25 @@ int main (int argc, char* argv[]) {
   //Scan the list of exhanges for potential patches
   if(verbose){
     std::cout << std::endl;
-    std::cout << "Scanning exchange-symbol-lists for companies " << std::endl;
-    std::cout << "with the same name. These are stored as a" << std::endl;
-    std::cout << "potential PrimaryTickerPatch" << std::endl;
+    std::cout << "Scanning exchange-symbol-lists for companies "    <<std::endl;
+    std::cout << "with the same ISIN. If the ISIN is not available" <<std::endl;
+    std::cout << " a company with a similar name is searched. "     <<std::endl;
+    std::cout << "These are stored as a potential " << std::endl;
+    std::cout << " PrimaryTickerPatch" << std::endl;
   }
 
   //load the exchange-list
   std::ifstream exchangeListFileStream(exchangeListFileName.c_str());
   json exchangeList = json::parse(exchangeListFileStream);
+
+  //load the main-exchange-list
+  json mainExchangeList;
+  bool mainExchangeAvailable=false;
+  if(mainExchangeListFileName.length()>0){
+    std::ifstream mainExchangeListFileStream(mainExchangeListFileName.c_str());
+    mainExchangeList = json::parse(mainExchangeListFileStream);
+    mainExchangeAvailable=true;
+  }
 
   //scan the errors and group them by currency
   std::vector< primaryTickerPatchData > primaryTickerPatchDataVector;
@@ -159,6 +183,24 @@ int main (int argc, char* argv[]) {
   //   only have to open each exchange symbol list once.
   for(auto& i : scanResults){
 
+    //Patch the ISIN from the main exchange, if its available
+    std::string isin=i["ISIN"].get<std::string>();
+    if(isin.length()==0){
+      if(mainExchangeAvailable){
+        auto j=mainExchangeList.begin();
+        bool found=false;
+
+        while(j != mainExchangeList.end() && !found){
+          if( i["Name"].get<std::string>().compare( 
+              (*j)["Name"].get<std::string>()) == 0 ){
+            isin = (*j)["Isin"].get<std::string>(); 
+            found=true;
+          }
+          ++j;
+        }
+      }
+    }
+
     if(i["MissingPrimaryTicker"].get<bool>()){
      
       json patchEntry = 
@@ -167,13 +209,14 @@ int main (int argc, char* argv[]) {
               {"Code", i["Code"].get<std::string>()},
               {"Name", i["Name"].get<std::string>()},
               {"Exchange", i["Exchange"].get<std::string>()},
-              {"ISIN", i["ISIN"].get<std::string>()},
+              {"ISIN", isin},
               {"PrimaryTicker", i["PrimaryTicker"].get<std::string>()},
               {"PatchFound",false},
               {"PatchPrimaryTicker", ""},
               {"PatchPrimaryExchange", ""},
               {"PatchName",""},
               {"PatchISIN",""},
+              {"PatchISINExactMatch",false},
               {"PatchNameSimilarityScore",0.},
               {"PatchNameExactMatch",false},
               {"PatchNameClosest",""},
@@ -184,16 +227,43 @@ int main (int argc, char* argv[]) {
             }
           );
 
+
+
       patchResults[i["Code"].get<std::string>()]= patchEntry;
 
+      //Take the currency_symbol that sometimes appears directly in the 
+      //balance sheet. This symbol is not always entered
       std::string currency_symbol;
       JsonFunctions::getJsonString(i["currency_symbol"],currency_symbol);
 
-      bool appendNewPatchData=true;
+      //If the isin exists, use the first digits to directly find the
+      //exchanges that carry this symbol. Directly retrieve the currency
+      //for the exchange
+      if(isin.length()>0){
+        auto k=exchangeList.begin();
+        bool found=false;
+
+        while(k != exchangeList.end() && !found){
+          if(  isin.find_first_of( (*k)["CountryISO2"].get<std::string>())==0 
+            || isin.find_first_of( (*k)["CountryISO3"].get<std::string>())==0){
+            currency_symbol =   (*k)["Currency"].get<std::string>();
+            found=true;
+          }
+          ++k;
+        }
+      }
+
+
+      bool appendNewCurrencyData=true;
+
+      //Add a condition here to append the exchanges that corresponds to
+      //the leading digits of the ISIN number
+      
+
       for(auto& j : primaryTickerPatchDataVector){
         //If the currency exists, then add to the existing patch
         if( j.currency.compare(currency_symbol)==0){
-          appendNewPatchData=false;
+          appendNewCurrencyData=false;
           std::string code;
           JsonFunctions::getJsonString(i["Code"],code);            
           j.tickersInError.push_back(code);
@@ -202,7 +272,7 @@ int main (int argc, char* argv[]) {
       }
 
       //If the currency doesn't exist, then make a new entry
-      if(appendNewPatchData){
+      if(appendNewCurrencyData){
         primaryTickerPatchData patch;
         patch.currency = currency_symbol;
 
@@ -253,119 +323,120 @@ int main (int argc, char* argv[]) {
       for(unsigned int indexTicker=0; 
             indexTicker<itPatchData.tickersInError.size();  ++indexTicker){
 
-        //Get the company name
         ++tickerCount;
+
+        //Get the code, isin, name
+        std::string code = itPatchData.tickersInError[indexTicker];
+        std::string isin = patchResults[code]["ISIN"].get<std::string>();
+        std::string nameARaw;
+        JsonFunctions::getJsonString(scanResults[code]["Name"],nameARaw);
+
+
         if(verbose){
-          std::string code=itPatchData.tickersInError[indexTicker];
           std::cout << tickerCount << '\t' <<"/" << numElementsToProcess << std::endl;
-          std::cout << '\t' << scanResults[code]["Code"].get<std::string>() 
-                    << std::endl;
-          std::cout << '\t' << scanResults[code]["Name"].get<std::string>() 
-                    << std::endl;
+          std::cout << '\t' << code << std::endl;
+          std::cout << '\t' << nameARaw << std::endl;
+          std::cout << '\t' << isin << std::endl;
           std::cout << std::endl;
         }        
 
-        std::string nameARaw;
-        std::string tickerName = itPatchData.tickersInError[indexTicker];
-        JsonFunctions::getJsonString(scanResults[tickerName]["Name"],nameARaw);
+        std::cout << "You are here" << std::endl;
+        std::abort();
+        //If the ISIN exists, go see if you can find an entry that corresponds
+        //in one of the exchanges
+        bool isinMatchFound=false;
+        if(isin.length()>0){
 
-        StringToolkit::WordData textA(nameARaw);
+        }
 
+        //If the ISIN search failed, try to find a company that exists with
+        //a similar name
+        if(isinMatchFound==false){
+          StringToolkit::WordData textA(nameARaw);
 
-        //Calculate the minimum acceptable score
-        double minMatchingWordFraction=0.3;                            
+          //Calculate the minimum acceptable score
+                                      
 
-        bool candidateFound = false;
-        double bestScore    = 
-          patchResults[tickerName]["PatchNameSimilarityScore"].get<double>();
+          bool candidateFound = false;
+          double bestScore    = 
+            patchResults[code]["PatchNameSimilarityScore"].get<double>();
 
-        std::string bestName;
-        std::string bestCode;
-        std::string bestIsin;
+          std::string bestName;
+          std::string bestCode;
+          std::string bestIsin;
 
-        for(auto& itSym : exchangeSymbolList){
+          for(auto& itSym : exchangeSymbolList){
 
+    
+            std::string nameBRaw;
+            JsonFunctions::getJsonString(itSym["Name"],nameBRaw);
+            StringToolkit::TextData textB(nameBRaw);
+
+            StringToolkit::TextSimilarity simAB;
+
+            simAB.score=0;
+            simAB.firstWordsMatch=false;
+            simAB.allWordsFound=false;
+            simAB.exactMatch=false;
+
+            StringToolkit::evaluateSimilarity(textA,textB,simAB);
+
+            if( ( simAB.score > bestScore &&
+                  simAB.score > MIN_MATCHING_WORD_FRACTION)  ||
+                ( simAB.exactMatch)) {
   
-          std::string nameBRaw;
-          JsonFunctions::getJsonString(itSym["Name"],nameBRaw);
-          StringToolkit::TextData textB(nameBRaw);
+              bestScore=simAB.score;
+              candidateFound=true;
+              JsonFunctions::getJsonString(itSym["Name"],bestName);            
+              JsonFunctions::getJsonString(itSym["Code"],bestCode);
+              JsonFunctions::getJsonString(itSym["ISIN"],bestIsin);
 
-          if(nameBRaw.compare("I")==0){
-            bool here=1;
-          }
+              //The spelling of ISIN in the json files is not always consistent      
+              if(bestIsin.length()==0){
+                JsonFunctions::getJsonString(itSym["Isin"], bestIsin);
+              }
+              if(bestIsin.length()==0){
+                JsonFunctions::getJsonString(itSym["isin"], bestIsin);
+              }
+              
 
-          if(nameARaw.find("Direct Line Insurance Group PLC") != std::string::npos &&
-              nameBRaw.find("Direct Line Insurance Group plc") != std::string::npos ){
-              bool here=true;
+              //bestCode.append(".");
+              //bestCode.append(itExc);
+
+              patchResults[code]["PatchFound"] = true;
+              patchResults[code]["PatchPrimaryTicker"]    = bestCode;
+              patchResults[code]["PatchPrimaryExchange"]  = itExc;
+              patchResults[code]["PatchName"]=bestName;
+              patchResults[code]["PatchISIN"]=bestIsin;
+              patchResults[code]["PatchNameSimilarityScore"] = bestScore;
+
+              itPatchData.patchFound[indexTicker]=true;
+
+              if(simAB.exactMatch){
+                patchResults[code]["PatchNameExactMatch"]=true;
+                break;
+              }
+            }else if( simAB.score > 
+              patchResults[code]["PatchNameSimilarityScoreClosest"].get<double>()){
+              std::string secondCode,secondName,secondIsin;
+              JsonFunctions::getJsonString(itSym["Name"],secondName);            
+              JsonFunctions::getJsonString(itSym["Code"],secondCode);            
+              JsonFunctions::getJsonString(itSym["ISIN"],secondIsin);
+
+              if(secondIsin.length()==0){
+                JsonFunctions::getJsonString(itSym["Isin"], secondIsin);
+              }
+              if(secondIsin.length()==0){
+                JsonFunctions::getJsonString(itSym["isin"], secondIsin);
               }
 
-          StringToolkit::TextSimilarity simAB;
-
-          simAB.score=0;
-          simAB.firstWordsMatch=false;
-          simAB.allWordsFound=false;
-          simAB.exactMatch=false;
-
-          StringToolkit::evaluateSimilarity(textA,textB,simAB);
-
-
-
-          if( ( simAB.score > bestScore &&
-                simAB.score > minMatchingWordFraction)  ||
-              ( simAB.exactMatch)) {
- 
-            bestScore=simAB.score;
-            candidateFound=true;
-            JsonFunctions::getJsonString(itSym["Name"],bestName);            
-            JsonFunctions::getJsonString(itSym["Code"],bestCode);
-            JsonFunctions::getJsonString(itSym["ISIN"],bestIsin);
-
-            //The spelling of ISIN in the json files is not always consistent      
-            if(bestIsin.length()==0){
-              JsonFunctions::getJsonString(itSym["Isin"], bestIsin);
-            }
-            if(bestIsin.length()==0){
-              JsonFunctions::getJsonString(itSym["isin"], bestIsin);
-            }
-            
-
-            //bestCode.append(".");
-            //bestCode.append(itExc);
-
-            patchResults[tickerName]["PatchFound"] = true;
-            patchResults[tickerName]["PatchPrimaryTicker"]    = bestCode;
-            patchResults[tickerName]["PatchPrimaryExchange"]  = itExc;
-            patchResults[tickerName]["PatchName"]=bestName;
-            patchResults[tickerName]["PatchISIN"]=bestIsin;
-            patchResults[tickerName]["PatchNameSimilarityScore"] = bestScore;
-
-            itPatchData.patchFound[indexTicker]=true;
-
-            if(simAB.exactMatch){
-              patchResults[tickerName]["PatchNameExactMatch"]=true;
-              break;
-            }
-          }else if( simAB.score > 
-            patchResults[tickerName]["PatchNameSimilarityScoreClosest"].get<double>()){
-            std::string secondCode,secondName,secondIsin;
-            JsonFunctions::getJsonString(itSym["Name"],secondName);            
-            JsonFunctions::getJsonString(itSym["Code"],secondCode);            
-            JsonFunctions::getJsonString(itSym["ISIN"],secondIsin);
-
-            if(secondIsin.length()==0){
-              JsonFunctions::getJsonString(itSym["Isin"], secondIsin);
-            }
-            if(secondIsin.length()==0){
-              JsonFunctions::getJsonString(itSym["isin"], secondIsin);
-            }
-
-            patchResults[tickerName]["PatchNameClosest"]=secondName;
-            patchResults[tickerName]["PatchCodeClosest"]=secondCode;
-            patchResults[tickerName]["PatchExchangeClosest"]=itExc;
-            patchResults[tickerName]["PatchISINClosest"]=secondIsin;
-            patchResults[tickerName]["PatchNameSimilarityScoreClosest"] 
-              = simAB.score;
-          } 
+              patchResults[code]["PatchNameClosest"]=secondName;
+              patchResults[code]["PatchCodeClosest"]=secondCode;
+              patchResults[code]["PatchExchangeClosest"]=itExc;
+              patchResults[code]["PatchISINClosest"]=secondIsin;
+              patchResults[code]["PatchNameSimilarityScoreClosest"] = simAB.score;
+            } 
+          }
         }
 
       }
