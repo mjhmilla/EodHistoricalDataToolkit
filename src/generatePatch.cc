@@ -154,8 +154,8 @@ int main (int argc, char* argv[]) {
     std::cout << "Scanning exchange-symbol-lists for companies "    <<std::endl;
     std::cout << "with the same ISIN. If the ISIN is not available" <<std::endl;
     std::cout << " a company with a similar name is searched. "     <<std::endl;
-    std::cout << "These are stored as a potential " << std::endl;
-    std::cout << " PrimaryTickerPatch" << std::endl;
+    std::cout << "Patches are stored in separate files depending " << std::endl;
+    std::cout << " on the type of match that has been made. " << std::endl;
   }
 
   //load the exchange-list
@@ -181,36 +181,36 @@ int main (int argc, char* argv[]) {
   //2. Identify the exchanges that use that currency
   //3. Then use this list to look for matching company names so that you 
   //   only have to open each exchange symbol list once.
-  for(auto& i : scanResults){
+  for(auto& iterScan : scanResults){
 
     //Patch the ISIN from the main exchange, if its available
-    std::string isin=i["ISIN"].get<std::string>();
+    std::string isin=iterScan["ISIN"].get<std::string>();
     if(isin.length()==0){
       if(mainExchangeAvailable){
-        auto j=mainExchangeList.begin();
+        auto iterExchange=mainExchangeList.begin();
         bool found=false;
 
-        while(j != mainExchangeList.end() && !found){
-          if( i["Name"].get<std::string>().compare( 
-              (*j)["Name"].get<std::string>()) == 0 ){
-            isin = (*j)["Isin"].get<std::string>(); 
+        while(iterExchange != mainExchangeList.end() && !found){
+          if( iterScan["Name"].get<std::string>().compare( 
+              (*iterExchange)["Name"].get<std::string>()) == 0 ){
+            isin = (*iterExchange)["Isin"].get<std::string>(); 
             found=true;
           }
-          ++j;
+          ++iterExchange;
         }
       }
     }
 
-    if(i["MissingPrimaryTicker"].get<bool>()){
+    if(iterScan["MissingPrimaryTicker"].get<bool>()){
      
       json patchEntry = 
         json::object( 
             { 
-              {"Code", i["Code"].get<std::string>()},
-              {"Name", i["Name"].get<std::string>()},
-              {"Exchange", i["Exchange"].get<std::string>()},
+              {"Code", iterScan["Code"].get<std::string>()},
+              {"Name", iterScan["Name"].get<std::string>()},
+              {"Exchange", iterScan["Exchange"].get<std::string>()},
               {"ISIN", isin},
-              {"PrimaryTicker", i["PrimaryTicker"].get<std::string>()},
+              {"PrimaryTicker", iterScan["PrimaryTicker"].get<std::string>()},
               {"PatchFound",false},
               {"PatchPrimaryTicker", ""},
               {"PatchPrimaryExchange", ""},
@@ -229,28 +229,33 @@ int main (int argc, char* argv[]) {
 
 
 
-      patchResults[i["Code"].get<std::string>()]= patchEntry;
+      patchResults[iterScan["Code"].get<std::string>()]= patchEntry;
 
-      //Take the currency_symbol that sometimes appears directly in the 
-      //balance sheet. This symbol is not always entered
-      std::string currency_symbol;
-      JsonFunctions::getJsonString(i["currency_symbol"],currency_symbol);
+      //Retrieve the company's domestic currency
+      std::string currency;
+      
 
       //If the isin exists, use the first digits to directly find the
       //exchanges that carry this symbol. Directly retrieve the currency
-      //for the exchange
+      //for the exchange.
       if(isin.length()>0){
-        auto k=exchangeList.begin();
+        auto iterExchange=exchangeList.begin();
         bool found=false;
 
-        while(k != exchangeList.end() && !found){
-          if(  isin.find_first_of( (*k)["CountryISO2"].get<std::string>())==0 
-            || isin.find_first_of( (*k)["CountryISO3"].get<std::string>())==0){
-            currency_symbol =   (*k)["Currency"].get<std::string>();
+        while(iterExchange != exchangeList.end() && !found){
+          if(  isin.find_first_of((*iterExchange)["CountryISO2"].get<std::string>())==0 
+            || isin.find_first_of((*iterExchange)["CountryISO3"].get<std::string>())==0){
+            currency =   (*iterExchange)["Currency"].get<std::string>();
             found=true;
           }
-          ++k;
+          ++iterExchange;
         }
+      }
+      
+      if(currency.length()==0){
+        //Retrieve the currency_symbol which appears in the 
+        //BalanceSheet        
+        JsonFunctions::getJsonString(iterScan["currency_symbol"],currency);
       }
 
 
@@ -259,35 +264,37 @@ int main (int argc, char* argv[]) {
       //Add a condition here to append the exchanges that corresponds to
       //the leading digits of the ISIN number
       
-
-      for(auto& j : primaryTickerPatchDataVector){
+      //Scan through the list of existing patches to see if the currency
+      //appears in this list or not.
+      for(auto& iterPatch : primaryTickerPatchDataVector){
         //If the currency exists, then add to the existing patch
-        if( j.currency.compare(currency_symbol)==0){
+        if( iterPatch.currency.compare(currency)==0){
           appendNewCurrencyData=false;
           std::string code;
-          JsonFunctions::getJsonString(i["Code"],code);            
-          j.tickersInError.push_back(code);
-          j.patchFound.push_back(false);          
+          JsonFunctions::getJsonString(iterScan["Code"],code);            
+          iterPatch.tickersInError.push_back(code);
+          iterPatch.patchFound.push_back(false);          
         }
       }
 
-      //If the currency doesn't exist, then make a new entry
+      //If the currency doesn't appear in the list of tickers to patch, 
+      //then make a new entry
       if(appendNewCurrencyData){
         primaryTickerPatchData patch;
-        patch.currency = currency_symbol;
+        patch.currency = currency;
 
         std::string code;
-        JsonFunctions::getJsonString(i["Code"],code);            
+        JsonFunctions::getJsonString(iterScan["Code"],code);            
         patch.tickersInError.push_back(code);
         patch.patchFound.push_back(false);
 
         //Make a list that contains every exchange that uses this currency
-        for(auto& itExc : exchangeList){
+        for(auto& iterExchange : exchangeList){
           std::string exchangeCurrency;
-          JsonFunctions::getJsonString(itExc["Currency"],exchangeCurrency);
+          JsonFunctions::getJsonString(iterExchange["Currency"],exchangeCurrency);
             if(patch.currency.compare(exchangeCurrency)==0){
               std::string exchangeCode;
-              JsonFunctions::getJsonString(itExc["Code"],exchangeCode);
+              JsonFunctions::getJsonString(iterExchange["Code"],exchangeCode);
               patch.exchanges.push_back(exchangeCode);
             }
         }
@@ -297,8 +304,9 @@ int main (int argc, char* argv[]) {
   }
 
   unsigned int numElementsToProcess=0;
-  for(auto& j : primaryTickerPatchDataVector){
-    numElementsToProcess += j.tickersInError.size()*j.exchanges.size();
+  for(auto& iterPatch : primaryTickerPatchDataVector){
+    numElementsToProcess += 
+      iterPatch.tickersInError.size()*iterPatch.exchanges.size();
   }
 
 
@@ -309,24 +317,24 @@ int main (int argc, char* argv[]) {
     std::cout << "Processing "  << std::endl;
   }
   unsigned int tickerCount = 0;
-  for (auto& itPatchData : primaryTickerPatchDataVector){
+  for (auto& iterPatch : primaryTickerPatchDataVector){
 
-    for (auto& itExc : itPatchData.exchanges ){
+    for (auto& iterExchange : iterPatch.exchanges ){
       //load the exchange-symbol-list
       std::string exchangeSymbolListPath = exchangeSymbolListFolder;
-      exchangeSymbolListPath.append(itExc);
+      exchangeSymbolListPath.append(iterExchange);
       exchangeSymbolListPath.append(".json");
       std::ifstream exchangeSymbolListFileStream(exchangeSymbolListPath);
       json exchangeSymbolList = json::parse(exchangeSymbolListFileStream);        
 
-      //for(auto& indexTicker : itPatchData.tickersInError){
+      //for(auto& indexTicker : iterPatch.tickersInError){
       for(unsigned int indexTicker=0; 
-            indexTicker<itPatchData.tickersInError.size();  ++indexTicker){
+            indexTicker<iterPatch.tickersInError.size();  ++indexTicker){
 
         ++tickerCount;
 
         //Get the code, isin, name
-        std::string code = itPatchData.tickersInError[indexTicker];
+        std::string code = iterPatch.tickersInError[indexTicker];
         std::string isin = patchResults[code]["ISIN"].get<std::string>();
         std::string nameARaw;
         JsonFunctions::getJsonString(scanResults[code]["Name"],nameARaw);
@@ -340,23 +348,49 @@ int main (int argc, char* argv[]) {
           std::cout << std::endl;
         }        
 
-        std::cout << "You are here" << std::endl;
-        std::abort();
+
         //If the ISIN exists, go see if you can find an entry that corresponds
         //in one of the exchanges
+        std::assert(0);
+        std:abort();
+
         bool isinMatchFound=false;
         if(isin.length()>0){
+          auto iterSymbol=exchangeSymbolList.begin();
+          bool found=false;
 
+          std::string candidateIsin("");
+          JsonFunctions::getJsonString((*iterSymbol)["Isin"],candidateIsin);
+
+          while(iterSymbol != exchangeSymbolList.end() && !found){
+            if(  isin.compare(candidateIsin)==0){
+              patchResults[code]["PatchFound"] = true;
+              patchResults[code]["PatchISIN"]                 = isin;
+              patchResults[code]["PatchNameSimilarityScore"]  = 1.0;
+              patchResults[code]["PatchISINExactMatch"]       = true;
+
+              patchResults[code]["PatchPrimaryTicker"]        = 
+                (*iterSymbol)["Code"].get<std::string>();
+
+              patchResults[code]["PatchPrimaryExchange"]      = 
+                (*iterSymbol)["Exchange"].get<std::string>();
+
+              patchResults[code]["PatchName"]                 = 
+                (*iterSymbol)["Name"].get<std::string>();          
+
+              found=true;
+              isinMatchFound=true;
+            }
+            ++iterSymbol;
+          }
         }
 
         //If the ISIN search failed, try to find a company that exists with
         //a similar name
         if(isinMatchFound==false){
-          StringToolkit::WordData textA(nameARaw);
+          StringToolkit::WordData wordA(nameARaw);
 
           //Calculate the minimum acceptable score
-                                      
-
           bool candidateFound = false;
           double bestScore    = 
             patchResults[code]["PatchNameSimilarityScore"].get<double>();
@@ -365,11 +399,11 @@ int main (int argc, char* argv[]) {
           std::string bestCode;
           std::string bestIsin;
 
-          for(auto& itSym : exchangeSymbolList){
+          for(auto& iterSymbol : exchangeSymbolList){
 
     
             std::string nameBRaw;
-            JsonFunctions::getJsonString(itSym["Name"],nameBRaw);
+            JsonFunctions::getJsonString(iterSymbol["Name"],nameBRaw);
             StringToolkit::TextData textB(nameBRaw);
 
             StringToolkit::TextSimilarity simAB;
@@ -379,7 +413,7 @@ int main (int argc, char* argv[]) {
             simAB.allWordsFound=false;
             simAB.exactMatch=false;
 
-            StringToolkit::evaluateSimilarity(textA,textB,simAB);
+            StringToolkit::evaluateSimilarity(wordA,textB,simAB);
 
             if( ( simAB.score > bestScore &&
                   simAB.score > MIN_MATCHING_WORD_FRACTION)  ||
@@ -387,30 +421,30 @@ int main (int argc, char* argv[]) {
   
               bestScore=simAB.score;
               candidateFound=true;
-              JsonFunctions::getJsonString(itSym["Name"],bestName);            
-              JsonFunctions::getJsonString(itSym["Code"],bestCode);
-              JsonFunctions::getJsonString(itSym["ISIN"],bestIsin);
+              JsonFunctions::getJsonString(iterSymbol["Name"],bestName);            
+              JsonFunctions::getJsonString(iterSymbol["Code"],bestCode);
+              JsonFunctions::getJsonString(iterSymbol["ISIN"],bestIsin);
 
               //The spelling of ISIN in the json files is not always consistent      
               if(bestIsin.length()==0){
-                JsonFunctions::getJsonString(itSym["Isin"], bestIsin);
+                JsonFunctions::getJsonString(iterSymbol["Isin"], bestIsin);
               }
               if(bestIsin.length()==0){
-                JsonFunctions::getJsonString(itSym["isin"], bestIsin);
+                JsonFunctions::getJsonString(iterSymbol["isin"], bestIsin);
               }
               
 
               //bestCode.append(".");
-              //bestCode.append(itExc);
+              //bestCode.append(iterExchange);
 
               patchResults[code]["PatchFound"] = true;
               patchResults[code]["PatchPrimaryTicker"]    = bestCode;
-              patchResults[code]["PatchPrimaryExchange"]  = itExc;
+              patchResults[code]["PatchPrimaryExchange"]  = iterExchange;
               patchResults[code]["PatchName"]=bestName;
               patchResults[code]["PatchISIN"]=bestIsin;
               patchResults[code]["PatchNameSimilarityScore"] = bestScore;
 
-              itPatchData.patchFound[indexTicker]=true;
+              iterPatch.patchFound[indexTicker]=true;
 
               if(simAB.exactMatch){
                 patchResults[code]["PatchNameExactMatch"]=true;
@@ -419,20 +453,20 @@ int main (int argc, char* argv[]) {
             }else if( simAB.score > 
               patchResults[code]["PatchNameSimilarityScoreClosest"].get<double>()){
               std::string secondCode,secondName,secondIsin;
-              JsonFunctions::getJsonString(itSym["Name"],secondName);            
-              JsonFunctions::getJsonString(itSym["Code"],secondCode);            
-              JsonFunctions::getJsonString(itSym["ISIN"],secondIsin);
+              JsonFunctions::getJsonString(iterSymbol["Name"],secondName);            
+              JsonFunctions::getJsonString(iterSymbol["Code"],secondCode);            
+              JsonFunctions::getJsonString(iterSymbol["ISIN"],secondIsin);
 
               if(secondIsin.length()==0){
-                JsonFunctions::getJsonString(itSym["Isin"], secondIsin);
+                JsonFunctions::getJsonString(iterSymbol["Isin"], secondIsin);
               }
               if(secondIsin.length()==0){
-                JsonFunctions::getJsonString(itSym["isin"], secondIsin);
+                JsonFunctions::getJsonString(iterSymbol["isin"], secondIsin);
               }
 
               patchResults[code]["PatchNameClosest"]=secondName;
               patchResults[code]["PatchCodeClosest"]=secondCode;
-              patchResults[code]["PatchExchangeClosest"]=itExc;
+              patchResults[code]["PatchExchangeClosest"]=iterExchange;
               patchResults[code]["PatchISINClosest"]=secondIsin;
               patchResults[code]["PatchNameSimilarityScoreClosest"] = simAB.score;
             } 
@@ -449,75 +483,86 @@ int main (int argc, char* argv[]) {
   // patch.candidate.json  : not exact, but met the conditions
   // patch.missing.json    : did not meet conditions
 
-json patchExactList;
-json patchCandidateList;
+json patchIsinMatchList;
+json patchNameMatchList;
+json patchNameSimilarList;
 json patchMissingList;
 
-for(auto& it : patchResults){
-  bool patchFound = it["PatchFound"].get<bool>();
-  bool patchExact = it["PatchNameExactMatch"].get<bool>();
+for(auto& iterPatch : patchResults){
+  bool isinFound  = iterPatch["PatchISINExactMatch"].get<bool>();
+  bool patchFound = iterPatch["PatchFound"].get<bool>();
+  bool patchExact = iterPatch["PatchNameExactMatch"].get<bool>();
   std::string code;
-  JsonFunctions::getJsonString(it["Code"],code);        
-
-  if(patchExact){
+  JsonFunctions::getJsonString(iterPatch["Code"],code);        
+  if(isinFound){
+    json patchIsinMatchEntry=
+      json::object( 
+          { 
+            {"Name", iterPatch["Name"].get<std::string>()},
+            {"Code", iterPatch["Code"].get<std::string>()},
+            {"Exchange", iterPatch["Exchange"].get<std::string>()},
+            {"ISIN", iterPatch["ISIN"].get<std::string>()},            
+            {"PatchName",iterPatch["PatchName"]},                   
+            {"PatchISIN", iterPatch["PatchISIN"].get<std::string>()},            
+            {"PrimaryTicker", iterPatch["PatchPrimaryTicker"].get<std::string>()},
+            {"PrimaryExchange", iterPatch["PatchPrimaryExchange"].get<std::string>()},            
+          }
+        );
+    patchIsinMatchList[code]=patchIsinMatchEntry; 
+  }else if(patchExact){
     json patchExactEntry = 
       json::object( 
           { 
-            {"Name", it["Name"].get<std::string>()},
-            {"Code", it["Code"].get<std::string>()},
-            {"Exchange", it["Exchange"].get<std::string>()},
-            {"ISIN", it["ISIN"].get<std::string>()},            
-            {"PatchName",it["PatchName"]},            
-            {"PatchISIN", it["PatchISIN"].get<std::string>()},            
-            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
-            {"PrimaryExchange", it["PatchPrimaryExchange"].get<std::string>()},            
-
-
+            {"Name", iterPatch["Name"].get<std::string>()},
+            {"Code", iterPatch["Code"].get<std::string>()},
+            {"Exchange", iterPatch["Exchange"].get<std::string>()},
+            {"ISIN", iterPatch["ISIN"].get<std::string>()},            
+            {"PatchName",iterPatch["PatchName"]},            
+            {"PatchISIN", iterPatch["PatchISIN"].get<std::string>()},            
+            {"PrimaryTicker", iterPatch["PatchPrimaryTicker"].get<std::string>()},
+            {"PrimaryExchange", iterPatch["PatchPrimaryExchange"].get<std::string>()},            
           }
         );
-    patchExactList[code]=patchExactEntry;  
-  }
-   
-  if(!patchExact && patchFound){
+    patchNameMatchList[code]=patchExactEntry;  
+  }else if(!patchExact && patchFound){
     json patchCandidateEntry = 
       json::object( 
           { 
-            {"Name", it["Name"].get<std::string>()},
-            {"Code", it["Code"].get<std::string>()},
-            {"Exchange", it["Exchange"].get<std::string>()},
-            {"ISIN", it["ISIN"].get<std::string>()},            
-            {"PatchName",it["PatchName"]},
-            {"PatchISIN", it["PatchISIN"].get<std::string>()},            
-            {"PrimaryTicker", it["PatchPrimaryTicker"].get<std::string>()},
-            {"PrimaryExchange", it["PatchPrimaryExchange"].get<std::string>()},            
-            {"PatchNameSimilarityScore", it["PatchNameSimilarityScore"].get<double>()},
+            {"Name", iterPatch["Name"].get<std::string>()},
+            {"Code", iterPatch["Code"].get<std::string>()},
+            {"Exchange", iterPatch["Exchange"].get<std::string>()},
+            {"ISIN", iterPatch["ISIN"].get<std::string>()},            
+            {"PatchName",iterPatch["PatchName"]},
+            {"PatchISIN", iterPatch["PatchISIN"].get<std::string>()},            
+            {"PrimaryTicker", iterPatch["PatchPrimaryTicker"].get<std::string>()},
+            {"PrimaryExchange", iterPatch["PatchPrimaryExchange"].get<std::string>()},            
+            {"PatchNameSimilarityScore", iterPatch["PatchNameSimilarityScore"].get<double>()},
           }
         );
-    patchCandidateList[code]=patchCandidateEntry;  
+    patchNameSimilarList[code]=patchCandidateEntry;  
 
-  }
-
-  if(!patchExact && !patchFound){
+  }else{
+//  if(!patchExact && !patchFound){
 
     std::string patchNameClosest;
     std::string patchCodeClosest;
     std::string patchExchangeClosest;
     std::string patchIsinClosest;
     double patchSimilarityScoreClosest=0;
-    JsonFunctions::getJsonString(it["PatchNameClosest"],patchNameClosest);
-    JsonFunctions::getJsonString(it["PatchCodeClosest"],patchCodeClosest);
-    JsonFunctions::getJsonString(it["PatchExchangeClosest"],patchExchangeClosest);
-    JsonFunctions::getJsonString(it["PatchISINClosest"],patchIsinClosest);
+    JsonFunctions::getJsonString(iterPatch["PatchNameClosest"],patchNameClosest);
+    JsonFunctions::getJsonString(iterPatch["PatchCodeClosest"],patchCodeClosest);
+    JsonFunctions::getJsonString(iterPatch["PatchExchangeClosest"],patchExchangeClosest);
+    JsonFunctions::getJsonString(iterPatch["PatchISINClosest"],patchIsinClosest);
     patchSimilarityScoreClosest= 
-      JsonFunctions::getJsonFloat( it["PatchNameSimilarityScoreClosest"]);
+      JsonFunctions::getJsonFloat( iterPatch["PatchNameSimilarityScoreClosest"]);
 
     json patchMissingEntry = 
       json::object( 
           { 
-            {"Name", it["Name"].get<std::string>()},
-            {"Code", it["Code"].get<std::string>()},
-            {"Exchange", it["Exchange"].get<std::string>()},
-            {"ISIN", it["ISIN"].get<std::string>()},
+            {"Name", iterPatch["Name"].get<std::string>()},
+            {"Code", iterPatch["Code"].get<std::string>()},
+            {"Exchange", iterPatch["Exchange"].get<std::string>()},
+            {"ISIN", iterPatch["ISIN"].get<std::string>()},
             {"PatchNameClosest", patchNameClosest},
             {"PatchCodeClosest", patchCodeClosest},
             {"PatchExchangeClosest",patchExchangeClosest},    
@@ -535,34 +580,51 @@ for(auto& it : patchResults){
   //Report on the items that were patched and not.
   if(verbose){
     std::cout << std::endl;    
-    std::cout << "Patches found for : " << std::endl;
+    std::cout << "Patches found with matching ISIN numbers : " << std::endl;
     std::cout << std::endl;
 
     unsigned int count = 1;
-    for(auto& it : patchExactList){
+    for(auto& iterPatch : patchIsinMatchList){
       std::cout << count << "." << '\t' 
-                << it["Code"].get<std::string>() << '\t' << '\t'   
-                << it["Name"].get<std::string>() << std::endl
-                << '\t' << it["PrimaryTicker"].get<std::string>() 
-        << '\t' << '\t' << it["PatchName"].get<std::string>() << std::endl;
+                << iterPatch["Code"].get<std::string>() << '\t' << '\t'   
+                << iterPatch["Name"].get<std::string>() << std::endl
+                << '\t' << iterPatch["PrimaryTicker"].get<std::string>() 
+        << '\t' << '\t' << iterPatch["PatchName"].get<std::string>() << std::endl;
+      std::cout << std::endl;
+
+      ++count;
+    }
+
+
+    std::cout << std::endl;    
+    std::cout << "Patches found with matching names : " << std::endl;
+    std::cout << std::endl;
+
+    count = 1;
+    for(auto& iterPatch : patchNameMatchList){
+      std::cout << count << "." << '\t' 
+                << iterPatch["Code"].get<std::string>() << '\t' << '\t'   
+                << iterPatch["Name"].get<std::string>() << std::endl
+                << '\t' << iterPatch["PrimaryTicker"].get<std::string>() 
+        << '\t' << '\t' << iterPatch["PatchName"].get<std::string>() << std::endl;
       std::cout << std::endl;
 
       ++count;
     }
 
     std::cout << std::endl;    
-    std::cout << "Patch candidates found for : " << std::endl;
+    std::cout << "Patches found with similar names : " << std::endl;
     std::cout << std::endl;
 
     count =1;
-    for(auto& it : patchCandidateList){
+    for(auto& iterPatch : patchNameSimilarList){
       std::cout << count << "." << '\t' 
-                << it["Code"].get<std::string>() << '\t' 
-                << it["PrimaryTicker"].get<std::string>() << std::endl
-                << '\t' << it["Name"].get<std::string>() << std::endl                
-                << '\t' << it["PatchName"].get<std::string>() << std::endl;
+                << iterPatch["Code"].get<std::string>() << '\t' 
+                << iterPatch["PrimaryTicker"].get<std::string>() << std::endl
+                << '\t' << iterPatch["Name"].get<std::string>() << std::endl                
+                << '\t' << iterPatch["PatchName"].get<std::string>() << std::endl;
 
-      std::cout << '\t' << it["PatchNameSimilarityScore"].get<double>() 
+      std::cout << '\t' << iterPatch["PatchNameSimilarityScore"].get<double>() 
                 << std::endl << std::endl;
       ++count;
     }
@@ -573,12 +635,12 @@ for(auto& it : patchResults){
     std::cout << std::endl;
 
     count =1;
-    for(auto& it : patchMissingList){
+    for(auto& iterPatch : patchMissingList){
       std::cout << count << "." << '\t' 
-                << it["Code"].get<std::string>() << std::endl  
-                << '\t' << it["Name"].get<std::string>() << std::endl
-                << '\t' << it["PatchNameClosest"].get<std::string>() << std::endl
-                << '\t' << it["PatchNameSimilarityScoreClosest"].get<double>();                 
+                << iterPatch["Code"].get<std::string>() << std::endl  
+                << '\t' << iterPatch["Name"].get<std::string>() << std::endl
+                << '\t' << iterPatch["PatchNameClosest"].get<std::string>() << std::endl
+                << '\t' << iterPatch["PatchNameSimilarityScoreClosest"].get<double>();                 
       std::cout << std::endl;
       std::cout << std::endl;
       ++count;
@@ -586,17 +648,27 @@ for(auto& it : patchResults){
 
   }
     
-
-
-  //Output the list of exact patches
+  //Output the list of matching isin patches
   std::string outputFilePath(outputFolder);
   std::string outputFileName(exchangeCode);
-  outputFileName.append(".patch.json");
+  outputFileName.append(".patch.matching_isin.json");
   outputFilePath.append(outputFileName);
 
   std::ofstream outputFileStream(outputFilePath,
       std::ios_base::trunc | std::ios_base::out);
-  outputFileStream << patchExactList;
+  outputFileStream << patchIsinMatchList;
+  outputFileStream.close();
+
+
+  //Output the list of matching by name patches
+  outputFilePath = outputFolder;
+  outputFileName = exchangeCode;
+  outputFileName.append(".patch.matching_name.json");
+  outputFilePath.append(outputFileName);
+
+  outputFileStream.open(outputFilePath,
+      std::ios_base::trunc | std::ios_base::out);
+  outputFileStream << patchNameMatchList;
   outputFileStream.close();
 
   //Output the list of candidate patches
@@ -607,7 +679,7 @@ for(auto& it : patchResults){
 
   outputFileStream.open(outputFilePath,
       std::ios_base::trunc | std::ios_base::out);
-  outputFileStream << patchCandidateList;
+  outputFileStream << patchNameSimilarList;
   outputFileStream.close();
 
   //Output the list of missing patches
