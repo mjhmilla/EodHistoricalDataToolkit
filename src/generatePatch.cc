@@ -11,6 +11,10 @@
 
 #include "JsonFunctions.h"
 #include "StringToolkit.h"
+#include "CurlToolkit.h"
+
+const char TRADING_VIEW_URL[] = "https://www.tradingview.com/symbols/";
+const char GOOGLE_SEARCH_URL[] = "https://www.google.com/search?q=";
 
 
 struct primaryTickerPatchData {
@@ -32,6 +36,7 @@ int main (int argc, char* argv[]) {
   std::string mainExchangeListFileName;
   std::string exchangeSymbolListFolder;
   std::string outputFolder;
+  std::string tradingViewExchangeCodes;
   bool verbose;
 
   try{
@@ -87,6 +92,22 @@ int main (int argc, char* argv[]) {
     cmd.add(mainExchangeListFileNameInput);  
 
 
+    TCLAP::ValueArg<std::string> tradingViewExchangeCodeInput("t",
+      "trading_view_exchange_code", 
+      "ISIN data can be patched by searching www.tradingview.com. TradingView "
+      "has its own codes for each exchange. Pass in the code that corresponds"
+      "to the exchange of interest here. This feature requires that you have"
+      "an account to TradingView and be logged in to function. This feature"
+      "also assumes that the first occurance of \"isin\" in the html returned"
+      "by TradingView is followed by the isin number."
+      "(e.g. SWB for the Stuttgart Boerse)",
+      false,"","string");
+
+    cmd.add(tradingViewExchangeCodeInput);  
+
+
+
+
     TCLAP::ValueArg<std::string> outputFolderInput("o","output_folder_path", 
       "The path to the folder that will contain the output json files "
       "produced by this analysis",
@@ -104,7 +125,8 @@ int main (int argc, char* argv[]) {
     exchangeCode              = exchangeCodeInput.getValue();
     mainExchangeListFileName  = mainExchangeListFileNameInput.getValue();
     exchangeListFileName      = exchangeListFileNameInput.getValue(); 
-    exchangeSymbolListFolder  = exchangeSymbolListFolderInput.getValue();   
+    exchangeSymbolListFolder  = exchangeSymbolListFolderInput.getValue();  
+    tradingViewExchangeCodes   = tradingViewExchangeCodeInput.getValue(); 
     outputFolder              = outputFolderInput.getValue();
     verbose                   = verboseInput.getValue();
 
@@ -124,6 +146,9 @@ int main (int argc, char* argv[]) {
       std::cout << "  Exchange Symbol List" << std::endl;
       std::cout << "    " << exchangeSymbolListFolder << std::endl;
 
+      std::cout << "  TradingView exchange code" << std::endl;
+      std::cout << "    " << tradingViewExchangeCodes << std::endl;
+
       std::cout << "  Output Folder" << std::endl;
       std::cout << "    " << outputFolder << std::endl;
     }
@@ -131,6 +156,24 @@ int main (int argc, char* argv[]) {
 	{ 
     std::cerr << "error: "    << e.error() 
               << " for arg "  << e.argId() << std::endl; 
+  }
+
+  //Break out the set of exchanges to query
+  std::vector< std::string > tradingViewExchangeList;
+  if(tradingViewExchangeCodes.length()>0){
+    size_t idxA=0;
+    size_t idxB = tradingViewExchangeCodes.find_first_of('-');
+    std::string exchange;
+    while(idxB != std::string::npos){
+      exchange = tradingViewExchangeCodes.substr(idxA,idxB-idxA);
+      tradingViewExchangeList.push_back(exchange);
+      idxA = idxB+1;           
+      idxB = tradingViewExchangeCodes.find_first_of('-',idxA);
+    }
+    idxB = tradingViewExchangeCodes.length();
+    exchange = tradingViewExchangeCodes.substr(idxA,idxB);
+    tradingViewExchangeList.push_back(exchange);
+
   }
 
 
@@ -177,23 +220,37 @@ int main (int argc, char* argv[]) {
   unsigned int patchCount = 0;
 
 
+
+  if(verbose){
+    std::cout << std::endl;
+    std::cout << "Constructing the table of companies with missing "
+                 "primary tickers " <<std::endl;
+  }
   //1. Sort MissingPrimaryTicker errors by currency.
   //2. Identify the exchanges that use that currency
   //3. Then use this list to look for matching company names so that you 
   //   only have to open each exchange symbol list once.
+
   for(auto& iterScan : scanResults){
 
     //Patch the ISIN from the main exchange, if its available
-    std::string isin=iterScan["ISIN"].get<std::string>();
-    if(isin.length()==0){
+//    std::string isin("");
+    std::string eodIsin(""); //EOD ISIN
+    std::string tvIsin(""); //Trading View ISIN
+    std::string googleIsin(""); //ISIN number scanned from a google search
+
+    JsonFunctions::getJsonString(iterScan["ISIN"],eodIsin);
+    if(eodIsin.length()==0){
       if(mainExchangeAvailable){
         auto iterExchange=mainExchangeList.begin();
         bool found=false;
+        std::string nameA,nameB;
+        JsonFunctions::getJsonString(iterScan["Name"],nameA);
 
         while(iterExchange != mainExchangeList.end() && !found){
-          if( iterScan["Name"].get<std::string>().compare( 
-              (*iterExchange)["Name"].get<std::string>()) == 0 ){
-            isin = (*iterExchange)["Isin"].get<std::string>(); 
+          JsonFunctions::getJsonString((*iterExchange)["Name"],nameB);
+          if( nameA.compare(nameB) == 0 ){
+            JsonFunctions::getJsonString((*iterExchange)["Isin"],eodIsin);
             found=true;
           }
           ++iterExchange;
@@ -201,16 +258,157 @@ int main (int argc, char* argv[]) {
       }
     }
 
+
+
     if(iterScan["MissingPrimaryTicker"].get<bool>()){
-     
+
+      std::string code("");
+      JsonFunctions::getJsonString(iterScan["Code"],code);
+      std::string name("");
+      JsonFunctions::getJsonString(iterScan["Name"],name);
+      std::string exchange("");
+      JsonFunctions::getJsonString(iterScan["Exchange"],exchange);
+      std::string primaryTicker("");
+      JsonFunctions::getJsonString(iterScan["PrimaryTicker"],primaryTicker);
+
+
+      ++patchCount;
+      if(verbose){
+        std::cout << '\n' << '\n'
+          << patchCount << "." << '\t' << exchange << ":" << code << std::endl;
+        std::cout << '\t' << '\"' << name <<'\"' << std::endl;
+        if(eodIsin.length()>0){
+          std::cout << '\t' << eodIsin << std::endl;  
+        }
+      }
+
+      //Query trading view if the isin is missing
+      if(eodIsin.length()==0 && tradingViewExchangeList.size() > 0){
+        if(verbose){
+          std::cout << '\t' << "Searching TradingView for ISIN:";
+        }
+
+        if(code.length()>0){
+          bool found = false;
+          size_t iter=0;
+
+          while(found == false && iter < tradingViewExchangeList.size()){
+            if(verbose){
+              std::cout << " " << tradingViewExchangeList[iter];
+            }
+
+            std::string tradingViewSearchUrl(TRADING_VIEW_URL);
+            tradingViewSearchUrl.append(tradingViewExchangeList[iter]);
+            tradingViewSearchUrl.append("-");
+            tradingViewSearchUrl.append(code);
+            tradingViewSearchUrl.append("/");
+            std::string tradingViewSearchResult;
+            bool downloadSuccessful = 
+              CurlToolkit::downloadHtmlToString(tradingViewSearchUrl,
+                                                tradingViewSearchResult,
+                                                false);                                           
+            if(downloadSuccessful){
+              //std::string fname = code;
+              //fname.append(".html");   
+              //std::ofstream file(fname);       
+              //file << tradingViewSearchResult;
+              //file.close();
+
+              //search through the html code for "isin"
+              //bool here=true;
+              std::string isinStr("\"isin\":");
+              std::size_t idx = tradingViewSearchResult.find(isinStr);
+              if(idx != std::string::npos){
+                std::size_t idxQuoteA = 
+                  tradingViewSearchResult.find_first_of('\"',idx+isinStr.length());
+                std::size_t idxQuoteB = 
+                  tradingViewSearchResult.find_first_of('\"',idxQuoteA+1);
+                if(idxQuoteA != std::string::npos && 
+                  idxQuoteB != std::string::npos){
+                  tvIsin = tradingViewSearchResult.substr(idxQuoteA+1,
+                                                        idxQuoteB-idxQuoteA-1);
+                  found=true;                                             
+                  if(verbose){
+                    std::cout << '\n' << '\t' << "ISIN: " 
+                              << tvIsin << std::endl;
+                  }
+
+                }
+              }
+            }
+            ++iter;
+          }
+
+
+        }
+
+      }
+
+      //If TradingView turned up nothing, try google
+      if(tvIsin.length()==0 && eodIsin.length()==0){
+            if(verbose){
+              std::cout << '\n' << '\t' << "Google's ISIN: ";
+            }
+
+            std::string googleSearchUrl(GOOGLE_SEARCH_URL);
+            std::string nameMod = name;
+            size_t idx=nameMod.find(' ',0);
+            while(idx != std::string::npos){
+              nameMod.at(idx)='+';
+              idx=nameMod.find(' ',idx+1);
+            }
+            googleSearchUrl.append(nameMod);
+            googleSearchUrl.append("+");
+            googleSearchUrl.append(code);
+            googleSearchUrl.append("+ISIN");
+            std::string googleSearchResult;
+            bool downloadSuccessful = 
+              CurlToolkit::downloadHtmlToString(googleSearchUrl,
+                                                googleSearchResult,
+                                                false); 
+
+            //std::string fname = code;
+            //fname.append(".html");   
+            //std::ofstream file(fname);       
+            //file << googleSearchResult;
+            //file.close();
+
+            std::string isinLabel =" ISIN ";          
+            //This is the search  
+            idx = googleSearchResult.find(isinLabel); 
+            //This could be the ISIN
+            idx = googleSearchResult.find(isinLabel, idx+isinLabel.length()); 
+            if(idx != std::string::npos){
+              idx=idx+isinLabel.length();
+              googleIsin = googleSearchResult.substr(idx,12);
+              bool validIsin=true;
+              idx=0;
+              while(idx < googleIsin.length() && validIsin==true){
+                if(!isalnum(googleIsin[idx])){
+                  validIsin=false;
+                  googleIsin="";
+                }
+                ++idx;
+              }
+              if(verbose){
+                std::cout << googleIsin << std::endl;
+              }
+
+            }
+            bool here=true;
+
+      }
+
       json patchEntry = 
         json::object( 
             { 
-              {"Code", iterScan["Code"].get<std::string>()},
-              {"Name", iterScan["Name"].get<std::string>()},
-              {"Exchange", iterScan["Exchange"].get<std::string>()},
-              {"ISIN", isin},
-              {"PrimaryTicker", iterScan["PrimaryTicker"].get<std::string>()},
+              {"Code", code},
+              {"Name", name},
+              {"Exchange", exchange},
+              {"ISIN", eodIsin},
+              {"TradingViewISIN",tvIsin},
+              {"GoogleISIN",googleIsin},
+              {"PrimaryTicker", primaryTicker},
               {"PatchFound",false},
               {"PatchPrimaryTicker", ""},
               {"PatchPrimaryExchange", ""},
@@ -238,6 +436,17 @@ int main (int argc, char* argv[]) {
       //If the isin exists, use the first digits to directly find the
       //exchanges that carry this symbol. Directly retrieve the currency
       //for the exchange.
+      std::string isin;
+      if(eodIsin.length()>0){
+        isin=eodIsin;
+      }else if(tvIsin.length()>0){
+        isin=tvIsin;
+      }else if(googleIsin.length()>0){
+        isin=googleIsin;
+      }else{
+        isin="";
+      }
+
       if(isin.length()>0){
         auto iterExchange=exchangeList.begin();
         bool found=false;
@@ -336,6 +545,15 @@ int main (int argc, char* argv[]) {
         //Get the code, isin, name
         std::string code = iterPatch.tickersInError[indexTicker];
         std::string isin = patchResults[code]["ISIN"].get<std::string>();
+
+        if(isin.length()==0){
+          isin=patchResults[code]["TradingViewISIN"].get<std::string>();
+        }
+        if(isin.length()==0){
+          isin=patchResults[code]["GoogleISIN"].get<std::string>();
+        }
+
+
         std::string nameARaw;
         JsonFunctions::getJsonString(scanResults[code]["Name"],nameARaw);
 
@@ -349,20 +567,17 @@ int main (int argc, char* argv[]) {
         }        
 
 
-        //If the ISIN exists, go see if you can find an entry that corresponds
-        //in one of the exchanges
-        std::assert(0);
-        std:abort();
+        bool isinMatchFound= 
+          JsonFunctions::getJsonBool(patchResults[code]["PatchISINExactMatch"]);
 
-        bool isinMatchFound=false;
-        if(isin.length()>0){
+        if(isin.length()>0 && isinMatchFound == false){
           auto iterSymbol=exchangeSymbolList.begin();
           bool found=false;
 
           std::string candidateIsin("");
-          JsonFunctions::getJsonString((*iterSymbol)["Isin"],candidateIsin);
 
           while(iterSymbol != exchangeSymbolList.end() && !found){
+            JsonFunctions::getJsonString((*iterSymbol)["Isin"],candidateIsin);
             if(  isin.compare(candidateIsin)==0){
               patchResults[code]["PatchFound"] = true;
               patchResults[code]["PatchISIN"]                 = isin;
@@ -382,6 +597,7 @@ int main (int argc, char* argv[]) {
               isinMatchFound=true;
             }
             ++iterSymbol;
+
           }
         }
 
@@ -501,7 +717,9 @@ for(auto& iterPatch : patchResults){
             {"Name", iterPatch["Name"].get<std::string>()},
             {"Code", iterPatch["Code"].get<std::string>()},
             {"Exchange", iterPatch["Exchange"].get<std::string>()},
-            {"ISIN", iterPatch["ISIN"].get<std::string>()},            
+            {"ISIN", iterPatch["ISIN"].get<std::string>()},
+            {"TradingViewISIN", iterPatch["TradingViewISIN"].get<std::string>()},
+            {"GoogleISIN", iterPatch["GoogleISIN"].get<std::string>()},            
             {"PatchName",iterPatch["PatchName"]},                   
             {"PatchISIN", iterPatch["PatchISIN"].get<std::string>()},            
             {"PrimaryTicker", iterPatch["PatchPrimaryTicker"].get<std::string>()},
@@ -516,7 +734,9 @@ for(auto& iterPatch : patchResults){
             {"Name", iterPatch["Name"].get<std::string>()},
             {"Code", iterPatch["Code"].get<std::string>()},
             {"Exchange", iterPatch["Exchange"].get<std::string>()},
-            {"ISIN", iterPatch["ISIN"].get<std::string>()},            
+            {"ISIN", iterPatch["ISIN"].get<std::string>()},   
+            {"TradingViewISIN", iterPatch["TradingViewISIN"].get<std::string>()},         
+            {"GoogleISIN", iterPatch["GoogleISIN"].get<std::string>()},            
             {"PatchName",iterPatch["PatchName"]},            
             {"PatchISIN", iterPatch["PatchISIN"].get<std::string>()},            
             {"PrimaryTicker", iterPatch["PatchPrimaryTicker"].get<std::string>()},
@@ -531,7 +751,9 @@ for(auto& iterPatch : patchResults){
             {"Name", iterPatch["Name"].get<std::string>()},
             {"Code", iterPatch["Code"].get<std::string>()},
             {"Exchange", iterPatch["Exchange"].get<std::string>()},
-            {"ISIN", iterPatch["ISIN"].get<std::string>()},            
+            {"ISIN", iterPatch["ISIN"].get<std::string>()},
+            {"TradingViewISIN", iterPatch["TradingViewISIN"].get<std::string>()},
+            {"GoogleISIN", iterPatch["GoogleISIN"].get<std::string>()},            
             {"PatchName",iterPatch["PatchName"]},
             {"PatchISIN", iterPatch["PatchISIN"].get<std::string>()},            
             {"PrimaryTicker", iterPatch["PatchPrimaryTicker"].get<std::string>()},
@@ -563,6 +785,8 @@ for(auto& iterPatch : patchResults){
             {"Code", iterPatch["Code"].get<std::string>()},
             {"Exchange", iterPatch["Exchange"].get<std::string>()},
             {"ISIN", iterPatch["ISIN"].get<std::string>()},
+            {"TradingViewISIN", iterPatch["TradingViewISIN"].get<std::string>()},
+            {"GoogleISIN", iterPatch["GoogleISIN"].get<std::string>()},            
             {"PatchNameClosest", patchNameClosest},
             {"PatchCodeClosest", patchCodeClosest},
             {"PatchExchangeClosest",patchExchangeClosest},    
@@ -674,7 +898,7 @@ for(auto& iterPatch : patchResults){
   //Output the list of candidate patches
   outputFilePath = outputFolder;
   outputFileName = exchangeCode;
-  outputFileName.append(".patch.candidate.json");
+  outputFileName.append(".patch.similar_name.json");
   outputFilePath.append(outputFileName);
 
   outputFileStream.open(outputFilePath,

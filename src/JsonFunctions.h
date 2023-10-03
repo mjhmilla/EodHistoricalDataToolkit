@@ -26,6 +26,18 @@ class JsonFunctions {
       }
     };
 
+    static bool getJsonBool(nlohmann::ordered_json &jsonEntry){
+      if(  jsonEntry.is_null()){
+        return std::nan("1");
+      }else{
+        if(  jsonEntry.is_boolean()){
+          return jsonEntry.get<bool>();
+        }else{
+          throw std::invalid_argument("json entry is not a boolean");      
+        }
+      }
+    };
+
     static void getJsonString(nlohmann::ordered_json &jsonEntry,
                               std::string &updString){
       if( jsonEntry.is_null()){

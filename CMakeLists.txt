@@ -73,6 +73,10 @@ TARGET_LINK_LIBRARIES(applyPatch
   ${CURL_LIBRARIES}
 )
 
+TARGET_LINK_LIBRARIES(generatePatch
+  ${CURL_LIBRARIES}
+)
+
 
 message("EIGEN3_INCLUDE_DIR           :" ${EIGEN3_INCLUDE_DIR})
 message("TCLAP_INCLUDE_DIR            :" ${TCLAP_INCLUDE_PATH})

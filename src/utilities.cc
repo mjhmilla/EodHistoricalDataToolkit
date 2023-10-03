@@ -14,7 +14,7 @@
 int main (int argc, char* argv[]) {
 
   std::string inputJsonFileName;
-  std::string outputJsonFileName;
+  std::string outputJsonFileName; 
   bool splitPrimaryTicker;
   bool verbose;
 
@@ -38,7 +38,7 @@ int main (int argc, char* argv[]) {
 
     cmd.add(outputJsonFileNameInput);
 
-    TCLAP::SwitchArg splitPrimaryTickerInput("s","split_primary_ticker",
+    TCLAP::SwitchArg splitPrimaryTickerInput("p","split_primary_ticker",
       "Will update the PrimaryTicker to be PrimaryTicker and PrimaryExchange. "
       "As an example a PrimaryTicker of OCSL.US would turn into a PrimaryTicker "
       "of OCSL and a PrimaryExchange of US", false);
@@ -67,6 +67,7 @@ int main (int argc, char* argv[]) {
       std::cout << "  Split primary ticker?" << std::endl;
       std::cout << "    " << splitPrimaryTicker << std::endl;
     }
+
   } catch (TCLAP::ArgException &e)  // catch exceptions
 	{ 
     std::cerr << "error: "    << e.error() 
@@ -106,6 +107,7 @@ int main (int argc, char* argv[]) {
 
     }
   }
+
 
 
   std::ofstream outputFileStream(outputJsonFileName,

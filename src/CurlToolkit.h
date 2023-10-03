@@ -120,6 +120,81 @@ class CurlToolkit {
     return success;
   };
 
+    static bool downloadHtmlToString( std::string &url, 
+                                  std::string &updUrlContents, 
+                                  bool verbose){
+
+      bool success = false;
+      unsigned int downloadAttempts=0;
+      updUrlContents.clear();
+
+      while(downloadAttempts < DOWNLOAD_ATTEMPTS && success == false){
+
+        if(verbose){
+          std::cout << std::endl;
+          std::cout << "    Contacting" << std::endl;
+          std::cout << "    " << url << std::endl;
+        }
+
+        CURL* curl = curl_easy_init();
+  
+        // Set remote URL.
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+  
+        // Don't bother trying IPv6, which would increase DNS resolution time.
+        curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+  
+        // Don't wait forever, time out after 20 seconds.
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, CURL_TIMEOUT_TIME_SECONDS);
+  
+        // Follow HTTP redirects if necessary.
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+  
+        // Response information.
+        long httpCode(0);
+        std::unique_ptr<std::string> httpData(new std::string());
+  
+        // Hook up data handling function.
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callBack);
+  
+        // Hook up data container (will be passed as the last parameter to the
+        // callBack handling function).  Can be any pointer type, since it will
+        // internally be passed as a void pointer.
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, httpData.get());
+  
+        // Run our HTTP GET command, capture the HTTP response code, and clean up.
+        unsigned int retryAttemptCount = 0;
+  
+        curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+        curl_easy_cleanup(curl);
+  
+        if(verbose){
+          std::cout << "    http response code" << std::endl;
+          std::cout << "    " << httpCode << std::endl;
+        }
+
+        if (httpCode == 200)
+        {
+          success=true;
+
+          updUrlContents = (*httpData);
+  
+
+          if(verbose){    
+            std::cout << "    Wrote https data to string" << std::endl;
+          }
+  
+        }else{
+          success=false;
+        }
+  
+        ++downloadAttempts;
+      }
+  
+    return success;
+  };
+
 };
 
 #endif 

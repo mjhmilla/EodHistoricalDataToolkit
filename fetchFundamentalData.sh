@@ -2,10 +2,10 @@
 
 EX="$1"
 
-rm -r ${EOD_TOOLKIT_HOME}/data/"$EX"/fundamentalData/
+#rm -r ${EOD_TOOLKIT_HOME}/data/"$EX"/fundamentalData/
 
-mkdir ${EOD_TOOLKIT_HOME}/data/"$EX"
-mkdir ${EOD_TOOLKIT_HOME}/data/"$EX"/fundamentalData/
+#mkdir ${EOD_TOOLKIT_HOME}/data/"$EX"
+#mkdir ${EOD_TOOLKIT_HOME}/data/"$EX"/fundamentalData/
 
 
 
