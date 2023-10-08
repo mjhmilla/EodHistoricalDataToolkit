@@ -1,12 +1,14 @@
 #ifndef CURL_TOOLKIT
 #define CURL_TOOLKIT
 
-#include <curl/curl.h>
-
-#include <nlohmann/json.hpp>
+#include <filesystem>
 #include <stdlib.h>
 
+#include <curl/curl.h>
+#include <nlohmann/json.hpp>
+
 #include "StringToolkit.h"
+
 
 
 unsigned int CURL_TIMEOUT_TIME_SECONDS = 20;
@@ -34,13 +36,29 @@ class CurlToolkit {
 
     static bool downloadJsonFile( std::string &eodUrl, 
                                   std::string &outputFolder, 
-                                  std::string &outputFileName, 
+                                  std::string &outputFileName,
+                                  bool skipIfFileExists, 
                                   bool verbose){
 
       bool success = false;
       unsigned int downloadAttempts=0;
 
-      while(downloadAttempts < DOWNLOAD_ATTEMPTS && success == false){
+      std::stringstream ss;
+      ss << outputFolder << outputFileName;
+      std::string outputFilePathName = ss.str();
+      std::string removeStr("\"");
+      StringToolkit::removeFromString(outputFilePathName,removeStr); 
+
+      bool fileExists=false;
+      if(skipIfFileExists){
+        std::filesystem::path filePath=outputFilePathName;
+        fileExists = std::filesystem::exists(filePath); 
+        if(fileExists){
+          success=true;
+        }       
+      }      
+
+      while(downloadAttempts < DOWNLOAD_ATTEMPTS && !success && !fileExists){
 
         if(verbose){
           std::cout << std::endl;
@@ -95,12 +113,7 @@ class CurlToolkit {
           json jsonData = json::parse(*httpData.get());
   
   
-          std::stringstream ss;
-          ss << outputFolder << outputFileName;
-          std::string outputFilePathName = ss.str();
-          std::string removeStr("\"");
-          StringToolkit::removeFromString(outputFilePathName,removeStr);    
-  
+    
           //Write the file
           std::ofstream file(outputFilePathName);
           file << jsonData;

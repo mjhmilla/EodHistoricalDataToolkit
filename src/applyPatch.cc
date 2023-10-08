@@ -21,6 +21,7 @@ int main (int argc, char* argv[]) {
   std::string exchangeCode;
   std::string patchFileName;
   std::string fundamentalFolder;
+  bool skipExistingFiles;
 
   bool verbose;
 
@@ -69,6 +70,10 @@ int main (int argc, char* argv[]) {
 
     cmd.add(exchangeCodeInput);  
 
+    TCLAP::SwitchArg skipExistingFilesInput("i","skip_existing_files",
+      "Existing primary ticker files will not be downloaded again", false);
+
+    cmd.add(skipExistingFilesInput);   
 
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
@@ -82,6 +87,7 @@ int main (int argc, char* argv[]) {
     patchFileName             = patchFileNameInput.getValue();
     fundamentalFolder         = fundamentalFolderInput.getValue();
     exchangeCode              = exchangeCodeInput.getValue();
+    skipExistingFiles         = skipExistingFilesInput.getValue();
     verbose                   = verboseInput.getValue();
 
     if(verbose){
@@ -101,6 +107,8 @@ int main (int argc, char* argv[]) {
       std::cout << "  EOD Url Template" << std::endl;
       std::cout << "    " << eodUrlTemplate << std::endl;
 
+      std::cout << "  Skip existing files" << std::endl;
+      std::cout << "    " << skipExistingFiles << std::endl;
 
     }
   } catch (TCLAP::ArgException &e)  // catch exceptions
@@ -142,7 +150,8 @@ int main (int argc, char* argv[]) {
     json updFileData = json::parse(updFileInputStream);    
     updFileInputStream.close();
 
-    updFileData["General"]["PrimaryTicker"]=patchData["PrimaryTicker"].get<std::string>();
+    updFileData["General"]["PrimaryTicker"]=
+      patchData["PrimaryTicker"].get<std::string>();
 
     std::ofstream updFileOutputStream(updFileName.c_str(), 
                 std::ios_base::trunc | std::ios_base::out);
@@ -161,19 +170,24 @@ int main (int argc, char* argv[]) {
     //Download the primary ticker
     std::string eodUrl = eodUrlTemplate;
     std::string eodTicker = patchData["PrimaryTicker"].get<std::string>();
-    unsigned int indexPoint = eodTicker.find('.');
-    std::string eodExchange = eodTicker.substr(indexPoint+1,eodTicker.length());
-    std::string ticker = eodTicker.substr(0,indexPoint);
+    std::string eodExchange = patchData["PrimaryExchange"].get<std::string>();
+
+    bool skipDownload=false;
+
+
 
     StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
     StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",eodExchange);
-    StringToolkit::findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
+    StringToolkit::findAndReplaceString(eodUrl,"{TICKER_CODE}",eodTicker);
 
     std::string primaryFileName = eodTicker;
+    primaryFileName.append(".");
+    primaryFileName.append(eodExchange);
     primaryFileName.append(".json");
 
     bool successTickerDownload = 
-      CurlToolkit::downloadJsonFile(eodUrl,fundamentalFolder,primaryFileName,false);
+      CurlToolkit::downloadJsonFile(eodUrl,fundamentalFolder,primaryFileName,
+                                    skipExistingFiles, false);
 
     if(verbose){
       if(successTickerDownload){

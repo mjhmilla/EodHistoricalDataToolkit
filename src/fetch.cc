@@ -31,6 +31,7 @@ int main (int argc, char* argv[]) {
   std::string outputFileName;
   std::string outputPrimaryTickerFileName;
   bool gapFillPartialDownload;
+  bool skipExistingFiles;  
   bool verbose;
 
   unsigned int mode;
@@ -106,6 +107,11 @@ int main (int argc, char* argv[]) {
        false);
     cmd.add(gapFillPartialDownloadInput); 
 
+    TCLAP::SwitchArg skipExistingFilesInput("i","skip_existing_files",
+      "Existing primary ticker files will not be downloaded again", false);
+
+    cmd.add(skipExistingFilesInput); 
+
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
     cmd.add(verboseInput);    
@@ -122,6 +128,7 @@ int main (int argc, char* argv[]) {
     outputFolder              = outputFolderInput.getValue();
     outputFileName            = outputFileNameInput.getValue();
     gapFillPartialDownload    = gapFillPartialDownloadInput.getValue();
+    skipExistingFiles         = skipExistingFilesInput.getValue();
     verbose                   = verboseInput.getValue();
 
     if(tickerFileListPath.length()==0 
@@ -169,6 +176,10 @@ int main (int argc, char* argv[]) {
   
 
     if(verbose){
+      std::cout << "************" <<std::endl;
+      std::cout << "Todo: Remove gapFillPartialDownload" << std::endl;
+      std::cout << "************" <<std::endl;
+
       std::cout << "  API Key" << std::endl;
       std::cout << "    " << apiKey << std::endl;
 
@@ -205,6 +216,9 @@ int main (int argc, char* argv[]) {
         std::cout << "  Output File Name" << std::endl;
         std::cout << "    " << outputFileName << std::endl;
       }
+
+      std::cout << "  Skip existing files" << std::endl;
+      std::cout << "    " << skipExistingFiles << std::endl;
     }
   } catch (TCLAP::ArgException &e){ 
     std::cerr << "TCLAP::ArgException: "   << e.error() 
@@ -222,13 +236,15 @@ int main (int argc, char* argv[]) {
     StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
     bool success = 
-      CurlToolkit::downloadJsonFile(eodUrl,outputFolder,outputFileName,verbose);
+      CurlToolkit::downloadJsonFile(eodUrl,outputFolder, outputFileName, 
+        skipExistingFiles,verbose);
 
     if(verbose && success == true){
       std::cout << '\t' << outputFileName << std::endl;
     }    
     if( success == false){
-      std::cerr << "Error: CurlToolkit::downloadJsonFile failed to get" << std::endl;
+      std::cerr << "Error: CurlToolkit::downloadJsonFile failed to get" 
+                << std::endl;
       std::cerr << '\t' << eodUrl << std::endl;
       std::cerr << '\t' << outputFileName << std::endl;
     }
@@ -284,7 +300,8 @@ int main (int argc, char* argv[]) {
                                  || gapFillPartialDownload == false){ 
                                   
           successTickerDownload = 
-            CurlToolkit::downloadJsonFile(eodUrl,outputFolder,fileName,false);
+            CurlToolkit::downloadJsonFile(eodUrl, outputFolder,fileName, 
+                                                skipExistingFiles,false);
 
           if(successTickerDownload == false){
             std::cout << count << "." 
@@ -336,12 +353,13 @@ int main (int argc, char* argv[]) {
             if((filePrimaryExists==false && gapFillPartialDownload==true) 
                 || gapFillPartialDownload == false){           
               bool successPrimaryDownload = 
-                CurlToolkit::downloadJsonFile(eodUrlPrimary,outputFolder,fileNamePrimary,
-                                 false);  
+                CurlToolkit::downloadJsonFile(eodUrlPrimary,outputFolder,
+                                  fileNamePrimary,skipExistingFiles,false);  
                  
 
               if( successPrimaryDownload == false ){
-                std::cerr << "Error: CurlToolkit::downloadJsonFile: " << std::endl;
+                std::cerr << "Error: CurlToolkit::downloadJsonFile: " 
+                          << std::endl;
                 std::cerr << '\t' << fileNamePrimary << std::endl;
                 std::cerr << '\t' << eodUrlPrimary << std::endl;
               }                          
@@ -403,7 +421,8 @@ int main (int argc, char* argv[]) {
                                  || gapFillPartialDownload == false){ 
                                   
           successTickerDownload = 
-            CurlToolkit::downloadJsonFile(eodUrl,outputFolder,fileName,false);
+            CurlToolkit::downloadJsonFile(eodUrl,outputFolder,fileName,
+              skipExistingFiles,false);
 
           if(successTickerDownload == false){
             std::cout << count << "." 
