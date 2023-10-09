@@ -593,8 +593,13 @@ int main (int argc, char* argv[]) {
               patchResults[code]["PatchPrimaryTicker"]        = 
                 (*iterSymbol)["Code"].get<std::string>();
 
-              patchResults[code]["PatchPrimaryExchange"]      = 
-                (*iterSymbol)["Exchange"].get<std::string>();
+              patchResults[code]["PatchPrimaryExchange"]      =  iterExchange;
+
+              //The exchange stored here is the acronym of the actual exchange
+              //which can differ from the EOD exchange code, which is what we
+              //want.
+              //patchResults[code]["PatchPrimaryExchange"]      = 
+              //  (*iterSymbol)["Exchange"].get<std::string>();
 
               patchResults[code]["PatchName"]                 = 
                 (*iterSymbol)["Name"].get<std::string>();          
