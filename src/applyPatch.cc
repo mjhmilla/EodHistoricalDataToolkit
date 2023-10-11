@@ -10,6 +10,7 @@
 #include <filesystem>
 #include "StringToolkit.h"
 #include "CurlToolkit.h"
+#include "FinancialAnalysisToolkit.h"
 
 unsigned int COLUMN_WIDTH=30;
 
@@ -21,7 +22,7 @@ int main (int argc, char* argv[]) {
   std::string exchangeCode;
   std::string patchFileName;
   std::string fundamentalFolder;
-  bool skipExistingFiles;
+  bool gapFillPartialDownload;
 
   bool verbose;
 
@@ -70,10 +71,10 @@ int main (int argc, char* argv[]) {
 
     cmd.add(exchangeCodeInput);  
 
-    TCLAP::SwitchArg skipExistingFilesInput("i","skip_existing_files",
-      "Existing primary ticker files will not be downloaded again", false);
-
-    cmd.add(skipExistingFilesInput);   
+    TCLAP::SwitchArg gapFillPartialDownloadInput("g","gapfill",
+      "Download the missing files to fill the gaps from an incomplete download",
+       false);
+    cmd.add(gapFillPartialDownloadInput);   
 
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
@@ -87,7 +88,7 @@ int main (int argc, char* argv[]) {
     patchFileName             = patchFileNameInput.getValue();
     fundamentalFolder         = fundamentalFolderInput.getValue();
     exchangeCode              = exchangeCodeInput.getValue();
-    skipExistingFiles         = skipExistingFilesInput.getValue();
+    gapFillPartialDownload    = gapFillPartialDownloadInput.getValue();
     verbose                   = verboseInput.getValue();
 
     if(verbose){
@@ -107,8 +108,8 @@ int main (int argc, char* argv[]) {
       std::cout << "  EOD Url Template" << std::endl;
       std::cout << "    " << eodUrlTemplate << std::endl;
 
-      std::cout << "  Skip existing files" << std::endl;
-      std::cout << "    " << skipExistingFiles << std::endl;
+      std::cout << "  Fill the gaps in an incomplete download" << std::endl;
+      std::cout << "    " << gapFillPartialDownload << std::endl;
 
     }
   } catch (TCLAP::ArgException &e)  // catch exceptions
@@ -180,22 +181,35 @@ int main (int argc, char* argv[]) {
     StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",eodExchange);
     StringToolkit::findAndReplaceString(eodUrl,"{TICKER_CODE}",eodTicker);
 
-    std::string primaryFileName = eodTicker;
-    primaryFileName.append(".");
-    primaryFileName.append(eodExchange);
-    primaryFileName.append(".json");
+    std::string primaryFileName;
+    FinancialAnalysisToolkit::
+      createEodJsonFileName(eodTicker,eodExchange,primaryFileName);
 
-    bool successTickerDownload = 
-      CurlToolkit::downloadJsonFile(eodUrl,fundamentalFolder,primaryFileName,
-                                    skipExistingFiles, false);
+    std::string jsonFilePath;
+    StringToolkit::
+      createFilePath(fundamentalFolder,primaryFileName,jsonFilePath);
 
+    bool fileExists=false;
+    if(gapFillPartialDownload){
+      fileExists = std::filesystem::exists(jsonFilePath.c_str()); 
+    }
+
+    bool successTickerDownload=false;
+    if(!fileExists && gapFillPartialDownload || !gapFillPartialDownload){
+       successTickerDownload = 
+        CurlToolkit::downloadJsonFile(eodUrl,jsonFilePath, false);
+    }
     if(verbose){
       if(successTickerDownload){
         std::cout   << '\t' 
                     << eodTicker << " downloaded" << std::endl;
-      }else{
+      }else if(fileExists && gapFillPartialDownload){
         std::cout   << '\t' 
-                    << eodTicker  << " failed to download" << std::endl;      }      
+                    << eodTicker  << " skipped (it exists)" << std::endl;            
+      }else {
+        std::cout   << '\t' 
+                    << eodTicker  << " failed" << std::endl;      
+      }      
     }
   }
 

@@ -14,6 +14,9 @@ class StringToolkit {
 
   public:
 
+
+
+
     static void removeFromString(std::string& str,
                    const std::string& removeStr)
     {
@@ -24,6 +27,16 @@ class StringToolkit {
          pos += removeStr.length();
          pos = str.find(removeStr, pos);
       }
+    };
+
+    static void createFilePath(const std::string &folderPath, 
+                          const std::string &fileName,
+                          std::string &updFilePath){
+
+      updFilePath=folderPath;
+      updFilePath.append(fileName);
+      StringToolkit::removeFromString(updFilePath,std::string("\""));      
+
     };
 
     static void findAndReplaceString(std::string& str,

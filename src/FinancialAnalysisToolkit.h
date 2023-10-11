@@ -22,6 +22,17 @@ class FinancialAnalysisToolkit {
 
   public:
 
+    static void createEodJsonFileName(const std::string &ticker, 
+                                      const std::string &exchangeCode,
+                                      std::string &updEodFileName)
+    {
+      updEodFileName=ticker;
+      updEodFileName.append(".");
+      updEodFileName.append(exchangeCode);
+      updEodFileName.append(".json");
+    };
+
+
 
     static double calcReturnOnCapitalDeployed( nlohmann::ordered_json &jsonData, 
                                               std::string &date, 

@@ -34,31 +34,30 @@ class CurlToolkit {
 
 
 
+
     static bool downloadJsonFile( std::string &eodUrl, 
-                                  std::string &outputFolder, 
-                                  std::string &outputFileName,
-                                  bool skipIfFileExists, 
+                                  std::string &outputFilePath, 
                                   bool verbose){
 
       bool success = false;
       unsigned int downloadAttempts=0;
 
-      std::stringstream ss;
-      ss << outputFolder << outputFileName;
-      std::string outputFilePathName = ss.str();
-      std::string removeStr("\"");
-      StringToolkit::removeFromString(outputFilePathName,removeStr); 
+      //std::stringstream ss;
+      //ss << outputFolder << outputFileName;
+      //std::string outputFilePathName = ss.str();
+      //std::string removeStr("\"");
+      //StringToolkit::removeFromString(outputFilePathName,removeStr); 
 
-      bool fileExists=false;
-      if(skipIfFileExists){
-        std::filesystem::path filePath=outputFilePathName;
-        fileExists = std::filesystem::exists(filePath); 
-        if(fileExists){
-          success=true;
-        }       
-      }      
+      //bool fileExists=false;
+      //if(skipIfFileExists){
+      //  std::filesystem::path filePath=outputFilePath;
+      //  fileExists = std::filesystem::exists(filePath); 
+      //  if(fileExists){
+      //    success=true;
+      //  }       
+      //}      
 
-      while(downloadAttempts < DOWNLOAD_ATTEMPTS && !success && !fileExists){
+      while(downloadAttempts < DOWNLOAD_ATTEMPTS && !success){
 
         if(verbose){
           std::cout << std::endl;
@@ -115,12 +114,12 @@ class CurlToolkit {
   
     
           //Write the file
-          std::ofstream file(outputFilePathName);
+          std::ofstream file(outputFilePath);
           file << jsonData;
           file.close();
           if(verbose){    
             std::cout << "    Wrote json to" << std::endl;
-            std::cout << "    " << outputFileName << std::endl;
+            std::cout << "    " << outputFilePath << std::endl;
           }
   
         }else{

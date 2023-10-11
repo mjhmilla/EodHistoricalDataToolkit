@@ -17,7 +17,6 @@ unsigned int MODE_FETCH_MULTIPLE_EXCHANGE_FILES   = 2;
 
 
 
-
 int main (int argc, char* argv[]) {
 
   std::string apiKey;
@@ -31,7 +30,6 @@ int main (int argc, char* argv[]) {
   std::string outputFileName;
   std::string outputPrimaryTickerFileName;
   bool gapFillPartialDownload;
-  bool skipExistingFiles;  
   bool verbose;
 
   unsigned int mode;
@@ -107,11 +105,6 @@ int main (int argc, char* argv[]) {
        false);
     cmd.add(gapFillPartialDownloadInput); 
 
-    TCLAP::SwitchArg skipExistingFilesInput("i","skip_existing_files",
-      "Existing primary ticker files will not be downloaded again", false);
-
-    cmd.add(skipExistingFilesInput); 
-
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
     cmd.add(verboseInput);    
@@ -128,7 +121,6 @@ int main (int argc, char* argv[]) {
     outputFolder              = outputFolderInput.getValue();
     outputFileName            = outputFileNameInput.getValue();
     gapFillPartialDownload    = gapFillPartialDownloadInput.getValue();
-    skipExistingFiles         = skipExistingFilesInput.getValue();
     verbose                   = verboseInput.getValue();
 
     if(tickerFileListPath.length()==0 
@@ -217,8 +209,6 @@ int main (int argc, char* argv[]) {
         std::cout << "    " << outputFileName << std::endl;
       }
 
-      std::cout << "  Skip existing files" << std::endl;
-      std::cout << "    " << skipExistingFiles << std::endl;
     }
   } catch (TCLAP::ArgException &e){ 
     std::cerr << "TCLAP::ArgException: "   << e.error() 
@@ -235,9 +225,14 @@ int main (int argc, char* argv[]) {
     StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
     StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
+    std::stringstream ss;
+    ss << outputFolder << outputFileName;
+    std::string outputFilePath = ss.str();
+    std::string removeStr("\"");
+    StringToolkit::removeFromString(outputFilePath,removeStr); 
+
     bool success = 
-      CurlToolkit::downloadJsonFile(eodUrl,outputFolder, outputFileName, 
-        skipExistingFiles,verbose);
+      CurlToolkit::downloadJsonFile(eodUrl,outputFilePath,verbose);
 
     if(verbose && success == true){
       std::cout << '\t' << outputFileName << std::endl;
@@ -281,45 +276,44 @@ int main (int argc, char* argv[]) {
         StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
         StringToolkit::findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
 
-        std::string fileName = ticker;
-        fileName.append(".");
-        fileName.append(exchangeCode);
-        fileName.append(".json");
+
+        std::string eodFileName;
+        FinancialAnalysisToolkit::
+          createEodJsonFileName(ticker,exchangeCode,eodFileName);
+
+        std::string jsonFilePath;
+        StringToolkit::
+          createFilePath(outputFolder,eodFileName,jsonFilePath);
 
         bool fileExists=false;
-
         if(gapFillPartialDownload == true){
           //Check if the file has been downloaded already.
-          std::string existingFilePath = outputFolder;
-          existingFilePath.append(fileName);
-          fileExists = std::filesystem::exists(existingFilePath.c_str());
+          fileExists = std::filesystem::exists(jsonFilePath.c_str());
         }
 
         bool successTickerDownload=false;
-        if( (fileExists == false && gapFillPartialDownload == true) 
-                                 || gapFillPartialDownload == false){ 
+        if( (!fileExists && gapFillPartialDownload) || !gapFillPartialDownload){ 
                                   
           successTickerDownload = 
-            CurlToolkit::downloadJsonFile(eodUrl, outputFolder,fileName, 
-                                                skipExistingFiles,false);
+            CurlToolkit::downloadJsonFile(eodUrl, jsonFilePath, false);
 
           if(successTickerDownload == false){
             std::cout << count << "." 
-                      << '\t' << fileName << std::endl 
+                      << '\t' << ticker << "." << exchangeCode << std::endl 
                       << '\t' << "Error: failed to download" << std::endl
                       << '\t' << eodUrl << std::endl;
           } 
           if(verbose && successTickerDownload == true){
-            std::cout << count << "." << '\t' << fileName << std::endl;
+            std::cout << count << "." << '\t' << ticker << "." << exchangeCode 
+                      << std::endl;
           }         
         
         }
 
-        if( (fileExists == true && gapFillPartialDownload == true) 
-           || successTickerDownload==true){
+        if( (fileExists && gapFillPartialDownload) || successTickerDownload){
           std::string primaryEodTickerName("");
           JsonFunctions::getPrimaryTickerName(outputFolder, 
-                                        fileName, primaryEodTickerName);
+                                        eodFileName, primaryEodTickerName);
 
           //If this is not the primary ticker, then we need to download the 
           //primary ticker file  
@@ -338,23 +332,29 @@ int main (int argc, char* argv[]) {
             StringToolkit::findAndReplaceString(eodUrlPrimary,"{EXCHANGE_CODE}",exchangeCodePrimary);
             StringToolkit::findAndReplaceString(eodUrlPrimary,"{TICKER_CODE}",tickerPrimary);
 
-            std::string fileNamePrimary = primaryEodTickerName; //This will include the exchange code
-            fileNamePrimary.append(".json");
+            //std::string fileNamePrimary = primaryEodTickerName; //This will include the exchange code
+            //fileNamePrimary.append(".json");
+            std::string fileNamePrimary;
+            FinancialAnalysisToolkit::createEodJsonFileName(tickerPrimary,
+                                        exchangeCodePrimary,fileNamePrimary);
 
             bool filePrimaryExists=false;
+            std::string primaryFilePath;
+            StringToolkit::createFilePath(outputFolder,fileNamePrimary,
+                                              primaryFilePath);            
             if(gapFillPartialDownload == true){
               //Check if the file has been downloaded already.
-              std::string existingPrimaryFilePath = outputFolder;
-              existingPrimaryFilePath.append(fileNamePrimary);
+              //std::string existingPrimaryFilePath = outputFolder;
+              //existingPrimaryFilePath.append(fileNamePrimary);
+
               filePrimaryExists 
-                = std::filesystem::exists(existingPrimaryFilePath.c_str());
+                = std::filesystem::exists(primaryFilePath.c_str());
             } 
 
-            if((filePrimaryExists==false && gapFillPartialDownload==true) 
-                || gapFillPartialDownload == false){           
-              bool successPrimaryDownload = 
-                CurlToolkit::downloadJsonFile(eodUrlPrimary,outputFolder,
-                                  fileNamePrimary,skipExistingFiles,false);  
+            if((!filePrimaryExists && gapFillPartialDownload) 
+                || !gapFillPartialDownload ){           
+              bool successPrimaryDownload = CurlToolkit::downloadJsonFile(
+                                      eodUrlPrimary,primaryFilePath,false);  
                  
 
               if( successPrimaryDownload == false ){
@@ -404,34 +404,33 @@ int main (int argc, char* argv[]) {
         StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
         StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
-        std::string fileName = exchangeCode;
-        fileName.append(".json");
+        std::string exchangeFileName = exchangeCode;
+        exchangeFileName.append(".json");
+
+        std::string exchangeFilePath=outputFolder;
+        exchangeFilePath.append(exchangeFileName);
 
         bool fileExists=false;
 
         if(gapFillPartialDownload == true){
           //Check if the file has been downloaded already.
-          std::string existingFilePath = outputFolder;
-          existingFilePath.append(fileName);
-          fileExists = std::filesystem::exists(existingFilePath.c_str());
+          fileExists = std::filesystem::exists(exchangeFilePath.c_str());
         }
 
         bool successTickerDownload=false;
-        if( (fileExists == false && gapFillPartialDownload == true) 
-                                 || gapFillPartialDownload == false){ 
+        if( (!fileExists && gapFillPartialDownload) || !gapFillPartialDownload){ 
                                   
           successTickerDownload = 
-            CurlToolkit::downloadJsonFile(eodUrl,outputFolder,fileName,
-              skipExistingFiles,false);
+            CurlToolkit::downloadJsonFile(eodUrl,exchangeFilePath,false);
 
           if(successTickerDownload == false){
             std::cout << count << "." 
-                      << '\t' << fileName << std::endl 
+                      << '\t' << exchangeFileName << std::endl 
                       << '\t' << "Error: failed to download" << std::endl
                       << '\t' << eodUrl << std::endl;
           } 
           if(verbose && successTickerDownload == true){
-            std::cout << count << "." << '\t' << fileName << std::endl;
+            std::cout << count << "." << '\t' << exchangeFileName << std::endl;
           }         
         
         }
