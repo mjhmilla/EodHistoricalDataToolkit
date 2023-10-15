@@ -149,13 +149,27 @@ int main (int argc, char* argv[]) {
       JsonFunctions::getJsonString(jsonData[GEN]["Exchange"], exchange);
       JsonFunctions::getJsonString(jsonData[GEN]["CurrencyCode"], currencyCode);
 
+      bool here=false;
+      if(code.compare("PUR")==0){
+        here=true;
+      }
 
-      auto it= jsonData[FIN][BAL][Q].begin();
+      auto it= jsonData[FIN][BAL][Y].begin();
 
-      if(it != jsonData[FIN][BAL][Q].end()){
-        JsonFunctions::getJsonString(
-              jsonData[FIN][BAL][Q][it.key().c_str()]["currency_symbol"], 
+      if(it != jsonData[FIN][BAL][Y].end()){
+        //A lot of companies do their accounting in USD/EUR, 
+        //at least for some years, but are not domiciled in the US nor in Europe
+        while(it != jsonData[FIN][BAL][Y].end() && 
+                (currencySymbol.length()==0 
+                 || currencySymbol.compare("USD")==0
+                 || currencySymbol.compare("EUR")==0)){
+          std::string quarter = it.key().c_str();
+          JsonFunctions::getJsonString(
+              jsonData[FIN][BAL][Y][quarter]["currency_symbol"], 
               currencySymbol);
+          ++it;
+        }
+
       }else{
         currencySymbolMissing=true;
       }
