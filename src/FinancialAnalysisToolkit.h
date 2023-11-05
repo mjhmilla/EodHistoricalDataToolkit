@@ -22,6 +22,81 @@ class FinancialAnalysisToolkit {
 
   public:
 
+    static void getIsinCountryCodes(const std::string& isin, 
+                            nlohmann::ordered_json &exchangeList,
+                            std::string &isinCountryISO2,
+                            std::string &isinCountryISO3){
+
+      isinCountryISO2="";
+      isinCountryISO3="";
+      bool found=false;
+      auto iterExchange=exchangeList.begin();
+      while(iterExchange != exchangeList.end() && !found){
+        std::string countryISO2 =(*iterExchange)["CountryISO2"].get<std::string>();
+        std::string countryISO3 =(*iterExchange)["CountryISO3"].get<std::string>();
+        if(  isin.find(countryISO2)==0 
+          || isin.find(countryISO3)==0){
+          isinCountryISO2=countryISO2;
+          isinCountryISO3=countryISO3;
+          found=true;
+        }
+        ++iterExchange;
+      }
+    };
+
+    static bool doesIsinHaveMatchingExchange(const std::string &isin,
+                                      nlohmann::ordered_json &exchangeList,
+                                      const std::string &exchangeSymbolListFolder){
+
+      auto iterExchange=exchangeList.begin();
+      bool exists=false;
+      while(iterExchange != exchangeList.end() && !exists){
+
+        std::string countryISO2 =(*iterExchange)["CountryISO2"].get<std::string>();
+        std::string countryISO3 =(*iterExchange)["CountryISO3"].get<std::string>();
+
+        if(countryISO2.length()>0 && countryISO3.length()>0){
+          if(  isin.find(countryISO2)==0 || isin.find(countryISO3)==0){
+            //Check to see if the corresponding file exists
+            std::string exchangeCode = (*iterExchange)["Code"].get<std::string>();  
+            std::string exchangeSymbolListPath = exchangeSymbolListFolder;
+            exchangeSymbolListPath.append(exchangeCode);
+            exchangeSymbolListPath.append(".json");
+            bool fileExists = std::filesystem::exists(exchangeSymbolListPath.c_str());
+            if(fileExists){
+              exists=true;
+            }                   
+          }
+        }
+        ++iterExchange;
+      }  
+      return exists;
+    };
+
+    static bool isExchangeAndIsinConsistent( std::string &exchange,
+                                      std::string &isin,
+                                      nlohmann::ordered_json &exchangeList){
+
+      auto iterExchange=exchangeList.begin();
+      bool consistent=false;
+      while(iterExchange != exchangeList.end() && !consistent){
+
+        std::string countryISO2 =(*iterExchange)["CountryISO2"].get<std::string>();
+        std::string countryISO3 =(*iterExchange)["CountryISO3"].get<std::string>();
+
+        if(  isin.find(countryISO2)==0 || isin.find(countryISO3)==0){
+          std::string exchangeCode=(*iterExchange)["Code"].get<std::string>();
+
+          if(exchangeCode.compare(exchange) == 0){
+            consistent=true;
+          }
+
+        }
+        ++iterExchange;
+      }  
+      return consistent;
+    };
+
     static void createEodJsonFileName(const std::string &ticker, 
                                       const std::string &exchangeCode,
                                       std::string &updEodFileName)

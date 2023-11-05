@@ -151,8 +151,17 @@ int main (int argc, char* argv[]) {
     json updFileData = json::parse(updFileInputStream);    
     updFileInputStream.close();
 
-    updFileData["General"]["PrimaryTicker"]=
-      patchData["PrimaryTicker"].get<std::string>();
+    //update the PrimaryTicker
+    std::string primaryTicker = patchData["PrimaryTicker"].get<std::string>();
+    std::string primaryExchange= patchData["PrimaryExchange"].get<std::string>();
+    std::string eodPrimaryTicker=primaryTicker;
+    eodPrimaryTicker.append(".");
+    eodPrimaryTicker.append(primaryExchange);
+    updFileData["General"]["PrimaryTicker"]= eodPrimaryTicker;
+
+    //update the ISIN
+    std::string isin = patchData["ISIN"].get<std::string>();
+    updFileData["General"]["ISIN"]=isin;
 
     std::ofstream updFileOutputStream(updFileName.c_str(), 
                 std::ios_base::trunc | std::ios_base::out);
@@ -164,13 +173,15 @@ int main (int argc, char* argv[]) {
                  << patchData["Code"].get<std::string>()
                  << "."  
                  << patchData["Exchange"].get<std::string>() 
+                 << '\t'
+                 << isin 
                  << " updated"
                  << std::endl;
     }
 
     //Download the primary ticker
-    std::string eodUrl = eodUrlTemplate;
-    std::string eodTicker = patchData["PrimaryTicker"].get<std::string>();
+    std::string eodUrl      = eodUrlTemplate;
+    std::string eodTicker   = patchData["PrimaryTicker"].get<std::string>();
     std::string eodExchange = patchData["PrimaryExchange"].get<std::string>();
 
     bool skipDownload=false;
