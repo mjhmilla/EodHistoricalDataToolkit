@@ -1,8 +1,10 @@
 #ifndef FINANCIAL_ANALYSIS_TOOLKIT
 #define FINANCIAL_ANALYSIS_TOOLKIT
 
+#include <cmath>
 #include <string>
 #include <stdlib.h>
+#include <algorithm>
 
 #include <nlohmann/json.hpp>
 #include "JsonFunctions.h"
@@ -309,7 +311,7 @@ class FinancialAnalysisToolkit {
                       ["netIncome"]);
 
       double capitalExpenditures = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["capitalExpenditures"]);
 
       double freeCashFlowCalc = 
@@ -336,11 +338,15 @@ class FinancialAnalysisToolkit {
     static double calcDebtToCapitalizationRatio(
                                     nlohmann::ordered_json &jsonData, 
                                     std::string &date,
-                                    const char *timeUnit){
+                                    const char *timeUnit,
+                                    bool zeroNanInShortTermDebt){
 
       double shortTermDebt = 
               JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["shortTermDebt"]);
+      if(std::isnan(shortTermDebt) && zeroNanInShortTermDebt){
+        shortTermDebt=0.;
+      }
       double longTermDebt = 
               JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["longTermDebt"]);      
@@ -396,9 +402,8 @@ class FinancialAnalysisToolkit {
 
       netDebt = (shortTermDebt+longTermDebt)-cashAndCashEquivalents
 
-      This is not at all the same as the change in debt. I could instead look
-      at the change in longTermDebt between two years. This would exclude 
-      shortTermDebt, but perhaps that's fine.
+      This is not at all the same as the change in debt. I am instead using
+      the change of long term debt between periods.
 
       https://www.investopedia.com/terms/n/netdebt.asp
 
@@ -408,6 +413,7 @@ class FinancialAnalysisToolkit {
     
     static double calcFreeCashFlowToEquity(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
+                                     std::string &previousDate,
                                      const char *timeUnit){
 
       
@@ -428,32 +434,19 @@ class FinancialAnalysisToolkit {
         JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["salePurchaseOfStock"]);
 
+      double longTermDebt = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+                      ["longTermDebt"]);     
+
+      double previousLongTermDebt = JsonFunctions::getJsonFloat(
+                        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]
+                        ["longTermDebt"]); 
+
 
       double fcfeIP = totalCashFromOperatingActivities 
                     - capitalExpenditures
-                    + (totalCashFromFinancingActivities-salePurchaseOfStock);
-
-      std::cout << "This does not work: "
-                << "(totalCashFromFinancingActivities-salePurchaseOfStock)"
-                << "This will not approximate the change in debt from a company"
-                << "that issues a dividend."
-                << std::endl;
-
-      //Damodaran definition      
-      //double  netIncome = 
-      //  JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-      //                ["netIncome"]);
-      //double depreciation =                                            
-      // JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-      //                ["depreciation"]);
-      //double otherNonCashItems = 
-      //  JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-      //                ["otherNonCashItems"]);
-      //double fcfeD =  netIncome
-      //              + depreciation
-      //              - capitalExpenditures
-      //              - otherNonCashItems
-      //              + (totalCashFromFinancingActivities-salePurchaseOfStock);
+                    + (totalCashFromFinancingActivities-salePurchaseOfStock) 
+                    - (previousLongTermDebt-longTermDebt);
       
       return fcfeIP;
     };
@@ -569,24 +562,22 @@ class FinancialAnalysisToolkit {
                                      std::string &date,
                                      const char *timeUnit){
 
-      double totalCashFromOperatingActivities =
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
-                      ["totalCashFromOperatingActivities"]); 
+      double totalCashFromOperatingActivities = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][date.c_str()]["totalCashFromOperatingActivities"]); 
 
       double taxRate = calcTaxRate(jsonData, date, timeUnit);
 
       double operatingIncomeAfterTax = 
               totalCashFromOperatingActivities*(1.0-taxRate);
 
-      double capitalExpenditures = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
-                      ["capitalExpenditures"]); 
+      double capitalExpenditures =  JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][date.c_str()]["capitalExpenditures"]); 
 
       double reinvestmentRate = 
         calcReinvestmentRate(jsonData,date,timeUnit);      
 
-      double otherNonCashItems = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
+      double otherNonCashItems = JsonFunctions::getJsonFloat(
+          jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
 
 
       double fcff =   operatingIncomeAfterTax 
@@ -595,6 +586,85 @@ class FinancialAnalysisToolkit {
 
       return fcff;
     };
+
+    /**
+     * This function calculates the residual cash flow defined in the book
+     * `The end of accounting and the path forward' by Baruch Lev and Feng Gu.
+     * in Chapter 18:
+     * 
+     * Residual Cash Flow = cash flow from operations (1)
+     *                    + research and development (2)
+     *                    - normal capital expenditures (3, mean of 3-5 years)
+     *                    - cost of equity capital (4)
+     * 
+     * Terms 1 and 2 directly come from reported financial data.
+     *                    
+    */
+    static double calcResidualCashFlow(
+        nlohmann::ordered_json &jsonData, 
+        std::string &date,
+        const char *timeUnit,
+        double costOfEquityAsAPercentage,
+        std::vector< std::string > datesToAverageCapitalExpenditures,
+        bool zeroNansInResearchAndDevelopment){
+
+      bool isDataNan = false;
+
+      double totalCashFromOperatingActivities = JsonFunctions::getJsonFloat( 
+        jsonData[FIN][CF][timeUnit][date.c_str()]["totalCashFromOperatingActivities"]);  
+      if(std::isnan(totalCashFromOperatingActivities)){
+        isDataNan=true;
+      }
+      double researchDevelopment = JsonFunctions::getJsonFloat(
+        jsonData[FIN][IS][timeUnit][date.c_str()]["researchDevelopment"]);  
+      if(std::isnan(researchDevelopment)){
+        //2023/12/25
+        //Some firms don't report research and development such as 
+        //Master Card. It's possible they have outsourced all of this work
+        //and don't have any actual R&D that shows up on their financial
+        //statements. 
+        if(zeroNansInResearchAndDevelopment)
+          researchDevelopment=0.;
+        else{
+          isDataNan=true;
+        }
+      }
+      
+      //Now, how to iterate through the past three to five time entries to get 
+      //this information? 
+      double capitalExpenditureMean = 0;      
+      for(auto& iter : datesToAverageCapitalExpenditures){
+        capitalExpenditureMean += JsonFunctions::getJsonFloat( 
+          jsonData[FIN][CF][timeUnit][iter]["capitalExpenditures"]); 
+        if(std::isnan(capitalExpenditureMean)){
+          isDataNan=true;
+        }
+      }
+      if(!isDataNan){
+        capitalExpenditureMean = 
+          capitalExpenditureMean/
+          static_cast<double>(datesToAverageCapitalExpenditures.size());
+      }
+
+      double totalStockholderEquity = JsonFunctions::getJsonFloat( 
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["totalStockholderEquity"]);
+      if(std::isnan(totalStockholderEquity)){
+        isDataNan=true;
+      }
+
+      double value = std::nan("1");
+
+      if(!isDataNan){
+        double costOfEquity = totalStockholderEquity*costOfEquityAsAPercentage;
+        value = totalCashFromOperatingActivities
+              + researchDevelopment
+              - capitalExpenditureMean
+              - costOfEquity;
+      }
+
+      return value;
+
+    }
 
 };
 
