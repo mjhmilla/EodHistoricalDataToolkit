@@ -23,6 +23,7 @@ int main (int argc, char* argv[]) {
   std::string timePeriod;
   double annualCostOfEquityAsAPercentage;
   double costOfEquityAsAPercentage;
+  double defaultTaxRate;
   int numberOfYearsToAverageCapitalExpenditures;
   int numberOfPeriodsToAverageCapitalExpenditures;
   bool verbose;
@@ -55,6 +56,15 @@ int main (int argc, char* argv[]) {
       false,"","string");
 
     cmd.add(exchangeCodeInput);  
+
+    TCLAP::ValueArg<double> defaultTaxRateInput("t",
+      "DEFAULT_TAX_RATE", 
+      "The tax rate used if the tax rate cannot be calculated, or averaged, from"
+      " the data",
+      false,0.30,"double");
+
+    cmd.add(defaultTaxRateInput);  
+
 
     TCLAP::ValueArg<double> annualCostOfEquityAsAPercentageInput("c",
       "COST_OF_EQUITY_PERCENTAGE", 
@@ -96,6 +106,8 @@ int main (int argc, char* argv[]) {
     analyseFolder         = analyseFolderOutput.getValue();
     analyzeQuarterlyData  = quarterlyAnalysisInput.getValue();
 
+    defaultTaxRate = defaultTaxRateInput.getValue();
+
     annualCostOfEquityAsAPercentage 
       = annualCostOfEquityAsAPercentageInput.getValue();
 
@@ -130,6 +142,9 @@ int main (int argc, char* argv[]) {
       std::cout << "  Analyze Quaterly Data" << std::endl;
       std::cout << "    " << analyzeQuarterlyData << std::endl;
 
+      std::cout << "  Default tax rate" << std::endl;
+      std::cout << "    " << defaultTaxRate << std::endl;
+
       std::cout << "  Annual cost of equity" << std::endl;
       std::cout << "    " << annualCostOfEquityAsAPercentage << std::endl;
 
@@ -154,6 +169,17 @@ int main (int argc, char* argv[]) {
 
   unsigned int count=0;
 
+  using json = nlohmann::ordered_json;    
+
+  bool zeroNanInShortTermDebt=true;
+  bool zeroNansInResearchAndDevelopment=true;
+  bool zeroNansInDividendsPaid = true;
+  bool appendTermRecord=true;
+  std::vector< std::string >  termNames;
+  std::vector< double >       termValues;  
+
+
+
   //Get a list of the json files in the input folder
   for ( const auto & entry 
           : std::filesystem::directory_iterator(fundamentalFolder)){
@@ -162,6 +188,7 @@ int main (int argc, char* argv[]) {
     //ticker
 
     bool validInput = true;
+
 
     std::string fileName=entry.path().filename();
     size_t lastIndex = fileName.find_last_of(".");
@@ -190,26 +217,39 @@ int main (int argc, char* argv[]) {
         }                                                        
     }
 
-      
-    //Process the file if its valid;
+    //Try to load the file
+
+    nlohmann::ordered_json jsonData;
     if(validInput){
-      //Load the json file
-      std::stringstream ss;
-      ss << fundamentalFolder << fileName;
-      std::string filePathName = ss.str();
-      using json = nlohmann::ordered_json;
-      std::ifstream inputJsonFileStream(filePathName.c_str());
-      json jsonData = json::parse(inputJsonFileStream);
+      try{
+        //Load the json file
+        std::stringstream ss;
+        ss << fundamentalFolder << fileName;
+        std::string filePathName = ss.str();
 
-      json analysis;
-
-      std::vector< std::string > entryDates;
-
+        std::ifstream inputJsonFileStream(filePathName.c_str());
+        jsonData = nlohmann::ordered_json::parse(inputJsonFileStream);
+      }catch(const nlohmann::json::parse_error& e){
+        std::cout << e.what() << std::endl;
+        validInput=false;
+      }
+    }
+    //Process the file if its valid;
+    nlohmann::ordered_json analysis;
+    std::vector< std::string > entryDates;
+    if(validInput){
       //By default this will analyze annual data
       for(auto& el : jsonData[FIN][BAL][timePeriod].items()){
         //entryDates.push_back(el.key());
         entryDates.insert(entryDates.begin(),el.key());
       }
+      if(entryDates.size()==0){
+        std::cout << "  File contains no date entries" << std::endl;
+        validInput=false;
+      }
+    }
+
+    if(validInput){
       //Check that the dates are ordered from oldest to newest
       std::istringstream timeStreamFirst(entryDates.front());
       std::istringstream timeStreamLast(entryDates.back());
@@ -239,9 +279,35 @@ int main (int argc, char* argv[]) {
 
       unsigned int entryCount = 0;
 
+      //calculate the average tax rate
+      std::vector< std::string > tmpNames;
+      std::vector< double > tempValues;
+      std::string tmpResultName("");
+      unsigned int taxRateEntryCount = 0;
+      double meanTaxRate = 0.;
+
+      for( auto& it : entryDates){
+        std::string date = it;           
+        double taxRateEntry = 
+          FinancialAnalysisToolkit::calcTaxRate(jsonData,date,timePeriod.c_str(),
+                false,tmpResultName,termNames,termValues);
+        if(!std::isnan(taxRateEntry)){
+          meanTaxRate += taxRateEntry;
+          ++taxRateEntryCount;
+        }
+      }     
+      meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
+      if(std::isnan(meanTaxRate)){
+        meanTaxRate=defaultTaxRate;
+      }
+
+
       for( auto& it : entryDates){
         std::string date = it;        
 
+
+        termNames.clear();
+        termValues.clear();
 
 
         trailingPastPeriods.push_back(date);
@@ -266,37 +332,52 @@ int main (int argc, char* argv[]) {
 
 
         double roic = FinancialAnalysisToolkit::
-          calcReturnOnInvestedCapital(jsonData,it,timePeriod.c_str());
+          calcReturnOnInvestedCapital(jsonData,it,timePeriod.c_str(),
+            zeroNansInDividendsPaid, appendTermRecord, termNames, termValues);
+
         double roce = FinancialAnalysisToolkit::
-          calcReturnOnCapitalDeployed(jsonData,it,timePeriod.c_str());
+          calcReturnOnCapitalDeployed(jsonData,it,timePeriod.c_str(),
+            appendTermRecord, termNames, termValues);
 
         double grossMargin = FinancialAnalysisToolkit::
-          calcGrossMargin(jsonData,it,timePeriod.c_str());
-        double operatingMargin = FinancialAnalysisToolkit::
-          calcOperatingMargin(jsonData,it,timePeriod.c_str());          
-        double cashConversion = FinancialAnalysisToolkit::
-          calcCashConversionRatio(jsonData,it,timePeriod.c_str());
+          calcGrossMargin(jsonData,it,timePeriod.c_str(),
+            appendTermRecord,termNames,termValues);
 
-        bool zeroNanInShortTermDebt=true;
+        double operatingMargin = FinancialAnalysisToolkit::
+          calcOperatingMargin(jsonData,it,timePeriod.c_str(),
+            appendTermRecord,termNames,termValues);          
+
+        double cashConversion = FinancialAnalysisToolkit::
+          calcCashConversionRatio(jsonData,it,timePeriod.c_str(),
+            meanTaxRate,appendTermRecord,termNames,termValues);
+
         double debtToCapital = FinancialAnalysisToolkit::
           calcDebtToCapitalizationRatio(jsonData,it,timePeriod.c_str(),
-                                              zeroNanInShortTermDebt);   
+              zeroNanInShortTermDebt,appendTermRecord,termNames,termValues);
+
         double interestCover = FinancialAnalysisToolkit::
-          calcInterestCover(jsonData,it,timePeriod.c_str()); 
+          calcInterestCover(jsonData,it,timePeriod.c_str(),
+            appendTermRecord,termNames,termValues); 
 
         double ownersEarnings = FinancialAnalysisToolkit::
-          calcOwnersEarnings(jsonData,it,timePeriod.c_str());                 
+          calcOwnersEarnings(jsonData,it,timePeriod.c_str(), 
+                              appendTermRecord, termNames, termValues);                 
 
         double residualCashFlow = std::nan("1");
-        if(trailingPastPeriods.size() == numberOfPeriodsToAverageCapitalExpenditures){
-          bool zeroNansInResearchAndDevelopment=true;
+
+        if(trailingPastPeriods.size() 
+            == numberOfPeriodsToAverageCapitalExpenditures){
+
           residualCashFlow = FinancialAnalysisToolkit::
             calcResidualCashFlow( jsonData,
                                   it,
                                   timePeriod.c_str(),
                                   costOfEquityAsAPercentage,
                                   trailingPastPeriods,
-                                  zeroNansInResearchAndDevelopment);
+                                  zeroNansInResearchAndDevelopment,
+                                  appendTermRecord,
+                                  termNames,
+                                  termValues);
         }
 
         double freeCashFlowToEquity=std::nan("1");
@@ -305,10 +386,28 @@ int main (int argc, char* argv[]) {
             FinancialAnalysisToolkit::calcFreeCashFlowToEquity(jsonData, 
                                      it,
                                      previousTimePeriod,
-                                     timePeriod.c_str());
+                                     timePeriod.c_str(),
+                                     appendTermRecord,
+                                     termNames,
+                                     termValues);
         }
 
+        double freeCashFlowToFirm=std::nan("1");
+        freeCashFlowToFirm = FinancialAnalysisToolkit::
+          calcFreeCashFlowToFirm(jsonData, it, timePeriod.c_str(),
+                                 meanTaxRate,
+                                 appendTermRecord,
+                                 termNames, 
+                                 termValues);
+
         //it.c_str(), 
+        nlohmann::ordered_json analysisEntry=nlohmann::ordered_json::object();        
+        for( unsigned int i=0; i < termNames.size();++i){
+          analysisEntry.push_back({termNames[i],
+                                   termValues[i]});
+        }
+
+        /*
         json analysisEntry = json::object( 
                           {                             
                             {"residualCashFlow",residualCashFlow},
@@ -320,10 +419,11 @@ int main (int argc, char* argv[]) {
                             {"cashConversionRatio",cashConversion},
                             {"debtToCapitalRatio",debtToCapital},
                             {"interestCover",interestCover},
-                            {"totalStockHolderEquity",totalStockHolderEquity}
+                            {"totalStockHolderEquity",totalStockHolderEquity},
+                            {"freeCashFlowToFirm",freeCashFlowToFirm},
                           }
                         );
-
+        */
         analysis[it]= analysisEntry;
         previousTimePeriod = date;
         ++entryCount;

@@ -112,8 +112,11 @@ class FinancialAnalysisToolkit {
 
 
     static double calcReturnOnCapitalDeployed( nlohmann::ordered_json &jsonData, 
-                                              std::string &date, 
-                                              const char *timeUnit){
+                                    std::string &date, 
+                                    const char *timeUnit,
+                                    bool appendTermRecord,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
       // Return On Capital Deployed
       //  Source: https://www.investopedia.com/terms/r/roce.asp
       double longTermDebt = 
@@ -124,7 +127,7 @@ class FinancialAnalysisToolkit {
         JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["totalStockholderEquity"]);
 
-      double  ebit = 
+      double  operatingIncome = 
         JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["operatingIncome"]);
 
@@ -132,14 +135,33 @@ class FinancialAnalysisToolkit {
       //be the same. These values are not the same for Apple, but are within
       //30% of one and other.  
       //1. capitalDeployed = (longTermDebt+totalShareholderEquity);
-        //2. capitalDeployed = (totalAssets-currentTotalLiabilities);
+      //2. capitalDeployed = (totalAssets-currentTotalLiabilities);
 
-        return ebit / (longTermDebt+totalShareholderEquity);
-      };
+      double returnOnCapitalDeployed = 
+        operatingIncome / (longTermDebt+totalShareholderEquity);
+
+      if(appendTermRecord){
+        termNames.push_back("returnOnCapitalDeployed_longTermDebt");
+        termNames.push_back("returnOnCapitalDeployed_totalShareholderEquity");
+        termNames.push_back("returnOnCapitalDeployed_operatingIncome");
+        termNames.push_back("returnOnCapitalDeployed");
+
+        termValues.push_back(longTermDebt);
+        termValues.push_back(totalShareholderEquity);
+        termValues.push_back(operatingIncome);
+        termValues.push_back(returnOnCapitalDeployed);
+      }
+
+      return returnOnCapitalDeployed;
+    };
 
     static double calcReturnOnInvestedCapital(nlohmann::ordered_json &jsonData, 
-                                              std::string &date,
-                                              const char *timeUnit){
+                                    std::string &date,
+                                    const char *timeUnit,
+                                    bool zeroNansInDividendsPaid,
+                                    bool appendTermRecord,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
       // Return On Invested Capital
       //  Source: https://www.investopedia.com/terms/r/returnoninvestmentcapital.asp
       double longTermDebt = 
@@ -160,14 +182,35 @@ class FinancialAnalysisToolkit {
         JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["dividendsPaid"]);
       
+      if(std::isnan(dividendsPaid) && zeroNansInDividendsPaid){
+        dividendsPaid=0.;
+      }
       //Some companies don't pay dividends: if this field does not appear as
       //an entry in the security filings then value in the EOD json file will
       //be nan.
-      if(std::isnan(dividendsPaid)){
-        dividendsPaid=0.;
+      //if(std::isnan(dividendsPaid)){
+      //  dividendsPaid=0.;
+      //}
+
+      double returnOnInvestedCapital =  
+        (netIncome-dividendsPaid) / (longTermDebt+totalShareholderEquity);
+
+      if(appendTermRecord){
+        termNames.push_back("returnOnInvestedCapital_longTermDebt");
+        termNames.push_back("returnOnInvestedCapital_totalShareholderEquity");
+        termNames.push_back("returnOnInvestedCapital_netIncome");
+        termNames.push_back("returnOnInvestedCapital_dividendsPaid");
+        termNames.push_back("returnOnInvestedCapital");
+
+        termValues.push_back(longTermDebt);
+        termValues.push_back(totalShareholderEquity);
+        termValues.push_back(netIncome);
+        termValues.push_back(dividendsPaid);
+        termValues.push_back(returnOnInvestedCapital);
+
       }
 
-      return (netIncome-dividendsPaid) / (longTermDebt+totalShareholderEquity);
+      return returnOnInvestedCapital;
     };
 
     /**
@@ -177,7 +220,10 @@ class FinancialAnalysisToolkit {
     */      
     static double calcReturnOnAssets(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
-                                     const char *timeUnit){
+                                     const char *timeUnit,
+                                     bool appendTermRecord,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
 
       double  netIncome = 
         JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
@@ -193,7 +239,20 @@ class FinancialAnalysisToolkit {
       //1. capitalDeployed = (longTermDebt+totalShareholderEquity);
       //2. capitalDeployed = (totalAssets-currentTotalLiabilities);
 
-      return netIncome / totalAssets;
+      double returnOnAssets= netIncome / totalAssets;
+
+      if(appendTermRecord){
+        termNames.push_back("returnOnAssets_netIncome");
+        termNames.push_back("returnOnAssets_totalAssets");
+        termNames.push_back("returnOnAssets");
+
+        termValues.push_back(netIncome);
+        termValues.push_back(totalAssets);
+        termValues.push_back(returnOnAssets);
+      }
+
+      return returnOnAssets;
+
     };
 
     /**
@@ -202,7 +261,10 @@ class FinancialAnalysisToolkit {
     */
     static double calcGrossMargin(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
-                                     const char *timeUnit){
+                                     const char *timeUnit,
+                                     bool appendTermRecord,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
       
       double totalRevenue =
         JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
@@ -211,8 +273,19 @@ class FinancialAnalysisToolkit {
         JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["costOfRevenue"]);
 
-      return (totalRevenue-costOfRevenue)/totalRevenue;
+      double grossMargin= (totalRevenue-costOfRevenue)/totalRevenue;
 
+      if(appendTermRecord){
+        termNames.push_back("grossMargin_totalRevenue");
+        termNames.push_back("grossMargin_costOfRevenue");
+        termNames.push_back("grossMargin");
+
+        termValues.push_back(totalRevenue);
+        termValues.push_back(costOfRevenue);
+        termValues.push_back(grossMargin);
+      }
+
+      return grossMargin;
     };
 
     /**
@@ -220,7 +293,10 @@ class FinancialAnalysisToolkit {
     */
     static double calcOperatingMargin(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
-                                     const char *timeUnit){
+                                     const char *timeUnit,
+                                     bool appendTermRecord,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
       double  operatingIncome = 
         JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["operatingIncome"]);      
@@ -228,7 +304,19 @@ class FinancialAnalysisToolkit {
         JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["totalRevenue"]);
 
-      return operatingIncome/totalRevenue;
+      double operatingMargin=operatingIncome/totalRevenue;
+
+      if(appendTermRecord){
+        termNames.push_back("operatingMargin_operatingIncome");
+        termNames.push_back("operatingMargin_totalRevenue");
+        termNames.push_back("operatingMargin");
+
+        termValues.push_back(operatingIncome);
+        termValues.push_back(totalRevenue);
+        termValues.push_back(operatingMargin);
+      }
+
+      return operatingMargin;
     };    
 
     /**
@@ -236,7 +324,11 @@ class FinancialAnalysisToolkit {
     */
     static double calcCashConversionRatio(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
-                                     const char *timeUnit){
+                                     const char *timeUnit,
+                                     double defaultTaxRate,
+                                     bool appendTermRecord,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
       /*
         Free cash flow is not reported in the 10-Q that I'm working through,
         but it does appear in EOD's data. The formula suggested from 
@@ -298,37 +390,26 @@ class FinancialAnalysisToolkit {
         transparent. In any case, I'm tempted to avoid fields that don't 
         actually show up in a quaterly or yearly report.
       */
-      double  freeCashFlow = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["freeCashFlow"]);
 
-      double totalCashFromOperatingActivities = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["totalCashFromOperatingActivities"]);
+      std::string categoryName("cashFlowConversionRatio_");
+      double freeCashFlow = calcFreeCashFlow(jsonData,date,timeUnit, 
+        defaultTaxRate, appendTermRecord,categoryName, termNames, termValues);
 
       double netIncome = 
         JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["netIncome"]);
 
-      double capitalExpenditures = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["capitalExpenditures"]);
+      double cashFlowConversionRatio = (freeCashFlow)/netIncome;
 
-      double freeCashFlowCalc = 
-        (totalCashFromOperatingActivities-capitalExpenditures);
+      if(appendTermRecord){
+        termNames.push_back(categoryName+"netIncome");
+        termNames.push_back("cashFlowConversionRatio");
 
-      double freeCashFlowError = std::abs(freeCashFlow-freeCashFlowCalc)
-                                /(0.5*std::abs(freeCashFlow+freeCashFlowCalc));
-
-      if(freeCashFlowError > 0.1){
-        std::cout << '\t'
-                  << "Warning: Free-cash-flow calculated (" << freeCashFlowCalc 
-                  << ") and free-cash-flow from EOD (" << freeCashFlow 
-                  << ") differ by " << freeCashFlowError*100.0 << "%" 
-                  << std::endl;
+        termValues.push_back(netIncome);
+        termValues.push_back(cashFlowConversionRatio);
       }
 
-      return (freeCashFlowCalc)/netIncome;
+      return cashFlowConversionRatio;
 
     };
 
@@ -339,7 +420,10 @@ class FinancialAnalysisToolkit {
                                     nlohmann::ordered_json &jsonData, 
                                     std::string &date,
                                     const char *timeUnit,
-                                    bool zeroNanInShortTermDebt){
+                                    bool zeroNanInShortTermDebt,
+                                    bool appendTermRecord,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
 
       double shortTermDebt = 
               JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
@@ -350,14 +434,26 @@ class FinancialAnalysisToolkit {
       double longTermDebt = 
               JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["longTermDebt"]);      
-      double shareHoldersEquity = 
+      double totalStockholderEquity = 
               JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["totalStockholderEquity"]);
 
-      double debtToCapitalization=(shortTermDebt+longTermDebt)
-                    /(shortTermDebt+longTermDebt+shareHoldersEquity);
+      double debtToCapitalizationRatio=(shortTermDebt+longTermDebt)
+                    /(shortTermDebt+longTermDebt+totalStockholderEquity);
 
-      return debtToCapitalization;                    
+      if(appendTermRecord){
+        termNames.push_back("debtToCapitalizationRatio_shortTermDebt");
+        termNames.push_back("debtToCapitalizationRatio_longTermDebt");
+        termNames.push_back("debtToCapitalizationRatio_totalStockholderEquity");
+        termNames.push_back("debtToCapitalizationRatio");
+
+        termValues.push_back(shortTermDebt);
+        termValues.push_back(longTermDebt);
+        termValues.push_back(totalStockholderEquity);
+        termValues.push_back(debtToCapitalizationRatio);
+      }
+
+      return debtToCapitalizationRatio;                    
     };
 
     /**
@@ -365,18 +461,98 @@ class FinancialAnalysisToolkit {
     */
     static double calcInterestCover(nlohmann::ordered_json &jsonData, 
                                     std::string &date,
-                                    const char *timeUnit){
-      double  ebit = 
+                                    const char *timeUnit,
+                                    bool appendTermRecord,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
+      double  operatingIncome = 
         JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["operatingIncome"]);
       double interestExpense = 
         JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
                       ["interestExpense"]);
 
-      double interestCover=ebit/interestExpense;
+      double interestCover=operatingIncome/interestExpense;
+
+      if(appendTermRecord){
+        termNames.push_back("interestCover_operatingIncome");
+        termNames.push_back("interestCover_interestExpense");
+        termNames.push_back("interestCover");
+
+        termValues.push_back(operatingIncome);
+        termValues.push_back(interestExpense);
+        termValues.push_back(interestCover);
+      }
 
       return interestCover;
 
+    };    
+
+
+    static double calcFreeCashFlow(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     const char *timeUnit,
+                                     double defaultTaxRate,
+                                     bool appendTermRecord,
+                                     std::string parentCategoryName,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
+
+      
+      //Investopedia definition
+      //https://www.investopedia.com/terms/f/freecashflow.asp
+
+      double totalCashFromOperatingActivities = 
+      JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                    ["totalCashFromOperatingActivities"]);
+
+      double interestExpense = 
+      JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
+                    ["interestExpense"]);
+
+      std::string resultName(parentCategoryName);
+      resultName.append("freeCashFlow_");                    
+
+      double taxRate = calcTaxRate(jsonData,date,timeUnit,appendTermRecord,
+                                    resultName,
+                                    termNames,termValues);      
+
+      if(std::isnan(taxRate)){
+        taxRate=defaultTaxRate;
+        termValues[termValues.size()-1]=defaultTaxRate;
+      }                                                  
+
+      double taxShieldOnInterestExpense = interestExpense*taxRate;
+
+
+      double capitalExpenditures = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["capitalExpenditures"]);
+
+      double freeCashFlow = 
+          totalCashFromOperatingActivities
+          + interestExpense
+          - taxShieldOnInterestExpense
+          - capitalExpenditures;
+      
+
+      if(appendTermRecord){
+        
+        termNames.push_back(resultName + "totalCashFromOperatingActivities");
+        termNames.push_back(resultName + "interestExpense");
+        termNames.push_back(resultName + "taxShieldOnInterestExpense");
+        termNames.push_back(resultName + "capitalExpenditures");
+        termNames.push_back(parentCategoryName+"freeCashFlow");
+
+        termValues.push_back(totalCashFromOperatingActivities);
+        termValues.push_back(interestExpense);
+        termValues.push_back(taxShieldOnInterestExpense);
+        termValues.push_back(capitalExpenditures);
+        termValues.push_back(freeCashFlow);
+ 
+      }
+
+      return freeCashFlow;
     };    
 
     /**
@@ -394,18 +570,9 @@ class FinancialAnalysisToolkit {
      FCFE =  net Income                     | netIncome 
            + depreciation                   | + depreciation
            - cap. expenditures              | - capitalExpenditures
-           - change in non-cash capital     | - otherNonCashItems
-           - (principal repaid - new debt)  | + ?
+           - change in non-cash capital     | - (otherNonCashItems-otherNonCashItemsPrevious)
+           - (principal repaid - new debt)  | + (netDebt-netDebtPrevious)
 
-     The only difficulty I have is the last line. The suggestion from EOD
-     was to use the netDebt field. According to investopedia
-
-      netDebt = (shortTermDebt+longTermDebt)-cashAndCashEquivalents
-
-      This is not at all the same as the change in debt. I am instead using
-      the change of long term debt between periods.
-
-      https://www.investopedia.com/terms/n/netdebt.asp
 
      Damodaran, A.(2011). The Little Book of Valuation. Wiley.
     */
@@ -414,41 +581,73 @@ class FinancialAnalysisToolkit {
     static double calcFreeCashFlowToEquity(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      std::string &previousDate,
-                                     const char *timeUnit){
+                                     const char *timeUnit,
+                                     bool appendTermRecord,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
 
       
       //Investopedia definition
-      double totalCashFromOperatingActivities = 
+
+      double netIncome = 
       JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                    ["totalCashFromOperatingActivities"]);
+                    ["netIncome"]);
+
+      double depreciation = 
+      JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                    ["depreciation"]);
 
       double capitalExpenditures = 
         JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["capitalExpenditures"]);
 
-      double totalCashFromFinancingActivities = 
+      double otherNonCashItems = 
         JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["totalCashFromFinancingActivities"]);
+                      ["otherNonCashItems"]);
 
-      double salePurchaseOfStock = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["salePurchaseOfStock"]);
+      double otherNonCashItemsPrevious = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][previousDate.c_str()]
+                      ["otherNonCashItems"]);             
 
-      double longTermDebt = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
-                      ["longTermDebt"]);     
+      double netDebt = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["netDebt"]);
 
-      double previousLongTermDebt = JsonFunctions::getJsonFloat(
-                        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]
-                        ["longTermDebt"]); 
+      double netDebtPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["netDebt"]);
 
-
-      double fcfeIP = totalCashFromOperatingActivities 
-                    - capitalExpenditures
-                    + (totalCashFromFinancingActivities-salePurchaseOfStock) 
-                    - (previousLongTermDebt-longTermDebt);
+      //https://www.investopedia.com/terms/f/freecashflowtoequity.asp
+      //Note that the sign for netDebtChanges must be such that more debt
+      //produces a posive value for freeCashFlowToEquity
+      double freeCashFlowToEquity = 
+          netIncome
+          + depreciation
+          - capitalExpenditures
+          - (otherNonCashItems-otherNonCashItemsPrevious)
+          + (netDebt-netDebtPrevious);
       
-      return fcfeIP;
+      //          + (totalCashFromFinancingActivities-salePurchaseOfStock) 
+
+      if(appendTermRecord){
+        termNames.push_back("freeCashFlowToEquity_netIncome");
+        termNames.push_back("freeCashFlowToEquity_depreciation");
+        termNames.push_back("freeCashFlowToEquity_capitalExpenditures");
+        termNames.push_back("freeCashFlowToEquity_otherNonCashItems");
+        termNames.push_back("freeCashFlowToEquity_otherNonCashItemsPrevious");
+        termNames.push_back("freeCashFlowToEquity_netDebt");
+        termNames.push_back("freeCashFlowToEquity_netDebtPrevious");
+        termNames.push_back("freeCashFlowToEquity");
+
+        termValues.push_back(netIncome);
+        termValues.push_back(depreciation);
+        termValues.push_back(capitalExpenditures);
+        termValues.push_back(otherNonCashItems);
+        termValues.push_back(otherNonCashItemsPrevious);
+        termValues.push_back(netDebt); 
+        termValues.push_back(netDebtPrevious); 
+        termValues.push_back(freeCashFlowToEquity);
+      }
+
+      return freeCashFlowToEquity;
     };
 
     /**
@@ -490,7 +689,10 @@ class FinancialAnalysisToolkit {
      * */
     static double calcOwnersEarnings(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
-                                     const char *timeUnit){
+                                     const char *timeUnit,
+                                     bool appendTermRecord,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
 
     
       //Damodaran definition (page 40/172 22%)     
@@ -510,20 +712,51 @@ class FinancialAnalysisToolkit {
       double ownersEarnings =  netIncome
                               + depreciation
                               - capitalExpenditures
-                              - otherNonCashItems;      
+                              - otherNonCashItems;  
+
+      if(appendTermRecord){
+        termNames.push_back("ownersEarnings_netIncome");
+        termNames.push_back("ownersEarnings_depreciation");
+        termNames.push_back("ownersEarnings_capitalExpenditures");
+        termNames.push_back("ownersEarnings_otherNonCashItems");
+        termNames.push_back("ownersEarnings");
+
+        termValues.push_back(netIncome);
+        termValues.push_back(depreciation);
+        termValues.push_back(capitalExpenditures);
+        termValues.push_back(otherNonCashItems);
+        termValues.push_back(ownersEarnings);
+      }                            
       return ownersEarnings;
     };
 
     static double calcTaxRate(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
-                                     const char *timeUnit){
-      double taxProvision = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]["taxProvision"]);
+                                     const char *timeUnit,
+                                     bool appendTermRecord,
+                                     std::string &parentCategoryName,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
 
-      double incomeBeforeTaxes = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]["incomeBeforeTax"]);
+      double taxProvision = JsonFunctions::getJsonFloat(
+        jsonData[FIN][IS][timeUnit][date.c_str()]["taxProvision"]);
+
+      double incomeBeforeTaxes =  JsonFunctions::getJsonFloat(
+        jsonData[FIN][IS][timeUnit][date.c_str()]["incomeBeforeTax"]);
 
       double taxRate = taxProvision/incomeBeforeTaxes;
+
+      //Update the argument and result record
+      if(appendTermRecord){
+
+        termNames.push_back(parentCategoryName + "taxRate_taxProvision");
+        termNames.push_back(parentCategoryName + "taxRate_incomeBeforeTax");
+        termNames.push_back(parentCategoryName + "taxRate");
+
+        termValues.push_back(taxProvision);
+        termValues.push_back(incomeBeforeTaxes);
+        termValues.push_back(taxRate);
+      }
 
       return taxRate;
     };
@@ -531,7 +764,12 @@ class FinancialAnalysisToolkit {
 
     static double calcReinvestmentRate(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
-                                     const char *timeUnit){
+                                     const char *timeUnit,
+                                     double defaultTaxRate,
+                                     bool appendTermRecord,
+                                     std::string &parentCategoryName,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
 
     
       //Damodaran definition (page 40/172 22%)     
@@ -540,7 +778,16 @@ class FinancialAnalysisToolkit {
         JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
                       ["totalCashFromOperatingActivities"]); 
 
-      double taxRate = calcTaxRate(jsonData,date,timeUnit);
+      std::string termCategoryName = parentCategoryName;
+      termCategoryName.append("_reinvestmentRate_");
+
+      double taxRate = calcTaxRate(jsonData,date,timeUnit, appendTermRecord,
+                                    termCategoryName,termNames,termValues);
+
+      if(std::isnan(taxRate)){
+        taxRate=defaultTaxRate;
+        termValues[termValues.size()-1]=defaultTaxRate;
+      }
 
       double afterTaxOperatingIncome = 
         totalCashFromOperatingActivities*(1.0-taxRate);
@@ -554,18 +801,49 @@ class FinancialAnalysisToolkit {
 
       double reinvestmentRate =  
         (capitalExpenditures + otherNonCashItems)/afterTaxOperatingIncome;
+
+      //Update the argument and result record
+      if(appendTermRecord){
+
+        termNames.push_back(parentCategoryName + "reinvestmentRate_totalCashFromOperatingActivities");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_afterTaxOperatingIncome");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_capitalExpenditure");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_otherNonCashItems");
+        termNames.push_back(parentCategoryName + "reinvestmentRate");
+
+        termValues.push_back(totalCashFromOperatingActivities);
+        termValues.push_back(afterTaxOperatingIncome);
+        termValues.push_back(capitalExpenditures);
+        termValues.push_back(otherNonCashItems);
+        termValues.push_back(reinvestmentRate);
+      }
+
       return reinvestmentRate;
     };   
 
 
     static double calcFreeCashFlowToFirm(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
-                                     const char *timeUnit){
+                                     const char *timeUnit,
+                                     double defaultTaxRate,
+                                     bool appendTermRecord,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
+
 
       double totalCashFromOperatingActivities = JsonFunctions::getJsonFloat(
         jsonData[FIN][CF][timeUnit][date.c_str()]["totalCashFromOperatingActivities"]); 
 
-      double taxRate = calcTaxRate(jsonData, date, timeUnit);
+
+      std::string resultName("freeCashFlowToFirm_");
+
+      double taxRate = calcTaxRate(jsonData, date, timeUnit, appendTermRecord,
+                                    resultName,termNames,termValues);
+
+      if(std::isnan(taxRate)){
+        taxRate=defaultTaxRate;
+        termValues[termValues.size()-1]=defaultTaxRate;
+      }
 
       double operatingIncomeAfterTax = 
               totalCashFromOperatingActivities*(1.0-taxRate);
@@ -573,18 +851,32 @@ class FinancialAnalysisToolkit {
       double capitalExpenditures =  JsonFunctions::getJsonFloat(
         jsonData[FIN][CF][timeUnit][date.c_str()]["capitalExpenditures"]); 
 
-      double reinvestmentRate = 
-        calcReinvestmentRate(jsonData,date,timeUnit);      
+      //double reinvestmentRate = 
+      //  calcReinvestmentRate(jsonData,date,timeUnit);      
 
       double otherNonCashItems = JsonFunctions::getJsonFloat(
           jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
+                                                     
 
+      double freeCashFlowToFirm =   operatingIncomeAfterTax 
+                                  - capitalExpenditures
+                                  - otherNonCashItems;
+      if(appendTermRecord){
 
-      double fcff =   operatingIncomeAfterTax 
-                    - capitalExpenditures
-                    - otherNonCashItems;
+        termNames.push_back(resultName + "totalCashFromOperatingActivities");
+        termNames.push_back(resultName + "operatingIncomeAfterTax");
+        termNames.push_back(resultName + "capitalExpenditures");
+        termNames.push_back(resultName + "otherNonCashItems");
+        termNames.push_back("freeCashFlowToFirm");
 
-      return fcff;
+        termValues.push_back(totalCashFromOperatingActivities);
+        termValues.push_back(operatingIncomeAfterTax);
+        termValues.push_back(capitalExpenditures);
+        termValues.push_back(otherNonCashItems);
+        termValues.push_back(freeCashFlowToFirm);
+      }
+
+      return freeCashFlowToFirm;
     };
 
     /**
@@ -606,7 +898,10 @@ class FinancialAnalysisToolkit {
         const char *timeUnit,
         double costOfEquityAsAPercentage,
         std::vector< std::string > datesToAverageCapitalExpenditures,
-        bool zeroNansInResearchAndDevelopment){
+        bool zeroNansInResearchAndDevelopment,
+        bool appendTermRecord,
+        std::vector< std::string> &termNames,
+        std::vector< double > &termValues){
 
       bool isDataNan = false;
 
@@ -617,6 +912,7 @@ class FinancialAnalysisToolkit {
       }
       double researchDevelopment = JsonFunctions::getJsonFloat(
         jsonData[FIN][IS][timeUnit][date.c_str()]["researchDevelopment"]);  
+
       if(std::isnan(researchDevelopment)){
         //2023/12/25
         //Some firms don't report research and development such as 
@@ -630,8 +926,7 @@ class FinancialAnalysisToolkit {
         }
       }
       
-      //Now, how to iterate through the past three to five time entries to get 
-      //this information? 
+      //Extract the mean capital expenditure for the list of dates given
       double capitalExpenditureMean = 0;      
       for(auto& iter : datesToAverageCapitalExpenditures){
         capitalExpenditureMean += JsonFunctions::getJsonFloat( 
@@ -652,17 +947,36 @@ class FinancialAnalysisToolkit {
         isDataNan=true;
       }
 
-      double value = std::nan("1");
+      double residualCashFlow = std::nan("1");
+      double costOfEquity = totalStockholderEquity*costOfEquityAsAPercentage;
 
       if(!isDataNan){
-        double costOfEquity = totalStockholderEquity*costOfEquityAsAPercentage;
-        value = totalCashFromOperatingActivities
-              + researchDevelopment
-              - capitalExpenditureMean
-              - costOfEquity;
+
+        residualCashFlow =  totalCashFromOperatingActivities
+                            + researchDevelopment
+                            - capitalExpenditureMean
+                            - costOfEquity;
       }
 
-      return value;
+      if(appendTermRecord){
+        termNames.push_back("residualCashFlow_totalStockholderEquity");
+        termNames.push_back("residualCashFlow_costOfEquityAsAPercentage");
+        termNames.push_back("residualCashFlow_costOfEquity");
+        termNames.push_back("residualCashFlow_totalCashFromOperatingActivities");
+        termNames.push_back("residualCashFlow_researchDevelopment");
+        termNames.push_back("residualCashFlow_capitalExpenditureMean");
+        termNames.push_back("residualCashFlow");
+
+        termValues.push_back(totalStockholderEquity);
+        termValues.push_back(costOfEquityAsAPercentage);
+        termValues.push_back(costOfEquity);
+        termValues.push_back(totalCashFromOperatingActivities);
+        termValues.push_back(researchDevelopment);
+        termValues.push_back(capitalExpenditureMean);
+        termValues.push_back(residualCashFlow);
+      }
+
+      return residualCashFlow;
 
     }
 
