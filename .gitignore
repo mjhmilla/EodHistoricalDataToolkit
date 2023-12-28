@@ -8,4 +8,4 @@ build/*
 *.txt
 data/countryCodeExchangeMap.csv
 data/countryCodeList.ods
-
+!data/defaultSpreadTable.json

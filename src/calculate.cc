@@ -21,8 +21,11 @@ int main (int argc, char* argv[]) {
   std::string analyseFolder;
   bool analyzeQuarterlyData;
   std::string timePeriod;
-  double annualCostOfEquityAsAPercentage;
-  double costOfEquityAsAPercentage;
+  
+  std::string defaultSpreadJsonFile;
+
+  double riskFreeRate;
+  double equityRiskPremium;
   double defaultTaxRate;
   int numberOfYearsToAverageCapitalExpenditures;
   int numberOfPeriodsToAverageCapitalExpenditures;
@@ -57,6 +60,14 @@ int main (int argc, char* argv[]) {
 
     cmd.add(exchangeCodeInput);  
 
+
+    TCLAP::ValueArg<std::string> defaultSpreadJsonFileInput("d",
+      "DEFAULT_SPREAD_JSON_FILE_PATH", 
+      "The path to the json file that contains a table relating interest"
+      " coverage to default spread",false,"","string");
+
+    cmd.add(defaultSpreadJsonFileInput);  
+
     TCLAP::ValueArg<double> defaultTaxRateInput("t",
       "DEFAULT_TAX_RATE", 
       "The tax rate used if the tax rate cannot be calculated, or averaged, from"
@@ -66,13 +77,25 @@ int main (int argc, char* argv[]) {
     cmd.add(defaultTaxRateInput);  
 
 
-    TCLAP::ValueArg<double> annualCostOfEquityAsAPercentageInput("c",
-      "COST_OF_EQUITY_PERCENTAGE", 
-      "The annual cost of equity as a percentage. Default value of 0.10 taken "
-      "from Ch. 12 of Lev and Gu.",
-      false,0.10,"double");
+    TCLAP::ValueArg<double> riskFreeRateInput("r",
+      "RISK_FREE_RATE", 
+      "The risk free rate of return, which is often set to the return on "
+      "a 10 year or 30 year bond as noted from Ch. 3 of Lev and Gu.",
+      false,0.025,"double");
 
-    cmd.add(annualCostOfEquityAsAPercentageInput);  
+    cmd.add(riskFreeRateInput);  
+
+    TCLAP::ValueArg<double> equityRiskPremiumInput("c",
+      "EQUITY_RISK_PREMIUM", 
+      "The extra return that the stock should return given its risk. Often this"
+      " is set to the historical incremental rate of return provided by the "
+      " stock market relative to the bond market. In the U.S. this is somewhere"
+      " around 4 percent between 1928 and 2010 as noted in Ch. 3 of Lev and Gu."
+      " Given the high inflation rate, it might be wise to demande more than 0.05.",
+      false,0.05,"double");
+
+    cmd.add(equityRiskPremiumInput);  
+
 
     //numberOfYearsToAverageCapitalExpenditures
     TCLAP::ValueArg<int> numberOfYearsToAverageCapitalExpendituresInput("n",
@@ -106,10 +129,11 @@ int main (int argc, char* argv[]) {
     analyseFolder         = analyseFolderOutput.getValue();
     analyzeQuarterlyData  = quarterlyAnalysisInput.getValue();
 
-    defaultTaxRate = defaultTaxRateInput.getValue();
+    defaultTaxRate      = defaultTaxRateInput.getValue();
+    riskFreeRate        = riskFreeRateInput.getValue();
+    equityRiskPremium   = equityRiskPremiumInput.getValue();
 
-    annualCostOfEquityAsAPercentage 
-      = annualCostOfEquityAsAPercentageInput.getValue();
+    defaultSpreadJsonFile = defaultSpreadJsonFileInput.getValue();
 
     numberOfYearsToAverageCapitalExpenditures 
       = numberOfYearsToAverageCapitalExpendituresInput.getValue();              
@@ -118,13 +142,11 @@ int main (int argc, char* argv[]) {
 
     if(analyzeQuarterlyData){
       timePeriod                  = Q;
-      costOfEquityAsAPercentage   = annualCostOfEquityAsAPercentage/4.0;
       numberOfPeriodsToAverageCapitalExpenditures = 
         numberOfYearsToAverageCapitalExpenditures*4;
 
     }else{
       timePeriod                  = Y;
-      costOfEquityAsAPercentage   = annualCostOfEquityAsAPercentage;
       numberOfPeriodsToAverageCapitalExpenditures = 
         numberOfYearsToAverageCapitalExpenditures;
     }   
@@ -139,14 +161,20 @@ int main (int argc, char* argv[]) {
       std::cout << "  Exchange Code" << std::endl;
       std::cout << "    " << exchangeCode << std::endl;
 
+      std::cout << "  Default Spread Json File" << std::endl;
+      std::cout << "    " << defaultSpreadJsonFile << std::endl;
+
       std::cout << "  Analyze Quaterly Data" << std::endl;
       std::cout << "    " << analyzeQuarterlyData << std::endl;
 
       std::cout << "  Default tax rate" << std::endl;
       std::cout << "    " << defaultTaxRate << std::endl;
 
-      std::cout << "  Annual cost of equity" << std::endl;
-      std::cout << "    " << annualCostOfEquityAsAPercentage << std::endl;
+      std::cout << "  Annual risk free rate" << std::endl;
+      std::cout << "    " << riskFreeRate << std::endl;
+
+      std::cout << "  Annual equity risk premium" << std::endl;
+      std::cout << "    " << equityRiskPremium << std::endl;
 
       std::cout << "  Years to average capital expenditures " << std::endl;
       std::cout << "    " << numberOfYearsToAverageCapitalExpenditures 
@@ -170,6 +198,18 @@ int main (int argc, char* argv[]) {
   unsigned int count=0;
 
   using json = nlohmann::ordered_json;    
+
+  std::ifstream defaultSpreadFileStream(defaultSpreadJsonFile.c_str());
+  json jsonDefaultSpread = nlohmann::ordered_json::parse(defaultSpreadFileStream);
+
+  for(auto &row: jsonDefaultSpread.items()){
+    for(auto &ele: row.value()){
+      std::cout << ele << " ";
+    }
+    std::cout << std::endl;
+  }
+
+  std::cout << jsonDefaultSpread.at(1).at(2);
 
   bool zeroNanInShortTermDebt=true;
   bool zeroNansInResearchAndDevelopment=true;
@@ -286,11 +326,20 @@ int main (int argc, char* argv[]) {
       unsigned int taxRateEntryCount = 0;
       double meanTaxRate = 0.;
 
+      double beta = JsonFunctions::getJsonFloat(jsonData[GEN][TECH]["Beta"]);
+      double annualCostOfEquityAsAPercentage = 
+          riskFreeRate + equityRiskPremium*beta;
+
+      double costOfEquityAsAPercentage=annualCostOfEquityAsAPercentage;
+      if(analyzeQuarterlyData){
+        costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
+      }
+
       for( auto& it : entryDates){
         std::string date = it;           
-        double taxRateEntry = 
-          FinancialAnalysisToolkit::calcTaxRate(jsonData,date,timePeriod.c_str(),
-                false,tmpResultName,termNames,termValues);
+        double taxRateEntry = FinancialAnalysisToolkit::calcTaxRate(
+          jsonData,date,timePeriod.c_str(), false,tmpResultName,termNames,
+          termValues);
         if(!std::isnan(taxRateEntry)){
           meanTaxRate += taxRateEntry;
           ++taxRateEntryCount;
@@ -326,42 +375,77 @@ int main (int argc, char* argv[]) {
           abort();
         }
         
-        double totalStockHolderEquity = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timePeriod.c_str()][it.c_str()]
-                      ["totalStockholderEquity"]); 
+        double totalStockHolderEquity = JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timePeriod.c_str()][it.c_str()]["totalStockholderEquity"]); 
 
 
         double roic = FinancialAnalysisToolkit::
-          calcReturnOnInvestedCapital(jsonData,it,timePeriod.c_str(),
-            zeroNansInDividendsPaid, appendTermRecord, termNames, termValues);
+          calcReturnOnInvestedCapital(jsonData,
+                                      it,
+                                      timePeriod.c_str(),
+                                      zeroNansInDividendsPaid, 
+                                      appendTermRecord, 
+                                      termNames, 
+                                      termValues);
 
         double roce = FinancialAnalysisToolkit::
-          calcReturnOnCapitalDeployed(jsonData,it,timePeriod.c_str(),
-            appendTermRecord, termNames, termValues);
+          calcReturnOnCapitalDeployed(  jsonData,
+                                        it,
+                                        timePeriod.c_str(), 
+                                        appendTermRecord, 
+                                        termNames, 
+                                        termValues);
 
         double grossMargin = FinancialAnalysisToolkit::
-          calcGrossMargin(jsonData,it,timePeriod.c_str(),
-            appendTermRecord,termNames,termValues);
+          calcGrossMargin(  jsonData,
+                            it,
+                            timePeriod.c_str(),
+                            appendTermRecord,
+                            termNames,
+                            termValues);
 
         double operatingMargin = FinancialAnalysisToolkit::
-          calcOperatingMargin(jsonData,it,timePeriod.c_str(),
-            appendTermRecord,termNames,termValues);          
+          calcOperatingMargin(  jsonData,
+                                it,
+                                timePeriod.c_str(), 
+                                appendTermRecord,
+                                termNames,
+                                termValues);          
 
         double cashConversion = FinancialAnalysisToolkit::
-          calcCashConversionRatio(jsonData,it,timePeriod.c_str(),
-            meanTaxRate,appendTermRecord,termNames,termValues);
+          calcCashConversionRatio(  jsonData,
+                                    it,
+                                    timePeriod.c_str(), 
+                                    meanTaxRate,
+                                    appendTermRecord,
+                                    termNames,
+                                    termValues);
 
         double debtToCapital = FinancialAnalysisToolkit::
-          calcDebtToCapitalizationRatio(jsonData,it,timePeriod.c_str(),
-              zeroNanInShortTermDebt,appendTermRecord,termNames,termValues);
+          calcDebtToCapitalizationRatio(  jsonData,
+                                          it,
+                                          timePeriod.c_str(),
+                                          zeroNanInShortTermDebt,
+                                          appendTermRecord,
+                                          termNames,
+                                          termValues);
 
         double interestCover = FinancialAnalysisToolkit::
-          calcInterestCover(jsonData,it,timePeriod.c_str(),
-            appendTermRecord,termNames,termValues); 
+          calcInterestCover(  jsonData,
+                              it,
+                              timePeriod.c_str(),
+                              appendTermRecord,
+                              termNames,
+                              termValues); 
 
         double ownersEarnings = FinancialAnalysisToolkit::
-          calcOwnersEarnings(jsonData,it,timePeriod.c_str(), 
-                              appendTermRecord, termNames, termValues);                 
+          calcOwnersEarnings( jsonData, 
+                              it, 
+                              previousTimePeriod,
+                              timePeriod.c_str(), 
+                              appendTermRecord, 
+                              termNames, 
+                              termValues);  
 
         double residualCashFlow = std::nan("1");
 
@@ -382,8 +466,8 @@ int main (int argc, char* argv[]) {
 
         double freeCashFlowToEquity=std::nan("1");
         if(previousTimePeriod.length()>0){
-          freeCashFlowToEquity = 
-            FinancialAnalysisToolkit::calcFreeCashFlowToEquity(jsonData, 
+          freeCashFlowToEquity = FinancialAnalysisToolkit::
+            calcFreeCashFlowToEquity(jsonData, 
                                      it,
                                      previousTimePeriod,
                                      timePeriod.c_str(),
@@ -394,7 +478,10 @@ int main (int argc, char* argv[]) {
 
         double freeCashFlowToFirm=std::nan("1");
         freeCashFlowToFirm = FinancialAnalysisToolkit::
-          calcFreeCashFlowToFirm(jsonData, it, timePeriod.c_str(),
+          calcFreeCashFlowToFirm(jsonData, 
+                                 it, 
+                                 previousTimePeriod, 
+                                 timePeriod.c_str(),
                                  meanTaxRate,
                                  appendTermRecord,
                                  termNames, 

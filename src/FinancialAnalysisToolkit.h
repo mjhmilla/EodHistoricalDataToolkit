@@ -11,6 +11,7 @@
 
 
 const char *GEN = "General";
+const char *TECH= "Technicals";
 const char *FIN = "Financials";
 const char *BAL = "Balance_Sheet";
 const char *CF  = "Cash_Flow";
@@ -689,42 +690,44 @@ class FinancialAnalysisToolkit {
      * */
     static double calcOwnersEarnings(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
-                                     const char *timeUnit,
+                                     std::string &previousDate,
+                                     const char *timeUnit,                                     
                                      bool appendTermRecord,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
 
     
       //Damodaran definition (page 40/172 22%)     
-      double  netIncome = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["netIncome"]);
-      double depreciation =                                            
-       JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["depreciation"]);
-      double capitalExpenditures = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
-                      ["capitalExpenditures"]);             
-      double otherNonCashItems = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["otherNonCashItems"]);
+      double  netIncome = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][date.c_str()]["netIncome"]);
+      double depreciation = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][date.c_str()]["depreciation"]);
+      double capitalExpenditures = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][date.c_str()]["capitalExpenditures"]);             
+      double otherNonCashItems = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
+
+      double otherNonCashItemsPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][previousDate.c_str()]["otherNonCashItems"]); 
 
       double ownersEarnings =  netIncome
                               + depreciation
                               - capitalExpenditures
-                              - otherNonCashItems;  
+                              - (otherNonCashItems-otherNonCashItemsPrevious);  
 
       if(appendTermRecord){
         termNames.push_back("ownersEarnings_netIncome");
         termNames.push_back("ownersEarnings_depreciation");
         termNames.push_back("ownersEarnings_capitalExpenditures");
         termNames.push_back("ownersEarnings_otherNonCashItems");
+        termNames.push_back("ownersEarnings_otherNonCashItemsPrevious");
         termNames.push_back("ownersEarnings");
 
         termValues.push_back(netIncome);
         termValues.push_back(depreciation);
         termValues.push_back(capitalExpenditures);
         termValues.push_back(otherNonCashItems);
+        termValues.push_back(otherNonCashItemsPrevious);
         termValues.push_back(ownersEarnings);
       }                            
       return ownersEarnings;
@@ -764,6 +767,7 @@ class FinancialAnalysisToolkit {
 
     static double calcReinvestmentRate(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
+                                     std::string &previousDate,  
                                      const char *timeUnit,
                                      double defaultTaxRate,
                                      bool appendTermRecord,
@@ -799,8 +803,12 @@ class FinancialAnalysisToolkit {
         JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                       ["otherNonCashItems"]);
 
+      double otherNonCashItemsPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][previousDate.c_str()]["otherNonCashItems"]); 
+
       double reinvestmentRate =  
-        (capitalExpenditures + otherNonCashItems)/afterTaxOperatingIncome;
+        (capitalExpenditures + (otherNonCashItems-otherNonCashItemsPrevious)
+        )/afterTaxOperatingIncome;
 
       //Update the argument and result record
       if(appendTermRecord){
@@ -809,12 +817,14 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName + "reinvestmentRate_afterTaxOperatingIncome");
         termNames.push_back(parentCategoryName + "reinvestmentRate_capitalExpenditure");
         termNames.push_back(parentCategoryName + "reinvestmentRate_otherNonCashItems");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_otherNonCashItemsPrevious");
         termNames.push_back(parentCategoryName + "reinvestmentRate");
 
         termValues.push_back(totalCashFromOperatingActivities);
         termValues.push_back(afterTaxOperatingIncome);
         termValues.push_back(capitalExpenditures);
         termValues.push_back(otherNonCashItems);
+        termValues.push_back(otherNonCashItemsPrevious);
         termValues.push_back(reinvestmentRate);
       }
 
@@ -824,6 +834,7 @@ class FinancialAnalysisToolkit {
 
     static double calcFreeCashFlowToFirm(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
+                                     std::string &previousDate,                                     
                                      const char *timeUnit,
                                      double defaultTaxRate,
                                      bool appendTermRecord,
@@ -857,22 +868,27 @@ class FinancialAnalysisToolkit {
       double otherNonCashItems = JsonFunctions::getJsonFloat(
           jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
                                                      
+      double otherNonCashItemsPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][previousDate.c_str()]["otherNonCashItems"]);     
 
-      double freeCashFlowToFirm =   operatingIncomeAfterTax 
+      double freeCashFlowToFirm =  operatingIncomeAfterTax 
                                   - capitalExpenditures
-                                  - otherNonCashItems;
+                                  - (otherNonCashItems 
+                                      -otherNonCashItemsPrevious);
       if(appendTermRecord){
 
         termNames.push_back(resultName + "totalCashFromOperatingActivities");
         termNames.push_back(resultName + "operatingIncomeAfterTax");
         termNames.push_back(resultName + "capitalExpenditures");
         termNames.push_back(resultName + "otherNonCashItems");
+        termNames.push_back(resultName + "otherNonCashItemsPrevious");
         termNames.push_back("freeCashFlowToFirm");
 
         termValues.push_back(totalCashFromOperatingActivities);
         termValues.push_back(operatingIncomeAfterTax);
         termValues.push_back(capitalExpenditures);
         termValues.push_back(otherNonCashItems);
+        termValues.push_back(otherNonCashItemsPrevious);        
         termValues.push_back(freeCashFlowToFirm);
       }
 
