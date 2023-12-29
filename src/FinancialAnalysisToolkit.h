@@ -594,57 +594,149 @@ class FinancialAnalysisToolkit {
       JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                     ["netIncome"]);
 
-      double depreciation = 
-      JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                    ["depreciation"]);
+      //double depreciation = 
+      //JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+      //              ["depreciation"]);
+      //if(zeroNansInDepreciation && std::isnan(depreciation)){
+      //  depreciation = 0.;
+      //}  
 
-      double capitalExpenditures = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["capitalExpenditures"]);
 
-      double otherNonCashItems = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["otherNonCashItems"]);
+      //double capitalExpenditures = 
+      //  JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+      //                ["capitalExpenditures"]);
 
-      double otherNonCashItemsPrevious = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][previousDate.c_str()]
-                      ["otherNonCashItems"]);             
+      /*
+      Problem: depreciation is often not reported.
+      Solution: Since Damodran's formula for FCFE is
 
-      double netDebt = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][date.c_str()]["netDebt"]);
+      net Income
+      + depreciation
+      - capital expenditure
+      - change in non-cash working capital
+      - change in debt
 
-      double netDebtPrevious = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["netDebt"]);
+      and  
+
+      capital expenditure = change in PPE + depreciation,
+      https://www.investopedia.com/terms/c/capitalexpenditure.asp
+
+      we can instead use
+
+      net income
+      - (change in PPE)
+      - change in non-cash working capital
+      - change in debt
+      */
+
+      double plantPropertyEquipment = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["propertyPlantEquipment"]);
+      
+      double plantPropertyEquipmentPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["propertyPlantEquipment"]);
+
+      /*
+        Problem: Damodran's FCFE needs change in non-cash working capital, but
+                 this quantity is not really reported by EOD. 
+
+        Solution: calculate the change in non-cash working capital directly 
+                  using the suggestions in Ch. 3 of Damodran
+
+        change non-cash working capital = (inventory-inventoryPrevious)
+                                        + (netReceivables-netReceivablesPrevious)
+                                        - (accountsPayable-accountsPayablePrevious)
+
+      */
+
+      double inventory = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["inventory"]);
+
+      double inventoryPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["inventory"]);
+
+      double netReceivables = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["netReceivables"]);
+
+     double netReceivablesPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["netReceivables"]);
+
+      double accountsPayable = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["accountsPayable"]);
+
+      double accountsPayablePrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["accountsPayable"]);
+
+      /*
+        Problem: the change in cash due to debt is not something that EOD 
+                 reports though in the case of 3M 2007 10-K this value is
+                 reported. Instead, I'll estimate this quantity by evaluating
+                 the change of the sum of short-term and long-term debt. I'm
+                 not using net debt, in this case, because net debt includes
+                 total current assets which I do not want.
+
+                 net debt = (short-term debt + long-term debt) - total current assets
+      */
+
+      double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["shortLongTermDebtTotal"]);
+
+      double shortLongTermDebtTotalPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["shortLongTermDebtTotal"]);
 
       //https://www.investopedia.com/terms/f/freecashflowtoequity.asp
       //Note that the sign for netDebtChanges must be such that more debt
       //produces a posive value for freeCashFlowToEquity
+
+      double netCapitalExpenditures = 
+        plantPropertyEquipment-plantPropertyEquipmentPrevious;
+
+      double changeInNonCashWorkingCapital = 
+            ( (inventory-inventoryPrevious)
+             +(netReceivables-netReceivablesPrevious)
+             -(accountsPayable-accountsPayablePrevious));
+
+      double netDebtIssued = (shortLongTermDebtTotal
+                              -shortLongTermDebtTotalPrevious);
+
       double freeCashFlowToEquity = 
           netIncome
-          + depreciation
-          - capitalExpenditures
-          - (otherNonCashItems-otherNonCashItemsPrevious)
-          + (netDebt-netDebtPrevious);
+          - (netCapitalExpenditures)
+          - (changeInNonCashWorkingCapital)
+          + netDebtIssued;
       
       //          + (totalCashFromFinancingActivities-salePurchaseOfStock) 
 
       if(appendTermRecord){
         termNames.push_back("freeCashFlowToEquity_netIncome");
-        termNames.push_back("freeCashFlowToEquity_depreciation");
-        termNames.push_back("freeCashFlowToEquity_capitalExpenditures");
-        termNames.push_back("freeCashFlowToEquity_otherNonCashItems");
-        termNames.push_back("freeCashFlowToEquity_otherNonCashItemsPrevious");
-        termNames.push_back("freeCashFlowToEquity_netDebt");
-        termNames.push_back("freeCashFlowToEquity_netDebtPrevious");
+        termNames.push_back("freeCashFlowToEquity_plantPropertyEquipment");
+        termNames.push_back("freeCashFlowToEquity_plantPropertyEquipmentPrevious");
+        termNames.push_back("freeCashFlowToEquity_netCapitalExpenditures");
+        termNames.push_back("freeCashFlowToEquity_inventory");
+        termNames.push_back("freeCashFlowToEquity_inventoryPrevious");
+        termNames.push_back("freeCashFlowToEquity_netRecievables");
+        termNames.push_back("freeCashFlowToEquity_netRecievablesPrevious");
+        termNames.push_back("freeCashFlowToEquity_accountsPayable");
+        termNames.push_back("freeCashFlowToEquity_accountsPayablePrevious");
+        termNames.push_back("freeCashFlowToEquity_changeInNonCashWorkingCapital");
+        termNames.push_back("freeCashFlowToEquity_shortLongTermDebtTotal");
+        termNames.push_back("freeCashFlowToEquity_shortLongTermDebtTotalPrevious");
+        termNames.push_back("freeCashFlowToEquity_netDebtIssued");
         termNames.push_back("freeCashFlowToEquity");
 
         termValues.push_back(netIncome);
-        termValues.push_back(depreciation);
-        termValues.push_back(capitalExpenditures);
-        termValues.push_back(otherNonCashItems);
-        termValues.push_back(otherNonCashItemsPrevious);
-        termValues.push_back(netDebt); 
-        termValues.push_back(netDebtPrevious); 
+        termValues.push_back(plantPropertyEquipment);
+        termValues.push_back(plantPropertyEquipmentPrevious);
+        termValues.push_back(netCapitalExpenditures);
+        termValues.push_back(inventory);
+        termValues.push_back(inventoryPrevious);
+        termValues.push_back(netReceivables);
+        termValues.push_back(netReceivablesPrevious);
+        termValues.push_back(accountsPayable);
+        termValues.push_back(accountsPayablePrevious);
+        termValues.push_back(changeInNonCashWorkingCapital);
+        termValues.push_back(shortLongTermDebtTotal); 
+        termValues.push_back(shortLongTermDebtTotalPrevious); 
+        termValues.push_back(netDebtIssued);
         termValues.push_back(freeCashFlowToEquity);
       }
 
@@ -691,7 +783,7 @@ class FinancialAnalysisToolkit {
     static double calcOwnersEarnings(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      std::string &previousDate,
-                                     const char *timeUnit,                                     
+                                     const char *timeUnit,                                 
                                      bool appendTermRecord,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
@@ -700,36 +792,105 @@ class FinancialAnalysisToolkit {
       //Damodaran definition (page 40/172 22%)     
       double  netIncome = JsonFunctions::getJsonFloat(
         jsonData[FIN][CF][timeUnit][date.c_str()]["netIncome"]);
-      double depreciation = JsonFunctions::getJsonFloat(
-        jsonData[FIN][CF][timeUnit][date.c_str()]["depreciation"]);
-      double capitalExpenditures = JsonFunctions::getJsonFloat(
-        jsonData[FIN][CF][timeUnit][date.c_str()]["capitalExpenditures"]);             
-      double otherNonCashItems = JsonFunctions::getJsonFloat(
-        jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
 
-      double otherNonCashItemsPrevious = JsonFunctions::getJsonFloat(
-        jsonData[FIN][CF][timeUnit][previousDate.c_str()]["otherNonCashItems"]); 
+      //double depreciation = JsonFunctions::getJsonFloat(
+      //  jsonData[FIN][CF][timeUnit][date.c_str()]["depreciation"]);
 
-      double ownersEarnings =  netIncome
-                              + depreciation
-                              - capitalExpenditures
-                              - (otherNonCashItems-otherNonCashItemsPrevious);  
+      //if(zeroNansInDepreciation && std::isnan(depreciation)){
+      //  depreciation = 0.;
+      //}
+      /*
+      Problem: depreciation is often not reported.
+      Solution: Since Damodran's formula for FCFE is
+
+      net Income
+      + depreciation
+      - capital expenditure
+      - change in non-cash working capital
+      - change in debt
+
+      and  
+
+      capital expenditure = change in PPE + depreciation,
+      https://www.investopedia.com/terms/c/capitalexpenditure.asp
+
+      we can instead use
+
+      net income
+      - (change in PPE)
+      - change in non-cash working capital
+      - change in debt
+      */
+
+      double plantPropertyEquipment = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["propertyPlantEquipment"]);
+      
+      double plantPropertyEquipmentPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["propertyPlantEquipment"]);
+
+
+      /*
+        Problem: Damodran's FCFE needs change in non-cash working capital, but
+                 this quantity is not really reported by EOD. 
+
+        Solution: calculate the change in non-cash working capital directly 
+                  using the suggestions in Ch. 3 of Damodran
+
+        change non-cash working capital = (inventory-inventoryPrevious)
+                                        + (netReceivables-netReceivablesPrevious)
+                                        - (accountsPayable-accountsPayablePrevious)
+
+      */
+
+      double inventory = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["inventory"]);
+
+      double inventoryPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["inventory"]);
+
+      double netReceivables = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["netReceivables"]);
+
+     double netReceivablesPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["netReceivables"]);
+
+      double accountsPayable = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["accountsPayable"]);
+
+      double accountsPayablePrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["accountsPayable"]);
+
+      double ownersEarnings =  
+          netIncome
+          - (plantPropertyEquipment-plantPropertyEquipmentPrevious)
+          - ( (inventory-inventoryPrevious)
+             +(netReceivables-netReceivablesPrevious)
+             -(accountsPayable-accountsPayablePrevious));      
 
       if(appendTermRecord){
         termNames.push_back("ownersEarnings_netIncome");
-        termNames.push_back("ownersEarnings_depreciation");
-        termNames.push_back("ownersEarnings_capitalExpenditures");
-        termNames.push_back("ownersEarnings_otherNonCashItems");
-        termNames.push_back("ownersEarnings_otherNonCashItemsPrevious");
+        termNames.push_back("ownersEarnings_plantPropertyEquipment");
+        termNames.push_back("ownersEarnings_plantPropertyEquipmentPrevious");
+        termNames.push_back("ownersEarnings_inventory");
+        termNames.push_back("ownersEarnings_inventoryPrevious");
+        termNames.push_back("ownersEarnings_netRecievables");
+        termNames.push_back("ownersEarnings_netRecievablesPrevious");
+        termNames.push_back("ownersEarnings_accountsPayable");
+        termNames.push_back("ownersEarnings_accountsPayablePrevious");
         termNames.push_back("ownersEarnings");
 
         termValues.push_back(netIncome);
-        termValues.push_back(depreciation);
-        termValues.push_back(capitalExpenditures);
-        termValues.push_back(otherNonCashItems);
-        termValues.push_back(otherNonCashItemsPrevious);
+        termValues.push_back(plantPropertyEquipment);
+        termValues.push_back(plantPropertyEquipmentPrevious);
+        termValues.push_back(inventory);
+        termValues.push_back(inventoryPrevious);
+        termValues.push_back(netReceivables);
+        termValues.push_back(netReceivablesPrevious);
+        termValues.push_back(accountsPayable);
+        termValues.push_back(accountsPayablePrevious);
         termValues.push_back(ownersEarnings);
-      }                            
+      }
+
       return ownersEarnings;
     };
 
@@ -769,7 +930,7 @@ class FinancialAnalysisToolkit {
                                      std::string &date,
                                      std::string &previousDate,  
                                      const char *timeUnit,
-                                     double defaultTaxRate,
+                                     double taxRate,
                                      bool appendTermRecord,
                                      std::string &parentCategoryName,
                                      std::vector< std::string> &termNames,
@@ -785,46 +946,125 @@ class FinancialAnalysisToolkit {
       std::string termCategoryName = parentCategoryName;
       termCategoryName.append("_reinvestmentRate_");
 
-      double taxRate = calcTaxRate(jsonData,date,timeUnit, appendTermRecord,
-                                    termCategoryName,termNames,termValues);
-
-      if(std::isnan(taxRate)){
-        taxRate=defaultTaxRate;
-        termValues[termValues.size()-1]=defaultTaxRate;
-      }
-
       double afterTaxOperatingIncome = 
         totalCashFromOperatingActivities*(1.0-taxRate);
 
-      double capitalExpenditures = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
-                      ["capitalExpenditures"]);             
-      double otherNonCashItems = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
-                      ["otherNonCashItems"]);
+      //double capitalExpenditures = 
+      //  JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+      //                ["capitalExpenditures"]); 
 
-      double otherNonCashItemsPrevious = JsonFunctions::getJsonFloat(
-        jsonData[FIN][CF][timeUnit][previousDate.c_str()]["otherNonCashItems"]); 
+      /*
+      Problem: capitalExpenditures from EOD does not match what Damodran 
+                reports for net capital expenditures 3M in 2007
+      Solution: Since Damodran's formula for net capital expenditures appears
+                to be:
+
+        net capital expenditures = capital expenditures - depreciation
+        
+        and
+        
+        capital expenditure = change in PPE + depreciation,
+        https://www.investopedia.com/terms/c/capitalexpenditure.asp
+
+        net capital expenditures = change in PPE
+
+
+      */
+
+      double plantPropertyEquipment = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["propertyPlantEquipment"]);
+      
+      double plantPropertyEquipmentPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["propertyPlantEquipment"]);
+
+
+      /*
+        Problem: Damodran's FCFE needs change in non-cash working capital, but
+                 this quantity is not really reported by EOD. 
+
+        Solution: calculate the change in non-cash working capital directly 
+                  using the suggestions in Ch. 3 of Damodran
+
+        change non-cash working capital = (inventory-inventoryPrevious)
+                                        + (netReceivables-netReceivablesPrevious)
+                                        - (accountsPayable-accountsPayablePrevious)
+
+      */
+
+      double inventory = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["inventory"]);
+
+      double inventoryPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["inventory"]);
+
+      double netReceivables = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["netReceivables"]);
+
+     double netReceivablesPrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["netReceivables"]);
+
+      double accountsPayable = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["accountsPayable"]);
+
+      double accountsPayablePrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["accountsPayable"]);
+
+      //double otherNonCashItems = 
+      //  JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+      //                ["otherNonCashItems"]);
+
+      //double otherNonCashItemsPrevious = JsonFunctions::getJsonFloat(
+      //  jsonData[FIN][CF][timeUnit][previousDate.c_str()]["otherNonCashItems"]); 
+
+      double netCapitalExpenditures = 
+        plantPropertyEquipment-plantPropertyEquipmentPrevious;
+
+      double changeInNonCashWorkingCapital = 
+            ( (inventory-inventoryPrevious)
+             +(netReceivables-netReceivablesPrevious)
+             -(accountsPayable-accountsPayablePrevious));
 
       double reinvestmentRate =  
-        (capitalExpenditures + (otherNonCashItems-otherNonCashItemsPrevious)
+        (netCapitalExpenditures+changeInNonCashWorkingCapital
         )/afterTaxOperatingIncome;
 
       //Update the argument and result record
       if(appendTermRecord){
 
         termNames.push_back(parentCategoryName + "reinvestmentRate_totalCashFromOperatingActivities");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_taxRate");
         termNames.push_back(parentCategoryName + "reinvestmentRate_afterTaxOperatingIncome");
-        termNames.push_back(parentCategoryName + "reinvestmentRate_capitalExpenditure");
-        termNames.push_back(parentCategoryName + "reinvestmentRate_otherNonCashItems");
-        termNames.push_back(parentCategoryName + "reinvestmentRate_otherNonCashItemsPrevious");
+
+        termNames.push_back(parentCategoryName + "reinvestmentRate_plantPropertyEquipment");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_plantPropertyEquipmentPrevious");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_netCapitalExpenditures");
+
+        termNames.push_back(parentCategoryName + "reinvestmentRate_inventory");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_inventoryPrevious");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_netRecievables");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_netRecievablesPrevious");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_accountsPayable");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_accountsPayablePrevious");
+        termNames.push_back(parentCategoryName + "reinvestmentRate_changeInNonCashWorkingCapital");
+
         termNames.push_back(parentCategoryName + "reinvestmentRate");
 
         termValues.push_back(totalCashFromOperatingActivities);
+        termValues.push_back(taxRate);
         termValues.push_back(afterTaxOperatingIncome);
-        termValues.push_back(capitalExpenditures);
-        termValues.push_back(otherNonCashItems);
-        termValues.push_back(otherNonCashItemsPrevious);
+
+        termValues.push_back(plantPropertyEquipment);
+        termValues.push_back(plantPropertyEquipmentPrevious);
+        termValues.push_back(netCapitalExpenditures);
+
+        termValues.push_back(inventory);
+        termValues.push_back(inventoryPrevious);
+        termValues.push_back(netReceivables);
+        termValues.push_back(netReceivablesPrevious);
+        termValues.push_back(accountsPayable);
+        termValues.push_back(accountsPayablePrevious);
+        termValues.push_back(changeInNonCashWorkingCapital);
+
         termValues.push_back(reinvestmentRate);
       }
 
@@ -848,48 +1088,42 @@ class FinancialAnalysisToolkit {
 
       std::string resultName("freeCashFlowToFirm_");
 
-      double taxRate = calcTaxRate(jsonData, date, timeUnit, appendTermRecord,
-                                    resultName,termNames,termValues);
+      double taxRate = calcTaxRate(jsonData, 
+                                    date, 
+                                    timeUnit, 
+                                    appendTermRecord,
+                                    resultName,
+                                    termNames,
+                                    termValues);
 
       if(std::isnan(taxRate)){
         taxRate=defaultTaxRate;
         termValues[termValues.size()-1]=defaultTaxRate;
       }
 
-      double operatingIncomeAfterTax = 
-              totalCashFromOperatingActivities*(1.0-taxRate);
+      std::string parentCategoryName("freeCashFlowToFirm_");
 
-      double capitalExpenditures =  JsonFunctions::getJsonFloat(
-        jsonData[FIN][CF][timeUnit][date.c_str()]["capitalExpenditures"]); 
+      double reinvestmentRate = calcReinvestmentRate(jsonData,
+                                                    date,
+                                                    previousDate,
+                                                    timeUnit,
+                                                    taxRate,
+                                                    appendTermRecord,
+                                                    parentCategoryName,
+                                                    termNames,
+                                                    termValues);
+                                                    
+      double freeCashFlowToFirm =  
+        totalCashFromOperatingActivities*(1-taxRate)*(1-reinvestmentRate);
 
-      //double reinvestmentRate = 
-      //  calcReinvestmentRate(jsonData,date,timeUnit);      
-
-      double otherNonCashItems = JsonFunctions::getJsonFloat(
-          jsonData[FIN][CF][timeUnit][date.c_str()]["otherNonCashItems"]);
-                                                     
-      double otherNonCashItemsPrevious = JsonFunctions::getJsonFloat(
-        jsonData[FIN][CF][timeUnit][previousDate.c_str()]["otherNonCashItems"]);     
-
-      double freeCashFlowToFirm =  operatingIncomeAfterTax 
-                                  - capitalExpenditures
-                                  - (otherNonCashItems 
-                                      -otherNonCashItemsPrevious);
       if(appendTermRecord){
 
         termNames.push_back(resultName + "totalCashFromOperatingActivities");
-        termNames.push_back(resultName + "operatingIncomeAfterTax");
-        termNames.push_back(resultName + "capitalExpenditures");
-        termNames.push_back(resultName + "otherNonCashItems");
-        termNames.push_back(resultName + "otherNonCashItemsPrevious");
         termNames.push_back("freeCashFlowToFirm");
 
         termValues.push_back(totalCashFromOperatingActivities);
-        termValues.push_back(operatingIncomeAfterTax);
-        termValues.push_back(capitalExpenditures);
-        termValues.push_back(otherNonCashItems);
-        termValues.push_back(otherNonCashItemsPrevious);        
         termValues.push_back(freeCashFlowToFirm);
+
       }
 
       return freeCashFlowToFirm;

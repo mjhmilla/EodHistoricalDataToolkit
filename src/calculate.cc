@@ -22,10 +22,12 @@ int main (int argc, char* argv[]) {
   bool analyzeQuarterlyData;
   std::string timePeriod;
   
-  std::string defaultSpreadJsonFile;
+  std::string defaultSpreadJsonFile;  
 
   double riskFreeRate;
   double equityRiskPremium;
+  double defaultBeta;
+
   double defaultTaxRate;
   int numberOfYearsToAverageCapitalExpenditures;
   int numberOfPeriodsToAverageCapitalExpenditures;
@@ -96,6 +98,12 @@ int main (int argc, char* argv[]) {
 
     cmd.add(equityRiskPremiumInput);  
 
+    TCLAP::ValueArg<double> defaultBetaInput("b",
+      "DEFAULT_BETA", 
+      "The default beta value to use when one is not reported",
+      false,1.0,"double");
+
+    cmd.add(defaultBetaInput);  
 
     //numberOfYearsToAverageCapitalExpenditures
     TCLAP::ValueArg<int> numberOfYearsToAverageCapitalExpendituresInput("n",
@@ -131,7 +139,9 @@ int main (int argc, char* argv[]) {
 
     defaultTaxRate      = defaultTaxRateInput.getValue();
     riskFreeRate        = riskFreeRateInput.getValue();
+    defaultBeta         = defaultBetaInput.getValue();
     equityRiskPremium   = equityRiskPremiumInput.getValue();
+
 
     defaultSpreadJsonFile = defaultSpreadJsonFileInput.getValue();
 
@@ -176,6 +186,9 @@ int main (int argc, char* argv[]) {
       std::cout << "  Annual equity risk premium" << std::endl;
       std::cout << "    " << equityRiskPremium << std::endl;
 
+      std::cout << "  Default beta value" << std::endl;
+      std::cout << "    " << defaultBeta << std::endl;
+
       std::cout << "  Years to average capital expenditures " << std::endl;
       std::cout << "    " << numberOfYearsToAverageCapitalExpenditures 
                 << std::endl;
@@ -214,10 +227,13 @@ int main (int argc, char* argv[]) {
   bool zeroNanInShortTermDebt=true;
   bool zeroNansInResearchAndDevelopment=true;
   bool zeroNansInDividendsPaid = true;
+  bool zeroNansInDepreciation = true;
   bool appendTermRecord=true;
   std::vector< std::string >  termNames;
   std::vector< double >       termValues;  
 
+  bool loadSingleTicker=true;
+  std::string singleTicker = "MMM.STU.json";
 
 
   //Get a list of the json files in the input folder
@@ -229,8 +245,10 @@ int main (int argc, char* argv[]) {
 
     bool validInput = true;
 
-
     std::string fileName=entry.path().filename();
+    if(loadSingleTicker){
+      fileName  = singleTicker;
+    }
     size_t lastIndex = fileName.find_last_of(".");
     std::string tickerName = fileName.substr(0,lastIndex);
     std::size_t foundExtension = fileName.find(validFileExtension);
@@ -327,6 +345,9 @@ int main (int argc, char* argv[]) {
       double meanTaxRate = 0.;
 
       double beta = JsonFunctions::getJsonFloat(jsonData[GEN][TECH]["Beta"]);
+      if(std::isnan(beta)){
+        beta=defaultBeta;
+      }
       double annualCostOfEquityAsAPercentage = 
           riskFreeRate + equityRiskPremium*beta;
 
@@ -357,6 +378,16 @@ int main (int argc, char* argv[]) {
 
         termNames.clear();
         termValues.clear();
+
+        termNames.push_back("costOfEquityAsAPercentage_riskFreeRate");
+        termNames.push_back("costOfEquityAsAPercentage_equityRiskPremium");
+        termNames.push_back("costOfEquityAsAPercentage_beta");
+        termNames.push_back("costOfEquityAsAPercentage");
+
+        termValues.push_back(riskFreeRate);
+        termValues.push_back(equityRiskPremium);
+        termValues.push_back(beta);
+        termValues.push_back(costOfEquityAsAPercentage);
 
 
         trailingPastPeriods.push_back(date);
@@ -442,7 +473,7 @@ int main (int argc, char* argv[]) {
           calcOwnersEarnings( jsonData, 
                               it, 
                               previousTimePeriod,
-                              timePeriod.c_str(), 
+                              timePeriod.c_str(),
                               appendTermRecord, 
                               termNames, 
                               termValues);  
