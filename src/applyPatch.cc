@@ -34,13 +34,13 @@ int main (int argc, char* argv[]) {
     "data folder is ready for further processing."
     ,' ', "0.0");
 
-    TCLAP::ValueArg<std::string> apiKeyInput("k","EOD_API_KEY", 
+    TCLAP::ValueArg<std::string> apiKeyInput("k","eod_api_key", 
       "The EOD API KEY of your account at https://eodhistoricaldata.com/",
       true,"","string");
 
     cmd.add(apiKeyInput);
 
-    TCLAP::ValueArg<std::string> eodUrlInput("u","EOD_API_URL", 
+    TCLAP::ValueArg<std::string> eodUrlInput("u","eod_api_url", 
       "The specific EOD API URL. For example: https://eodhistoricaldata.com/api"
       "/exchanges-list/?api_token={YOUR_API_KEY}",
       true,"","string");
@@ -65,13 +65,13 @@ int main (int argc, char* argv[]) {
 
     cmd.add(patchFileNameInput);
 
-    TCLAP::ValueArg<std::string> exchangeCodeInput("x","EXCHANGE_CODE", 
+    TCLAP::ValueArg<std::string> exchangeCodeInput("x","exchange_code", 
       "The exchange code. For example: US",
       true,"","string");
 
     cmd.add(exchangeCodeInput);  
 
-    TCLAP::SwitchArg gapFillPartialDownloadInput("g","gapfill",
+    TCLAP::SwitchArg gapFillPartialDownloadInput("g","gap_fill",
       "Download the missing files to fill the gaps from an incomplete download",
        false);
     cmd.add(gapFillPartialDownloadInput);   

@@ -84,7 +84,8 @@ int main (int argc, char* argv[]) {
 
     cmd.add(exchangeListFileNameInput); 
 
-    TCLAP::ValueArg<std::string> mainExchangeListFileNameInput("m","main_exchange_list", 
+    TCLAP::ValueArg<std::string> mainExchangeListFileNameInput("m",
+      "main_exchange_list", 
       "The main/largest exchange for this country. For example, in Germany the "
       "Frankfurt Exchange is the largest and can be used as a reference for "
       "entries that are missing in the smaller exchanges in Germany "

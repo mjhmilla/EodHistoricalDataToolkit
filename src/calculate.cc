@@ -23,10 +23,13 @@ int main (int argc, char* argv[]) {
   std::string timePeriod;
   
   std::string defaultSpreadJsonFile;  
+  double defaultInterestCover;
 
   double riskFreeRate;
   double equityRiskPremium;
   double defaultBeta;
+
+  std::string singleFileToEvaluate;
 
   double defaultTaxRate;
   int numberOfYearsToAverageCapitalExpenditures;
@@ -56,22 +59,37 @@ int main (int argc, char* argv[]) {
 
     cmd.add(historicalFolderInput);
 
-    TCLAP::ValueArg<std::string> exchangeCodeInput("x","EXCHANGE_CODE", 
+    TCLAP::ValueArg<std::string> singleFileToEvaluateInput("s",
+      "single_ticker_name", 
+      "To evaluate a single ticker only, set the full file name here.",
+      true,"","string");
+
+    cmd.add(singleFileToEvaluateInput);
+
+    TCLAP::ValueArg<std::string> exchangeCodeInput("x","exchange_code", 
       "The exchange code. For example: US",
       false,"","string");
 
     cmd.add(exchangeCodeInput);  
 
-
     TCLAP::ValueArg<std::string> defaultSpreadJsonFileInput("d",
-      "DEFAULT_SPREAD_JSON_FILE_PATH", 
+      "default_spread_json_file_input", 
       "The path to the json file that contains a table relating interest"
       " coverage to default spread",false,"","string");
 
     cmd.add(defaultSpreadJsonFileInput);  
 
+    TCLAP::ValueArg<double> defaultInterestCoverInput("c",
+      "default_interest_cover", 
+      "The default interest cover that is used if an average value cannot"
+      "be computed from the data provided. This can happen with older "
+      "EOD records",
+      false,2.5,"double");
+
+    cmd.add(defaultInterestCoverInput);  
+
     TCLAP::ValueArg<double> defaultTaxRateInput("t",
-      "DEFAULT_TAX_RATE", 
+      "default_tax_rate", 
       "The tax rate used if the tax rate cannot be calculated, or averaged, from"
       " the data",
       false,0.30,"double");
@@ -80,26 +98,25 @@ int main (int argc, char* argv[]) {
 
 
     TCLAP::ValueArg<double> riskFreeRateInput("r",
-      "RISK_FREE_RATE", 
+      "risk_free_rate", 
       "The risk free rate of return, which is often set to the return on "
-      "a 10 year or 30 year bond as noted from Ch. 3 of Lev and Gu.",
+      "a 10 year or 30 year bond as noted from Ch. 3 of Damodran.",
       false,0.025,"double");
 
     cmd.add(riskFreeRateInput);  
 
-    TCLAP::ValueArg<double> equityRiskPremiumInput("c",
-      "EQUITY_RISK_PREMIUM", 
+    TCLAP::ValueArg<double> equityRiskPremiumInput("e",
+      "equity_risk_premium", 
       "The extra return that the stock should return given its risk. Often this"
       " is set to the historical incremental rate of return provided by the "
       " stock market relative to the bond market. In the U.S. this is somewhere"
-      " around 4 percent between 1928 and 2010 as noted in Ch. 3 of Lev and Gu."
-      " Given the high inflation rate, it might be wise to demande more than 0.05.",
+      " around 4 percent between 1928 and 2010 as noted in Ch. 3 Damodran.",
       false,0.05,"double");
 
     cmd.add(equityRiskPremiumInput);  
 
     TCLAP::ValueArg<double> defaultBetaInput("b",
-      "DEFAULT_BETA", 
+      "default_beta", 
       "The default beta value to use when one is not reported",
       false,1.0,"double");
 
@@ -107,7 +124,7 @@ int main (int argc, char* argv[]) {
 
     //numberOfYearsToAverageCapitalExpenditures
     TCLAP::ValueArg<int> numberOfYearsToAverageCapitalExpendituresInput("n",
-      "NUMBER_OF_YEARS_TO_AVERAGE_CAPITAL_EXPENDITURES", 
+      "number_of_years_to_average_capital_expenditures", 
       "Number of years used to evaluate capital expenditures."
       " Default value of 3 taken from Ch. 12 of Lev and Gu.",
       false,3,"int");
@@ -132,6 +149,7 @@ int main (int argc, char* argv[]) {
     cmd.parse(argc,argv);
 
     fundamentalFolder     = fundamentalFolderInput.getValue();
+    singleFileToEvaluate = singleFileToEvaluateInput.getValue();
     historicalFolder      = historicalFolderInput.getValue();
     exchangeCode          = exchangeCodeInput.getValue();    
     analyseFolder         = analyseFolderOutput.getValue();
@@ -144,6 +162,7 @@ int main (int argc, char* argv[]) {
 
 
     defaultSpreadJsonFile = defaultSpreadJsonFileInput.getValue();
+    defaultInterestCover  = defaultInterestCoverInput.getValue();
 
     numberOfYearsToAverageCapitalExpenditures 
       = numberOfYearsToAverageCapitalExpendituresInput.getValue();              
@@ -171,8 +190,14 @@ int main (int argc, char* argv[]) {
       std::cout << "  Exchange Code" << std::endl;
       std::cout << "    " << exchangeCode << std::endl;
 
+      std::cout << "  Single file name to evaluate" << std::endl;
+      std::cout << "    " << singleFileToEvaluate << std::endl;
+
       std::cout << "  Default Spread Json File" << std::endl;
       std::cout << "    " << defaultSpreadJsonFile << std::endl;
+
+      std::cout << "  Default interest cover value" << std::endl;
+      std::cout << "    " << defaultInterestCover << std::endl;
 
       std::cout << "  Analyze Quaterly Data" << std::endl;
       std::cout << "    " << analyzeQuarterlyData << std::endl;
@@ -202,28 +227,6 @@ int main (int argc, char* argv[]) {
               << " for arg "  << e.argId() << std::endl; 
   }
 
-  std::string validFileExtension = exchangeCode;
-  validFileExtension.append(".json");
-
-  auto startingDirectory = std::filesystem::current_path();
-  std::filesystem::current_path(fundamentalFolder);
-
-  unsigned int count=0;
-
-  using json = nlohmann::ordered_json;    
-
-  std::ifstream defaultSpreadFileStream(defaultSpreadJsonFile.c_str());
-  json jsonDefaultSpread = nlohmann::ordered_json::parse(defaultSpreadFileStream);
-
-  for(auto &row: jsonDefaultSpread.items()){
-    for(auto &ele: row.value()){
-      std::cout << ele << " ";
-    }
-    std::cout << std::endl;
-  }
-
-  std::cout << jsonDefaultSpread.at(1).at(2);
-
   bool zeroNanInShortTermDebt=true;
   bool zeroNansInResearchAndDevelopment=true;
   bool zeroNansInDividendsPaid = true;
@@ -232,11 +235,44 @@ int main (int argc, char* argv[]) {
   std::vector< std::string >  termNames;
   std::vector< double >       termValues;  
 
-  bool loadSingleTicker=true;
-  std::string singleTicker = "MMM.STU.json";
+  bool loadSingleTicker=false;
+  if(singleFileToEvaluate.size() > 0){
+    loadSingleTicker = true;
+  }
+
+  std::string validFileExtension = exchangeCode;
+  validFileExtension.append(".json");
+
+  auto startingDirectory = std::filesystem::current_path();
+  std::filesystem::current_path(fundamentalFolder);
+
+  unsigned int count=0;
+
+  //============================================================================
+  // Load the default spread array
+  //============================================================================
+  using json = nlohmann::ordered_json;    
+
+  std::ifstream defaultSpreadFileStream(defaultSpreadJsonFile.c_str());
+  json jsonDefaultSpread = nlohmann::ordered_json::parse(defaultSpreadFileStream);
+  //std::cout << jsonDefaultSpread.at(1).at(2);
+  if(verbose){
+    std::cout << "default spread table" << std::endl;
+    for(auto &row: jsonDefaultSpread.items()){
+      for(auto &ele: row.value()){
+        std::cout << ele << '\t';
+      }
+      std::cout << std::endl;
+    }
+  }
 
 
-  //Get a list of the json files in the input folder
+
+  //============================================================================
+  //
+  // Evaluate every file in the folder
+  //
+  //============================================================================  
   for ( const auto & entry 
           : std::filesystem::directory_iterator(fundamentalFolder)){
 
@@ -247,7 +283,7 @@ int main (int argc, char* argv[]) {
 
     std::string fileName=entry.path().filename();
     if(loadSingleTicker){
-      fileName  = singleTicker;
+      fileName  = singleFileToEvaluate;
     }
     size_t lastIndex = fileName.find_last_of(".");
     std::string tickerName = fileName.substr(0,lastIndex);
@@ -308,6 +344,14 @@ int main (int argc, char* argv[]) {
     }
 
     if(validInput){
+      
+      //========================================================================
+      //Check 
+      //  :that dates are ordered from oldest to newest.
+      //  :Why? The code I've written to evaluate the 'previous' time period
+      //        and the trailing last 3 time periods assumes this ordering.    
+      //========================================================================
+
       //Check that the dates are ordered from oldest to newest
       std::istringstream timeStreamFirst(entryDates.front());
       std::istringstream timeStreamLast(entryDates.back());
@@ -320,34 +364,43 @@ int main (int argc, char* argv[]) {
       if(timeStreamFirst.fail() || timeStreamLast.fail()){
         std::cerr << "Error: converting date strings to double values failed"
                   << std::endl;
-        std::abort();
+        validInput = false;
       }
       std::mktime(&firstTime);
       std::mktime(&lastTime);
+      
       //Make sure the first time is smaller than the last time
       if(firstTime.tm_year > lastTime.tm_year){
         std::cerr << "Error: time entries are in the opposite order than expected"
                   << std::endl;
-        std::abort();
+        validInput = false;
       }
+    }
 
+    if(validInput){
 
       std::vector< std::string > trailingPastPeriods;
       std::string previousTimePeriod("");
-
       unsigned int entryCount = 0;
 
-      //calculate the average tax rate
+      //========================================================================
+      //Calculate 
+      //  average tax rate
+      //  average interest cover    
+      //========================================================================
       std::vector< std::string > tmpNames;
       std::vector< double > tempValues;
       std::string tmpResultName("");
       unsigned int taxRateEntryCount = 0;
       double meanTaxRate = 0.;
+      unsigned int meanInterestCoverEntryCount = 0;
+      double meanInterestCover = 0.;
 
       double beta = JsonFunctions::getJsonFloat(jsonData[GEN][TECH]["Beta"]);
       if(std::isnan(beta)){
         beta=defaultBeta;
       }
+
       double annualCostOfEquityAsAPercentage = 
           riskFreeRate + equityRiskPremium*beta;
 
@@ -356,22 +409,51 @@ int main (int argc, char* argv[]) {
         costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
       }
 
-      for( auto& it : entryDates){
+      for( auto& it : entryDates){        
         std::string date = it;           
-        double taxRateEntry = FinancialAnalysisToolkit::calcTaxRate(
-          jsonData,date,timePeriod.c_str(), false,tmpResultName,termNames,
-          termValues);
+        double taxRateEntry = FinancialAnalysisToolkit::
+                                calcTaxRate(jsonData, 
+                                            date, 
+                                            timePeriod.c_str(), 
+                                            false, 
+                                            tmpResultName,
+                                            termNames,
+                                            termValues);
         if(!std::isnan(taxRateEntry)){
           meanTaxRate += taxRateEntry;
           ++taxRateEntryCount;
         }
-      }     
-      meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
-      if(std::isnan(meanTaxRate)){
-        meanTaxRate=defaultTaxRate;
+        double interestCover = FinancialAnalysisToolkit::
+          calcInterestCover(jsonData,
+                            date,
+                            timePeriod.c_str(),
+                            appendTermRecord,
+                            termNames,
+                            termValues);
+        if(!std::isnan(interestCover) && !std::isinf(interestCover)){
+          meanInterestCover += interestCover;
+          ++meanInterestCoverEntryCount;
+        }
+      }        
+
+      if(taxRateEntryCount > 0){
+        meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
+      }else{
+        meanTaxRate = defaultTaxRate;
       }
 
+      if(meanInterestCoverEntryCount > 0){
+        meanInterestCover = meanInterestCover 
+            / static_cast<double>(meanInterestCoverEntryCount);
+      }else{
+        meanInterestCover = defaultInterestCover;
+      }
 
+      //=======================================================================
+      //
+      //  Calculate the metrics for every data entry in the file
+      //
+      //=======================================================================      
       for( auto& it : entryDates){
         std::string date = it;        
 
@@ -379,6 +461,9 @@ int main (int argc, char* argv[]) {
         termNames.clear();
         termValues.clear();
 
+        //======================================================================
+        //Evaluate the cost of equity
+        //======================================================================        
         termNames.push_back("costOfEquityAsAPercentage_riskFreeRate");
         termNames.push_back("costOfEquityAsAPercentage_equityRiskPremium");
         termNames.push_back("costOfEquityAsAPercentage_beta");
@@ -389,6 +474,99 @@ int main (int argc, char* argv[]) {
         termValues.push_back(beta);
         termValues.push_back(costOfEquityAsAPercentage);
 
+        //======================================================================
+        //Evaluate the cost of debt
+        //======================================================================        
+        double interestCover = FinancialAnalysisToolkit::
+          calcInterestCover(jsonData,
+                            it,
+                            timePeriod.c_str(),
+                            appendTermRecord,
+                            termNames,
+                            termValues);
+        if(std::isnan(interestCover) || std::isinf(interestCover)){
+          interestCover = meanInterestCover;
+        }
+
+        double defaultSpread = std::nan("1");
+        bool found=false;
+        unsigned int i=0;        
+        while(found == false && i < jsonDefaultSpread.size()){
+          if(interestCover >= jsonDefaultSpread.at(i).at(0) 
+              && interestCover <= jsonDefaultSpread.at(i).at(1)){
+            defaultSpread = jsonDefaultSpread.at(i).at(2);
+            found=true;
+          }
+          ++i;
+        } 
+        if(std::isnan(defaultSpread) || std::isinf(defaultSpread)){
+          std::cerr << "Error: the default spread has evaluated to nan or inf"
+                       " which is only possible if the default spread json file"
+                       " has errors in it. The default spread json file should"
+                       " have 3 columns: interest cover lower bound, interest "
+                       " cover upper bound, and default spread rate. Each row "
+                       " specifies an interval. The intervals should be "
+                       " continuous and cover from -10000 to 10000, likely with"
+                       " very big intervals at the beginning and end. By default"
+                       " data/defaultSpreadTable.json contains this information"
+                       " which comes from "
+                       " https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html" 
+                       " on January 2023. The 1st and 2nd columns come from the"
+                       " table in the url, the 3rd column (rating) is ignored"
+                       " while the final column is put in decimal format "
+                       "(divide by 100). This table is appropriate for the U.S."
+                       " and perhaps Europe, but is probably not correct for"
+                       " the rest of the world."
+                       << std::endl;
+          std::abort();
+        }       
+
+
+        termNames.push_back("defaultSpread_interestCover");
+        termNames.push_back("defaultSpread");
+        termValues.push_back(interestCover);
+        termValues.push_back(defaultSpread);
+
+        std::string parentName = "afterTaxCostOfDebt_";
+        double taxRate = FinancialAnalysisToolkit::
+            calcTaxRate(jsonData,
+                        it,
+                        timePeriod.c_str(),
+                        appendTermRecord,
+                        parentName,
+                        termNames,
+                        termValues);
+        if(std::isnan(taxRate) || std::isinf(taxRate)){
+          taxRate = meanTaxRate;
+          if(appendTermRecord){
+            termValues[termValues.size()-1]=taxRate;
+          }
+        }
+                        
+        double afterTaxCostOfDebt = (riskFreeRate+defaultSpread)*(1.0-taxRate);
+        termNames.push_back("afterTaxCostOfDebt_riskFreeRate");
+        termNames.push_back("afterTaxCostOfDebt_defaultSpread");
+        termNames.push_back("afterTaxCostOfDebt");
+        
+        termValues.push_back(riskFreeRate);
+        termValues.push_back(defaultSpread);
+        termValues.push_back(afterTaxCostOfDebt);
+
+
+        double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+                  ["shortLongTermDebtTotal"]);
+        
+        double numberOfSharesOutstanding = JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+                  ["commonStockSharesOutstanding"]);
+
+        
+
+
+        //======================================================================
+        //Update the list of past periods
+        //======================================================================        
 
         trailingPastPeriods.push_back(date);
 
@@ -406,8 +584,13 @@ int main (int argc, char* argv[]) {
           abort();
         }
         
+        //======================================================================
+        //Evaluate the metrics
+        //======================================================================        
+
         double totalStockHolderEquity = JsonFunctions::getJsonFloat(
-          jsonData[FIN][BAL][timePeriod.c_str()][it.c_str()]["totalStockholderEquity"]); 
+          jsonData[FIN][BAL][timePeriod.c_str()][it.c_str()]
+                  ["totalStockholderEquity"]); 
 
 
         double roic = FinancialAnalysisToolkit::
@@ -460,14 +643,6 @@ int main (int argc, char* argv[]) {
                                           appendTermRecord,
                                           termNames,
                                           termValues);
-
-        double interestCover = FinancialAnalysisToolkit::
-          calcInterestCover(  jsonData,
-                              it,
-                              timePeriod.c_str(),
-                              appendTermRecord,
-                              termNames,
-                              termValues); 
 
         double ownersEarnings = FinancialAnalysisToolkit::
           calcOwnersEarnings( jsonData, 
@@ -566,6 +741,11 @@ int main (int argc, char* argv[]) {
     }
 
     ++count;
+
+    if(loadSingleTicker){
+      std::cout << "Done evaluating: " << singleFileToEvaluate << std::endl;
+      break;
+    }
   }
 
 
