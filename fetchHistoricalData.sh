@@ -2,9 +2,9 @@
 
 EX="$1"
 
-rm -r ${EOD_TOOLKIT_HOME}/data/"$EX"/historicalData/
+#rm -r ${EOD_TOOLKIT_HOME}/data/"$EX"/historicalData/
 
-mkdir ${EOD_TOOLKIT_HOME}/data/"$EX"/historicalData/
+#mkdir ${EOD_TOOLKIT_HOME}/data/"$EX"/historicalData/
 
 
 cd build

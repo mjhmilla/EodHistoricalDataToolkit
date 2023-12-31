@@ -360,6 +360,11 @@ int main (int argc, char* argv[]) {
                       << std::endl;
           }         
         
+        }else{
+          if(verbose && fileExists && gapFillPartialDownload){
+            std::cout << count << "." << '\t' << ticker << "." << exchangeCode 
+                      << " Skipping: already downloaded" << std::endl;
+          }            
         }
 
         if( ((fileExists && gapFillPartialDownload) || successTickerDownload) 
@@ -432,6 +437,11 @@ int main (int argc, char* argv[]) {
                 std::cout << count << ". (PrimaryTicker)" << '\t' 
                           << fileNamePrimary << std::endl;
               }  
+            }else{
+              if(verbose && filePrimaryExists && gapFillPartialDownload){
+                std::cout << count << "." << '\t' << ticker << "." << exchangeCode 
+                          << " Skipping: already downloaded" << std::endl;
+              }            
             }
           }
         }
