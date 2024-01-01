@@ -16,7 +16,11 @@ class JsonFunctions {
       if(  jsonEntry.is_null()){
         return std::nan("1");
       }else{
-        if(  jsonEntry.is_number_float()){
+        if(jsonEntry.is_number_unsigned()){
+          return static_cast<double>(jsonEntry.get<unsigned int>());
+        }else if(jsonEntry.is_number_integer()){
+          return static_cast<double>(jsonEntry.get<int>());
+        }else if( jsonEntry.is_number_float()){
           return jsonEntry.get<double>();
         }else if (jsonEntry.is_string()){
           return std::atof(jsonEntry.get<std::string>().c_str());

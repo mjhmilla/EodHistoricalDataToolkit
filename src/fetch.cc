@@ -177,11 +177,13 @@ int main (int argc, char* argv[]) {
 
     mode=MODE_FETCH_SINGLE_FILE;
 
-    if(tickerFileListPath.length() > 0){
-      mode = MODE_FETCH_MULTIPLE_TICKER_FILES;
-    }
-    if(exchangeListFileName.length() > 0){
-      mode = MODE_FETCH_MULTIPLE_EXCHANGE_FILES;
+    if(singleTickerNameToFetch.length()==0){
+      if(tickerFileListPath.length() > 0){
+        mode = MODE_FETCH_MULTIPLE_TICKER_FILES;
+      }
+      if(exchangeListFileName.length() > 0){
+        mode = MODE_FETCH_MULTIPLE_EXCHANGE_FILES;
+      }
     }
 
   
