@@ -375,6 +375,10 @@ int main (int argc, char* argv[]) {
 
           //If this is not the primary ticker, then we need to download the 
           //primary ticker file  
+          bool here=false;
+          if(ticker.compare("MMM")==0){
+            here=true;
+          }
           std::string eodTicker=ticker;
           eodTicker.append(".").append(exchangeCode);
 
@@ -388,9 +392,9 @@ int main (int argc, char* argv[]) {
               primaryEodTickerName.substr(idx+1,primaryEodTickerName.length()-1);
           }
 
-          if(std::strcmp(ticker.c_str(),tickerPrimaryCode.c_str()) != 0 
-            && std::strcmp(exchangeCode.c_str(),exchangeCodePrimary.c_str())!=0
-            && tickerPrimaryCode.length() > 0 
+          //If the echange codes don't match then download the primary
+          if(std::strcmp(exchangeCode.c_str(),exchangeCodePrimary.c_str())!=0
+            && exchangeCode.length() > 0 
             && exchangeCodePrimary.length()>0){
 
             std::string eodUrlPrimary = eodUrlTemplate;        
@@ -439,7 +443,7 @@ int main (int argc, char* argv[]) {
               }  
             }else{
               if(verbose && filePrimaryExists && gapFillPartialDownload){
-                std::cout << count << "." << '\t' << ticker << "." << exchangeCode 
+                std::cout << count << "." << '\t' << fileNamePrimary 
                           << " Skipping: already downloaded" << std::endl;
               }            
             }
