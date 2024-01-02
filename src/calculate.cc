@@ -26,6 +26,8 @@ int main (int argc, char* argv[]) {
   std::string timePeriod;
   
   std::string defaultSpreadJsonFile;  
+  std::string bondYieldJsonFile;  
+
   double defaultInterestCover;
 
   double riskFreeRate;
@@ -62,9 +64,9 @@ int main (int argc, char* argv[]) {
 
     cmd.add(historicalFolderInput);
 
-    TCLAP::ValueArg<std::string> singleFileToEvaluateInput("s",
+    TCLAP::ValueArg<std::string> singleFileToEvaluateInput("i",
       "single_ticker_name", 
-      "To evaluate a single ticker only, set the full file name here.",
+      "To evaluate a single ticker only, set the ticker name here.",
       true,"","string");
 
     cmd.add(singleFileToEvaluateInput);
@@ -81,6 +83,14 @@ int main (int argc, char* argv[]) {
       " coverage to default spread",false,"","string");
 
     cmd.add(defaultSpreadJsonFileInput);  
+
+    TCLAP::ValueArg<std::string> bondYieldJsonFileInput("y",
+      "bond_yield_file_input", 
+      "The path to the json file that contains a long historical record"
+      " of 10 year bond yield values",false,"","string");
+
+    cmd.add(bondYieldJsonFileInput);  
+    
 
     TCLAP::ValueArg<double> defaultInterestCoverInput("c",
       "default_interest_cover", 
@@ -165,6 +175,7 @@ int main (int argc, char* argv[]) {
 
 
     defaultSpreadJsonFile = defaultSpreadJsonFileInput.getValue();
+    bondYieldJsonFile     = bondYieldJsonFileInput.getValue();
     defaultInterestCover  = defaultInterestCoverInput.getValue();
 
     numberOfYearsToAverageCapitalExpenditures 
@@ -231,6 +242,11 @@ int main (int argc, char* argv[]) {
   }
 
 
+
+
+
+
+
   int maxNumberOfDaysInError = 10;
   bool zeroNanInShortTermDebt=true;
   bool zeroNansInResearchAndDevelopment=true;
@@ -254,7 +270,7 @@ int main (int argc, char* argv[]) {
   unsigned int count=0;
 
   //============================================================================
-  // Load the default spread array
+  // Load the default spread array 
   //============================================================================
   using json = nlohmann::ordered_json;    
 
@@ -262,15 +278,43 @@ int main (int argc, char* argv[]) {
   json jsonDefaultSpread = nlohmann::ordered_json::parse(defaultSpreadFileStream);
   //std::cout << jsonDefaultSpread.at(1).at(2);
   if(verbose){
+    std::cout << std::endl;
     std::cout << "default spread table" << std::endl;
-    for(auto &row: jsonDefaultSpread.items()){
+    std::cout << '\t'
+              << "Interest Coverage Interval" 
+              << '\t'
+              << '\t' 
+              << "default spread" << std::endl;
+    for(auto &row: jsonDefaultSpread["USA"]["default_spread"].items()){
       for(auto &ele: row.value()){
-        std::cout << ele << '\t';
+        std::cout << '\t' << ele << '\t';
       }
       std::cout << std::endl;
     }
   }
 
+  //============================================================================
+  // Load the 10 year bond yield table 
+  //============================================================================
+  using json = nlohmann::ordered_json;    
+
+  std::ifstream bondYieldFileStream(bondYieldJsonFile.c_str());
+  json jsonBondYield = nlohmann::ordered_json::parse(bondYieldFileStream);
+  //std::cout << jsonDefaultSpread.at(1).at(2);
+  if(verbose){
+    std::size_t numberOfEntries = jsonBondYield["USA"]["10y_bond_yield"].size();
+    std::string startKey = jsonBondYield["USA"]["10y_bond_yield"].begin().key();
+    std::string endKey = (--jsonBondYield["USA"]["10y_bond_yield"].end()).key();
+    std::cout << std::endl;
+    std::cout << "bond yield table" 
+              << "with " 
+              << numberOfEntries
+              << " entries from "
+              << startKey
+              << " to "
+              << endKey
+              << std::endl;
+  }
 
 
   //============================================================================
@@ -289,6 +333,10 @@ int main (int argc, char* argv[]) {
     std::string fileName=entry.path().filename();
     if(loadSingleTicker){
       fileName  = singleFileToEvaluate;
+      size_t idx = singleFileToEvaluate.find(".json");
+      if(idx == std::string::npos){
+        fileName.append(".json");
+      }
     }
     size_t lastIndex = fileName.find_last_of(".");
     std::string tickerName = fileName.substr(0,lastIndex);
@@ -601,10 +649,21 @@ int main (int argc, char* argv[]) {
         double defaultSpread = std::nan("1");
         bool found=false;
         unsigned int i=0;        
-        while(found == false && i < jsonDefaultSpread.size()){
-          if(interestCover >= jsonDefaultSpread.at(i).at(0) 
-              && interestCover <= jsonDefaultSpread.at(i).at(1)){
-            defaultSpread = jsonDefaultSpread.at(i).at(2);
+        
+        while(found == false 
+              && i < jsonDefaultSpread["USA"]["default_spread"].size()){
+          
+          double interestCoverLowerBound = JsonFunctions::getJsonFloat(
+              jsonDefaultSpread["USA"]["default_spread"].at(i).at(0));
+          double interestCoverUpperBound = JsonFunctions::getJsonFloat(
+              jsonDefaultSpread["USA"]["default_spread"].at(i).at(1));
+          double defaultSpreadIntervalValue = JsonFunctions::getJsonFloat(
+              jsonDefaultSpread["USA"]["default_spread"].at(i).at(0));
+
+
+          if(interestCover >= interestCoverLowerBound
+          && interestCover <= interestCoverUpperBound){
+             defaultSpread = defaultSpreadIntervalValue;
             found=true;
           }
           ++i;

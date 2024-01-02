@@ -9,3 +9,4 @@ build/*
 data/countryCodeExchangeMap.csv
 data/countryCodeList.ods
 !data/defaultSpreadTable.json
+!data/bondYieldTable.json
