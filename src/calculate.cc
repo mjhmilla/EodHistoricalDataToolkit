@@ -162,6 +162,8 @@ bool extractDatesOfClosestMatch(
   return validInput;
 };
 
+
+
 int main (int argc, char* argv[]) {
 
   std::string exchangeCode;
@@ -177,7 +179,7 @@ int main (int argc, char* argv[]) {
 
   double defaultInterestCover;
 
-  double riskFreeRate;
+  double defaultRiskFreeRate;
   double equityRiskPremium;
   double defaultBeta;
 
@@ -257,13 +259,13 @@ int main (int argc, char* argv[]) {
     cmd.add(defaultTaxRateInput);  
 
 
-    TCLAP::ValueArg<double> riskFreeRateInput("r",
-      "risk_free_rate", 
+    TCLAP::ValueArg<double> defaultRiskFreeRateInput("r",
+      "default_risk_free_rate", 
       "The risk free rate of return, which is often set to the return on "
       "a 10 year or 30 year bond as noted from Ch. 3 of Damodran.",
       false,0.025,"double");
 
-    cmd.add(riskFreeRateInput);  
+    cmd.add(defaultRiskFreeRateInput);  
 
     TCLAP::ValueArg<double> equityRiskPremiumInput("e",
       "equity_risk_premium", 
@@ -316,7 +318,7 @@ int main (int argc, char* argv[]) {
     analyzeQuarterlyData  = quarterlyAnalysisInput.getValue();
 
     defaultTaxRate      = defaultTaxRateInput.getValue();
-    riskFreeRate        = riskFreeRateInput.getValue();
+    defaultRiskFreeRate = defaultRiskFreeRateInput.getValue();
     defaultBeta         = defaultBetaInput.getValue();
     equityRiskPremium   = equityRiskPremiumInput.getValue();
 
@@ -366,8 +368,8 @@ int main (int argc, char* argv[]) {
       std::cout << "  Default tax rate" << std::endl;
       std::cout << "    " << defaultTaxRate << std::endl;
 
-      std::cout << "  Annual risk free rate" << std::endl;
-      std::cout << "    " << riskFreeRate << std::endl;
+      std::cout << "  Annual default risk free rate" << std::endl;
+      std::cout << "    " << defaultRiskFreeRate << std::endl;
 
       std::cout << "  Annual equity risk premium" << std::endl;
       std::cout << "    " << equityRiskPremium << std::endl;
@@ -394,7 +396,8 @@ int main (int argc, char* argv[]) {
 
 
 
-  int maxNumberOfDaysInError = 10;
+  int maxDayErrorHistoricalData = 10; // Historical data has a resolution of 1 day
+  int maxDayErrorBondYieldData  = 35; // Bond yield data has a resolution of 1 month
   bool zeroNanInShortTermDebt=true;
   bool zeroNansInResearchAndDevelopment=true;
   bool zeroNansInDividendsPaid = true;
@@ -442,26 +445,39 @@ int main (int argc, char* argv[]) {
 
   //============================================================================
   // Load the 10 year bond yield table 
+  // Note: 1. Right now I only have historical data for the US, and so I'm
+  //          approximating the bond yield of all countries using US data.
+  //          This is probably approximately correct for wealthy developed
+  //          countries that have access to international markets, but is 
+  //          terrible for countries outside of this group.
+  //       
   //============================================================================
   using json = nlohmann::ordered_json;    
 
   std::ifstream bondYieldFileStream(bondYieldJsonFile.c_str());
   json jsonBondYield = nlohmann::ordered_json::parse(bondYieldFileStream);
-  //std::cout << jsonDefaultSpread.at(1).at(2);
+
   if(verbose){
     std::size_t numberOfEntries = jsonBondYield["US"]["10y_bond_yield"].size();
     std::string startKey = jsonBondYield["US"]["10y_bond_yield"].begin().key();
     std::string endKey = (--jsonBondYield["US"]["10y_bond_yield"].end()).key();
     std::cout << std::endl;
-    std::cout << "bond yield table" 
-              << "with " 
+    std::cout << "bond yield table with " 
               << numberOfEntries
               << " entries from "
               << startKey
               << " to "
               << endKey
               << std::endl;
+    std::cout << "  Warning**" << std::endl; 
+    std::cout << "    The 10 year bond yields from the US are being used to " << std::endl;          
+    std::cout << "    approximate the bond yields from all countries. The "   << std::endl; 
+    std::cout << "    bond yields, in turn, are being used to approximate"    << std::endl; 
+    std::cout << "    the risk free rate which is used in the calculation "   << std::endl; 
+    std::cout << "    of the cost of capital and the cost of debt."           << std::endl; 
+    std::cout << std::endl;
   }
+
 
 
   //============================================================================
@@ -497,9 +513,9 @@ int main (int argc, char* argv[]) {
                                             fileName,
                                             updTickerName);
         if(verbose){
-          std::cout << count << ".    " << fileName << std::endl;
+          std::cout << count << "." << '\t' << fileName << std::endl;
           if(updTickerName.compare(tickerName) != 0){
-            std::cout << "    " << updTickerName 
+            std::cout << "  " << '\t' << updTickerName 
                       << " (PrimaryTicker) " << std::endl;
           }
         }
@@ -585,11 +601,32 @@ int main (int argc, char* argv[]) {
                         datesHistorical,
                         "%Y-%m-%d",
                         indicesClosestHistoricalDates,
-                        maxNumberOfDaysInError);
+                        maxDayErrorHistoricalData);
     }
 
+    //==========================================================================
+    //Extract the closest order of the bond yields
+    //==========================================================================
+    std::vector< std::string > datesBondYields;
+    for(auto& el : jsonBondYield["US"]["10y_bond_yield"].items()){
+      datesBondYields.push_back(el.key());
+    }
+    std::vector< unsigned int > indicesClosestBondYieldDates;
+    if(validInput){
+      validInput = extractDatesOfClosestMatch(
+                        datesFundamental,
+                        "%Y-%m-%d",
+                        datesBondYields,
+                        "%Y-%m-%d",
+                        indicesClosestBondYieldDates,
+                        maxDayErrorBondYieldData);
+    }    
 
-    //Process the file if the input data is valid;
+    //==========================================================================
+    //
+    // Process these files, if all of the inputs are valid
+    //
+    //==========================================================================
     nlohmann::ordered_json analysis;
     if(validInput){
 
@@ -619,13 +656,7 @@ int main (int argc, char* argv[]) {
       if(std::isnan(beta)){
         beta=defaultBeta;
       }
-      double annualCostOfEquityAsAPercentage = 
-          riskFreeRate + equityRiskPremium*beta;
 
-      double costOfEquityAsAPercentage=annualCostOfEquityAsAPercentage;
-      if(analyzeQuarterlyData){
-        costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
-      }
 
       //========================================================================
       // Evaluate the average tax rate and interest cover
@@ -719,12 +750,41 @@ int main (int argc, char* argv[]) {
         }
 
         //======================================================================
+        //Evaluate the risk free rate as the yield on a 10 year US bond
+        //======================================================================
+        int indexBondYield = indicesClosestBondYieldDates[indexFundamental];
+        std::string closestBondYieldDate= datesBondYields[indexBondYield]; 
+
+        double bondYield = std::nan("1");
+        try{
+          bondYield = JsonFunctions::getJsonFloat(
+              jsonBondYield["US"]["10y_bond_yield"][closestBondYieldDate]); 
+          bondYield = bondYield * (0.01); //Convert from percent to decimal form      
+        }catch( std::invalid_argument const& ex){
+          std::cout << " Bond yield record (" << closestBondYieldDate << ")"
+                    << " is missing a value. Reverting to the default"
+                    << " risk free rate."
+                    << std::endl;
+          bondYield=defaultRiskFreeRate;
+        }        
+
+        double riskFreeRate = bondYield;
+
+        //======================================================================
         //Evaluate the cost of equity
         //======================================================================        
-        termNames.push_back("costOfEquityAsAPercentage_riskFreeRate");
-        termNames.push_back("costOfEquityAsAPercentage_equityRiskPremium");
-        termNames.push_back("costOfEquityAsAPercentage_beta");
-        termNames.push_back("costOfEquityAsAPercentage");
+        double annualCostOfEquityAsAPercentage = 
+          riskFreeRate + equityRiskPremium*beta;
+
+        double costOfEquityAsAPercentage=annualCostOfEquityAsAPercentage;
+        if(analyzeQuarterlyData){
+          costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
+        }        
+
+        termNames.push_back("costOfEquity_riskFreeRate");
+        termNames.push_back("costOfEquity_equityRiskPremium");
+        termNames.push_back("costOfEquity_beta");
+        termNames.push_back("costOfEquity");
 
         termValues.push_back(riskFreeRate);
         termValues.push_back(equityRiskPremium);
@@ -757,7 +817,7 @@ int main (int argc, char* argv[]) {
           double interestCoverUpperBound = JsonFunctions::getJsonFloat(
               jsonDefaultSpread["US"]["default_spread"].at(i).at(1));
           double defaultSpreadIntervalValue = JsonFunctions::getJsonFloat(
-              jsonDefaultSpread["US"]["default_spread"].at(i).at(0));
+              jsonDefaultSpread["US"]["default_spread"].at(i).at(2));
 
 
           if(interestCover >= interestCoverLowerBound
@@ -831,7 +891,7 @@ int main (int argc, char* argv[]) {
                   ["commonStockSharesOutstanding"]);
 
         unsigned int indexHistoricalData = 
-          indicesClosestHistoricalDates[entryCount];   
+          indicesClosestHistoricalDates[indexFundamental];   
 
         std::string closestHistoricalDate= datesHistorical[indexHistoricalData]; 
 
@@ -875,9 +935,8 @@ int main (int argc, char* argv[]) {
         //======================================================================        
 
         double totalStockHolderEquity = JsonFunctions::getJsonFloat(
-          fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                  ["totalStockholderEquity"]); 
-
+                fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+                               ["totalStockholderEquity"]); 
 
         double roic = FinancialAnalysisToolkit::
           calcReturnOnInvestedCapital(fundamentalData,
