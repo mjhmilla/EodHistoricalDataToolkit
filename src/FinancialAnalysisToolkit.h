@@ -5,6 +5,7 @@
 #include <string>
 #include <stdlib.h>
 #include <algorithm>
+#include <sstream>
 
 #include <nlohmann/json.hpp>
 #include "JsonFunctions.h"
@@ -136,6 +137,9 @@ class FinancialAnalysisToolkit {
         JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["longTermDebt"]);       
 
+      //Total shareholder equity is the money that would be left over if the 
+      //company went out of business immediately. 
+      //https://www.investopedia.com/ask/answers/033015/what-does-total-stockholders-equity-represent.asp
       double totalShareholderEquity = 
         JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
                       ["totalStockholderEquity"]);
@@ -226,6 +230,81 @@ class FinancialAnalysisToolkit {
 
       return returnOnInvestedCapital;
     };
+
+    /**
+     * https://www.investopedia.com/terms/r/returnonequity.asp
+    */
+    static double calcReturnOnEquity(nlohmann::ordered_json &jsonData, 
+                                    std::string &date,
+                                    const char *timeUnit,
+                                    bool appendTermRecord,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
+      double totalShareholderEquity = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][date.c_str()]
+                      ["totalStockholderEquity"]);
+
+      double  netIncome = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["netIncome"]);
+
+      double returnOnEquity = netIncome/totalShareholderEquity;
+      if(appendTermRecord){
+        termNames.push_back("returnOnEquity_netIncome");
+        termNames.push_back("returnOnEquity_totalShareholderEquity");
+        termNames.push_back("returnOnEquity");
+
+        termValues.push_back(netIncome);
+        termValues.push_back(totalShareholderEquity);
+        termValues.push_back(returnOnEquity);
+
+      }
+
+      return returnOnEquity;
+    };    
+
+
+    static double calcRetentionRatio(nlohmann::ordered_json &jsonData, 
+                                    std::string &date,
+                                    const char *timeUnit,
+                                    bool zeroNansInDividendsPaid,
+                                    bool appendTermRecord,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
+      // Return On Invested Capital
+      //  Source: 
+      // https://www.investopedia.com/terms/r/returnoninvestmentcapital.asp
+
+      double  netIncome = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["netIncome"]);
+
+      //Interesting fact: dividends paid can be negative. This would have
+      //the effect of increasing the ROIC for a misleading reason.
+      double  dividendsPaid = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                      ["dividendsPaid"]);
+      
+      if(std::isnan(dividendsPaid) && zeroNansInDividendsPaid){
+        dividendsPaid=0.;
+      }
+
+      double retentionRatio =  
+        (netIncome-dividendsPaid) / (netIncome);
+
+      if(appendTermRecord){
+        termNames.push_back("retentionRatio_netIncome");
+        termNames.push_back("retentionRatio_dividendsPaid");
+        termNames.push_back("retentionRatio");
+
+        termValues.push_back(netIncome);
+        termValues.push_back(dividendsPaid);
+        termValues.push_back(retentionRatio);
+
+      }
+
+      return retentionRatio;
+    };    
 
     /**
      *Return On Assets
@@ -1134,6 +1213,183 @@ class FinancialAnalysisToolkit {
       return residualCashFlow;
 
     }
+    static double calcValuation(nlohmann::ordered_json &jsonData, 
+                                     std::string &date,
+                                     std::string &previousDate,
+                                     const char *timeUnit,   
+                                     bool zeroNansInDividendsPaid,
+                                     double riskFreeRate,
+                                     double costOfCapital,
+                                     int numberOfYearsForTerminalValuation,                              
+                                     bool appendTermRecord,
+                                     std::vector< std::string> &termNames,
+                                     std::vector< double > &termValues){
+
+      std::string parentName("presentValue_");
+
+      double taxRate = calcTaxRate(jsonData, 
+                                    date, 
+                                    timeUnit, 
+                                    appendTermRecord,
+                                    parentName,
+                                    termNames,
+                                    termValues);
+
+      double reinvestmentRate = calcReinvestmentRate(jsonData,
+                                                    date,
+                                                    previousDate,
+                                                    timeUnit,
+                                                    taxRate,
+                                                    appendTermRecord,
+                                                    parentName,
+                                                    termNames,
+                                                    termValues);
+
+      double returnOnInvestedCapital = 
+                    calcReturnOnInvestedCapital(  jsonData,
+                                                  date,
+                                                  timeUnit,
+                                                  zeroNansInDividendsPaid,
+                                                  appendTermRecord,
+                                                  termNames,
+                                                  termValues);
+
+      double operatingIncomeGrowth = reinvestmentRate*returnOnInvestedCapital;
+
+      double retentionRatio = calcRetentionRatio( jsonData,
+                                                  date,
+                                                  timeUnit,
+                                                  zeroNansInDividendsPaid,
+                                                  appendTermRecord,
+                                                  termNames,
+                                                  termValues);
+
+      double returnOnEquity = calcReturnOnEquity(   jsonData,
+                                                    date,
+                                                    timeUnit,
+                                                    appendTermRecord,
+                                                    termNames,
+                                                    termValues);                                       
+
+      double netIncomeGrowth = retentionRatio*returnOnEquity;
+
+      if(appendTermRecord){
+        termNames.push_back("presentValue_taxRate");
+        termNames.push_back("presentValue_reinvestmentRate");
+        termNames.push_back("presentValue_returnOnInvestedCapital");
+        termNames.push_back("presentValue_operatingIncomeGrowth");
+        termNames.push_back("presentValue_retentionRatio");
+        termNames.push_back("presentValue_returnOnEquity");
+        termNames.push_back("presentValue_netIncomeGrowth");
+
+        termValues.push_back(taxRate);
+        termValues.push_back(reinvestmentRate);
+        termValues.push_back(returnOnInvestedCapital);
+        termValues.push_back(operatingIncomeGrowth);
+        termValues.push_back(retentionRatio);
+        termValues.push_back(returnOnEquity);
+        termValues.push_back(netIncomeGrowth);
+      }
+
+      std::vector< double > afterTaxOperatingIncomeVector(
+                              1+numberOfYearsForTerminalValuation);
+      std::vector< double > reinvestmentVector(
+                              1+numberOfYearsForTerminalValuation);
+      std::vector< double > freeCashFlowToFirmVector(
+                              1+numberOfYearsForTerminalValuation);
+
+      double totalCashFromOperatingActivities =
+        JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
+                      ["totalCashFromOperatingActivities"]); 
+
+      double afterTaxOperatingIncome = 
+        totalCashFromOperatingActivities*(1.0-taxRate);
+
+      if(appendTermRecord){
+        termNames.push_back("presentValue_afterTaxOperatingIncome_totalCashFromOperatingActivities");
+        termNames.push_back("presentValue_afterTaxOperatingIncome_taxRate");
+        termNames.push_back("presentValue_afterTaxOperatingIncome");
+
+        termValues.push_back(totalCashFromOperatingActivities);
+        termValues.push_back(taxRate);
+        termValues.push_back(afterTaxOperatingIncome);
+      }
+
+
+      for(int i=0; i<numberOfYearsForTerminalValuation;++i){
+        
+        if(i==0){
+          afterTaxOperatingIncomeVector[i]=afterTaxOperatingIncome;
+          reinvestmentVector[i]=0.;
+          freeCashFlowToFirmVector[i]=0.;
+        }else{
+          afterTaxOperatingIncomeVector[i] = 
+            afterTaxOperatingIncomeVector[i-1]*(1.0+operatingIncomeGrowth);
+          reinvestmentVector[i]=
+            afterTaxOperatingIncomeVector[i]*reinvestmentRate;
+          freeCashFlowToFirmVector[i]=afterTaxOperatingIncomeVector[i]
+                                     -reinvestmentVector[i];
+        }
+        if(appendTermRecord){
+          std::stringstream sstreamName;
+          sstreamName.clear();
+          sstreamName << "presentValue_afterTaxOperatingIncome_"<< i;
+          termNames.push_back(sstreamName.str());
+
+          sstreamName.clear();
+          sstreamName << "presentValue_reinvestment_"<< i;
+          termNames.push_back(sstreamName.str());          
+
+          sstreamName.clear();
+          sstreamName << "presentValue_freeCashFlowToFirm_"<< i;
+          termNames.push_back(sstreamName.str());
+
+          termValues.push_back(afterTaxOperatingIncomeVector[i]);
+          termValues.push_back(reinvestmentVector[i]);
+          termValues.push_back(freeCashFlowToFirmVector[i]);
+        }
+      }
+
+      double reinvestmentRateStableGrowth = riskFreeRate/costOfCapital;
+
+
+      double terminalAfterTaxOperatingIncome = 
+        afterTaxOperatingIncomeVector[numberOfYearsForTerminalValuation];
+
+      double terminalValue = 
+        (terminalAfterTaxOperatingIncome
+          *(1+riskFreeRate)
+          *(1-reinvestmentRateStableGrowth)
+        )/(costOfCapital-riskFreeRate);
+
+      double presentValue = 0;
+
+      for(int i=1; i<numberOfYearsForTerminalValuation; ++i){
+        presentValue += freeCashFlowToFirmVector[i]/std::pow(1+costOfCapital,i);
+      }
+      presentValue += terminalValue 
+        / std::pow(1.+costOfCapital,numberOfYearsForTerminalValuation);
+
+      if(appendTermRecord){
+        termNames.push_back("presentValue_terminalValue_afterTaxOperatingIncome");
+        termNames.push_back("presentValue_terminalValue_riskFreeRate");
+        termNames.push_back("presentValue_terminalValue_reinvestmentRateStableGrowth");
+        termNames.push_back("presentValue_terminalValue_costOfCapital");
+        termNames.push_back("presentValue_terminalValue");
+        termNames.push_back("presentValue");
+
+        termValues.push_back(terminalAfterTaxOperatingIncome);
+        termValues.push_back(riskFreeRate);
+        termValues.push_back(reinvestmentRateStableGrowth);
+        termValues.push_back(costOfCapital);
+        termValues.push_back(terminalValue);
+        termValues.push_back(presentValue);
+      }
+
+      return presentValue;
+
+    };
+
 
 };
 

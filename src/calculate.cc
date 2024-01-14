@@ -394,7 +394,7 @@ int main (int argc, char* argv[]) {
 
 
 
-
+  int numberOfYearsForTerminalValuation = 5;
 
   int maxDayErrorHistoricalData = 10; // Historical data has a resolution of 1 day
   int maxDayErrorBondYieldData  = 35; // Bond yield data has a resolution of 1 month
@@ -1037,6 +1037,20 @@ int main (int argc, char* argv[]) {
                                  appendTermRecord,
                                  termNames, 
                                  termValues);
+
+        //Evaluation
+        double presentValue = FinancialAnalysisToolkit::calcValuation(
+          fundamentalData,
+          date,
+          previousTimePeriod,
+          timePeriod.c_str(),
+          zeroNansInDividendsPaid,
+          riskFreeRate,
+          costOfCapital,
+          numberOfYearsForTerminalValuation,
+          appendTermRecord,
+          termNames,
+          termValues);
 
         //it.c_str(), 
         nlohmann::ordered_json analysisEntry=nlohmann::ordered_json::object();        
