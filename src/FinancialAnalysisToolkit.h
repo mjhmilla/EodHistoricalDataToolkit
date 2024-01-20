@@ -238,6 +238,7 @@ class FinancialAnalysisToolkit {
                                     std::string &date,
                                     const char *timeUnit,
                                     bool appendTermRecord,
+                                    std::string &parentCategoryName,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
       double totalShareholderEquity = 
@@ -250,9 +251,9 @@ class FinancialAnalysisToolkit {
 
       double returnOnEquity = netIncome/totalShareholderEquity;
       if(appendTermRecord){
-        termNames.push_back("returnOnEquity_netIncome");
-        termNames.push_back("returnOnEquity_totalShareholderEquity");
-        termNames.push_back("returnOnEquity");
+        termNames.push_back(parentCategoryName+"returnOnEquity_netIncome");
+        termNames.push_back(parentCategoryName+"returnOnEquity_totalShareholderEquity");
+        termNames.push_back(parentCategoryName+"returnOnEquity");
 
         termValues.push_back(netIncome);
         termValues.push_back(totalShareholderEquity);
@@ -269,6 +270,7 @@ class FinancialAnalysisToolkit {
                                     const char *timeUnit,
                                     bool zeroNansInDividendsPaid,
                                     bool appendTermRecord,
+                                    std::string &parentCategoryName,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
       // Return On Invested Capital
@@ -293,9 +295,9 @@ class FinancialAnalysisToolkit {
         (netIncome-dividendsPaid) / (netIncome);
 
       if(appendTermRecord){
-        termNames.push_back("retentionRatio_netIncome");
-        termNames.push_back("retentionRatio_dividendsPaid");
-        termNames.push_back("retentionRatio");
+        termNames.push_back(parentCategoryName+"retentionRatio_netIncome");
+        termNames.push_back(parentCategoryName+"retentionRatio_dividendsPaid");
+        termNames.push_back(parentCategoryName+"retentionRatio");
 
         termValues.push_back(netIncome);
         termValues.push_back(dividendsPaid);
@@ -661,6 +663,7 @@ class FinancialAnalysisToolkit {
                                      std::string &date,
                                      std::string &previousDate,
                                      const char *timeUnit,
+                                     bool zeroNansInDepreciation,
                                      bool appendTermRecord,
                                      std::string &parentCategoryName,
                                      std::vector< std::string> &termNames,
@@ -669,22 +672,15 @@ class FinancialAnalysisToolkit {
       Problem: the depreciation field in EOD's json data is often null
       Solution: Since Damodran's formula for net capital expenditures is
 
-      net capital expenditures = - depreciation + capital expenditure [a]
+      net capital expenditures =  capital expenditure - depreciation  [a]
 
-      and 
-
-      capital expenditure = change in PPE + depreciation,             [b]
-
-      we can instead use
+      where capital expendature is the change in plant, property and equipment
+      from the previous year.
 
       References
-      a.       I'm inferring this from looking at Table 3.2 of 'The Little Book
-               of Valuation' (2011) and the subsequent application to 3M on 
-               the following page where "- depreciation + cap. expend." is
-               replaced with 'net cap. expend.'
-      b.       https://www.investopedia.com/terms/c/capitalexpenditure.asp
+        https://www.investopedia.com/terms/c/capitalexpenditure.asp
 
-      Damodaran, A.(2011). The Little Book of Valuation. Wiley.
+        Damodaran, A.(2011). The Little Book of Valuation. Wiley.
       */
 
       double plantPropertyEquipment = JsonFunctions::getJsonFloat(
@@ -693,8 +689,15 @@ class FinancialAnalysisToolkit {
       double plantPropertyEquipmentPrevious = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["propertyPlantEquipment"]);
 
+      double depreciation = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][date.c_str()]["depreciation"]);
+      if(zeroNansInDepreciation && std::isnan(depreciation)){
+        depreciation=0.;
+      }
+
       double netCapitalExpenditures = 
-        plantPropertyEquipment-plantPropertyEquipmentPrevious;
+        (plantPropertyEquipment-plantPropertyEquipmentPrevious)
+        - depreciation;
 
       if(appendTermRecord){
         termNames.push_back(parentCategoryName 
@@ -702,10 +705,13 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures_plantPropertyEquipmentPrevious");
         termNames.push_back(parentCategoryName 
+          + "netCapitalExpenditures_depreciation");
+        termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures");
 
         termValues.push_back(plantPropertyEquipment);
         termValues.push_back(plantPropertyEquipmentPrevious);
+        termValues.push_back(depreciation);
         termValues.push_back(netCapitalExpenditures);
       }
 
@@ -808,23 +814,28 @@ class FinancialAnalysisToolkit {
                                      std::string &date,
                                      std::string &previousDate,
                                      const char *timeUnit,
+                                     bool zeroNansInDepreciation,
                                      bool appendTermRecord,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
 
       
+      std::string parentName = "freeCashFlowToEquity_";
 
       double netIncome = 
       JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
                     ["netIncome"]);
 
-      std::string parentName = "freeCashFlowToEquity_";
+      double depreciation = 
+      JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]
+                    ["depreciation"]);
 
       double netCapitalExpenditures = 
         calcNetCapitalExpenditures( jsonData, 
                                     date,
                                     previousDate,
                                     timeUnit,
+                                    zeroNansInDepreciation,
                                     appendTermRecord,
                                     parentName,
                                     termNames,
@@ -841,7 +852,7 @@ class FinancialAnalysisToolkit {
                                     termValues);                                    
       /*
         Problem: the change in cash due to debt is not something that EOD 
-                 reports though in the case of 3M 2007 10-K this value is
+                 reports, though in the case of 3M 2007 10-K this value is
                  reported. Instead, I'll estimate this quantity by evaluating
                  the change of the sum of short-term and long-term debt. I'm
                  not using net debt, in this case, because  
@@ -868,6 +879,7 @@ class FinancialAnalysisToolkit {
 
       double freeCashFlowToEquity = 
           netIncome
+          + (depreciation)
           - (netCapitalExpenditures)
           - (changeInNonCashWorkingCapital)
           + netDebtIssued;
@@ -898,7 +910,8 @@ class FinancialAnalysisToolkit {
     static double calcOwnersEarnings(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      std::string &previousDate,
-                                     const char *timeUnit,                                 
+                                     const char *timeUnit,   
+                                     bool zeroNansInDepreciation,                              
                                      bool appendTermRecord,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
@@ -917,6 +930,7 @@ class FinancialAnalysisToolkit {
                                     date,
                                     previousDate,
                                     timeUnit,
+                                    zeroNansInDepreciation,
                                     appendTermRecord,
                                     parentName,
                                     termNames,
@@ -985,6 +999,7 @@ class FinancialAnalysisToolkit {
                                      std::string &previousDate,  
                                      const char *timeUnit,
                                      double taxRate,
+                                     bool zeroNansInDepreciation,
                                      bool appendTermRecord,
                                      std::string &parentCategoryName,
                                      std::vector< std::string> &termNames,
@@ -998,7 +1013,7 @@ class FinancialAnalysisToolkit {
                       ["totalCashFromOperatingActivities"]); 
 
       std::string parentName = parentCategoryName;
-      parentName.append("_reinvestmentRate_");
+      parentName.append("reinvestmentRate_");
 
       double afterTaxOperatingIncome = 
         totalCashFromOperatingActivities*(1.0-taxRate);
@@ -1008,6 +1023,7 @@ class FinancialAnalysisToolkit {
                                     date,
                                     previousDate,
                                     timeUnit,
+                                    zeroNansInDepreciation,
                                     appendTermRecord,
                                     parentName,
                                     termNames,
@@ -1054,6 +1070,7 @@ class FinancialAnalysisToolkit {
                                      std::string &previousDate,                                     
                                      const char *timeUnit,
                                      double defaultTaxRate,
+                                     bool zeroNansInDepreciation,
                                      bool appendTermRecord,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
@@ -1085,6 +1102,7 @@ class FinancialAnalysisToolkit {
                                                     previousDate,
                                                     timeUnit,
                                                     taxRate,
+                                                    zeroNansInDepreciation,
                                                     appendTermRecord,
                                                     parentCategoryName,
                                                     termNames,
@@ -1218,6 +1236,7 @@ class FinancialAnalysisToolkit {
                                      std::string &previousDate,
                                      const char *timeUnit,   
                                      bool zeroNansInDividendsPaid,
+                                     bool zeroNansInDepreciation,
                                      double riskFreeRate,
                                      double costOfCapital,
                                      int numberOfYearsForTerminalValuation,                              
@@ -1240,6 +1259,7 @@ class FinancialAnalysisToolkit {
                                                     previousDate,
                                                     timeUnit,
                                                     taxRate,
+                                                    zeroNansInDepreciation,
                                                     appendTermRecord,
                                                     parentName,
                                                     termNames,
@@ -1261,13 +1281,15 @@ class FinancialAnalysisToolkit {
                                                   timeUnit,
                                                   zeroNansInDividendsPaid,
                                                   appendTermRecord,
+                                                  parentName,
                                                   termNames,
                                                   termValues);
 
       double returnOnEquity = calcReturnOnEquity(   jsonData,
                                                     date,
                                                     timeUnit,
-                                                    appendTermRecord,
+                                                    appendTermRecord,                                                    
+                                                    parentName,
                                                     termNames,
                                                     termValues);                                       
 
@@ -1316,7 +1338,7 @@ class FinancialAnalysisToolkit {
       }
 
 
-      for(int i=0; i<numberOfYearsForTerminalValuation;++i){
+      for(int i=0; i<=numberOfYearsForTerminalValuation;++i){
         
         if(i==0){
           afterTaxOperatingIncomeVector[i]=afterTaxOperatingIncome;
@@ -1332,15 +1354,15 @@ class FinancialAnalysisToolkit {
         }
         if(appendTermRecord){
           std::stringstream sstreamName;
-          sstreamName.clear();
+          sstreamName.str(std::string());
           sstreamName << "presentValue_afterTaxOperatingIncome_"<< i;
           termNames.push_back(sstreamName.str());
 
-          sstreamName.clear();
+          sstreamName.str(std::string());
           sstreamName << "presentValue_reinvestment_"<< i;
           termNames.push_back(sstreamName.str());          
 
-          sstreamName.clear();
+          sstreamName.str(std::string());
           sstreamName << "presentValue_freeCashFlowToFirm_"<< i;
           termNames.push_back(sstreamName.str());
 

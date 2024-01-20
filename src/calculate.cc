@@ -661,8 +661,12 @@ int main (int argc, char* argv[]) {
       //========================================================================
       // Evaluate the average tax rate and interest cover
       //========================================================================
-      for( auto& it : datesFundamental){        
-        std::string date = it;           
+      for( unsigned int indexFundamental=0;  
+                        indexFundamental < datesFundamental.size(); 
+                      ++indexFundamental){
+
+        std::string date = datesFundamental[indexFundamental]; 
+
         double taxRateEntry = FinancialAnalysisToolkit::
                                 calcTaxRate(fundamentalData, 
                                             date, 
@@ -710,7 +714,7 @@ int main (int argc, char* argv[]) {
             datesFundamental[datesFundamental.size()-1],
             "%Y-%m-%d");
       int indexDeltaFundamentalPrevious = 0;
-      if(firstMinusLastFundamental){
+      if(firstMinusLastFundamental > 0){
         indexDeltaFundamentalPrevious = 1;
       }else{
         indexDeltaFundamentalPrevious = -1;
@@ -726,6 +730,13 @@ int main (int argc, char* argv[]) {
               ++indexFundamental){
 
         std::string date = datesFundamental[indexFundamental];        
+
+        int indexPrevious = indexFundamental+indexDeltaFundamentalPrevious;
+        if(indexPrevious >= 0 && indexPrevious < datesFundamental.size()){
+          previousTimePeriod = datesFundamental[indexPrevious];
+        }else{
+          previousTimePeriod="";
+        }
 
         termNames.clear();
         termValues.clear();
@@ -994,6 +1005,7 @@ int main (int argc, char* argv[]) {
                               date, 
                               previousTimePeriod,
                               timePeriod.c_str(),
+                              zeroNansInDepreciation,
                               appendTermRecord, 
                               termNames, 
                               termValues);  
@@ -1022,6 +1034,7 @@ int main (int argc, char* argv[]) {
                                      date,
                                      previousTimePeriod,
                                      timePeriod.c_str(),
+                                     zeroNansInDepreciation,
                                      appendTermRecord,
                                      termNames,
                                      termValues);
@@ -1034,23 +1047,25 @@ int main (int argc, char* argv[]) {
                                  previousTimePeriod, 
                                  timePeriod.c_str(),
                                  meanTaxRate,
+                                 zeroNansInDepreciation,
                                  appendTermRecord,
                                  termNames, 
                                  termValues);
 
         //Evaluation
-        double presentValue = FinancialAnalysisToolkit::calcValuation(
-          fundamentalData,
-          date,
-          previousTimePeriod,
-          timePeriod.c_str(),
-          zeroNansInDividendsPaid,
-          riskFreeRate,
-          costOfCapital,
-          numberOfYearsForTerminalValuation,
-          appendTermRecord,
-          termNames,
-          termValues);
+        double presentValue = FinancialAnalysisToolkit::
+            calcValuation(  fundamentalData,
+                            date,
+                            previousTimePeriod,
+                            timePeriod.c_str(),
+                            zeroNansInDividendsPaid,
+                            zeroNansInDepreciation,
+                            riskFreeRate,
+                            costOfCapital,
+                            numberOfYearsForTerminalValuation,
+                            appendTermRecord,
+                            termNames,
+                            termValues);
 
         //it.c_str(), 
         nlohmann::ordered_json analysisEntry=nlohmann::ordered_json::object();        
@@ -1059,8 +1074,7 @@ int main (int argc, char* argv[]) {
                                    termValues[i]});
         }
 
-        analysis[date]= analysisEntry;
-        previousTimePeriod = date;
+        analysis[date]= analysisEntry;        
         ++entryCount;
       }
 
