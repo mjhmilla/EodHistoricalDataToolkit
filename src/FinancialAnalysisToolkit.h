@@ -1246,6 +1246,13 @@ class FinancialAnalysisToolkit {
 
       std::string parentName("presentValue_");
 
+      if(appendTermRecord){
+        termNames.push_back("presentValue_riskFreeRate");
+        termNames.push_back("presentValue_costOfCapital");
+        termValues.push_back(riskFreeRate);
+        termValues.push_back(costOfCapital);
+      }
+
       double taxRate = calcTaxRate(jsonData, 
                                     date, 
                                     timeUnit, 
@@ -1296,6 +1303,7 @@ class FinancialAnalysisToolkit {
       double netIncomeGrowth = retentionRatio*returnOnEquity;
 
       if(appendTermRecord){
+
         termNames.push_back("presentValue_taxRate");
         termNames.push_back("presentValue_reinvestmentRate");
         termNames.push_back("presentValue_returnOnInvestedCapital");
