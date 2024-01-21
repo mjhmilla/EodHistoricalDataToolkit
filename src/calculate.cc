@@ -41,11 +41,15 @@ bool extractDatesOfClosestMatch(
               const char* dateAFormat,
               std::vector< std::string > &datesSetB,
               const char* dateBFormat,
-              std::vector< unsigned int > &indicesOfClosestSetBDates,
-              unsigned int maxNumberOfDaysInError){
+              unsigned int maxNumberOfDaysInError,
+              std::vector< std::string > &datesCommonToAandB,
+              std::vector< unsigned int > &indicesOfCommonSetADates,
+              std::vector< unsigned int > &indicesOfCommonSetBDates ){
 
     
-  indicesOfClosestSetBDates.clear();
+  indicesOfCommonSetADates.clear();
+  indicesOfCommonSetBDates.clear();
+  datesCommonToAandB.clear();
 
   bool validInput=true;
 
@@ -82,8 +86,8 @@ bool extractDatesOfClosestMatch(
   }
 
 
-  int indexSetB=indexSetBFirst;
-  int indexSetBEnd = indexSetBEnd+indexSetBDelta;
+  int indexSetB    = indexSetBFirst;
+  int indexSetBEnd = indexSetBLast+indexSetBDelta;
 
   std::string tempDateSetB("");
   std::string tempDateSetA("");
@@ -100,8 +104,8 @@ bool extractDatesOfClosestMatch(
     std::string lastValidDate;
     bool found=false;
 
-    while( indexSetB != (indexSetBEnd) 
-        && !found){
+    while( indexSetB != (indexSetBEnd) && !found){
+
 
       tempDateSetB = datesSetB[indexSetB];
 
@@ -124,38 +128,16 @@ bool extractDatesOfClosestMatch(
     }
 
     //Go back to the last valid date and save its information
-    if(indexSetB < datesSetB.size() 
-    && indexSetB >= 0){  
-
-      indicesOfClosestSetBDates.push_back(indexSetB);      
-      if(daysInError >= maxNumberOfDaysInError){
-        std::cout << "Date mismatch between historical data (" 
-                  << tempDateSetB 
-                  <<") and fundamental data (" << tempDateSetA 
-                  <<") of " 
-                  << daysInError 
-                  <<" which is greater than the limit of " 
-                  << maxNumberOfDaysInError << std::endl;                        
-      }
-    }else{
-      std::cout << "  SetB data does not span date range of"
-                    " SetA data."
-                << std::endl;
-      validInput=false;
-
+    if(indexSetB < datesSetB.size() && indexSetB >= 0 
+        && daysInError <= maxNumberOfDaysInError){  
+        indicesOfCommonSetADates.push_back(indexSetA);
+        indicesOfCommonSetBDates.push_back(indexSetB);
+        datesCommonToAandB.push_back(tempDateSetA);           
     }
     
   }
-  if(indicesOfClosestSetBDates.size() != datesSetA.size()){
-    std::cout << "  Some dates in the fundamental data set could not be "
-              << "found in the historical data set."
-              << std::endl;
-    validInput=false;
-  }
 
-  if(indicesOfClosestSetBDates.size() == 0){
-    std::cout << "  SetB data does not contain any of the dates "
-    "in the fundamental data set" << std::endl;
+  if(datesCommonToAandB.size() == 0){
     validInput=false;
   }
 
@@ -216,7 +198,7 @@ int main (int argc, char* argv[]) {
     TCLAP::ValueArg<std::string> singleFileToEvaluateInput("i",
       "single_ticker_name", 
       "To evaluate a single ticker only, set the ticker name here.",
-      true,"","string");
+      false,"","string");
 
     cmd.add(singleFileToEvaluateInput);
 
@@ -589,19 +571,31 @@ int main (int argc, char* argv[]) {
       }
     }    
 
-    //Extract the list of closest entry dates for the historical data.
-    //  We have to look for the closest date because sometimes stock
-    //  exchanges are closed, and the date we need is missing.
-    std::vector< unsigned int > indicesClosestHistoricalDates;    
+
+
+     std::vector< std::string > datesCommon;
+    std::vector< unsigned int > indicesCommonHistoricalDates;
+    std::vector< unsigned int > indicesCommonFundamentalDates;
 
     if(validInput){
+      //Extract the set of matching dates (within tolerance) between
+      //the fundamental and historical data
       validInput = extractDatesOfClosestMatch(
                         datesFundamental,
                         "%Y-%m-%d",
                         datesHistorical,
                         "%Y-%m-%d",
-                        indicesClosestHistoricalDates,
-                        maxDayErrorHistoricalData);
+                        maxDayErrorHistoricalData,
+                        datesCommon,
+                        indicesCommonFundamentalDates,
+                        indicesCommonHistoricalDates);
+
+      if(!validInput){
+        std::cout << "  Skipping ticker: there is not one matching date between"
+                     " the fundamental and historical data sets."
+                     << std::endl;
+      }
+
     }
 
     //==========================================================================
@@ -611,16 +605,37 @@ int main (int argc, char* argv[]) {
     for(auto& el : jsonBondYield["US"]["10y_bond_yield"].items()){
       datesBondYields.push_back(el.key());
     }
+    
+    
+    std::vector< std::string > datesCommonBond;
+    std::vector< unsigned int > indicesClosestCommonDates;
     std::vector< unsigned int > indicesClosestBondYieldDates;
+
     if(validInput){
+      //Extract the set of matching dates (within tolerance) between
+      //the fundamental, historical, and bond data. The bond data table is
+      //quite dense (for the U.S.) so this shouldn't change in size at all.
       validInput = extractDatesOfClosestMatch(
-                        datesFundamental,
+                        datesCommon,
                         "%Y-%m-%d",
                         datesBondYields,
                         "%Y-%m-%d",
-                        indicesClosestBondYieldDates,
-                        maxDayErrorBondYieldData);
+                        maxDayErrorBondYieldData,
+                        datesCommonBond,
+                        indicesClosestCommonDates,
+                        indicesClosestBondYieldDates);
+
+      if(datesCommon.size() != datesCommonBond.size()){
+        validInput = false;
+        std::cout << " Skipping: the bond table is missing entries "
+                  << " that are in the set of common dates between "
+                  << " the fundamental and historical data" 
+                  << std::endl;
+      }
+
+
     }    
+
 
     //==========================================================================
     //
@@ -661,11 +676,11 @@ int main (int argc, char* argv[]) {
       //========================================================================
       // Evaluate the average tax rate and interest cover
       //========================================================================
-      for( unsigned int indexFundamental=0;  
-                        indexFundamental < datesFundamental.size(); 
-                      ++indexFundamental){
+      for( unsigned int indexDate=0;  
+                        indexDate < datesCommon.size(); 
+                      ++indexDate){
 
-        std::string date = datesFundamental[indexFundamental]; 
+        std::string date = datesCommon[indexDate]; 
 
         double taxRateEntry = FinancialAnalysisToolkit::
                                 calcTaxRate(fundamentalData, 
@@ -679,6 +694,7 @@ int main (int argc, char* argv[]) {
           meanTaxRate += taxRateEntry;
           ++taxRateEntryCount;
         }
+
         double interestCover = FinancialAnalysisToolkit::
           calcInterestCover(fundamentalData,
                             date,
@@ -686,6 +702,7 @@ int main (int argc, char* argv[]) {
                             appendTermRecord,
                             termNames,
                             termValues);
+
         if(!std::isnan(interestCover) && !std::isinf(interestCover)){
           meanInterestCover += interestCover;
           ++meanInterestCoverEntryCount;
@@ -707,17 +724,17 @@ int main (int argc, char* argv[]) {
 
 
       //Get the index direction of older data
-      int firstMinusLastFundamental = 
+      int firstMinusLastCommon = 
         calcDifferenceInDaysBetweenTwoDates(
-            datesFundamental[0],
+            datesCommon[0],
             "%Y-%m-%d",        
-            datesFundamental[datesFundamental.size()-1],
+            datesCommon[datesCommon.size()-1],
             "%Y-%m-%d");
-      int indexDeltaFundamentalPrevious = 0;
-      if(firstMinusLastFundamental > 0){
-        indexDeltaFundamentalPrevious = 1;
+      int indexDeltaCommonPrevious = 0;
+      if(firstMinusLastCommon > 0){
+        indexDeltaCommonPrevious = 1;
       }else{
-        indexDeltaFundamentalPrevious = -1;
+        indexDeltaCommonPrevious = -1;
       }
 
       //=======================================================================
@@ -725,15 +742,16 @@ int main (int argc, char* argv[]) {
       //  Calculate the metrics for every data entry in the file
       //
       //======================================================================= 
-      for(int indexFundamental = 0; 
-              indexFundamental < datesFundamental.size();
-              ++indexFundamental){
+      for(int indexDate = 0; 
+              indexDate < datesCommon.size();
+              ++indexDate){
 
-        std::string date = datesFundamental[indexFundamental];        
+        std::string date = datesCommon[indexDate];        
 
-        int indexPrevious = indexFundamental+indexDeltaFundamentalPrevious;
-        if(indexPrevious >= 0 && indexPrevious < datesFundamental.size()){
-          previousTimePeriod = datesFundamental[indexPrevious];
+        //Get the previous date
+        int indexPrevious = indexDate+indexDeltaCommonPrevious;        
+        if(indexPrevious >= 0 && indexPrevious < datesCommon.size()){
+          previousTimePeriod = datesCommon[indexPrevious];
         }else{
           previousTimePeriod="";
         }
@@ -746,24 +764,24 @@ int main (int argc, char* argv[]) {
         //======================================================================        
         trailingPastPeriods.clear();
         bool sufficentPastPeriods=true;
-        int indexPastPeriods = indexFundamental;
-        trailingPastPeriods.push_back(datesFundamental[indexPastPeriods]);
+        int indexPastPeriods = indexDate;
+        trailingPastPeriods.push_back(datesCommon[indexPastPeriods]);
 
         for(unsigned int i=0; 
                          i<(numberOfPeriodsToAverageCapitalExpenditures-1); 
                        ++i)
         {
-          indexPastPeriods += indexDeltaFundamentalPrevious;
+          indexPastPeriods += indexDeltaCommonPrevious;
           if(    indexPastPeriods >= 0 
-              && indexPastPeriods < datesFundamental.size()){
-            trailingPastPeriods.push_back(datesFundamental[indexPastPeriods]);
+              && indexPastPeriods < datesCommon.size()){
+            trailingPastPeriods.push_back(datesCommon[indexPastPeriods]);
           }
         }
 
         //======================================================================
         //Evaluate the risk free rate as the yield on a 10 year US bond
         //======================================================================
-        int indexBondYield = indicesClosestBondYieldDates[indexFundamental];
+        int indexBondYield = indicesClosestBondYieldDates[indexDate];
         std::string closestBondYieldDate= datesBondYields[indexBondYield]; 
 
         double bondYield = std::nan("1");
@@ -819,25 +837,43 @@ int main (int argc, char* argv[]) {
         double defaultSpread = std::nan("1");
         bool found=false;
         unsigned int i=0;        
+        int defaultSpreadTableSize = 
+          jsonDefaultSpread["US"]["default_spread"].size();
+
+        double interestCoverLowestValue = JsonFunctions::getJsonFloat(
+              jsonDefaultSpread["US"]["default_spread"].at(0).at(0));
+        double interestCoverHighestValue = JsonFunctions::getJsonFloat(
+              jsonDefaultSpread["US"]["default_spread"].at(defaultSpreadTableSize-1).at(1));
+
+        if(interestCover < interestCoverLowestValue){
+          defaultSpread = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(0).at(2));
         
-        while(found == false 
-              && i < jsonDefaultSpread["US"]["default_spread"].size()){
-          
-          double interestCoverLowerBound = JsonFunctions::getJsonFloat(
-              jsonDefaultSpread["US"]["default_spread"].at(i).at(0));
-          double interestCoverUpperBound = JsonFunctions::getJsonFloat(
-              jsonDefaultSpread["US"]["default_spread"].at(i).at(1));
-          double defaultSpreadIntervalValue = JsonFunctions::getJsonFloat(
-              jsonDefaultSpread["US"]["default_spread"].at(i).at(2));
+        }else if(interestCover > interestCoverHighestValue){
+          defaultSpread = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(defaultSpreadTableSize-1).at(2));          
+        
+        }else{        
+          while(found == false 
+                && i < defaultSpreadTableSize){
+            
+            double interestCoverLowerBound = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(i).at(0));
+            double interestCoverUpperBound = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(i).at(1));
+            double defaultSpreadIntervalValue = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(i).at(2));
 
 
-          if(interestCover >= interestCoverLowerBound
-          && interestCover <= interestCoverUpperBound){
-             defaultSpread = defaultSpreadIntervalValue;
-            found=true;
-          }
-          ++i;
-        } 
+            if(interestCover >= interestCoverLowerBound
+            && interestCover <= interestCoverUpperBound){
+              defaultSpread = defaultSpreadIntervalValue;
+              found=true;
+            }
+            ++i;
+          } 
+        }
+
         if(std::isnan(defaultSpread) || std::isinf(defaultSpread)){
           std::cerr << "Error: the default spread has evaluated to nan or inf"
                        " which is only possible if the default spread json file"
@@ -867,6 +903,7 @@ int main (int argc, char* argv[]) {
         termValues.push_back(defaultSpread);
 
         std::string parentName = "afterTaxCostOfDebt_";
+        
         double taxRate = FinancialAnalysisToolkit::
             calcTaxRate(fundamentalData,
                         date,
@@ -875,6 +912,7 @@ int main (int argc, char* argv[]) {
                         parentName,
                         termNames,
                         termValues);
+        
         if(std::isnan(taxRate) || std::isinf(taxRate)){
           taxRate = meanTaxRate;
           if(appendTermRecord){
@@ -902,7 +940,7 @@ int main (int argc, char* argv[]) {
                   ["commonStockSharesOutstanding"]);
 
         unsigned int indexHistoricalData = 
-          indicesClosestHistoricalDates[indexFundamental];   
+          indicesCommonHistoricalDates[indexDate];   
 
         std::string closestHistoricalDate= datesHistorical[indexHistoricalData]; 
 
@@ -1066,6 +1104,40 @@ int main (int argc, char* argv[]) {
                             appendTermRecord,
                             termNames,
                             termValues);
+
+        //Ratio: price to value
+        double priceToValue = marketCapitalization/presentValue;
+        if(appendTermRecord){
+          termNames.push_back("priceToValue_marketCapitalization");
+          termNames.push_back("priceToValue_presentValue");
+          termNames.push_back("priceToValue");
+          termValues.push_back(marketCapitalization);
+          termValues.push_back(presentValue);
+          termValues.push_back(priceToValue);
+        }
+
+        //Residual cash flow to enterprise value
+        std::string rFcfToEvLabel = "residualFreeCashFlowToEnterpriseValue_"; 
+        double enterpriseValue = FinancialAnalysisToolkit::
+            calcEnterpriseValue(fundamentalData, 
+                                shareOpenValue, 
+                                date,
+                                timePeriod.c_str(), 
+                                appendTermRecord,
+                                rFcfToEvLabel,
+                                termNames,
+                                termValues);
+
+        double residualFreeCashFlowToEnterpriseValue = 
+          residualCashFlow/enterpriseValue;
+
+        if(appendTermRecord){
+          termNames.push_back("residualFreeCashFlowToEnterpriseValue_residualCashFlow");
+          termNames.push_back("residualFreeCashFlowToEnterpriseValue");
+          termValues.push_back(residualCashFlow);
+          termValues.push_back(residualFreeCashFlowToEnterpriseValue);
+        }
+
 
         //it.c_str(), 
         nlohmann::ordered_json analysisEntry=nlohmann::ordered_json::object();        

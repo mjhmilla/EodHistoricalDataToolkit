@@ -1231,18 +1231,65 @@ class FinancialAnalysisToolkit {
       return residualCashFlow;
 
     }
+
+    static double calcEnterpriseValue(nlohmann::ordered_json &fundamentalData, 
+                                      double sharePriceOnDate, 
+                                      std::string &date,
+                                      const char *timeUnit, 
+                                      bool appendTermRecord,
+                                      std::string &parentCategoryName,
+                                      std::vector< std::string> &termNames,
+                                      std::vector< double > &termValues){
+
+      double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
+        fundamentalData[FIN][BAL][timeUnit][date.c_str()]["shortLongTermDebtTotal"]);
+      
+      double cashAndEquivalents = JsonFunctions::getJsonFloat(
+        fundamentalData[FIN][BAL][timeUnit][date.c_str()]["cashAndEquivalents"]);
+      
+      double commonStockSharesOutstanding = JsonFunctions::getJsonFloat(
+        fundamentalData[FIN][BAL][timeUnit][date.c_str()]
+                          ["commonStockSharesOutstanding"]);      
+
+      double marketCapitalization = sharePriceOnDate*commonStockSharesOutstanding;
+
+      double enterpriseValue = marketCapitalization
+                              + shortLongTermDebtTotal 
+                              - commonStockSharesOutstanding;
+
+      if(appendTermRecord){
+        termNames.push_back(parentCategoryName+"enterpriseValue_shortLongTermDebtTotal");
+        termNames.push_back(parentCategoryName+"enterpriseValue_cashAndEquivalents");
+        termNames.push_back(parentCategoryName+"enterpriseValue_commonStockSharesOutstanding");
+        termNames.push_back(parentCategoryName+"enterpriseValue_sharePrice");
+        termNames.push_back(parentCategoryName+"enterpriseValue_marketCapitalization");
+        termNames.push_back(parentCategoryName+"enterpriseValue");
+
+        termValues.push_back(shortLongTermDebtTotal);
+        termValues.push_back(cashAndEquivalents);
+        termValues.push_back(commonStockSharesOutstanding);
+        termValues.push_back(sharePriceOnDate);
+        termValues.push_back(marketCapitalization);
+        termValues.push_back(enterpriseValue);      
+      }
+
+      return enterpriseValue;
+
+
+    }
+
     static double calcValuation(nlohmann::ordered_json &jsonData, 
-                                     std::string &date,
-                                     std::string &previousDate,
-                                     const char *timeUnit,   
-                                     bool zeroNansInDividendsPaid,
-                                     bool zeroNansInDepreciation,
-                                     double riskFreeRate,
-                                     double costOfCapital,
-                                     int numberOfYearsForTerminalValuation,                              
-                                     bool appendTermRecord,
-                                     std::vector< std::string> &termNames,
-                                     std::vector< double > &termValues){
+                                std::string &date,
+                                std::string &previousDate,
+                                const char *timeUnit,   
+                                bool zeroNansInDividendsPaid,
+                                bool zeroNansInDepreciation,
+                                double riskFreeRate,
+                                double costOfCapital,
+                                int numberOfYearsForTerminalValuation,                              
+                                bool appendTermRecord,
+                                std::vector< std::string> &termNames,
+                                std::vector< double > &termValues){
 
       std::string parentName("presentValue_");
 
