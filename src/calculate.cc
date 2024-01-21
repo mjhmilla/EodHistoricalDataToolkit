@@ -933,6 +933,10 @@ int main (int argc, char* argv[]) {
         double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
           fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
                   ["shortLongTermDebtTotal"]);
+        if(std::isnan(shortLongTermDebtTotal) && zeroNanInShortTermDebt){
+          shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
+            fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]["longTermDebt"]);
+        }
         
         //Evaluate the current market capitalization
         double commonStockSharesOutstanding = JsonFunctions::getJsonFloat(
@@ -1073,6 +1077,7 @@ int main (int argc, char* argv[]) {
                                      previousTimePeriod,
                                      timePeriod.c_str(),
                                      zeroNansInDepreciation,
+                                     zeroNanInShortTermDebt,
                                      appendTermRecord,
                                      termNames,
                                      termValues);
@@ -1100,6 +1105,7 @@ int main (int argc, char* argv[]) {
                             zeroNansInDepreciation,
                             riskFreeRate,
                             costOfCapital,
+                            meanTaxRate,
                             numberOfYearsForTerminalValuation,
                             appendTermRecord,
                             termNames,
@@ -1122,8 +1128,9 @@ int main (int argc, char* argv[]) {
             calcEnterpriseValue(fundamentalData, 
                                 shareOpenValue, 
                                 date,
-                                timePeriod.c_str(), 
-                                appendTermRecord,
+                                timePeriod.c_str(),
+                                zeroNanInShortTermDebt, 
+                                appendTermRecord,                                
                                 rFcfToEvLabel,
                                 termNames,
                                 termValues);

@@ -521,7 +521,7 @@ class FinancialAnalysisToolkit {
                                     nlohmann::ordered_json &jsonData, 
                                     std::string &date,
                                     const char *timeUnit,
-                                    bool zeroNanInShortTermDebt,
+                                    bool zeroNansInShortTermDebt,
                                     bool appendTermRecord,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
@@ -529,7 +529,7 @@ class FinancialAnalysisToolkit {
       double shortTermDebt = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][date.c_str()]["shortTermDebt"]);
 
-      if(std::isnan(shortTermDebt) && zeroNanInShortTermDebt){
+      if(std::isnan(shortTermDebt) && zeroNansInShortTermDebt){
         shortTermDebt=0.;
       }
       double longTermDebt =  JsonFunctions::getJsonFloat(
@@ -739,6 +739,7 @@ class FinancialAnalysisToolkit {
 
       */
 
+      /*
       double inventory = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][date.c_str()]["inventory"]);
 
@@ -761,16 +762,32 @@ class FinancialAnalysisToolkit {
           ( (inventory-inventoryPrevious)
             +(netReceivables-netReceivablesPrevious)
             -(accountsPayable-accountsPayablePrevious));
+      */
+
+      double changeToInventory = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][date.c_str()]["changeToInventory"]);
+
+      double changeToAccountReceivables = JsonFunctions::getJsonFloat(
+        jsonData[FIN][CF][timeUnit][date.c_str()]["changeToAccountReceivables"]);
+
+      double accountsPayable = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][date.c_str()]["accountsPayable"]);
+
+      double accountsPayablePrevious = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["accountsPayable"]);
+
+
+      double changeInNonCashWorkingCapital = 
+          ( (changeToInventory)
+            +(changeToAccountReceivables)
+            -(accountsPayable-accountsPayablePrevious));
+
 
       if(appendTermRecord){
         termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_inventory");
+          + "changeInNonCashWorkingCapital_changeToInventory");
         termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_inventoryPrevious");
-        termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_netRecievables");
-        termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_netRecievablesPrevious");
+          + "changeInNonCashWorkingCapital_changeToAccountReceivables");
         termNames.push_back(parentCategoryName 
           + "changeInNonCashWorkingCapital_accountsPayable");
         termNames.push_back(parentCategoryName 
@@ -778,10 +795,8 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName 
           + "changeInNonCashWorkingCapital");
 
-        termValues.push_back(inventory);
-        termValues.push_back(inventoryPrevious);
-        termValues.push_back(netReceivables);
-        termValues.push_back(netReceivablesPrevious);
+        termValues.push_back(changeToInventory);
+        termValues.push_back(changeToAccountReceivables);
         termValues.push_back(accountsPayable);
         termValues.push_back(accountsPayablePrevious);
         termValues.push_back(changeInNonCashWorkingCapital);
@@ -815,6 +830,7 @@ class FinancialAnalysisToolkit {
                                      std::string &previousDate,
                                      const char *timeUnit,
                                      bool zeroNansInDepreciation,
+                                     bool zeroNansInShortTermDebt,
                                      bool appendTermRecord,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
@@ -865,10 +881,19 @@ class FinancialAnalysisToolkit {
 
       double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][date.c_str()]["shortLongTermDebtTotal"]);
+      if(std::isnan(shortLongTermDebtTotal) && zeroNansInShortTermDebt){
+        shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timeUnit][date.c_str()]["longTermDebt"]);
+      }
+
 
       double shortLongTermDebtTotalPrevious = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][previousDate.c_str()]
                 ["shortLongTermDebtTotal"]);
+      if(std::isnan(shortLongTermDebtTotalPrevious) && zeroNansInShortTermDebt){
+        shortLongTermDebtTotalPrevious = JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["longTermDebt"]);
+      }
 
       //https://www.investopedia.com/terms/f/freecashflowtoequity.asp
       //Note that the sign for netDebtChanges must be such that more debt
@@ -1236,14 +1261,20 @@ class FinancialAnalysisToolkit {
                                       double sharePriceOnDate, 
                                       std::string &date,
                                       const char *timeUnit, 
-                                      bool appendTermRecord,
+                                      bool zeroNansInShortTermDebt,
+                                      bool appendTermRecord,                                      
                                       std::string &parentCategoryName,
                                       std::vector< std::string> &termNames,
                                       std::vector< double > &termValues){
 
       double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
         fundamentalData[FIN][BAL][timeUnit][date.c_str()]["shortLongTermDebtTotal"]);
-      
+
+      if(std::isnan(shortLongTermDebtTotal) && zeroNansInShortTermDebt){
+        shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
+        fundamentalData[FIN][BAL][timeUnit][date.c_str()]["longTermDebt"]);
+      }
+
       double cashAndEquivalents = JsonFunctions::getJsonFloat(
         fundamentalData[FIN][BAL][timeUnit][date.c_str()]["cashAndEquivalents"]);
       
@@ -1286,6 +1317,7 @@ class FinancialAnalysisToolkit {
                                 bool zeroNansInDepreciation,
                                 double riskFreeRate,
                                 double costOfCapital,
+                                double defaultTaxRate,
                                 int numberOfYearsForTerminalValuation,                              
                                 bool appendTermRecord,
                                 std::vector< std::string> &termNames,
@@ -1307,6 +1339,9 @@ class FinancialAnalysisToolkit {
                                     parentName,
                                     termNames,
                                     termValues);
+      if(std::isnan(taxRate)){
+        taxRate=defaultTaxRate;
+      }
 
       double reinvestmentRate = calcReinvestmentRate(jsonData,
                                                     date,
