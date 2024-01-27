@@ -590,6 +590,96 @@ class FinancialAnalysisToolkit {
 
     };    
 
+    static double calcDefaultSpread(nlohmann::ordered_json &jsonData, 
+                                    std::string &date,
+                                    const char *timeUnit,
+                                    double meanInterestCover,
+                                    nlohmann::ordered_json &jsonDefaultSpread,
+                                    bool appendTermRecord,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
+
+        double interestCover = FinancialAnalysisToolkit::
+          calcInterestCover(jsonData,
+                            date,
+                            timeUnit,
+                            appendTermRecord,
+                            termNames,
+                            termValues);
+
+        if(std::isnan(interestCover) || std::isinf(interestCover)){
+          interestCover = meanInterestCover;
+        }
+
+        double defaultSpread = std::nan("1");
+        bool found=false;
+        unsigned int i=0;        
+        int tableSize = jsonDefaultSpread["US"]["default_spread"].size();
+
+        double interestCoverLowestValue = JsonFunctions::getJsonFloat(
+              jsonDefaultSpread["US"]["default_spread"].at(0).at(0));
+        double interestCoverHighestValue = JsonFunctions::getJsonFloat(
+              jsonDefaultSpread["US"]["default_spread"].at(tableSize-1).at(1));
+
+        if(interestCover < interestCoverLowestValue){
+          defaultSpread = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(0).at(2));
+        
+        }else if(interestCover > interestCoverHighestValue){
+          defaultSpread = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(tableSize-1).at(2));          
+        
+        }else{        
+          while(found == false 
+                && i < tableSize){
+            
+            double interestCoverLowerBound = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(i).at(0));
+            double interestCoverUpperBound = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(i).at(1));
+            double defaultSpreadIntervalValue = JsonFunctions::getJsonFloat(
+                jsonDefaultSpread["US"]["default_spread"].at(i).at(2));
+
+
+            if(interestCover >= interestCoverLowerBound
+            && interestCover <= interestCoverUpperBound){
+              defaultSpread = defaultSpreadIntervalValue;
+              found=true;
+            }
+            ++i;
+          } 
+        }
+
+        if(std::isnan(defaultSpread) || std::isinf(defaultSpread)){
+          std::cerr <<
+            "Error: the default spread has evaluated to nan or inf"
+            " which is only possible if the default spread json file"
+            " has errors in it. The default spread json file should"
+            " have 3 columns: interest cover lower bound, interest "
+            " cover upper bound, and default spread rate. Each row "
+            " specifies an interval. The intervals should be "
+            " continuous and cover from -10000 to 10000, likely with"
+            " very big intervals at the beginning and end. By default"
+            " data/defaultSpreadTable.json contains this information"
+            " which comes from "
+            " https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html" 
+            " on January 2023. The 1st and 2nd columns come from the"
+            " table in the url, the 3rd column (rating) is ignored"
+            " while the final column is put in decimal format "
+            "(divide by 100). This table is appropriate for the U.S."
+            " and perhaps Europe, but is probably not correct for"
+            " the rest of the world." << std::endl;
+          std::abort();
+        }       
+
+        termNames.push_back("defaultSpread_interestCover");
+        termNames.push_back("defaultSpread");
+        termValues.push_back(interestCover);
+        termValues.push_back(defaultSpread);
+
+        return defaultSpread;
+    };
+
 
     static double calcFreeCashFlow(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
@@ -830,7 +920,7 @@ class FinancialAnalysisToolkit {
                                      std::string &previousDate,
                                      const char *timeUnit,
                                      bool zeroNansInDepreciation,
-                                     bool zeroNansInShortTermDebt,
+                                     bool replaceNanInShortLongDebtWithLongDebt,
                                      bool appendTermRecord,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
@@ -881,7 +971,8 @@ class FinancialAnalysisToolkit {
 
       double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][date.c_str()]["shortLongTermDebtTotal"]);
-      if(std::isnan(shortLongTermDebtTotal) && zeroNansInShortTermDebt){
+      if(std::isnan(shortLongTermDebtTotal) 
+                 && replaceNanInShortLongDebtWithLongDebt){
         shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
           jsonData[FIN][BAL][timeUnit][date.c_str()]["longTermDebt"]);
       }
@@ -890,7 +981,8 @@ class FinancialAnalysisToolkit {
       double shortLongTermDebtTotalPrevious = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][previousDate.c_str()]
                 ["shortLongTermDebtTotal"]);
-      if(std::isnan(shortLongTermDebtTotalPrevious) && zeroNansInShortTermDebt){
+      if(std::isnan(shortLongTermDebtTotalPrevious) 
+                 && replaceNanInShortLongDebtWithLongDebt){
         shortLongTermDebtTotalPrevious = JsonFunctions::getJsonFloat(
           jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["longTermDebt"]);
       }
@@ -1258,19 +1350,20 @@ class FinancialAnalysisToolkit {
     }
 
     static double calcEnterpriseValue(nlohmann::ordered_json &fundamentalData, 
-                                      double sharePriceOnDate, 
-                                      std::string &date,
-                                      const char *timeUnit, 
-                                      bool zeroNansInShortTermDebt,
-                                      bool appendTermRecord,                                      
-                                      std::string &parentCategoryName,
-                                      std::vector< std::string> &termNames,
-                                      std::vector< double > &termValues){
+                                    double sharePriceOnDate, 
+                                    std::string &date,
+                                    const char *timeUnit, 
+                                    bool replaceNanInShortLongDebtWithLongDebt,
+                                    bool appendTermRecord,                                      
+                                    std::string &parentCategoryName,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
 
       double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
         fundamentalData[FIN][BAL][timeUnit][date.c_str()]["shortLongTermDebtTotal"]);
 
-      if(std::isnan(shortLongTermDebtTotal) && zeroNansInShortTermDebt){
+      if(std::isnan(shortLongTermDebtTotal) 
+                 && replaceNanInShortLongDebtWithLongDebt){
         shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
         fundamentalData[FIN][BAL][timeUnit][date.c_str()]["longTermDebt"]);
       }
@@ -1308,6 +1401,7 @@ class FinancialAnalysisToolkit {
 
 
     }
+
 
     static double calcValuation(nlohmann::ordered_json &jsonData, 
                                 std::string &date,

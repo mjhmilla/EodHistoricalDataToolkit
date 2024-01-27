@@ -170,6 +170,11 @@ int main (int argc, char* argv[]) {
   double defaultTaxRate;
   int numberOfYearsToAverageCapitalExpenditures;
   int numberOfPeriodsToAverageCapitalExpenditures;
+
+  int numberOfYearsForTerminalValuation;
+  int maxDayErrorTabularData;
+  bool relaxedCalculation;
+
   bool verbose;
 
   try{
@@ -184,7 +189,6 @@ int main (int argc, char* argv[]) {
       "The path to the folder that contains the fundamental data json files from "
       "https://eodhistoricaldata.com/ to analyze",
       true,"","string");
-
     cmd.add(fundamentalFolderInput);
 
     TCLAP::ValueArg<std::string> historicalFolderInput("p",
@@ -192,34 +196,29 @@ int main (int argc, char* argv[]) {
       "The path to the folder that contains the historical (price)"
       " data json files from https://eodhistoricaldata.com/ to analyze",
       true,"","string");
-
     cmd.add(historicalFolderInput);
 
     TCLAP::ValueArg<std::string> singleFileToEvaluateInput("i",
       "single_ticker_name", 
       "To evaluate a single ticker only, set the ticker name here.",
       false,"","string");
-
     cmd.add(singleFileToEvaluateInput);
 
     TCLAP::ValueArg<std::string> exchangeCodeInput("x","exchange_code", 
       "The exchange code. For example: US",
       false,"","string");
-
     cmd.add(exchangeCodeInput);  
 
     TCLAP::ValueArg<std::string> defaultSpreadJsonFileInput("d",
       "default_spread_json_file_input", 
       "The path to the json file that contains a table relating interest"
       " coverage to default spread",false,"","string");
-
     cmd.add(defaultSpreadJsonFileInput);  
 
     TCLAP::ValueArg<std::string> bondYieldJsonFileInput("y",
       "bond_yield_file_input", 
       "The path to the json file that contains a long historical record"
       " of 10 year bond yield values",false,"","string");
-
     cmd.add(bondYieldJsonFileInput);  
     
 
@@ -229,7 +228,6 @@ int main (int argc, char* argv[]) {
       "be computed from the data provided. This can happen with older "
       "EOD records",
       false,2.5,"double");
-
     cmd.add(defaultInterestCoverInput);  
 
     TCLAP::ValueArg<double> defaultTaxRateInput("t",
@@ -237,7 +235,6 @@ int main (int argc, char* argv[]) {
       "The tax rate used if the tax rate cannot be calculated, or averaged, from"
       " the data",
       false,0.30,"double");
-
     cmd.add(defaultTaxRateInput);  
 
 
@@ -246,7 +243,6 @@ int main (int argc, char* argv[]) {
       "The risk free rate of return, which is often set to the return on "
       "a 10 year or 30 year bond as noted from Ch. 3 of Damodran.",
       false,0.025,"double");
-
     cmd.add(defaultRiskFreeRateInput);  
 
     TCLAP::ValueArg<double> equityRiskPremiumInput("e",
@@ -256,35 +252,56 @@ int main (int argc, char* argv[]) {
       " stock market relative to the bond market. In the U.S. this is somewhere"
       " around 4 percent between 1928 and 2010 as noted in Ch. 3 Damodran.",
       false,0.05,"double");
-
     cmd.add(equityRiskPremiumInput);  
 
     TCLAP::ValueArg<double> defaultBetaInput("b",
       "default_beta", 
       "The default beta value to use when one is not reported",
       false,1.0,"double");
-
     cmd.add(defaultBetaInput);  
 
-    //numberOfYearsToAverageCapitalExpenditures
     TCLAP::ValueArg<int> numberOfYearsToAverageCapitalExpendituresInput("n",
       "number_of_years_to_average_capital_expenditures", 
       "Number of years used to evaluate capital expenditures."
       " Default value of 3 taken from Ch. 12 of Lev and Gu.",
       false,3,"int");
-
     cmd.add(numberOfYearsToAverageCapitalExpendituresInput);  
 
+    TCLAP::ValueArg<int>numberOfYearsForTerminalValuationInput("m",
+      "number_of_years_for_terminal_valuation_calculation", 
+      "Number of years for terminal valuation calculation."
+      " Default value of 5 taken from Ch. 3 of Damodran.",
+      false,5,"int");
+    cmd.add(numberOfYearsForTerminalValuationInput); 
+
+
+    TCLAP::ValueArg<int>maxDayErrorTabularDataInput("a",
+      "day_error", 
+      "The bond value and stock value tables do not have entries for"
+      " every day. This parameter specifies the maximum amount of error"
+      " that is acceptable. Note: the bond table is sometimes missing a "
+      " 30 days of data while the stock value tables are sometimes missing"
+      " 10 days of data.",
+      false,35,"int");
+    cmd.add(maxDayErrorTabularDataInput); 
+
+    TCLAP::SwitchArg relaxedCalculationInput("l","relaxed",
+      "Relaxed calculation: nulls for some values (short term debt,"
+      " research and development, dividends, depreciation) are set to "
+      " zero, while substitute calculations are used to replace "
+      " null values (shortLongDebt replaced with longDebt)", false);
+    cmd.add(relaxedCalculationInput); 
+
     TCLAP::SwitchArg quarterlyAnalysisInput("q","quarterly",
-      "Analyze quarterly data", false);
+      "Analyze quarterly data. Caution: this is not yet been tested.", false);
     cmd.add(quarterlyAnalysisInput); 
 
     TCLAP::ValueArg<std::string> analyseFolderOutput("o","output_folder_path", 
       "The path to the folder that will contain the output json files "
       "produced by this analysis",
       true,"","string");
-
     cmd.add(analyseFolderOutput);
+
 
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
@@ -311,6 +328,14 @@ int main (int argc, char* argv[]) {
 
     numberOfYearsToAverageCapitalExpenditures 
       = numberOfYearsToAverageCapitalExpendituresInput.getValue();              
+
+    numberOfYearsForTerminalValuation
+      = numberOfYearsForTerminalValuationInput.getValue();
+
+    maxDayErrorTabularData
+      = maxDayErrorTabularDataInput.getValue();
+
+    relaxedCalculation  = relaxedCalculationInput.getValue() ;
 
     verbose             = verboseInput.getValue();
 
@@ -341,6 +366,9 @@ int main (int argc, char* argv[]) {
       std::cout << "  Default Spread Json File" << std::endl;
       std::cout << "    " << defaultSpreadJsonFile << std::endl;
 
+      std::cout << "  Bond Yield Json File" << std::endl;
+      std::cout << "    " << bondYieldJsonFile << std::endl;
+
       std::cout << "  Default interest cover value" << std::endl;
       std::cout << "    " << defaultInterestCover << std::endl;
 
@@ -359,9 +387,19 @@ int main (int argc, char* argv[]) {
       std::cout << "  Default beta value" << std::endl;
       std::cout << "    " << defaultBeta << std::endl;
 
-      std::cout << "  Years to average capital expenditures " << std::endl;
-      std::cout << "    " << numberOfYearsToAverageCapitalExpenditures 
+      std::cout << "  Number of years to use when evaluating the terminal value " 
                 << std::endl;
+      std::cout << "    " << numberOfYearsForTerminalValuation 
+                << std::endl;
+
+      std::cout << "  Maximum number of days in error allowed for tabular " 
+                << "data of bond yields and historical stock prices " 
+                << std::endl;                
+      std::cout << "    " << maxDayErrorTabularData 
+                << std::endl;    
+
+      std::cout << "  Using relaxed calculations?" << std::endl;
+      std::cout << relaxedCalculation << std::endl;
 
       std::cout << "  Analyse Folder" << std::endl;
       std::cout << "    " << analyseFolder << std::endl;
@@ -373,18 +411,31 @@ int main (int argc, char* argv[]) {
   }
 
 
+  int maxDayErrorHistoricalData = maxDayErrorTabularData; 
+  // Historical data has a resolution of 1 day
+  
+  int maxDayErrorBondYieldData  = maxDayErrorTabularData; 
+  // Bond yield data has a resolution of 1 month
 
+  //bool relaxedCalculation = true;
+  //Some of entries in EODs data base are frequently null because the values
+  //are not reported in the original financial statements. There are two
+  //ways to handle this case:
+  //
+  // relaxedCalculation = true: 
+  //  Set (some) of these null values to zero, and substitute some combined 
+  //  quantities that are null (short-long-term debt) with an approximate them 
+  //  with one term (long term debt).
+  //
+  // relaxedCalculation = false: 
+  //  Use the data as is directly from EOD without any modification.
 
-
-  int numberOfYearsForTerminalValuation = 5;
-
-  int maxDayErrorHistoricalData = 10; // Historical data has a resolution of 1 day
-  int maxDayErrorBondYieldData  = 35; // Bond yield data has a resolution of 1 month
-  bool zeroNanInShortTermDebt=true;
-  bool zeroNansInResearchAndDevelopment=true;
-  bool zeroNansInDividendsPaid = true;
-  bool zeroNansInDepreciation = true;
-  bool appendTermRecord=true;
+  bool zeroNanInShortTermDebt                 = relaxedCalculation;
+  bool replaceNanInShortLongDebtWithLongDebt  = relaxedCalculation;
+  bool zeroNansInResearchAndDevelopment       = relaxedCalculation;
+  bool zeroNansInDividendsPaid                = relaxedCalculation;
+  bool zeroNansInDepreciation                 = relaxedCalculation;
+  bool appendTermRecord                       = relaxedCalculation;
   std::vector< std::string >  termNames;
   std::vector< double >       termValues;  
 
@@ -467,6 +518,7 @@ int main (int argc, char* argv[]) {
   // Evaluate every file in the fundamental folder
   //
   //============================================================================  
+  int validFileCount=0;
   for ( const auto & entry 
           : std::filesystem::directory_iterator(fundamentalFolder)){
 
@@ -494,8 +546,9 @@ int main (int argc, char* argv[]) {
         JsonFunctions::getPrimaryTickerName(fundamentalFolder, 
                                             fileName,
                                             updTickerName);
+        ++validFileCount;                                            
         if(verbose){
-          std::cout << count << "." << '\t' << fileName << std::endl;
+          std::cout << validFileCount << "." << '\t' << fileName << std::endl;
           if(updTickerName.compare(tickerName) != 0){
             std::cout << "  " << '\t' << updTickerName 
                       << " (PrimaryTicker) " << std::endl;
@@ -508,6 +561,9 @@ int main (int argc, char* argv[]) {
             tickerName = updTickerName;
         }else{
           validInput = false;
+          if(verbose){
+            std::cout << "  Skipping: PrimaryTicker is not listed" << std::endl; 
+          }
         }                                                        
     }
 
@@ -525,6 +581,9 @@ int main (int argc, char* argv[]) {
       }catch(const nlohmann::json::parse_error& e){
         std::cout << e.what() << std::endl;
         validInput=false;
+        if(verbose){
+          std::cout << "  Skipping: failed while reading json file" << std::endl; 
+        }
       }
     }
 
@@ -535,8 +594,11 @@ int main (int argc, char* argv[]) {
         datesFundamental.push_back(el.key());
       }
       if(datesFundamental.size()==0){
-        std::cout << "  fundamental data contains no date entries" << std::endl;
         validInput=false;
+        if(verbose){
+          std::cout << "  Skipping: fundamental data contains no date entries" 
+                    << std::endl; 
+        }
       }
     }
 
@@ -555,6 +617,10 @@ int main (int argc, char* argv[]) {
       }catch(const nlohmann::json::parse_error& e){
         std::cout << e.what() << std::endl;
         validInput=false;
+        if(verbose){
+          std::cout << "  Skipping: historical price json file would not load" 
+                    << std::endl; 
+        }
       }
     }
 
@@ -566,8 +632,11 @@ int main (int argc, char* argv[]) {
         datesHistorical.push_back(tempString);
       }
       if(datesHistorical.size()==0){
-        std::cout << "  historical data contains no date entries" << std::endl;
         validInput=false;
+        if(verbose){
+          std::cout << "  Skipping: historical data contains no date entries" 
+                    << std::endl; 
+        }
       }
     }    
 
@@ -594,6 +663,13 @@ int main (int argc, char* argv[]) {
         std::cout << "  Skipping ticker: there is not one matching date between"
                      " the fundamental and historical data sets."
                      << std::endl;
+        if(verbose){
+          std::cout << "  Skipping: there is not one matching date between"
+                     " the fundamental and historical data sets within the"
+                     " maximum allowed day error." 
+                    << std::endl; 
+        }
+                     
       }
 
     }
@@ -631,6 +707,13 @@ int main (int argc, char* argv[]) {
                   << " that are in the set of common dates between "
                   << " the fundamental and historical data" 
                   << std::endl;
+        if(verbose){
+          std::cout << " Skipping: the bond table is missing entries "
+                    << " that are in the set of common dates between "
+                    << " the fundamental and historical data" 
+                    << std::endl;
+        }
+                  
       }
 
 
@@ -802,18 +885,18 @@ int main (int argc, char* argv[]) {
         //======================================================================
         //Evaluate the cost of equity
         //======================================================================        
-        double annualCostOfEquityAsAPercentage = 
+        double annualcostOfEquityAsAPercentage = 
           riskFreeRate + equityRiskPremium*beta;
 
-        double costOfEquityAsAPercentage=annualCostOfEquityAsAPercentage;
+        double costOfEquityAsAPercentage=annualcostOfEquityAsAPercentage;
         if(analyzeQuarterlyData){
           costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
         }        
 
-        termNames.push_back("costOfEquity_riskFreeRate");
-        termNames.push_back("costOfEquity_equityRiskPremium");
-        termNames.push_back("costOfEquity_beta");
-        termNames.push_back("costOfEquity");
+        termNames.push_back("costOfEquityAsAPercentage_riskFreeRate");
+        termNames.push_back("costOfEquityAsAPercentage_equityRiskPremium");
+        termNames.push_back("costOfEquityAsAPercentage_beta");
+        termNames.push_back("costOfEquityAsAPercentage");
 
         termValues.push_back(riskFreeRate);
         termValues.push_back(equityRiskPremium);
@@ -823,84 +906,15 @@ int main (int argc, char* argv[]) {
         //======================================================================
         //Evaluate the cost of debt
         //======================================================================        
-        double interestCover = FinancialAnalysisToolkit::
-          calcInterestCover(fundamentalData,
-                            date,
-                            timePeriod.c_str(),
-                            appendTermRecord,
-                            termNames,
-                            termValues);
-        if(std::isnan(interestCover) || std::isinf(interestCover)){
-          interestCover = meanInterestCover;
-        }
-
-        double defaultSpread = std::nan("1");
-        bool found=false;
-        unsigned int i=0;        
-        int defaultSpreadTableSize = 
-          jsonDefaultSpread["US"]["default_spread"].size();
-
-        double interestCoverLowestValue = JsonFunctions::getJsonFloat(
-              jsonDefaultSpread["US"]["default_spread"].at(0).at(0));
-        double interestCoverHighestValue = JsonFunctions::getJsonFloat(
-              jsonDefaultSpread["US"]["default_spread"].at(defaultSpreadTableSize-1).at(1));
-
-        if(interestCover < interestCoverLowestValue){
-          defaultSpread = JsonFunctions::getJsonFloat(
-                jsonDefaultSpread["US"]["default_spread"].at(0).at(2));
-        
-        }else if(interestCover > interestCoverHighestValue){
-          defaultSpread = JsonFunctions::getJsonFloat(
-                jsonDefaultSpread["US"]["default_spread"].at(defaultSpreadTableSize-1).at(2));          
-        
-        }else{        
-          while(found == false 
-                && i < defaultSpreadTableSize){
-            
-            double interestCoverLowerBound = JsonFunctions::getJsonFloat(
-                jsonDefaultSpread["US"]["default_spread"].at(i).at(0));
-            double interestCoverUpperBound = JsonFunctions::getJsonFloat(
-                jsonDefaultSpread["US"]["default_spread"].at(i).at(1));
-            double defaultSpreadIntervalValue = JsonFunctions::getJsonFloat(
-                jsonDefaultSpread["US"]["default_spread"].at(i).at(2));
-
-
-            if(interestCover >= interestCoverLowerBound
-            && interestCover <= interestCoverUpperBound){
-              defaultSpread = defaultSpreadIntervalValue;
-              found=true;
-            }
-            ++i;
-          } 
-        }
-
-        if(std::isnan(defaultSpread) || std::isinf(defaultSpread)){
-          std::cerr << "Error: the default spread has evaluated to nan or inf"
-                       " which is only possible if the default spread json file"
-                       " has errors in it. The default spread json file should"
-                       " have 3 columns: interest cover lower bound, interest "
-                       " cover upper bound, and default spread rate. Each row "
-                       " specifies an interval. The intervals should be "
-                       " continuous and cover from -10000 to 10000, likely with"
-                       " very big intervals at the beginning and end. By default"
-                       " data/defaultSpreadTable.json contains this information"
-                       " which comes from "
-                       " https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html" 
-                       " on January 2023. The 1st and 2nd columns come from the"
-                       " table in the url, the 3rd column (rating) is ignored"
-                       " while the final column is put in decimal format "
-                       "(divide by 100). This table is appropriate for the U.S."
-                       " and perhaps Europe, but is probably not correct for"
-                       " the rest of the world."
-                       << std::endl;
-          std::abort();
-        }       
-
-
-        termNames.push_back("defaultSpread_interestCover");
-        termNames.push_back("defaultSpread");
-        termValues.push_back(interestCover);
-        termValues.push_back(defaultSpread);
+        double defaultSpread = FinancialAnalysisToolkit::
+            calcDefaultSpread(fundamentalData,
+                              date,
+                              timePeriod.c_str(),
+                              meanInterestCover,
+                              jsonDefaultSpread,
+                              appendTermRecord,
+                              termNames,
+                              termValues);
 
         std::string parentName = "afterTaxCostOfDebt_";
         
@@ -929,19 +943,29 @@ int main (int argc, char* argv[]) {
         termValues.push_back(defaultSpread);
         termValues.push_back(afterTaxCostOfDebt);
 
+        //======================================================================
         //Evaluate the current total short and long term debt
-        double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
-          fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                  ["shortLongTermDebtTotal"]);
-        if(std::isnan(shortLongTermDebtTotal) && zeroNanInShortTermDebt){
-          shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
-            fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]["longTermDebt"]);
+        //======================================================================
+        double shortLongTermDebtTotal = 
+          JsonFunctions::getJsonFloat(
+            fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+                           ["shortLongTermDebtTotal"]);
+
+        if(std::isnan(  shortLongTermDebtTotal) 
+                     && replaceNanInShortLongDebtWithLongDebt){
+          shortLongTermDebtTotal = 
+            JsonFunctions::getJsonFloat(
+              fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+                             ["longTermDebt"]);
         }
-        
+
+        //======================================================================        
         //Evaluate the current market capitalization
-        double commonStockSharesOutstanding = JsonFunctions::getJsonFloat(
-          fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                  ["commonStockSharesOutstanding"]);
+        //======================================================================
+        double commonStockSharesOutstanding = 
+          JsonFunctions::getJsonFloat(
+            fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+                            ["commonStockSharesOutstanding"]);
 
         unsigned int indexHistoricalData = 
           indicesCommonHistoricalDates[indexDate];   
@@ -961,7 +985,10 @@ int main (int argc, char* argv[]) {
         double marketCapitalization = 
           shareOpenValue*commonStockSharesOutstanding;
 
+        //======================================================================        
         //Evaluate a weighted cost of capital
+        //======================================================================        
+
         double costOfCapital = 
           (costOfEquityAsAPercentage*marketCapitalization
           +afterTaxCostOfDebt*shortLongTermDebtTotal)
@@ -985,6 +1012,9 @@ int main (int argc, char* argv[]) {
         
         //======================================================================
         //Evaluate the metrics
+        //  At the moment residual cash flow and the company's valuation are
+        //  most of interest. The remaining metrics are useful, however, and so,
+        //  have been included.
         //======================================================================        
 
         double totalStockHolderEquity = JsonFunctions::getJsonFloat(
@@ -1077,7 +1107,7 @@ int main (int argc, char* argv[]) {
                                      previousTimePeriod,
                                      timePeriod.c_str(),
                                      zeroNansInDepreciation,
-                                     zeroNanInShortTermDebt,
+                                     replaceNanInShortLongDebtWithLongDebt,
                                      appendTermRecord,
                                      termNames,
                                      termValues);
@@ -1129,7 +1159,7 @@ int main (int argc, char* argv[]) {
                                 shareOpenValue, 
                                 date,
                                 timePeriod.c_str(),
-                                zeroNanInShortTermDebt, 
+                                replaceNanInShortLongDebtWithLongDebt, 
                                 appendTermRecord,                                
                                 rFcfToEvLabel,
                                 termNames,
