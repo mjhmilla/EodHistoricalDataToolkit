@@ -26,6 +26,8 @@ class FinancialAnalysisToolkit {
 
   public:
 
+
+    //==========================================================================
     static void getIsinCountryCodes(const std::string& isin, 
                             nlohmann::ordered_json &exchangeList,
                             std::string &isinCountryISO2,
@@ -51,6 +53,7 @@ class FinancialAnalysisToolkit {
       }
     };
 
+    //==========================================================================
     static bool doesIsinHaveMatchingExchange(
                   const std::string &isin,
                   nlohmann::ordered_json &exchangeList,
@@ -87,6 +90,7 @@ class FinancialAnalysisToolkit {
       return exists;
     };
 
+    //==========================================================================
     static bool isExchangeAndIsinConsistent( std::string &exchange,
                                       std::string &isin,
                                       nlohmann::ordered_json &exchangeList){
@@ -113,6 +117,7 @@ class FinancialAnalysisToolkit {
       return consistent;
     };
 
+    //==========================================================================
     static void createEodJsonFileName(const std::string &ticker, 
                                       const std::string &exchangeCode,
                                       std::string &updEodFileName)
@@ -124,11 +129,12 @@ class FinancialAnalysisToolkit {
     };
 
 
-
+    //==========================================================================
     static double calcReturnOnCapitalDeployed( nlohmann::ordered_json &jsonData, 
                                     std::string &date, 
                                     const char *timeUnit,
                                     bool appendTermRecord,
+                                    std::string &parentCategoryName,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
       // Return On Capital Deployed
@@ -158,10 +164,10 @@ class FinancialAnalysisToolkit {
         operatingIncome / (longTermDebt+totalShareholderEquity);
 
       if(appendTermRecord){
-        termNames.push_back("returnOnCapitalDeployed_longTermDebt");
-        termNames.push_back("returnOnCapitalDeployed_totalShareholderEquity");
-        termNames.push_back("returnOnCapitalDeployed_operatingIncome");
-        termNames.push_back("returnOnCapitalDeployed");
+        termNames.push_back(parentCategoryName+"returnOnCapitalDeployed_longTermDebt");
+        termNames.push_back(parentCategoryName+"returnOnCapitalDeployed_totalShareholderEquity");
+        termNames.push_back(parentCategoryName+"returnOnCapitalDeployed_operatingIncome");
+        termNames.push_back(parentCategoryName+"returnOnCapitalDeployed");
 
         termValues.push_back(longTermDebt);
         termValues.push_back(totalShareholderEquity);
@@ -172,11 +178,13 @@ class FinancialAnalysisToolkit {
       return returnOnCapitalDeployed;
     };
 
+    //==========================================================================
     static double calcReturnOnInvestedCapital(nlohmann::ordered_json &jsonData, 
                                     std::string &date,
                                     const char *timeUnit,
                                     bool zeroNansInDividendsPaid,
                                     bool appendTermRecord,
+                                    std::string &parentCategoryName,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
       // Return On Invested Capital
@@ -214,18 +222,17 @@ class FinancialAnalysisToolkit {
         (netIncome-dividendsPaid) / (longTermDebt+totalShareholderEquity);
 
       if(appendTermRecord){
-        termNames.push_back("returnOnInvestedCapital_longTermDebt");
-        termNames.push_back("returnOnInvestedCapital_totalShareholderEquity");
-        termNames.push_back("returnOnInvestedCapital_netIncome");
-        termNames.push_back("returnOnInvestedCapital_dividendsPaid");
-        termNames.push_back("returnOnInvestedCapital");
+        termNames.push_back(parentCategoryName+"returnOnInvestedCapital_longTermDebt");
+        termNames.push_back(parentCategoryName+"returnOnInvestedCapital_totalShareholderEquity");
+        termNames.push_back(parentCategoryName+"returnOnInvestedCapital_netIncome");
+        termNames.push_back(parentCategoryName+"returnOnInvestedCapital_dividendsPaid");
+        termNames.push_back(parentCategoryName+"returnOnInvestedCapital");
 
         termValues.push_back(longTermDebt);
         termValues.push_back(totalShareholderEquity);
         termValues.push_back(netIncome);
         termValues.push_back(dividendsPaid);
         termValues.push_back(returnOnInvestedCapital);
-
       }
 
       return returnOnInvestedCapital;
@@ -264,7 +271,7 @@ class FinancialAnalysisToolkit {
       return returnOnEquity;
     };    
 
-
+    //==========================================================================
     static double calcRetentionRatio(nlohmann::ordered_json &jsonData, 
                                     std::string &date,
                                     const char *timeUnit,
@@ -308,6 +315,8 @@ class FinancialAnalysisToolkit {
       return retentionRatio;
     };    
 
+
+    //==========================================================================
     /**
      *Return On Assets
      *Source: https://www.investopedia.com/terms/r/returnonassets.asp 
@@ -350,6 +359,7 @@ class FinancialAnalysisToolkit {
 
     };
 
+    //==========================================================================
     /**
      * Gross margin
      * https://www.investopedia.com/terms/g/grossmargin.asp
@@ -383,6 +393,7 @@ class FinancialAnalysisToolkit {
       return grossMargin;
     };
 
+    //==========================================================================
     /**
      * https://www.investopedia.com/terms/o/operatingmargin.asp
     */
@@ -414,6 +425,7 @@ class FinancialAnalysisToolkit {
       return operatingMargin;
     };    
 
+    //==========================================================================
     /**
      * https://corporatefinanceinstitute.com/resources/accounting/cash-conversion-ratio/
     */
@@ -514,6 +526,7 @@ class FinancialAnalysisToolkit {
 
     };
 
+    //==========================================================================
     /**
        https://www.investopedia.com/terms/l/leverageratio.asp
     */
@@ -556,6 +569,7 @@ class FinancialAnalysisToolkit {
       return debtToCapitalizationRatio;                    
     };
 
+    //==========================================================================
     /**
      https://www.investopedia.com/terms/i/interestcoverageratio.asp
     */
@@ -590,6 +604,7 @@ class FinancialAnalysisToolkit {
 
     };    
 
+    //==========================================================================
     static double calcDefaultSpread(nlohmann::ordered_json &jsonData, 
                                     std::string &date,
                                     const char *timeUnit,
@@ -681,6 +696,7 @@ class FinancialAnalysisToolkit {
     };
 
 
+    //==========================================================================
     static double calcFreeCashFlow(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      const char *timeUnit,
@@ -749,6 +765,7 @@ class FinancialAnalysisToolkit {
       return freeCashFlow;
     };    
 
+    //==========================================================================
     static double calcNetCapitalExpenditures(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      std::string &previousDate,
@@ -808,6 +825,7 @@ class FinancialAnalysisToolkit {
       return netCapitalExpenditures;
     };
 
+    //==========================================================================
     static double calcChangeInNonCashWorkingCapital(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      std::string &previousDate,
@@ -829,7 +847,6 @@ class FinancialAnalysisToolkit {
 
       */
 
-      /*
       double inventory = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][date.c_str()]["inventory"]);
 
@@ -852,8 +869,42 @@ class FinancialAnalysisToolkit {
           ( (inventory-inventoryPrevious)
             +(netReceivables-netReceivablesPrevious)
             -(accountsPayable-accountsPayablePrevious));
-      */
+            
+      if(appendTermRecord){
+        termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_inventory");
+        termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_inventoryPrevious");
 
+        termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_netReceivables");
+        termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_netReceivablesPrevious");
+
+        termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_accountsPayable");
+        termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_accountsPayablePrevious");
+
+        termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital");
+
+        termValues.push_back(inventory);
+        termValues.push_back(inventoryPrevious);
+        termValues.push_back(netReceivables);
+        termValues.push_back(netReceivablesPrevious);        
+        termValues.push_back(accountsPayable);
+        termValues.push_back(accountsPayablePrevious);
+
+        termValues.push_back(changeInNonCashWorkingCapital);   
+      }  
+
+      //An alternative version is to use the changeToInventory and 
+      //changeToAccountReceivables fields. However, this method produces
+      //values that differ substantially from the version above and also differ
+      //from Damodaran's Ch. 3 example.
+
+      /*
       double changeToInventory = JsonFunctions::getJsonFloat(
         jsonData[FIN][CF][timeUnit][date.c_str()]["changeToInventory"]);
 
@@ -892,6 +943,7 @@ class FinancialAnalysisToolkit {
         termValues.push_back(changeInNonCashWorkingCapital);
 
       }
+      */
       return changeInNonCashWorkingCapital;
     };
 
@@ -1019,6 +1071,7 @@ class FinancialAnalysisToolkit {
       return freeCashFlowToEquity;
     };
 
+    //==========================================================================
     /**
      Warren Buffets definition for owners earnings is a bit more conservative
      than free-cash-flow-to-equity because the cash flow created by debt is
@@ -1079,6 +1132,9 @@ class FinancialAnalysisToolkit {
       return ownersEarnings;
     };
 
+
+    //==========================================================================
+
     static double calcTaxRate(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      const char *timeUnit,
@@ -1111,6 +1167,7 @@ class FinancialAnalysisToolkit {
     };
 
 
+    //==========================================================================
     static double calcReinvestmentRate(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      std::string &previousDate,  
@@ -1160,7 +1217,6 @@ class FinancialAnalysisToolkit {
         (netCapitalExpenditures+changeInNonCashWorkingCapital
         )/afterTaxOperatingIncome;
 
-      //Update the argument and result record
       if(appendTermRecord){
 
         termNames.push_back(parentCategoryName 
@@ -1181,7 +1237,7 @@ class FinancialAnalysisToolkit {
       return reinvestmentRate;
     };   
 
-
+    //==========================================================================
     static double calcFreeCashFlowToFirm(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      std::string &previousDate,                                     
@@ -1241,6 +1297,7 @@ class FinancialAnalysisToolkit {
       return freeCashFlowToFirm;
     };
 
+    //==========================================================================
     /**
      * This function calculates the residual cash flow defined in the book
      * `The end of accounting and the path forward' by Baruch Lev and Feng Gu.
@@ -1349,6 +1406,7 @@ class FinancialAnalysisToolkit {
 
     }
 
+    //==========================================================================
     static double calcEnterpriseValue(nlohmann::ordered_json &fundamentalData, 
                                     double sharePriceOnDate, 
                                     std::string &date,
@@ -1402,8 +1460,9 @@ class FinancialAnalysisToolkit {
 
     }
 
-
-    static double calcValuation(nlohmann::ordered_json &jsonData, 
+    //==========================================================================
+    static double calcPresentValueOfDiscountedFutureCashFlows(
+                                nlohmann::ordered_json &jsonData, 
                                 std::string &date,
                                 std::string &previousDate,
                                 const char *timeUnit,   
@@ -1411,17 +1470,18 @@ class FinancialAnalysisToolkit {
                                 bool zeroNansInDepreciation,
                                 double riskFreeRate,
                                 double costOfCapital,
+                                double costOfCapitalMature,
                                 double defaultTaxRate,
                                 int numberOfYearsForTerminalValuation,                              
                                 bool appendTermRecord,
                                 std::vector< std::string> &termNames,
                                 std::vector< double > &termValues){
 
-      std::string parentName("presentValue_");
+      std::string parentName("presentValueDCF_");
 
       if(appendTermRecord){
-        termNames.push_back("presentValue_riskFreeRate");
-        termNames.push_back("presentValue_costOfCapital");
+        termNames.push_back("presentValueDCF_riskFreeRate");
+        termNames.push_back("presentValueDCF_costOfCapital");
         termValues.push_back(riskFreeRate);
         termValues.push_back(costOfCapital);
       }
@@ -1454,6 +1514,7 @@ class FinancialAnalysisToolkit {
                                                   timeUnit,
                                                   zeroNansInDividendsPaid,
                                                   appendTermRecord,
+                                                  parentName,
                                                   termNames,
                                                   termValues);
 
@@ -1480,13 +1541,13 @@ class FinancialAnalysisToolkit {
 
       if(appendTermRecord){
 
-        termNames.push_back("presentValue_taxRate");
-        termNames.push_back("presentValue_reinvestmentRate");
-        termNames.push_back("presentValue_returnOnInvestedCapital");
-        termNames.push_back("presentValue_operatingIncomeGrowth");
-        termNames.push_back("presentValue_retentionRatio");
-        termNames.push_back("presentValue_returnOnEquity");
-        termNames.push_back("presentValue_netIncomeGrowth");
+        termNames.push_back("presentValueDCF_taxRate");
+        termNames.push_back("presentValueDCF_reinvestmentRate");
+        termNames.push_back("presentValueDCF_returnOnInvestedCapital");
+        termNames.push_back("presentValueDCF_operatingIncomeGrowth");
+        termNames.push_back("presentValueDCF_retentionRatio");
+        termNames.push_back("presentValueDCF_returnOnEquity");
+        termNames.push_back("presentValueDCF_netIncomeGrowth");
 
         termValues.push_back(taxRate);
         termValues.push_back(reinvestmentRate);
@@ -1512,9 +1573,9 @@ class FinancialAnalysisToolkit {
         totalCashFromOperatingActivities*(1.0-taxRate);
 
       if(appendTermRecord){
-        termNames.push_back("presentValue_afterTaxOperatingIncome_totalCashFromOperatingActivities");
-        termNames.push_back("presentValue_afterTaxOperatingIncome_taxRate");
-        termNames.push_back("presentValue_afterTaxOperatingIncome");
+        termNames.push_back("presentValueDCF_afterTaxOperatingIncome_totalCashFromOperatingActivities");
+        termNames.push_back("presentValueDCF_afterTaxOperatingIncome_taxRate");
+        termNames.push_back("presentValueDCF_afterTaxOperatingIncome");
 
         termValues.push_back(totalCashFromOperatingActivities);
         termValues.push_back(taxRate);
@@ -1539,15 +1600,15 @@ class FinancialAnalysisToolkit {
         if(appendTermRecord){
           std::stringstream sstreamName;
           sstreamName.str(std::string());
-          sstreamName << "presentValue_afterTaxOperatingIncome_"<< i;
+          sstreamName << "presentValueDCF_afterTaxOperatingIncome_"<< i;
           termNames.push_back(sstreamName.str());
 
           sstreamName.str(std::string());
-          sstreamName << "presentValue_reinvestment_"<< i;
+          sstreamName << "presentValueDCF_reinvestment_"<< i;
           termNames.push_back(sstreamName.str());          
 
           sstreamName.str(std::string());
-          sstreamName << "presentValue_freeCashFlowToFirm_"<< i;
+          sstreamName << "presentValueDCF_freeCashFlowToFirm_"<< i;
           termNames.push_back(sstreamName.str());
 
           termValues.push_back(afterTaxOperatingIncomeVector[i]);
@@ -1556,7 +1617,7 @@ class FinancialAnalysisToolkit {
         }
       }
 
-      double reinvestmentRateStableGrowth = riskFreeRate/costOfCapital;
+      double reinvestmentRateStableGrowth = riskFreeRate/costOfCapitalMature;
 
 
       double terminalAfterTaxOperatingIncome = 
@@ -1566,28 +1627,30 @@ class FinancialAnalysisToolkit {
         (terminalAfterTaxOperatingIncome
           *(1+riskFreeRate)
           *(1-reinvestmentRateStableGrowth)
-        )/(costOfCapital-riskFreeRate);
+        )/(costOfCapitalMature-riskFreeRate);
 
       double presentValue = 0;
 
-      for(int i=1; i<numberOfYearsForTerminalValuation; ++i){
-        presentValue += freeCashFlowToFirmVector[i]/std::pow(1+costOfCapital,i);
+      for(int i=1; i<=numberOfYearsForTerminalValuation; ++i){
+        presentValue += freeCashFlowToFirmVector[i]/std::pow(1.+costOfCapital,i);
       }
       presentValue += terminalValue 
         / std::pow(1.+costOfCapital,numberOfYearsForTerminalValuation);
 
       if(appendTermRecord){
-        termNames.push_back("presentValue_terminalValue_afterTaxOperatingIncome");
-        termNames.push_back("presentValue_terminalValue_riskFreeRate");
-        termNames.push_back("presentValue_terminalValue_reinvestmentRateStableGrowth");
-        termNames.push_back("presentValue_terminalValue_costOfCapital");
-        termNames.push_back("presentValue_terminalValue");
-        termNames.push_back("presentValue");
+        termNames.push_back("presentValueDCF_terminalValue_afterTaxOperatingIncome");
+        termNames.push_back("presentValueDCF_terminalValue_riskFreeRate");
+        termNames.push_back("presentValueDCF_terminalValue_reinvestmentRateStableGrowth");
+        termNames.push_back("presentValueDCF_terminalValue_costOfCapital");
+        termNames.push_back("presentValueDCF_terminalValue_costOfCapitalMature");
+        termNames.push_back("presentValueDCF_terminalValue");
+        termNames.push_back("presentValueDCF");
 
         termValues.push_back(terminalAfterTaxOperatingIncome);
         termValues.push_back(riskFreeRate);
         termValues.push_back(reinvestmentRateStableGrowth);
         termValues.push_back(costOfCapital);
+        termValues.push_back(costOfCapitalMature);
         termValues.push_back(terminalValue);
         termValues.push_back(presentValue);
       }

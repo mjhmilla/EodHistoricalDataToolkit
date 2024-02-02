@@ -175,6 +175,8 @@ int main (int argc, char* argv[]) {
   int maxDayErrorTabularData;
   bool relaxedCalculation;
 
+  double matureFirmFractionOfDebtCapital=0;
+
   bool verbose;
 
   try{
@@ -234,7 +236,7 @@ int main (int argc, char* argv[]) {
       "default_tax_rate", 
       "The tax rate used if the tax rate cannot be calculated, or averaged, from"
       " the data",
-      false,0.30,"double");
+      false,0.40,"double");
     cmd.add(defaultTaxRateInput);  
 
 
@@ -259,6 +261,13 @@ int main (int argc, char* argv[]) {
       "The default beta value to use when one is not reported",
       false,1.0,"double");
     cmd.add(defaultBetaInput);  
+
+    //Default value from Ch. 3 Damodaran
+    TCLAP::ValueArg<double> matureFirmFractionOfDebtCapitalInput("u",
+      "mature_firm_fraction_debt_capital", 
+      "The fraction of capital from debt for a mature firm.",
+      false,0.2,"double");
+    cmd.add(matureFirmFractionOfDebtCapitalInput);  
 
     TCLAP::ValueArg<int> numberOfYearsToAverageCapitalExpendituresInput("n",
       "number_of_years_to_average_capital_expenditures", 
@@ -326,6 +335,9 @@ int main (int argc, char* argv[]) {
     bondYieldJsonFile     = bondYieldJsonFileInput.getValue();
     defaultInterestCover  = defaultInterestCoverInput.getValue();
 
+    matureFirmFractionOfDebtCapital = 
+      matureFirmFractionOfDebtCapitalInput.getValue();
+
     numberOfYearsToAverageCapitalExpenditures 
       = numberOfYearsToAverageCapitalExpendituresInput.getValue();              
 
@@ -386,6 +398,9 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Default beta value" << std::endl;
       std::cout << "    " << defaultBeta << std::endl;
+
+      std::cout << "  Assumed mature firm fraction of capital from debt" << std::endl;
+      std::cout << "    " << matureFirmFractionOfDebtCapital << std::endl;
 
       std::cout << "  Number of years to use when evaluating the terminal value " 
                 << std::endl;
@@ -994,6 +1009,7 @@ int main (int argc, char* argv[]) {
           +afterTaxCostOfDebt*shortLongTermDebtTotal)
           /(marketCapitalization+shortLongTermDebtTotal);
 
+
         termNames.push_back("costOfCapital_shortLongTermDebtTotal");
         termNames.push_back("costOfCapital_commonStockSharesOutstanding");
         termNames.push_back("costOfCapital_shareOpenValue");
@@ -1009,7 +1025,27 @@ int main (int argc, char* argv[]) {
         termValues.push_back(costOfEquityAsAPercentage);
         termValues.push_back(afterTaxCostOfDebt);
         termValues.push_back(costOfCapital);
-        
+
+
+        //As companies mature they use cheaper forms of capital: debt.
+        double costOfCapitalMature = 
+          (costOfEquityAsAPercentage*(1-matureFirmFractionOfDebtCapital) 
+          + afterTaxCostOfDebt*matureFirmFractionOfDebtCapital);
+
+        if(costOfCapitalMature > costOfCapital){
+          costOfCapitalMature=costOfCapital;
+        }
+
+        termNames.push_back("costOfCapitalMature_matureFirmDebtCapitalFraction");
+        termNames.push_back("costOfCapitalMature_costOfEquityAsAPercentage");
+        termNames.push_back("costOfCapitalMature_afterTaxCostOfDebt");
+        termNames.push_back("costOfCapitalMature");
+
+        termValues.push_back(matureFirmFractionOfDebtCapital);
+        termValues.push_back(costOfEquityAsAPercentage);
+        termValues.push_back(afterTaxCostOfDebt);        
+        termValues.push_back(costOfCapitalMature);
+
         //======================================================================
         //Evaluate the metrics
         //  At the moment residual cash flow and the company's valuation are
@@ -1020,13 +1056,14 @@ int main (int argc, char* argv[]) {
         double totalStockHolderEquity = JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
                                ["totalStockholderEquity"]); 
-
+        std::string emptyParentName("");
         double roic = FinancialAnalysisToolkit::
           calcReturnOnInvestedCapital(fundamentalData,
                                       date,
                                       timePeriod.c_str(),
                                       zeroNansInDividendsPaid, 
                                       appendTermRecord, 
+                                      emptyParentName,
                                       termNames, 
                                       termValues);
 
@@ -1035,6 +1072,7 @@ int main (int argc, char* argv[]) {
                                         date,
                                         timePeriod.c_str(), 
                                         appendTermRecord, 
+                                        emptyParentName,
                                         termNames, 
                                         termValues);
 
@@ -1125,31 +1163,66 @@ int main (int argc, char* argv[]) {
                                  termNames, 
                                  termValues);
 
-        //Evaluation
-        double presentValue = FinancialAnalysisToolkit::
-            calcValuation(  fundamentalData,
-                            date,
-                            previousTimePeriod,
-                            timePeriod.c_str(),
-                            zeroNansInDividendsPaid,
-                            zeroNansInDepreciation,
-                            riskFreeRate,
-                            costOfCapital,
-                            meanTaxRate,
-                            numberOfYearsForTerminalValuation,
-                            appendTermRecord,
-                            termNames,
-                            termValues);
+        //Valuation (discounted cash flow)
+        double presentValueOfFutureCashFlows = FinancialAnalysisToolkit::
+            calcPresentValueOfDiscountedFutureCashFlows(  
+              fundamentalData,
+              date,
+              previousTimePeriod,
+              timePeriod.c_str(),
+              zeroNansInDividendsPaid,
+              zeroNansInDepreciation,
+              riskFreeRate,
+              costOfCapital,
+              costOfCapitalMature,
+              meanTaxRate,
+              numberOfYearsForTerminalValuation,
+              appendTermRecord,
+              termNames,
+              termValues);
+
+        //Market value (make adjustments as described in Damodaran Ch. 3)
+        double cash = JsonFunctions::getJsonFloat(
+          fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]["cash"]);
+
+        double netDebt = JsonFunctions::getJsonFloat(
+              fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+                             ["netDebt"]);
+
+        double crossHoldings = std::nan("1");
+
+        double potentialLiabilities = std::nan("1");
+
+        double optionValue = std::nan("1");
+
+        double presentValue = presentValueOfFutureCashFlows
+                            + cash 
+                            - netDebt;
+
 
         //Ratio: price to value
         double priceToValue = marketCapitalization/presentValue;
         if(appendTermRecord){
+          termNames.push_back("priceToValue_presentValueOfFutureCashFlows");
+          termNames.push_back("priceToValue_cash");
+          termNames.push_back("priceToValue_netDebt");
+          termNames.push_back("priceToValue_crossHolding_missing");
+          termNames.push_back("priceToValue_potentialLiabilities_missing");
+          termNames.push_back("priceToValue_stockOptionValuation_missing");
+          termNames.push_back("priceToValue_presentValue_approximation");
           termNames.push_back("priceToValue_marketCapitalization");
-          termNames.push_back("priceToValue_presentValue");
           termNames.push_back("priceToValue");
-          termValues.push_back(marketCapitalization);
+
+          termValues.push_back(presentValueOfFutureCashFlows);
+          termValues.push_back(cash);
+          termValues.push_back(netDebt);
+          termValues.push_back(crossHoldings);
+          termValues.push_back(potentialLiabilities);
+          termValues.push_back(optionValue);
           termValues.push_back(presentValue);
+          termValues.push_back(marketCapitalization);
           termValues.push_back(priceToValue);
+
         }
 
         //Residual cash flow to enterprise value
