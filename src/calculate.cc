@@ -15,6 +15,153 @@
 #include "FinancialAnalysisToolkit.h"
 #include "JsonFunctions.h"
 
+
+
+struct TaxFoundationDataSet{
+  std::vector< int > index;
+  std::vector< int > year;
+  std::vector< std::string > CountryISO2;
+  std::vector< std::string > CountryISO3;
+  std::vector< std::string > continent;
+  std::vector< std::string > country;
+  std::vector< std::vector < double > > taxTable; 
+};
+
+bool loadTaxFoundationDataSet(std::string &fileName, 
+                              TaxFoundationDataSet &dataSet){
+
+  bool validFormat=false;                                  
+  std::ifstream file(fileName);
+
+  if(file.is_open()){
+    validFormat=true;
+    std::string line;
+    std::string entry;
+
+    //First line is the header: check entries + read in years    
+    std::getline(file,line); 
+
+    std::size_t idx0=0;
+    std::size_t idx1=0;
+    int column = 0;
+    std::vector< double > dataRow;
+    dataRow.clear();
+
+    idx1 = line.find_first_of(',',idx0);
+    entry = line.substr(idx0,idx1-idx0);
+
+    do{
+        if(column <= 4){
+          switch(column){
+            case 1:{
+                if(entry.compare("iso_2") != 0){
+                  validFormat=false;
+                }
+            }break;
+            case 2:{
+              if(entry.compare("iso_3") != 0){
+                  validFormat=false;
+              }
+            } break;
+            case 3:{
+              if(entry.compare("continent") != 0){
+                  validFormat=false;
+              }
+            }break;
+            case 4:{
+              if(entry.compare("country") != 0){
+                  validFormat=false;
+              }                
+            }break;
+          };
+        }else{
+          if(entry.compare("NA") == 0){
+            dataSet.year.push_back(-1);
+            validFormat=false;
+          }else{
+            dataSet.year.push_back(std::stoi(entry));
+          }
+        }
+
+        idx0 = idx1+1;
+        idx1 = line.find_first_of(',',idx0);
+        entry = line.substr(idx0,idx1-idx0);
+
+        ++column;
+    }while(    idx0 !=  std::string::npos 
+            && idx1 !=  std::string::npos 
+            && validFormat);
+
+
+    //Read in the data table
+    while(std::getline(file,line) && validFormat){
+
+        idx0=0;
+        idx1=0;
+        dataRow.clear();
+        column = 0;
+        idx1 = line.find_first_of(',',idx0);
+        entry = line.substr(idx0,idx1-idx0);
+
+        do{
+
+
+          if(column <= 4){
+            switch(column){
+              case 0:{
+                  dataSet.index.push_back(std::stoi(entry));
+              } break;
+              case 1:{
+                  dataSet.CountryISO2.push_back(entry);
+              }break;
+              case 2:{
+                dataSet.CountryISO3.push_back(entry);
+              } break;
+              case 3:{
+                dataSet.continent.push_back(entry);
+              }break;
+              case 4:{
+                dataSet.country.push_back(entry);                
+              }break;
+            };
+          }else{
+            if(entry.compare("NA") == 0){
+              dataRow.push_back(std::nan("1"));
+            }else{
+              dataRow.push_back(std::stod(entry));
+            }
+          }
+          idx0 = idx1+1;
+          idx1 = line.find_first_of(',',idx0);
+          entry = line.substr(idx0,idx1-idx0);
+
+          if(entry.find_first_of('"') != std::string::npos){
+            //Opening bracket
+            idx1 = line.find_first_of('"',idx0);
+            //Closing bracket
+            idx1 = line.find_first_of('"',idx1+1);
+            //Final comma
+            idx1 = line.find_first_of(',',idx1);
+            entry = line.substr(idx0,idx1-idx0);
+          }
+
+          ++column;
+        }while( idx0 !=  std::string::npos && idx1 !=  std::string::npos );
+
+        dataSet.taxTable.push_back(dataRow);
+
+
+    }
+    file.close();
+  }else{
+   std::cout << " Warning: Reverting to default tax rate. Failed to " 
+             << " read in " << fileName << std::endl; 
+  }
+
+  return validFormat;
+};
+
+
 int calcDifferenceInDaysBetweenTwoDates(std::string &dateA,
                                         const char* dateAFormat,
                                         std::string &dateB,
@@ -158,6 +305,7 @@ int main (int argc, char* argv[]) {
   
   std::string defaultSpreadJsonFile;  
   std::string bondYieldJsonFile;  
+  std::string corpTaxesWorldFile;
 
   double defaultInterestCover;
 
@@ -234,11 +382,17 @@ int main (int argc, char* argv[]) {
 
     TCLAP::ValueArg<double> defaultTaxRateInput("t",
       "default_tax_rate", 
-      "The tax rate used if the tax rate cannot be calculated, or averaged, from"
-      " the data",
-      false,0.40,"double");
+      "The tax rate used if the tax rate cannot be found in tabular data."
+      " The default is 0.256 (25.6%) which is the world wide average"
+      "weighted by GDP reported by the tax foundation.",
+      false,0.256,"double");
     cmd.add(defaultTaxRateInput);  
 
+    TCLAP::ValueArg<std::string> corpTaxesWorldFileInput("w","global_corporate_tax_rate_file", 
+      "Corporate taxes reported around the world from the tax foundation"
+      " in csv format (https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/)",
+      false,"","string");
+    cmd.add(corpTaxesWorldFileInput);  
 
     TCLAP::ValueArg<double> defaultRiskFreeRateInput("r",
       "default_risk_free_rate", 
@@ -326,6 +480,7 @@ int main (int argc, char* argv[]) {
     analyzeQuarterlyData  = quarterlyAnalysisInput.getValue();
 
     defaultTaxRate      = defaultTaxRateInput.getValue();
+    corpTaxesWorldFile  = corpTaxesWorldFileInput.getValue();
     defaultRiskFreeRate = defaultRiskFreeRateInput.getValue();
     defaultBeta         = defaultBetaInput.getValue();
     equityRiskPremium   = equityRiskPremiumInput.getValue();
@@ -389,6 +544,10 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Default tax rate" << std::endl;
       std::cout << "    " << defaultTaxRate << std::endl;
+
+      std::cout << "  Corporate tax rate file from https://taxfoundation.org"
+                << std:: endl;
+      std::cout << "    " << corpTaxesWorldFile << std::endl;
 
       std::cout << "  Annual default risk free rate" << std::endl;
       std::cout << "    " << defaultRiskFreeRate << std::endl;
@@ -467,6 +626,23 @@ int main (int argc, char* argv[]) {
 
   unsigned int count=0;
 
+  //============================================================================
+  // Load the corporate tax rate table
+  //============================================================================
+  bool flag_usingTaxTable=false;
+  TaxFoundationDataSet corpWorldTaxTable;
+  if(corpTaxesWorldFile.length() > 0){
+    flag_usingTaxTable=true;
+    bool validFormat = 
+      loadTaxFoundationDataSet(corpTaxesWorldFile,corpWorldTaxTable);
+
+    if(!validFormat){
+      flag_usingTaxTable=false;
+      std::cout << "Warning: could not load the world corporate tax rate file "
+                << corpTaxesWorldFile << std::endl;
+      std::cout << "Reverting to the default rate " << std::endl;
+    }
+  }
   //============================================================================
   // Load the default spread array 
   //============================================================================
