@@ -22,6 +22,8 @@ const char *Y = "yearly";
 const char *Q = "quarterly";
 
 
+
+
 class FinancialAnalysisToolkit {
 
   public:
@@ -432,7 +434,7 @@ class FinancialAnalysisToolkit {
     static double calcCashConversionRatio(nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      const char *timeUnit,
-                                     double defaultTaxRate,
+                                     double taxRate,
                                      bool appendTermRecord,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
@@ -502,7 +504,7 @@ class FinancialAnalysisToolkit {
       double freeCashFlow =  calcFreeCashFlow(  jsonData,
                                                 date,
                                                 timeUnit, 
-                                                defaultTaxRate, 
+                                                taxRate, 
                                                 appendTermRecord,
                                                 categoryName, 
                                                 termNames, 
@@ -697,14 +699,14 @@ class FinancialAnalysisToolkit {
 
 
     //==========================================================================
-    static double calcFreeCashFlow(nlohmann::ordered_json &jsonData, 
-                                     std::string &date,
-                                     const char *timeUnit,
-                                     double defaultTaxRate,
-                                     bool appendTermRecord,
-                                     std::string parentCategoryName,
-                                     std::vector< std::string> &termNames,
-                                     std::vector< double > &termValues){
+    static double calcFreeCashFlow( nlohmann::ordered_json &jsonData, 
+                                    std::string &date,
+                                    const char *timeUnit,
+                                    double taxRate,
+                                    bool appendTermRecord,
+                                    std::string parentCategoryName,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
 
       
       //Investopedia definition
@@ -720,6 +722,7 @@ class FinancialAnalysisToolkit {
       std::string resultName(parentCategoryName);
       resultName.append("freeCashFlow_");                    
 
+      /*
       double taxRate = calcTaxRate( jsonData,
                                     date,
                                     timeUnit,
@@ -731,7 +734,8 @@ class FinancialAnalysisToolkit {
       if(std::isnan(taxRate)){
         taxRate=defaultTaxRate;
         termValues[termValues.size()-1]=defaultTaxRate;
-      }                                                  
+      }        
+      */                                          
 
       double taxShieldOnInterestExpense = interestExpense*taxRate;
 
@@ -1134,8 +1138,8 @@ class FinancialAnalysisToolkit {
 
 
     //==========================================================================
-
-    static double calcTaxRate(nlohmann::ordered_json &jsonData, 
+    static double calcTaxRateFromTheTaxProvision(
+                                     nlohmann::ordered_json &jsonData, 
                                      std::string &date,
                                      const char *timeUnit,
                                      bool appendTermRecord,
@@ -1242,7 +1246,7 @@ class FinancialAnalysisToolkit {
                                      std::string &date,
                                      std::string &previousDate,                                     
                                      const char *timeUnit,
-                                     double defaultTaxRate,
+                                     double taxRate,
                                      bool zeroNansInDepreciation,
                                      bool appendTermRecord,
                                      std::vector< std::string> &termNames,
@@ -1255,6 +1259,7 @@ class FinancialAnalysisToolkit {
 
       std::string resultName("freeCashFlowToFirm_");
 
+      /*
       double taxRate = calcTaxRate(jsonData, 
                                     date, 
                                     timeUnit, 
@@ -1267,6 +1272,7 @@ class FinancialAnalysisToolkit {
         taxRate=defaultTaxRate;
         termValues[termValues.size()-1]=defaultTaxRate;
       }
+      */
 
       std::string parentCategoryName("freeCashFlowToFirm_");
 
@@ -1471,7 +1477,7 @@ class FinancialAnalysisToolkit {
                                 double riskFreeRate,
                                 double costOfCapital,
                                 double costOfCapitalMature,
-                                double defaultTaxRate,
+                                double taxRate,
                                 int numberOfYearsForTerminalValuation,                              
                                 bool appendTermRecord,
                                 std::vector< std::string> &termNames,
@@ -1486,6 +1492,7 @@ class FinancialAnalysisToolkit {
         termValues.push_back(costOfCapital);
       }
 
+      /*
       double taxRate = calcTaxRate(jsonData, 
                                     date, 
                                     timeUnit, 
@@ -1496,6 +1503,7 @@ class FinancialAnalysisToolkit {
       if(std::isnan(taxRate)){
         taxRate=defaultTaxRate;
       }
+      */
 
       double reinvestmentRate = calcReinvestmentRate(jsonData,
                                                     date,

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <cmath>
+#include <limits>
 
 #include "date.h"
 #include <iostream>
@@ -16,7 +17,6 @@
 #include "JsonFunctions.h"
 
 
-
 struct TaxFoundationDataSet{
   std::vector< int > index;
   std::vector< int > year;
@@ -26,6 +26,79 @@ struct TaxFoundationDataSet{
   std::vector< std::string > country;
   std::vector< std::vector < double > > taxTable; 
 };
+
+double getTaxRateFromTable(std::string& countryISO2, int year, int yearMin, 
+                           TaxFoundationDataSet &taxDataSet){
+
+  double taxRate = std::numeric_limits<double>::quiet_NaN();                              
+
+  //Get the country index
+  bool foundCountry=false;
+  int indexCountry = 0;
+  while(indexCountry < taxDataSet.CountryISO3.size() && !foundCountry ){
+    if(countryISO2.compare(taxDataSet.CountryISO2[indexCountry])==0){
+      foundCountry=true;
+    }else{
+      ++indexCountry;
+    }
+  }  
+
+  int indexYearMin  = -1;
+  int indexYear     = -1;
+
+  if(foundCountry){
+    //Get the closest index to yearMin
+    int index         = 0;
+    int err           = 1;
+
+    int errYear       = std::numeric_limits<int>::max();
+
+    while(index < taxDataSet.year.size() && err > 0 ){
+      err = yearMin - taxDataSet.year[index];
+      if(err < errYear ){
+        errYear = err;
+        indexYearMin = index;
+      }else{
+        ++index;
+      }
+    }  
+    //Get the closest index to year
+    index     = indexYearMin;
+    err       = 1;
+    errYear   = std::numeric_limits<int>::max();
+
+    while(index < taxDataSet.year.size() && err > 0 ){
+      err = year - taxDataSet.year[index];
+      if(err < errYear ){
+        errYear = err;
+        indexYear = index;
+      }else{
+        ++index;
+      }
+    }  
+  }
+
+  //Scan backwards from the most recent acceptable year to year min
+  //and return the first valid tax rate
+  if(foundCountry && (indexYear > 0 && indexYearMin > 0)){
+    bool validIndex=true;
+
+    int index = indexYear;
+    taxRate = taxDataSet.taxTable[indexCountry][index];
+    while( std::isnan(taxRate) && index > indexYearMin && validIndex){
+      --index;
+      if(index < 0){
+        validIndex = false;
+      }else{
+        taxRate = taxDataSet.taxTable[indexCountry][index];   
+      }
+    }
+    
+  }
+
+  return taxRate;
+
+}
 
 bool loadTaxFoundationDataSet(std::string &fileName, 
                               TaxFoundationDataSet &dataSet){
@@ -584,6 +657,9 @@ int main (int argc, char* argv[]) {
               << " for arg "  << e.argId() << std::endl; 
   }
 
+  int acceptableBackwardsYearErrorForTaxRate = 5;
+  //This defines how far back in time data from the tax table can be taken
+  //to approximate the tax of this year.
 
   int maxDayErrorHistoricalData = maxDayErrorTabularData; 
   // Historical data has a resolution of 1 day
@@ -649,7 +725,8 @@ int main (int argc, char* argv[]) {
   using json = nlohmann::ordered_json;    
 
   std::ifstream defaultSpreadFileStream(defaultSpreadJsonFile.c_str());
-  json jsonDefaultSpread = nlohmann::ordered_json::parse(defaultSpreadFileStream);
+  json jsonDefaultSpread = 
+    nlohmann::ordered_json::parse(defaultSpreadFileStream);
   //std::cout << jsonDefaultSpread.at(1).at(2);
   if(verbose){
     std::cout << std::endl;
@@ -792,6 +869,16 @@ int main (int argc, char* argv[]) {
         }
       }
     }
+    //Extract the countryName and ISO
+    std::string countryName;
+    std::string countryISO2;
+    if(validInput){
+      JsonFunctions::getJsonString(fundamentalData[GEN]["CountryName"],
+                                   countryName);
+      JsonFunctions::getJsonString(fundamentalData[GEN]["CountryISO"],
+                                   countryISO2);
+
+    }
 
     //==========================================================================
     //Load the (primary) historical (price) file
@@ -833,7 +920,7 @@ int main (int argc, char* argv[]) {
 
 
 
-     std::vector< std::string > datesCommon;
+    std::vector< std::string > datesCommon;
     std::vector< unsigned int > indicesCommonHistoricalDates;
     std::vector< unsigned int > indicesCommonFundamentalDates;
 
@@ -932,7 +1019,8 @@ int main (int argc, char* argv[]) {
       std::vector< double > tempValues;
       std::string tmpResultName("");
       unsigned int taxRateEntryCount = 0;
-      double meanTaxRate = 0.;
+      double meanTaxRate = 0.; 
+      double taxRate = 0.;
       unsigned int meanInterestCoverEntryCount = 0;
       double meanInterestCover = 0.;
 
@@ -956,16 +1044,31 @@ int main (int argc, char* argv[]) {
 
         std::string date = datesCommon[indexDate]; 
 
+        /*
         double taxRateEntry = FinancialAnalysisToolkit::
-                                calcTaxRate(fundamentalData, 
+                                calcTaxRateFromTheTaxProvision(fundamentalData, 
                                             date, 
                                             timePeriod.c_str(), 
                                             false, 
                                             tmpResultName,
                                             termNames,
                                             termValues);
-        if(!std::isnan(taxRateEntry)){
-          meanTaxRate += taxRateEntry;
+        */
+        if(flag_usingTaxTable){
+          int year  = std::stoi(date.substr(0,4));
+          int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
+          taxRate = getTaxRateFromTable(countryISO2, year, yearMin, 
+                                        corpWorldTaxTable);
+          taxRate = taxRate*0.01;  //The table is in percent                                     
+          if(std::isnan(taxRate)){
+            taxRate=defaultTaxRate;
+          }                              
+        }else{
+          taxRate = defaultTaxRate;
+        }
+        
+        if(!std::isnan(taxRate)){
+          meanTaxRate += taxRate;
           ++taxRateEntryCount;
         }
 
@@ -983,11 +1086,13 @@ int main (int argc, char* argv[]) {
         }
       }        
 
+      
       if(taxRateEntryCount > 0){
         meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
       }else{
         meanTaxRate = defaultTaxRate;
       }
+      
 
       if(meanInterestCoverEntryCount > 0){
         meanInterestCover = meanInterestCover 
@@ -1109,29 +1214,49 @@ int main (int argc, char* argv[]) {
 
         std::string parentName = "afterTaxCostOfDebt_";
         
+
+        if(flag_usingTaxTable){
+          int year  = std::stoi(date.substr(0,4));
+          int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
+          taxRate = getTaxRateFromTable(countryISO2, year, yearMin, 
+                                        corpWorldTaxTable);
+          taxRate = taxRate*0.01;                                        
+          if(std::isnan(taxRate)){
+            taxRate=meanTaxRate;
+          }                    
+          if(std::isnan(taxRate)){
+            taxRate=defaultTaxRate;
+          }          
+        }else{
+          taxRate = defaultTaxRate;
+        }        
+        /*
         double taxRate = FinancialAnalysisToolkit::
-            calcTaxRate(fundamentalData,
+            calcTaxRateFromTheTaxProvision(fundamentalData,
                         date,
                         timePeriod.c_str(),
                         appendTermRecord,
                         parentName,
                         termNames,
                         termValues);
-        
         if(std::isnan(taxRate) || std::isinf(taxRate)){
           taxRate = meanTaxRate;
           if(appendTermRecord){
             termValues[termValues.size()-1]=taxRate;
           }
         }
+        */
+        
                         
         double afterTaxCostOfDebt = (riskFreeRate+defaultSpread)*(1.0-taxRate);
         termNames.push_back("afterTaxCostOfDebt_riskFreeRate");
         termNames.push_back("afterTaxCostOfDebt_defaultSpread");
+        termNames.push_back("afterTaxCostOfDebt_taxRate");
         termNames.push_back("afterTaxCostOfDebt");
         
         termValues.push_back(riskFreeRate);
         termValues.push_back(defaultSpread);
+        termValues.push_back(taxRate);
         termValues.push_back(afterTaxCostOfDebt);
 
         //======================================================================
@@ -1272,7 +1397,7 @@ int main (int argc, char* argv[]) {
           calcCashConversionRatio(  fundamentalData,
                                     date,
                                     timePeriod.c_str(), 
-                                    meanTaxRate,
+                                    taxRate,
                                     appendTermRecord,
                                     termNames,
                                     termValues);
@@ -1333,7 +1458,7 @@ int main (int argc, char* argv[]) {
                                  date, 
                                  previousTimePeriod, 
                                  timePeriod.c_str(),
-                                 meanTaxRate,
+                                 taxRate,
                                  zeroNansInDepreciation,
                                  appendTermRecord,
                                  termNames, 
@@ -1351,7 +1476,7 @@ int main (int argc, char* argv[]) {
               riskFreeRate,
               costOfCapital,
               costOfCapitalMature,
-              meanTaxRate,
+              taxRate,
               numberOfYearsForTerminalValuation,
               appendTermRecord,
               termNames,
