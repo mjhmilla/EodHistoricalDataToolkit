@@ -466,8 +466,8 @@ int main (int argc, char* argv[]) {
       " in csv format (https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/)",
       false,"","string");
     cmd.add(corpTaxesWorldFileInput);  
-
     TCLAP::ValueArg<double> defaultRiskFreeRateInput("r",
+
       "default_risk_free_rate", 
       "The risk free rate of return, which is often set to the return on "
       "a 10 year or 30 year bond as noted from Ch. 3 of Damodran.",
@@ -1288,10 +1288,10 @@ int main (int argc, char* argv[]) {
 
         std::string closestHistoricalDate= datesHistorical[indexHistoricalData]; 
 
-        double shareOpenValue = std::nan("1");
+        double adjustedClose = std::nan("1");
         try{
-          shareOpenValue = JsonFunctions::getJsonFloat(
-                              historicalData[ indexHistoricalData ]["open"]);       
+          adjustedClose = JsonFunctions::getJsonFloat(
+                              historicalData[ indexHistoricalData ]["adjusted_close"]);       
         }catch( std::invalid_argument const& ex){
           std::cout << " Historical record (" << closestHistoricalDate << ")"
                     << " is missing an opening share price."
@@ -1299,7 +1299,7 @@ int main (int argc, char* argv[]) {
         }
 
         double marketCapitalization = 
-          shareOpenValue*commonStockSharesOutstanding;
+          adjustedClose*commonStockSharesOutstanding;
 
         //======================================================================        
         //Evaluate a weighted cost of capital
@@ -1313,7 +1313,7 @@ int main (int argc, char* argv[]) {
 
         termNames.push_back("costOfCapital_shortLongTermDebtTotal");
         termNames.push_back("costOfCapital_commonStockSharesOutstanding");
-        termNames.push_back("costOfCapital_shareOpenValue");
+        termNames.push_back("costOfCapital_adjustedClose");
         termNames.push_back("costOfCapital_marketCapitalization");
         termNames.push_back("costOfCapital_costOfEquityAsAPercentage");
         termNames.push_back("costOfCapital_afterTaxCostOfDebt");
@@ -1321,7 +1321,7 @@ int main (int argc, char* argv[]) {
 
         termValues.push_back(shortLongTermDebtTotal);
         termValues.push_back(commonStockSharesOutstanding);
-        termValues.push_back(shareOpenValue);
+        termValues.push_back(adjustedClose);
         termValues.push_back(marketCapitalization);
         termValues.push_back(costOfEquityAsAPercentage);
         termValues.push_back(afterTaxCostOfDebt);
@@ -1530,7 +1530,7 @@ int main (int argc, char* argv[]) {
         std::string rFcfToEvLabel = "residualFreeCashFlowToEnterpriseValue_"; 
         double enterpriseValue = FinancialAnalysisToolkit::
             calcEnterpriseValue(fundamentalData, 
-                                shareOpenValue, 
+                                adjustedClose, 
                                 date,
                                 timePeriod.c_str(),
                                 replaceNanInShortLongDebtWithLongDebt, 

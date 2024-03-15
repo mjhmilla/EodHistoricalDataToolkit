@@ -1414,7 +1414,7 @@ class FinancialAnalysisToolkit {
 
     //==========================================================================
     static double calcEnterpriseValue(nlohmann::ordered_json &fundamentalData, 
-                                    double sharePriceOnDate, 
+                                    double sharePriceAdjustedClose, 
                                     std::string &date,
                                     const char *timeUnit, 
                                     bool replaceNanInShortLongDebtWithLongDebt,
@@ -1439,7 +1439,7 @@ class FinancialAnalysisToolkit {
         fundamentalData[FIN][BAL][timeUnit][date.c_str()]
                           ["commonStockSharesOutstanding"]);      
 
-      double marketCapitalization = sharePriceOnDate*commonStockSharesOutstanding;
+      double marketCapitalization = sharePriceAdjustedClose*commonStockSharesOutstanding;
 
       double enterpriseValue = marketCapitalization
                               + shortLongTermDebtTotal 
@@ -1449,14 +1449,14 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName+"enterpriseValue_shortLongTermDebtTotal");
         termNames.push_back(parentCategoryName+"enterpriseValue_cashAndEquivalents");
         termNames.push_back(parentCategoryName+"enterpriseValue_commonStockSharesOutstanding");
-        termNames.push_back(parentCategoryName+"enterpriseValue_sharePrice");
+        termNames.push_back(parentCategoryName+"enterpriseValue_adjustedClose");
         termNames.push_back(parentCategoryName+"enterpriseValue_marketCapitalization");
         termNames.push_back(parentCategoryName+"enterpriseValue");
 
         termValues.push_back(shortLongTermDebtTotal);
         termValues.push_back(cashAndEquivalents);
         termValues.push_back(commonStockSharesOutstanding);
-        termValues.push_back(sharePriceOnDate);
+        termValues.push_back(sharePriceAdjustedClose);
         termValues.push_back(marketCapitalization);
         termValues.push_back(enterpriseValue);      
       }
