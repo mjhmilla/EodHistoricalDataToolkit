@@ -44,6 +44,10 @@ ADD_EXECUTABLE(
   src/calculate.cc)
 
 ADD_EXECUTABLE(
+  rank
+  src/rank.cc)  
+
+ADD_EXECUTABLE(
   scan
   src/scan.cc)
   
@@ -55,11 +59,9 @@ ADD_EXECUTABLE(
   applyPatch
   src/applyPatch.cc)  
 
-
 ADD_EXECUTABLE(
   utilities
   src/utilities.cc)
-
 
 TARGET_LINK_LIBRARIES(sandbox
   ${CURL_LIBRARIES}
@@ -76,7 +78,6 @@ TARGET_LINK_LIBRARIES(applyPatch
 TARGET_LINK_LIBRARIES(generatePatch
   ${CURL_LIBRARIES}
 )
-
 
 message("EIGEN3_INCLUDE_DIR           :" ${EIGEN3_INCLUDE_DIR})
 message("TCLAP_INCLUDE_DIR            :" ${TCLAP_INCLUDE_PATH})
