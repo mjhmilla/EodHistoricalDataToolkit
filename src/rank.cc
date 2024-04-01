@@ -285,6 +285,162 @@ bool readMetricData(std::string &analysisFolder,
 }
 
 //==============================================================================
+void createMetricTable( 
+      std::vector< TickerMetricData > &tickerMetricDataSet,
+      std::vector< MetricTable > &metricTableSet,
+      date::year_month_day &youngestDate,
+      date::year_month_day &oldestDate,
+      unsigned int referenceMonth,
+      bool analyzeQuarters, 
+      bool verbose){
+
+  MetricTable metricTableEntry;      
+
+  unsigned int durationMonths = 12;
+  if(analyzeQuarters){
+    durationMonths = 3; 
+  }
+
+  date::year_month_day periodStart = 
+    youngestDate.year()/date::month(referenceMonth)/1;
+  date::year_month_day periodEnd = periodStart;
+  periodEnd = periodEnd + date::months(durationMonths);
+
+  //make sure that the first period contains the youngest date
+  while(periodEnd < youngestDate){
+    periodStart += date::months(durationMonths);
+    periodEnd = periodStart;
+    periodEnd += date::months(durationMonths);
+  }
+
+  date::sys_days dayStart(periodStart);
+  date::sys_days dayEnd(periodEnd);
+  date::sys_days dayOldest(oldestDate);
+
+  //Build the set of analysis periods;
+  while( dayStart > dayOldest ){
+    
+    metricTableEntry.dateStart=dayStart;
+
+    //Subtract off 1 day from the end so that the periods are non-overlapping
+    metricTableEntry.dateEnd  = dayEnd;        
+    metricTableSet.push_back(metricTableEntry);
+
+    dayEnd     = dayStart-date::days(1);
+    periodStart= dayStart;
+    periodStart= periodStart - date::months(durationMonths);
+    dayStart   = periodStart; 
+  }
+  
+  //Scan through the TickerMetricDataSet and put each entry into
+  //the correct analysis period
+  for(auto &tickerEntry : tickerMetricDataSet){
+
+    for(size_t indexTicker =0; 
+                indexTicker< tickerEntry.dates.size(); 
+                ++indexTicker){
+
+      bool found=false;
+      size_t indexTable=0;         
+      while( !found && indexTable < metricTableSet.size()){
+        if(  tickerEntry.dates[indexTicker] >= metricTableSet[indexTable].dateStart 
+          && tickerEntry.dates[indexTicker] <= metricTableSet[indexTable].dateEnd){
+
+          metricTableSet[indexTable].tickers.push_back(tickerEntry.ticker);
+          std::vector< double > metric;
+          for(size_t indexMetric=0; 
+            indexMetric < tickerEntry.metrics[indexTicker].size(); 
+            ++indexMetric){
+            metric.push_back(tickerEntry.metrics[indexTicker][indexMetric]);
+          }
+          metricTableSet[indexTable].metrics.push_back(metric);
+          found=true;
+        }          
+        ++indexTable;
+      }
+    }
+  }  
+
+}
+
+//==============================================================================
+void sortMetricTable(std::vector< MetricTable > &metricTableSet,
+     std::vector< std::vector < std::string > > &listOfRankingMetrics){
+
+  //Evaluate each metric ranking
+  for(auto &tableEntry : metricTableSet){
+    
+    tableEntry.metricRank.resize(tableEntry.metrics.size());
+    tableEntry.metricRankSum.resize(tableEntry.metrics.size());
+
+    for(size_t i =0; i<tableEntry.metricRank.size();++i){
+      tableEntry.metricRank[i].resize(tableEntry.metrics[i].size());
+    }
+
+    //Extract the jth column for sorting. There is not an elegant
+    //way to do this, so I'm just copying it over.
+    std::vector< double > column;
+    column.resize(tableEntry.metrics.size());
+    for(size_t j=0; j < tableEntry.metrics[0].size(); ++j){
+      for(size_t i =0; i < tableEntry.metrics.size(); ++i){
+        column[i] = tableEntry.metrics[i][j];
+      }
+      //Get the sorted indices 
+      bool sortAscending=true;
+      if(listOfRankingMetrics[j][1].compare("biggestIsBest")==0){
+        sortAscending=false;
+      }
+      std::vector< size_t > columnRank = rank(column,sortAscending);
+
+      for(size_t i =0; i < tableEntry.metrics.size(); ++i){
+        tableEntry.metricRank[i][j] = columnRank[i];
+      }
+    }
+    //Evaluate the combined ranking
+    tableEntry.metricRankSum.resize(tableEntry.metrics.size());
+    std::fill(tableEntry.metricRankSum.begin(),
+              tableEntry.metricRankSum.end(),0);
+
+    for(size_t i=0; i<tableEntry.metricRank.size();++i){
+      for(size_t j=0; j<tableEntry.metricRank[i].size();++j){
+        size_t k = tableEntry.metricRank[i][j];
+        tableEntry.metricRankSum[k]+=i;
+      }
+    }
+
+    //Swap the: now the index holds the rank.
+    for(size_t i=0; i<tableEntry.metricRank.size();++i){
+      for(size_t j=0; j<tableEntry.metricRank[i].size();++j){
+        size_t k = tableEntry.metricRank[i][j];
+        tableEntry.metricRank[k][j]=i;
+      }
+    }
+
+    tableEntry.rank = rank(tableEntry.metricRankSum,true);
+    
+    //Reorder all fields according to the ranking
+    MetricTable tableEntryUnsorted = tableEntry;
+    for(size_t i=0; i<tableEntry.rank.size();++i){
+
+      size_t k = tableEntryUnsorted.rank[i];
+      tableEntry.tickers[i]       = tableEntryUnsorted.tickers[k];
+      tableEntry.rank[i]          = i;
+      tableEntry.metricRankSum[i] = tableEntryUnsorted.metricRankSum[k];
+
+      for(size_t j=0;j<tableEntryUnsorted.metrics[0].size();++j){
+        tableEntry.metrics[i][j]    = tableEntryUnsorted.metrics[k][j];
+        tableEntry.metricRank[i][j] = tableEntryUnsorted.metricRank[k][j];
+      }
+    }
+
+  }
+
+};
+
+//==============================================================================
+
+
+//==============================================================================
 int main (int argc, char* argv[]) {
 
   std::string exchangeCode;
@@ -417,120 +573,20 @@ int main (int argc, char* argv[]) {
     //==========================================================================
     if(inputsAreValid){
       std::vector< MetricTable > metricTableSet;
-      MetricTable metricTableEntry;      
 
-
-      unsigned int durationMonths = 12;
-      if(analyzeQuarters){
-        durationMonths = 3; 
-      }
-
-      date::year_month_day periodStart = 
-        youngestDate.year()/date::month(referenceMonth)/1;
-      date::year_month_day periodEnd = periodStart;
-      periodEnd = periodEnd + date::months(durationMonths);
-
-      //make sure that the first period contains the youngest date
-      while(periodEnd < youngestDate){
-        periodStart += date::months(durationMonths);
-        periodEnd = periodStart;
-        periodEnd += date::months(durationMonths);
-      }
-
-      date::sys_days dayStart(periodStart);
-      date::sys_days dayEnd(periodEnd);
-      date::sys_days dayOldest(oldestDate);
-
-      //Build the set of analysis periods;
-      while( dayStart > dayOldest ){
-        
-        metricTableEntry.dateStart=dayStart;
-
-        //Subtract off 1 day from the end so that the periods are non-overlapping
-        metricTableEntry.dateEnd  = dayEnd;        
-        metricTableSet.push_back(metricTableEntry);
-
-        dayEnd     = dayStart-date::days(1);
-        periodStart= dayStart;
-        periodStart= periodStart - date::months(durationMonths);
-        dayStart   = periodStart; 
-      }
+      createMetricTable( 
+            tickerMetricDataSet,
+            metricTableSet,
+            youngestDate,
+            oldestDate,
+            referenceMonth,
+            analyzeQuarters, 
+            verbose);
       
-      //Scan through the TickerMetricDataSet and put each entry into
-      //the correct analysis period
-      for(auto &tickerEntry : tickerMetricDataSet){
+      sortMetricTable(metricTableSet, listOfRankingMetrics);
 
-        for(size_t indexTicker =0; 
-                   indexTicker< tickerEntry.dates.size(); 
-                   ++indexTicker){
-
-          bool found=false;
-          size_t indexTable=0;         
-          while( !found && indexTable < metricTableSet.size()){
-            if(  tickerEntry.dates[indexTicker] >= metricTableSet[indexTable].dateStart 
-              && tickerEntry.dates[indexTicker] <= metricTableSet[indexTable].dateEnd){
-
-              metricTableSet[indexTable].tickers.push_back(tickerEntry.ticker);
-              std::vector< double > metric;
-              for(size_t indexMetric=0; 
-                indexMetric < tickerEntry.metrics[indexTicker].size(); 
-                ++indexMetric){
-                metric.push_back(tickerEntry.metrics[indexTicker][indexMetric]);
-              }
-              metricTableSet[indexTable].metrics.push_back(metric);
-              found=true;
-            }          
-            ++indexTable;
-          }
-        }
-      }
+      bool here=1;
       
-      //Evaluate each metric ranking
-      for(auto tableEntry : metricTableSet){
-        
-        tableEntry.metricRank.resize(tableEntry.metrics.size());
-        tableEntry.metricRankSum.resize(tableEntry.metrics.size());
-        for(size_t i =0; i<tableEntry.metricRank.size();++i){
-          tableEntry.metricRank[i].resize(tableEntry.metrics[i].size());
-        }
-
-        tableEntry.metricRank[0].resize(tableEntry.metrics[0].size());
-
-
-        //Extract the jth column for sorting. There is not an elegant
-        //way to do this, so I'm just copying it over.
-        std::vector< double > column;
-        column.resize(tableEntry.metrics.size());
-        for(size_t j=0; j < tableEntry.metrics[0].size(); ++j){
-          for(size_t i =0; i < tableEntry.metrics.size(); ++i){
-            column[i] = tableEntry.metrics[i][j];
-          }
-          //Get the sorted indices 
-          bool sortAscending=true;
-          if(listOfRankingMetrics[j][1].compare("biggestIsBest")==0){
-            sortAscending=false;
-          }
-          std::vector< size_t > columnRank = rank(column,sortAscending);
-
-          for(size_t i =0; i < tableEntry.metrics.size(); ++i){
-            tableEntry.metricRank[i][j] = columnRank[i];
-          }
-        }
-        //Evaluate the combined ranking
-        for(size_t i=0; i<tableEntry.metricRank.size();++i){
-          tableEntry.metricRankSum[i]=0;
-          for(size_t j=0; j<tableEntry.metricRank[i].size();++j){
-            tableEntry.metricRankSum[i]+=tableEntry.metricRank[i][j];
-          }
-        }
-
-        tableEntry.rank = rank(tableEntry.metricRankSum,true);
-        bool here=true;
-
-      }
-
-      
-
     }
 
 
