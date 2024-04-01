@@ -121,6 +121,7 @@ bool readMetricData(std::string &analysisFolder,
               std::vector< TickerMetricData > &tickerMetricDataSet,
               date::year_month_day &youngestDate,
               date::year_month_day &oldestDate,
+              bool ignoreNegativeValues,
               bool verbose){
 
   bool inputsAreValid=true;
@@ -212,6 +213,8 @@ bool readMetricData(std::string &analysisFolder,
           metricData[i]=JsonFunctions::getJsonFloat(
               analysisData[el.key()][listOfRankingMetrics[i][0]]);
           if( std::isnan(metricData[i])){
+            validData = false;
+          }else if(metricData[i] < 0 && ignoreNegativeValues){
             validData = false;
           }
         }
@@ -409,9 +412,12 @@ void sortMetricTable(std::vector< MetricTable > &metricTableSet,
     }
 
     //Swap the: now the index holds the rank.
+    std::vector< std::vector< size_t > > metricRankUnsorted;
+    metricRankUnsorted = tableEntry.metricRank;
+
     for(size_t i=0; i<tableEntry.metricRank.size();++i){
       for(size_t j=0; j<tableEntry.metricRank[i].size();++j){
-        size_t k = tableEntry.metricRank[i][j];
+        size_t k = metricRankUnsorted[i][j];
         tableEntry.metricRank[k][j]=i;
       }
     }
@@ -449,7 +455,8 @@ int main (int argc, char* argv[]) {
   std::string rankingFilePath;
   bool analyzeYears=true;
   bool analyzeQuarters=false;
-  unsigned int referenceMonth = 12; 
+  unsigned int referenceMonth = 12;
+  bool ignoreNegativeValues=true; 
 
   int maxDifferenceInDays = 15; //a half month at most.
 
@@ -500,6 +507,10 @@ int main (int argc, char* argv[]) {
       false,1,"unsigned int");
     cmd.add(referenceMonthInput);
 
+    TCLAP::SwitchArg ignoreNegativeValuesInput("n","ignore_negative_values",
+      "Ignore negative values", false);
+    cmd.add(ignoreNegativeValuesInput);    
+
 
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
@@ -514,6 +525,7 @@ int main (int argc, char* argv[]) {
     analyzeQuarters       = quarterlyAnalysisInput.getValue();
     analyzeYears          = !analyzeQuarters;
     referenceMonth        = referenceMonthInput.getValue();
+    ignoreNegativeValues  = ignoreNegativeValuesInput.getValue();
 
     if(referenceMonth < 1 || referenceMonth > 12){
       std::cout << "Exiting: referenceMonth must be between 1-12" << std::endl;
@@ -563,13 +575,12 @@ int main (int argc, char* argv[]) {
                                       tickerMetricDataSet,
                                       youngestDate,
                                       oldestDate,
+                                      ignoreNegativeValues,
                                       verbose);
     }
 
     //==========================================================================
-    //
-    //Create the individual ranking tables 
-    //
+    //Create the ranking table and write to file 
     //==========================================================================
     if(inputsAreValid){
       std::vector< MetricTable > metricTableSet;
@@ -585,8 +596,46 @@ int main (int argc, char* argv[]) {
       
       sortMetricTable(metricTableSet, listOfRankingMetrics);
 
-      bool here=1;
-      
+      std::string fileName = std::filesystem::path(rankingFilePath).stem();
+      fileName.append("_ranking.csv");
+      std::string rankingFilePath = rankFolderOutput;
+      rankingFilePath.append(fileName);
+
+      std::ofstream rankingFile;
+      rankingFile.open(rankingFilePath);
+
+      for(auto const &tableEntry: metricTableSet){
+        date::year_month_day ymdStart = tableEntry.dateStart;
+        date::year_month_day ymdEnd = tableEntry.dateEnd;
+        rankingFile << ymdStart.year()<<"-"<<ymdStart.month()<<"-"<<ymdStart.day()
+                    <<'\n';
+        rankingFile << ymdEnd.year()<<"-"<<ymdEnd.month()<<"-"<<ymdEnd.day()
+                    <<'\n';
+
+        rankingFile <<"Ticker"<<","<<"ranking"<<","<<"metricRankSum";
+        for(size_t j=0; j<listOfRankingMetrics.size();++j){
+          rankingFile << "," << listOfRankingMetrics[j][0]<<"_rank";
+          rankingFile << "," << listOfRankingMetrics[j][0]<<"_value";          
+        }
+        rankingFile <<'\n';
+
+        for(size_t i=0; i<tableEntry.tickers.size();++i){
+          rankingFile     <<      tableEntry.tickers[i];
+          rankingFile     <<","<< tableEntry.rank[i];
+          rankingFile     <<","<< tableEntry.metricRankSum[i];
+          for(size_t j=0; j<tableEntry.metrics[i].size();++j){
+            rankingFile   <<","<<tableEntry.metricRank[i][j];
+            rankingFile   <<","<<tableEntry.metrics[i][j];
+          }
+          rankingFile <<'\n';
+        }
+        rankingFile <<'\n';
+      }
+
+      rankingFile.close();
+
+
+
     }
 
 
