@@ -10,4 +10,5 @@ data/countryCodeExchangeMap.csv
 data/countryCodeList.ods
 !data/defaultSpreadTable.json
 !data/bondYieldTable.json
+data/STU/rankDataTesting/*.csv
 data/STU/rankData/*.csv
