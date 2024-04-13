@@ -52,37 +52,6 @@ std::vector< size_t > rank(const std::vector< T > &v, bool sortAscending){
 } 
 
 //==============================================================================
-bool loadEodJsonFile( const std::string &ticker, const std::string &folder, 
-                      nlohmann::ordered_json &eodJsonData, 
-                      bool verbose){
-
-  bool success=true;
-        
-  try{
-    //Load the json file                    
-    std::stringstream ss;
-    ss << folder << ticker;
-    if(ticker.length() < 5){
-      ss << ".json";
-    }else if(ticker.substr(ticker.length()-5,5).compare(".json") != 0){
-      ss << ".json";
-    }
-    std::string filePathName = ss.str();
-    std::ifstream inputJsonFileStream(filePathName.c_str());
-    eodJsonData = nlohmann::ordered_json::parse(inputJsonFileStream);
-  }catch(const nlohmann::json::parse_error& e){
-    std::cout << e.what() << std::endl;
-    if(verbose){
-      std::cout << "  Skipping: failed while reading json file" << std::endl; 
-    }
-    success=false;
-  }  
-
-  return success;
-
-};
-
-//==============================================================================
 int calcDifferenceInDaysBetweenTwoDates(std::string &dateA,
                                         const char* dateAFormat,
                                         std::string &dateB,
@@ -222,28 +191,9 @@ bool readMetricData(std::string &analysisFolder,
     //Read in the file
     //
     nlohmann::ordered_json analysisData;
-    bool loadedAnalysisData =loadEodJsonFile(fileName, analysisFolder , 
-                                            analysisData, verbose);     
-    /*                  
-    if(validInput){
-      try{
-        //Load the json file
-        std::stringstream ss;
-        ss << analysisFolder << fileName;
-        std::string filePathName = ss.str();
-        std::ifstream inputJsonFileStream(filePathName.c_str());
-        analysisData = nlohmann::ordered_json::parse(inputJsonFileStream);
-
-      }catch(const nlohmann::json::parse_error& e){
-        std::cout << e.what() << std::endl;
-        validInput=false;
-        if(verbose){
-          std::cout << "  Skipping: failed while reading json file " 
-                    << fileName << std::endl; 
-        }
-      }
-    }
-    */
+    bool loadedAnalysisData =JsonFunctions::loadJsonFile(fileName,
+                                        analysisFolder, analysisData, verbose);     
+    
     //
     //Populate the Metric table
     //        
@@ -637,12 +587,13 @@ void writeMetricTableToCsvFile(
       //Add additional context data
       
       nlohmann::ordered_json fundamentalData;  
-      bool loadedFundData =loadEodJsonFile(tableEntry.tickers[i], 
-                  fundamentalFolder, fundamentalData, verbose);        
+      bool loadedFundData =JsonFunctions::loadJsonFile(tableEntry.tickers[i], 
+                                fundamentalFolder, fundamentalData, verbose);        
 
       nlohmann::ordered_json historicalData;
-      bool loadedHistData =loadEodJsonFile(tableEntry.tickers[i], fundamentalFolder, 
-                      fundamentalData, verbose); 
+      bool loadedHistData =JsonFunctions::loadJsonFile(tableEntry.tickers[i], 
+                                historicalFolder, historicalData, verbose); 
+                                
       bool addContext= (loadedFundData && loadedHistData);        
 
       if(addContext){

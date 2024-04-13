@@ -12,6 +12,36 @@ class JsonFunctions {
 
   public:
 
+    static bool loadJsonFile(const std::string &fileName, 
+                             const std::string &folder,
+                             nlohmann::ordered_json &jsonData,
+                             bool verbose){
+
+      bool success=true;
+        
+      try{
+        //Load the json file                    
+        std::stringstream ss;
+        ss << folder << fileName;
+        if(fileName.length() < 5){
+          ss << ".json";
+        }else if(fileName.substr(fileName.length()-5,5).compare(".json") != 0){
+          ss << ".json";
+        }
+        std::string filePathName = ss.str();
+        std::ifstream inputJsonFileStream(filePathName.c_str());
+        jsonData = nlohmann::ordered_json::parse(inputJsonFileStream);
+      }catch(const nlohmann::json::parse_error& e){
+        std::cout << e.what() << std::endl;
+        if(verbose){
+          std::cout << "  Skipping: failed while reading json file" << std::endl; 
+        }
+        success=false;
+      }  
+
+      return success;
+    };
+
     static double getJsonFloat(nlohmann::ordered_json &jsonEntry){
       if(  jsonEntry.is_null()){
         return std::nan("1");

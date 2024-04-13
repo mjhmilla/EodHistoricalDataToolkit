@@ -838,21 +838,8 @@ int main (int argc, char* argv[]) {
     //Try to load the fundamental file
     nlohmann::ordered_json fundamentalData;
     if(validInput){
-      try{
-        //Load the json file
-        std::stringstream ss;
-        ss << fundamentalFolder << fileName;
-        std::string filePathName = ss.str();
-
-        std::ifstream inputJsonFileStream(filePathName.c_str());
-        fundamentalData = nlohmann::ordered_json::parse(inputJsonFileStream);
-      }catch(const nlohmann::json::parse_error& e){
-        std::cout << e.what() << std::endl;
-        validInput=false;
-        if(verbose){
-          std::cout << "  Skipping: failed while reading json file" << std::endl; 
-        }
-      }
+      validInput = JsonFunctions::loadJsonFile(fileName, fundamentalFolder, 
+                                               fundamentalData, verbose);
     }
 
     //Extract the list of entry dates for the fundamental data
@@ -885,21 +872,8 @@ int main (int argc, char* argv[]) {
     //==========================================================================
     nlohmann::ordered_json historicalData;
     if(validInput){
-      try{
-        //Load the json file
-        std::stringstream ss;
-        ss << historicalFolder << fileName;
-        std::string filePathName = ss.str();
-        std::ifstream inputJsonFileStream(filePathName.c_str());
-        historicalData = nlohmann::ordered_json::parse(inputJsonFileStream);
-      }catch(const nlohmann::json::parse_error& e){
-        std::cout << e.what() << std::endl;
-        validInput=false;
-        if(verbose){
-          std::cout << "  Skipping: historical price json file would not load" 
-                    << std::endl; 
-        }
-      }
+      validInput=JsonFunctions::loadJsonFile(fileName, historicalFolder, 
+                                            historicalData, verbose);
     }
 
     std::vector< std::string > datesHistorical;
