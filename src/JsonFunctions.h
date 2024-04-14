@@ -16,20 +16,26 @@ class JsonFunctions {
                              const std::string &folder,
                              nlohmann::ordered_json &jsonData,
                              bool verbose){
+       std::stringstream ss;
+       ss << folder << fileName;                              
+       return loadJsonFile(ss.str(),jsonData,verbose);
+
+    }
+
+    static bool loadJsonFile(const std::string &fullFilePath,
+                             nlohmann::ordered_json &jsonData,
+                             bool verbose){
 
       bool success=true;
-        
+      std::string filePath = fullFilePath;
       try{
-        //Load the json file                    
-        std::stringstream ss;
-        ss << folder << fileName;
-        if(fileName.length() < 5){
-          ss << ".json";
-        }else if(fileName.substr(fileName.length()-5,5).compare(".json") != 0){
-          ss << ".json";
+        //Load the json file                           
+        if(filePath.length() < 5){
+          filePath.append(".json");
+        }else if(filePath.substr(filePath.length()-5,5).compare(".json") != 0){
+          filePath.append(".json");
         }
-        std::string filePathName = ss.str();
-        std::ifstream inputJsonFileStream(filePathName.c_str());
+        std::ifstream inputJsonFileStream(filePath.c_str());
         jsonData = nlohmann::ordered_json::parse(inputJsonFileStream);
       }catch(const nlohmann::json::parse_error& e){
         std::cout << e.what() << std::endl;
@@ -42,7 +48,7 @@ class JsonFunctions {
       return success;
     };
 
-    static double getJsonFloat(nlohmann::ordered_json &jsonEntry){
+    static double getJsonFloat(const nlohmann::ordered_json &jsonEntry){
       if(  jsonEntry.is_null()){
         return std::nan("1");
       }else{
@@ -60,7 +66,7 @@ class JsonFunctions {
       }
     };
 
-    static bool getJsonBool(nlohmann::ordered_json &jsonEntry){
+    static bool getJsonBool(const nlohmann::ordered_json &jsonEntry){
       if(  jsonEntry.is_null()){
         return std::nan("1");
       }else{
@@ -72,7 +78,7 @@ class JsonFunctions {
       }
     };
 
-    static void getJsonString(nlohmann::ordered_json &jsonEntry,
+    static void getJsonString(const nlohmann::ordered_json &jsonEntry,
                               std::string &updString){
       if( jsonEntry.is_null()){
         updString="";
@@ -81,8 +87,8 @@ class JsonFunctions {
       }                            
     };
 
-    static void getPrimaryTickerName(std::string &folder, 
-                              std::string &fileName, 
+    static void getPrimaryTickerName(const std::string &folder, 
+                              const std::string &fileName, 
                               std::string &updPrimaryTickerName){
 
       //Create the path and file name                          
