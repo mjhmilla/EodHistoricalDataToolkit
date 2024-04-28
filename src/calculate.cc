@@ -1342,6 +1342,10 @@ int main (int argc, char* argv[]) {
                                       termNames, 
                                       termValues);
 
+        double roicLessCostOfCapital = roic - costOfCapitalMature;  
+        termNames.push_back("returnOnInvestedCapitalLessCostOfCapital");
+        termValues.push_back(roicLessCostOfCapital);                                    
+
         double roce = FinancialAnalysisToolkit::
           calcReturnOnCapitalDeployed(  fundamentalData,
                                         date,
@@ -1537,14 +1541,7 @@ int main (int argc, char* argv[]) {
 
 
       std::string outputFilePath(analyseFolder);
-      std::string outputFileName(fileName.c_str());
-      
-      //Update the extension 
-      std::string oldExt = ".json";
-      std::string updExt = ".analysis.json";
-      std::string::size_type pos = 0u;      
-      pos = outputFileName.find(oldExt,pos);
-      outputFileName.replace(pos,oldExt.length(),updExt);
+      std::string outputFileName(fileName.c_str());    
       outputFilePath.append(outputFileName);
 
       std::ofstream outputFileStream(outputFilePath,

@@ -54,78 +54,6 @@ std::vector< size_t > rank(const std::vector< T > &v, bool sortAscending){
 
 
 
-//==============================================================================
-int calcDifferenceInDaysBetweenTwoDates(const std::string &dateA,
-                                        const char* dateAFormat,
-                                        const std::string &dateB,
-                                        const char* dateBFormat){
-
-  std::istringstream dateStream(dateA);
-  dateStream.exceptions(std::ios::failbit);
-  date::sys_days daysA;
-  dateStream >> date::parse(dateAFormat,daysA);
-
-  dateStream.clear();
-  dateStream.str(dateB);
-  date::sys_days daysB;
-  dateStream >> date::parse(dateBFormat,daysB);
-
-  int daysDifference = (daysA-daysB).count();
-
-  return daysDifference;
-
-};
-
-//==============================================================================
-int calcIndexOfClosestDateInHistorcalData(const std::string &targetDate,
-                                const char* targetDateFormat,
-                                nlohmann::ordered_json &historicalData,
-                                const char* dateSetFormat,
-                                bool verbose){
-
-
-  int indexA = 0;
-  int indexB = historicalData.size()-1;
-
-  int indexAError = calcDifferenceInDaysBetweenTwoDates(targetDate,
-                targetDateFormat, historicalData[indexA]["date"],dateSetFormat);
-  int indexBError = calcDifferenceInDaysBetweenTwoDates(targetDate,
-                targetDateFormat, historicalData[indexB]["date"],dateSetFormat);
-  int index      = std::round((indexB+indexA)*0.5);
-  int indexError = 0;
-  int changeInError = historicalData.size()-1;
-
-  while( std::abs(indexB-indexA)>1 
-      && std::abs(indexAError)>0 
-      && std::abs(indexBError)>0
-      && changeInError > 0){
-
-    int indexError = calcDifferenceInDaysBetweenTwoDates(targetDate,
-            targetDateFormat, historicalData[index]["date"],dateSetFormat);
-
-    if( indexError*indexAError >= 0){
-      indexA = index;
-      changeInError = std::abs(indexAError-indexError);
-      indexAError=indexError;
-    }else if(indexError*indexBError > 0){
-      indexB = index;
-      changeInError = std::abs(indexBError-indexError);
-      indexBError=indexError;
-    }
-    if(std::abs(indexB-indexA) > 1){
-      index      = std::round((indexB+indexA)*0.5);
-    }
-  }
-
-  if(std::abs(indexAError) <= std::abs(indexBError)){
-    return indexA;
-  }else{
-    return indexB;
-  }
-
-
-};
-
 
 //==============================================================================
 bool readMetricData(std::string &analysisFolder, 
@@ -139,7 +67,7 @@ bool readMetricData(std::string &analysisFolder,
   bool inputsAreValid=true;
   int validFileCount=0;
   int totalFileCount=0;      
-  std::string analysisExt = ".analysis.json";
+  std::string analysisExt = ".json";
 
   youngestDate = date::year{1900}/1/1;
   auto today = date::floor<date::days>(std::chrono::system_clock::now());

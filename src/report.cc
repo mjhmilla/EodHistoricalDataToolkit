@@ -20,39 +20,6 @@
 #include "JsonFunctions.h"
 #include "UtilityFunctions.h"
 
-struct TickerMetricData{
-  std::vector< date::sys_days > dates;
-  std::string ticker;
-  std::vector< std::vector< double > > metrics;
-};
-
-struct MetricTable{
-  date::sys_days dateStart;
-  date::sys_days dateEnd;
-  std::vector< std::string > tickers;
-  std::vector< std::vector< double > > metrics;
-  std::vector< std::vector< size_t > > metricRank;
-  std::vector< size_t > metricRankSum;
-  std::vector< size_t > rank;
-};
-
-//Fun example to get the ranked index of an entry
-//https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
-
-template <typename T>
-std::vector< size_t > rank(const std::vector< T > &v, bool sortAscending){
-  std::vector< size_t > idx(v.size());
-  std::iota(idx.begin(),idx.end(),0);
-  if(sortAscending){
-    std::stable_sort(idx.begin(),idx.end(),
-                    [&v](size_t i1, size_t i2){return v[i1] < v[i2];}); 
-  }else{
-    std::stable_sort(idx.begin(),idx.end(),
-                    [&v](size_t i1, size_t i2){return v[i1] > v[i2];}); 
-  }
-  return idx;
-} 
-
 
 
 //==============================================================================
@@ -76,6 +43,7 @@ int calcDifferenceInDaysBetweenTwoDates(const std::string &dateA,
   return daysDifference;
 
 };
+
 
 //==============================================================================
 int calcIndexOfClosestDateInHistorcalData(const std::string &targetDate,
@@ -123,24 +91,202 @@ int calcIndexOfClosestDateInHistorcalData(const std::string &targetDate,
   }else{
     return indexB;
   }
-
-
 };
 
 
+//==============================================================================
+void writeReportToTextFile(
+      nlohmann::ordered_json &metricTableSet,
+      std::vector< std::vector< std::string> > &listOfRankingMetrics,
+      std::string &fundamentalFolder,
+      std::string &historicalFolder,
+      std::string &analysisFolder,
+      std::string &reportFolderOutput,
+      std::string &outputFileName,
+      int numberOfYearsToAnalyze,
+      bool verbose){
+
+  std::string reportFilePath = reportFolderOutput;
+  reportFilePath.append(outputFileName);
+
+  std::ofstream reportFile;
+  reportFile.open(reportFilePath);
+
+  if(verbose){
+    std::cout<<"Writing report to text" << std::endl;
+  }
+
+  unsigned int indexEntry=0;
+  for(auto const &tableEntry: metricTableSet){
+
+    //
+    //Read in the starting and ending dates
+    //
+    std::string dateStringA;
+    JsonFunctions::getJsonString(tableEntry[0]["dateStart"],dateStringA);
+    std::istringstream dateSStreamA(dateStringA);
+    dateSStreamA.exceptions(std::ios::failbit);
+    date::year_month_day ymdStart;
+    dateSStreamA >> date::parse("%Y-%m-%d",ymdStart);
+
+    std::string dateStringB;
+    JsonFunctions::getJsonString(tableEntry[0]["dateEnd"],dateStringB);
+    std::istringstream dateSStreamB(dateStringB);
+    dateSStreamB.exceptions(std::ios::failbit);
+    date::year_month_day ymdEnd;
+    dateSStreamB >> date::parse("%Y-%m-%d",ymdEnd);
+
+    if(verbose){
+      std::cout << ymdStart.year()<<"-"<<ymdStart.month()<<"-"<<ymdStart.day()
+                << " to "
+                << ymdEnd.year()<<"-"<<ymdEnd.month()<<"-"<<ymdEnd.day()
+                << std::endl;
+    }
+
+    for(size_t i=1; i<tableEntry.size();++i){
+
+      std::string ticker;
+      JsonFunctions::getJsonString(tableEntry[i]["PrimaryTicker"],ticker);
+      
+      int ranking = static_cast<int>(
+                      JsonFunctions::getJsonFloat(tableEntry[i]["Ranking"]));
+
+      int metricRankSum = static_cast<int>(
+                      JsonFunctions::getJsonFloat(tableEntry[i]["MetricRankSum"]));
+
+      reportFile << i << '\t' << ticker << std::endl << std::endl;
+
+      //Write the summary table header
+      int colW=12;
+      int colS=8;
+      std::string emptyCol(""),emptyColBar(""),emptyColAlign("");
+      while(emptyCol.size()<colW){
+        emptyCol.append(" ");
+      }
+      while(emptyColBar.size()<(colS-1)){
+        emptyColBar.append(" ");  
+        emptyColAlign.append(" ");
+      }
+      emptyColBar.append("|");
 
 
+      reportFile  << emptyCol << emptyCol << emptyColAlign << 
+                     "Ranking"   << std::endl;
+      reportFile  << emptyCol << emptyCol << emptyColBar << emptyColAlign
+                  << "MetricRankSum" << std::endl;
+
+      if(verbose){
+        std::cout << '\t' << i << '\t' << ticker << std::endl;
+      }
+
+      for(size_t j=0; j<listOfRankingMetrics.size();++j){
+        std::string metricName = listOfRankingMetrics[j][0];
+
+        std::string metricNameValue = metricName;
+        metricNameValue.append("_value");
+        std::string metricNameRank = metricName;
+        metricNameRank.append("_rank");
+        
+        reportFile << emptyCol << emptyCol ;
+        for(size_t k=0; k < (2*j+2); ++k){
+          reportFile << emptyColBar;
+        }
+        reportFile << emptyColAlign << metricNameRank << std::endl;
+        reportFile << emptyCol << emptyCol ;
+        for(size_t k=0; k < (2*j+3); ++k){
+          reportFile << emptyColBar;
+        }
+        reportFile << emptyColAlign << metricNameValue << std::endl;
+      }
+
+      //Now go through the entire metric table and report all data on this
+      //ticker
+      for(auto const &iterTable: metricTableSet){
+        for(size_t idxTbl=1; idxTbl<iterTable.size();++idxTbl){
+          std::string iterTicker;
+          JsonFunctions::getJsonString(iterTable[idxTbl]["PrimaryTicker"],
+                                      iterTicker);
+          //Append the data                                          
+          if(ticker.compare(iterTicker)== 0){
+            std::string dateStart;
+            JsonFunctions::getJsonString(iterTable[0]["dateStart"],dateStart);
+            std::string dateEnd;
+            JsonFunctions::getJsonString(iterTable[0]["dateEnd"],dateEnd);
+            reportFile << std::setw(colW) << std::setfill(' ') << dateStart;
+            reportFile << std::setw(colW) << std::setfill(' ') << dateEnd;
+            
+            int ranking = static_cast<int>(
+              JsonFunctions::getJsonFloat(iterTable[idxTbl]["Ranking"]));
+
+            int metricRankSum = static_cast<int>(
+              JsonFunctions::getJsonFloat(iterTable[idxTbl]["MetricRankSum"]));                
+
+            reportFile << std::setw(colS)<<std::setfill(' ') << ranking;
+            reportFile << std::setw(colS)<<std::setfill(' ') << metricRankSum;
+
+            for(size_t j=0; j<listOfRankingMetrics.size();++j){
+              std::string metricName = listOfRankingMetrics[j][0];
+
+              std::string metricNameValue = metricName;
+              metricNameValue.append("_value");
+              std::string metricNameRank = metricName;
+              metricNameRank.append("_rank");
+
+              int metricRank = static_cast<int>(
+                JsonFunctions::getJsonFloat(iterTable[idxTbl][metricNameRank]));
+              double metricValue =
+                JsonFunctions::getJsonFloat(iterTable[idxTbl][metricNameValue]);
+
+              reportFile << std::setw(colS)<<std::setfill(' ') << metricRank;
+              reportFile << std::setw(colS)<<std::setfill(' ') 
+                         << std::setprecision(2)
+                         << metricValue;
+
+            }
+            reportFile << std::endl;
+
+          }                                          
+        }
+      }
+
+
+      //nlohmann::ordered_json fundamentalData;  
+      //bool loadedFundData =JsonFunctions::loadJsonFile(ticker, 
+      //                          fundamentalFolder, fundamentalData, verbose);        
+
+      //nlohmann::ordered_json historicalData;
+      //bool loadedHistData =JsonFunctions::loadJsonFile(ticker, 
+      //                          historicalFolder, historicalData, verbose); 
+                                
+      //nlohmann::ordered_json analysisData;
+      //bool loadedAnalysisData =JsonFunctions::loadJsonFile(ticker, 
+      //                          analysisFolder, analysisData, verbose); 
+
+      //bool addContext= (loadedFundData && loadedHistData && loadedAnalysisData);  
+    }
+
+
+    ++indexEntry;
+    if(numberOfYearsToAnalyze > 0 && indexEntry >= numberOfYearsToAnalyze){
+      break;
+    }
+  }
+  reportFile.close();
+
+};
 //==============================================================================
 void writeMetricTableToCsvFile(
       nlohmann::ordered_json &metricTableSet,
       std::vector< std::vector< std::string> > &listOfRankingMetrics,
       std::string &fundamentalFolder,
       std::string &historicalFolder,
-      std::string &rankFolderOutput,
+      std::string &analysisFolder,
+      std::string &reportFolderOutput,
       std::string &outputFileName,
+      int numberOfYearsToAnalyze,
       bool verbose){
 
-  std::string rankingResultFilePath = rankFolderOutput;
+  std::string rankingResultFilePath = reportFolderOutput;
   rankingResultFilePath.append(outputFileName);
 
   std::ofstream rankingFile;
@@ -150,8 +296,8 @@ void writeMetricTableToCsvFile(
     std::cout<<"Writing Metric Tables to csv" << std::endl;
   }
 
+  unsigned int indexEntry=0;
   for(auto const &tableEntry: metricTableSet){
-
     //
     //Read in the starting and ending dates
     //
@@ -179,8 +325,13 @@ void writeMetricTableToCsvFile(
       rankingFile << "," << listOfRankingMetrics[j][0]<<"_rank";
       rankingFile << "," << listOfRankingMetrics[j][0]<<"_value";          
     }
+
+
     rankingFile << ","<<"Country"
                 << ","<<"Name"
+                << ","<<"ProducingExcess"
+                << ","<<"ReturnOnInvestedCapital"
+                << ","<<"CostOfCapital"
                 << ","<<"PercentInsiders"
                 << ","<<"PercentInstitutions"
                 << ","<<"MarketCapitalizationMln"
@@ -247,9 +398,12 @@ void writeMetricTableToCsvFile(
       bool loadedHistData =JsonFunctions::loadJsonFile(ticker, 
                                 historicalFolder, historicalData, verbose); 
                                 
+      nlohmann::ordered_json analysisData;
+      bool loadedAnalysisData =JsonFunctions::loadJsonFile(ticker, 
+                                analysisFolder, analysisData, verbose); 
 
 
-      bool addContext= (loadedFundData && loadedHistData);        
+      bool addContext= (loadedFundData && loadedHistData && loadedAnalysisData);        
 
       if(addContext){
 
@@ -268,6 +422,33 @@ void writeMetricTableToCsvFile(
         double endPrice  = JsonFunctions::getJsonFloat(
                               historicalData[indexClosest]["adjusted_close"]);        
 
+        //Get the index of the closest analysis period. There are not many
+        date::sys_days dayStart(ymdStart);
+        date::sys_days dayEnd(ymdEnd);
+
+        std::string analysisDate("");
+        bool analysisItemFound=false;
+        auto analysisItem = analysisData.begin();
+
+        do{          
+                    
+          analysisDate=analysisItem.key();
+          std::stringstream analysisDateStream(analysisDate);
+          date::sys_days dayAnalysis;
+          analysisDateStream >> date::parse("%Y-%m-%d",dayAnalysis);
+          int dayErrorStart = (dayAnalysis-dayStart).count();
+          int dayErrorEnd = (dayAnalysis-dayEnd).count();
+
+          if(dayErrorEnd*dayErrorStart <= 0){
+            analysisItemFound=true;
+          }else{
+            ++analysisItem;              
+          }
+        }while( !analysisItemFound && analysisItem != analysisData.end());
+
+
+
+        //Write the data to file
         std::string tempString;
         JsonFunctions::getJsonString(
             fundamentalData["General"]["AddressData"]["Country"],
@@ -276,8 +457,25 @@ void writeMetricTableToCsvFile(
         JsonFunctions::getJsonString(
             fundamentalData["General"]["Name"],
             tempString);            
-        rankingFile << "," << tempString;            
-        rankingFile << "," << 
+        rankingFile << "," << tempString; 
+
+        double roic = JsonFunctions::getJsonFloat(
+            analysisData[analysisDate]["returnOnInvestedCapital"]);
+        double costOfCapital = JsonFunctions::getJsonFloat(
+            analysisData[analysisDate]["costOfCapital"]);
+        
+        if(!std::isnan(roic) && !std::isnan(costOfCapital)){
+          if(roic > costOfCapital){
+            rankingFile << ","<<"Yes";
+          }else{
+            rankingFile << ","<<"No";
+          }
+        }else{
+          rankingFile <<"," << ",";
+        }
+        rankingFile <<","<<roic;
+        rankingFile <<","<<costOfCapital;
+        rankingFile << "," <<
             JsonFunctions::getJsonFloat(
             fundamentalData["SharesStats"]["PercentInsiders"]);            
         rankingFile << "," << 
@@ -316,6 +514,10 @@ void writeMetricTableToCsvFile(
       rankingFile <<'\n';
     }
     rankingFile <<'\n';
+    ++indexEntry;
+    if(numberOfYearsToAnalyze > 0 && indexEntry >= numberOfYearsToAnalyze){
+      break;
+    }
   }
   rankingFile.close();
 };
@@ -335,6 +537,7 @@ int main (int argc, char* argv[]) {
   bool analyzeQuarters=false;
   bool ignoreNegativeValues=true; 
   int maxDifferenceInDays = 15; //a half month at most.
+  int numberOfYearsToReport = 2;
 
   bool verbose;
 
@@ -369,6 +572,12 @@ int main (int argc, char* argv[]) {
       "The path to the ranking configuration file.",
       true,"","string");
     cmd.add(rankingConfigurationFileInput);
+
+    TCLAP::ValueArg<int> numberOfYearsToReportInput("n",
+      "number_of_years_to_report_on", 
+      "The path to the ranking configuration file.",
+      false,2,"int");
+    cmd.add(numberOfYearsToReportInput);    
 
     TCLAP::ValueArg<std::string> fundamentalFolderInput("f",
       "fundamental_data_folder_path", 
@@ -405,6 +614,8 @@ int main (int argc, char* argv[]) {
     analyzeQuarters       = quarterlyAnalysisInput.getValue();
     analyzeYears          = !analyzeQuarters;
 
+    numberOfYearsToReport = numberOfYearsToReportInput.getValue();
+
     verbose             = verboseInput.getValue();
 
     if(verbose){
@@ -428,6 +639,9 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Report Folder" << std::endl;
       std::cout << "    " << reportFolder << std::endl;
+      
+      std::cout << "  Number of years to report" << std::endl;
+      std::cout << "    " << numberOfYearsToReport << std::endl;
 
       std::cout << "  Analyze Quarters (untested)" << std::endl;
       std::cout << "    " << analyzeYears << std::endl;
@@ -441,9 +655,7 @@ int main (int argc, char* argv[]) {
 
 
     //Load the metric table data set
-
     nlohmann::ordered_json metricTableSet;
-
     bool metricTableLoaded = 
       JsonFunctions::loadJsonFile(rankingFile, metricTableSet,verbose);
                                   
@@ -452,6 +664,7 @@ int main (int argc, char* argv[]) {
     bool listOfRankingMetricsLoaded = 
       UtilityFunctions::readListOfRankingMetrics(rankingConfigurationFile,
                                                listOfRankingMetrics, verbose);
+
 
     //File name
     std::filesystem::path rankingConfigFilePath = rankingConfigurationFile;
@@ -462,7 +675,16 @@ int main (int argc, char* argv[]) {
     csvFileName.append("_summary.csv");
 
     writeMetricTableToCsvFile(metricTableSet,listOfRankingMetrics,
-      fundamentalFolder,historicalFolder,reportFolder,csvFileName,verbose);
+      fundamentalFolder,historicalFolder,analysisFolder,reportFolder,
+      csvFileName,numberOfYearsToReport,verbose);
+
+    std::string reportFileName = rankingConfigFileName;
+    reportFileName = reportFileName.substr(0,reportFileName.length()-4);                                               
+    reportFileName.append("_report.txt");
+
+    writeReportToTextFile(metricTableSet,listOfRankingMetrics,
+      fundamentalFolder,historicalFolder,analysisFolder,reportFolder,
+      reportFileName,numberOfYearsToReport,verbose);  
 
   } catch (TCLAP::ArgException &e){ 
     std::cerr << "error: "    << e.error() 
