@@ -235,26 +235,6 @@ bool loadTaxFoundationDataSet(std::string &fileName,
 };
 
 
-int calcDifferenceInDaysBetweenTwoDates(std::string &dateA,
-                                        const char* dateAFormat,
-                                        std::string &dateB,
-                                        const char* dateBFormat){
-
-  std::istringstream dateStream(dateA);
-  dateStream.exceptions(std::ios::failbit);
-  date::sys_days daysA;
-  dateStream >> date::parse(dateAFormat,daysA);
-
-  dateStream.clear();
-  dateStream.str(dateB);
-  date::sys_days daysB;
-  dateStream >> date::parse(dateBFormat,daysB);
-
-  int daysDifference = (daysA-daysB).count();
-
-  return daysDifference;
-
-};
 
 bool extractDatesOfClosestMatch(
               std::vector< std::string > &datesSetA,
@@ -275,20 +255,20 @@ bool extractDatesOfClosestMatch(
 
   //Get the indicies of the most recent and oldest indexes "%Y-%m-%d"
   int firstMinusLastSetA = 
-    calcDifferenceInDaysBetweenTwoDates(
-        datesSetA[0],
-        dateAFormat,        
-        datesSetA[datesSetA.size()-1],
-        dateAFormat);
+    FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+                                datesSetA[0],
+                                dateAFormat,        
+                                datesSetA[datesSetA.size()-1],
+                                dateAFormat);
 
 
   //Get the indicies of the most recent and oldest indexes
   int firstMinusLastSetB = 
-    calcDifferenceInDaysBetweenTwoDates(
-        datesSetB[0],
-        dateBFormat,        
-        datesSetB[datesSetB.size()-1],
-        dateBFormat);
+    FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+                                datesSetB[0],
+                                dateBFormat,        
+                                datesSetB[datesSetB.size()-1],
+                                dateBFormat);
 
   //The indices stored to match the order of datesSetA
   int indexSetBFirst = 0;
@@ -330,11 +310,11 @@ bool extractDatesOfClosestMatch(
       tempDateSetB = datesSetB[indexSetB];
 
       int daysSetALessSetB = 
-        calcDifferenceInDaysBetweenTwoDates(
-            tempDateSetA,
-            dateAFormat,        
-            tempDateSetB,
-            dateBFormat);
+        FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+                                    tempDateSetA,
+                                    dateAFormat,        
+                                    tempDateSetB,
+                                    dateBFormat);
 
       //As long as the historical date is less than or equal to the 
       //fundamental date, increment
@@ -1078,7 +1058,7 @@ int main (int argc, char* argv[]) {
 
       //Get the index direction of older data
       int firstMinusLastCommon = 
-        calcDifferenceInDaysBetweenTwoDates(
+        FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
             datesCommon[0],
             "%Y-%m-%d",        
             datesCommon[datesCommon.size()-1],

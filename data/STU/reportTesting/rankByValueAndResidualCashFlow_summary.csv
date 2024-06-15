@@ -1,0 +1,37 @@
+2023-Jan-01
+2024-Jan-01
+Ticker,ranking,metricRankSum,priceToValue_rank,priceToValue_value,residualFreeCashFlowToEnterpriseValue_rank,residualFreeCashFlowToEnterpriseValue_value,Country,Name,ProducingExcess,ReturnOnInvestedCapital,CostOfCapital,PercentInsiders,PercentInstitutions,MarketCapitalizationMln,IPODate,Price,TargetPrice,StrongBuy,Buy,Hold,Sell,StrongSell,URL
+WOR.US,0,0,0,0.252149,0,0.163926,United States,Worthington Industries Inc,Yes,0.0879924,0.068079,39.54,46.732,2973.28,1990-03-26,57.55,68,0,0,3,0,0,https://www.worthingtonindustries.com
+BRC.US,1,2,1,1.2016,1,0.0603696,United States,Brady Corporation,Yes,0.124398,0.0872783,3.679,86.029,2696.77,1984-06-28,58.69,nan,2,0,0,1,0,https://www.bradyid.com
+RPM.US,2,4,2,6.7301,2,0.0139974,United States,RPM International Inc,No,0.0572138,0.105832,1.292,80.175,12158.4,1990-03-26,111.63,107.87,3,3,8,1,0,https://www.rpminc.com
+
+2022-Jan-01
+2022-Dec-31
+Ticker,ranking,metricRankSum,priceToValue_rank,priceToValue_value,residualFreeCashFlowToEnterpriseValue_rank,residualFreeCashFlowToEnterpriseValue_value,Country,Name,ProducingExcess,ReturnOnInvestedCapital,CostOfCapital,PercentInsiders,PercentInstitutions,MarketCapitalizationMln,IPODate,Price,TargetPrice,StrongBuy,Buy,Hold,Sell,StrongSell,URL
+GMM.XETRA,0,1,1,0.0255186,0,0.34962,Germany,Grammer AG,No,-0.243717,0.0964112,86.204,0.608,169.95,,10.55,nan,nan,nan,nan,nan,nan,https://www.grammer.com
+TKC.US,1,1,0,0.00939701,1,0.208613,Turkey,Turkcell Iletisim Hizmetleri AS,Yes,0.148903,0.0408451,0,3.91,4361.49,2000-07-11,4.6943,4.5,2,0,0,0,0,https://www.turkcell.com.tr
+SSAB-A.ST,2,4,2,0.103711,2,0.143375,Sweden,SSAB AB (publ),No,-0.132956,0.103424,27.56,30.523,71062.7,,50.6311,nan,nan,nan,nan,nan,nan,https://www.ssab.com
+X.US,3,6,3,0.163391,3,0.140808,United States,United States Steel Corporation,Yes,0.178602,0.0660172,1.265,77.029,7373.42,1991-04-12,24.858,23.37,1,0,7,0,1,https://www.ussteel.com
+DHL.XETRA,4,12,5,0.342883,7,0.0907259,Germany,Deutsche Post AG,Yes,0.118753,0.0676974,20.49,33.226,44959.4,,33.671,nan,nan,nan,nan,nan,nan,https://www.dpdhl.com
+FANG.US,5,12,4,0.249681,8,0.0834247,United States,Diamondback Energy Inc,Yes,0.2887,0.0745688,0.559,92.405,26858.5,2012-10-12,129.6,172.08,16,7,4,1,0,https://www.diamondbackenergy.com
+S32.AU,6,12,7,0.572978,5,0.103824,Australia,South32 Ltd,Yes,0.261578,0.0762863,0.496,38.198,15037.1,,3.8753,nan,nan,nan,nan,nan,nan,https://www.south32.net
+VECO.US,7,18,12,1.16823,6,0.094569,United States,Veeco Instruments Inc,Yes,0.200576,0.0760646,2.518,110.258,1540.49,1994-11-29,18.58,nan,4,1,2,0,0,https://www.veeco.com
+MPCC.OL,8,19,10,0.94331,9,0.0735456,Norway,MPC Container Ships ASA,No,-0.00618132,0.0853602,22.596,23.889,7039.3,,10.3395,nan,nan,nan,nan,nan,nan,https://www.mpc-container.com
+WY.US,9,19,8,0.786464,11,0.0467701,United States,Weyerhaeuser Company,No,0.0177463,0.0760285,0.232,85.747,21790.9,1973-05-03,29.4556,38.33,5,2,4,0,0,https://www.weyerhaeuser.com
+SWKS.US,10,21,11,1.03774,10,0.0659102,United States,Skyworks Solutions Inc,Yes,0.117784,0.0761786,0.313,83.37,15671.5,1968-03-13,88.837,120.51,12,3,14,1,0,https://www.skyworksinc.com
+IMPN.SW,11,22,6,0.402458,16,0.0281859,Switzerland,Implenia AG,Yes,0.100152,0.0649236,33.671,26.963,534.873,,37.6225,nan,nan,nan,nan,nan,nan,https://www.implenia.com
+LFUS.US,12,25,13,1.24666,12,0.0372471,United States,Littelfuse Inc,Yes,0.103117,0.0774583,1.59,99.077,6160.69,1992-09-23,218.049,nan,0,2,5,0,0,https://www.littelfuse.com
+EMGS.OL,13,26,22,3.02041,4,0.138903,Norway,Electromagnetic Geoservices ASA,Yes,0.395739,0.0822158,57.019,0,288.134,2007-03-30,1.602,nan,nan,nan,nan,nan,nan,https://www.emgs.com
+CSX.US,14,29,15,1.54257,14,0.0329727,United States,CSX Corporation,Yes,0.108581,0.0747293,0.295,78.473,61273.3,1980-11-03,30.5443,36.4,14,5,10,0,0,https://www.csx.com
+RATO-A.ST,15,29,9,0.888267,20,0.0132014,Sweden,Ratos AB (publ),Yes,0.0651355,0.0646442,93.832,0.014,10724.5,,42.6774,nan,nan,nan,nan,nan,nan,https://www.ratos.com
+AEIN.XETRA,16,31,14,1.24939,17,0.02397,Germany,Allgeier SE,Yes,0.105636,0.0673618,39.438,18.015,248.913,,27.8428,nan,nan,nan,nan,nan,nan,https://www.allgeier.com
+BRC.US,17,32,17,1.73601,15,0.0290898,United States,Brady Corporation,Yes,0.103397,0.0763405,3.679,86.029,2696.77,1984-06-28,46.2465,nan,2,0,0,1,0,https://www.bradyid.com
+SFM.US,18,34,21,2.35662,13,0.033238,United States,Sprouts Farmers Market LLC,Yes,0.201444,0.069734,0.558,111.999,4324.03,2013-08-01,32.37,nan,0,0,9,3,2,https://www.sprouts.com
+VACN.SW,19,37,19,1.87553,18,0.0239546,Switzerland,VAT Group AG,Yes,0.179862,0.084777,10.197,50.36,10364.7,,248.093,nan,nan,nan,nan,nan,nan,https://www.vatvalve.com
+HII.US,20,38,16,1.55364,22,0.0117333,United States,Huntington Ingalls Industries Inc,No,0.0645538,0.0724929,2.278,89.207,8156.11,2011-03-22,225.461,248.44,3,1,4,2,0,https://www.huntingtoningalls.com
+EL.PA,21,39,18,1.76281,21,0.01247,France,EssilorLuxottica S. A.,No,0.0403196,0.0785294,36.158,27.142,78807.4,,166.22,nan,nan,nan,nan,nan,nan,https://www.essilorluxottica.com
+TPX.US,22,39,20,2.19594,19,0.021513,United States,Tempur Sealy International Inc,Yes,0.142652,0.0673756,3.186,104.63,7051.55,2003-12-18,33.9624,52.13,6,0,3,0,0,https://www.tempursealy.com
+BDX.US,23,46,23,3.22898,23,0.00926783,United States,Becton Dickinson and Company,No,0.0177865,0.0750294,0.352,89.012,76130.4,1987-01-01,250.517,301.67,8,5,4,0,0,https://www.bd.com
+RMD.AU,24,48,24,13.4334,24,0.0046154,,Resmed Inc DRC,Yes,0.129444,0.0803079,0,7.516,34479.2,,30.917,nan,nan,nan,nan,nan,nan,https://www.resmed.com
+RWI.LSE,25,50,25,20.5741,25,0.00263325,United Kingdom,Renewi PLC,No,0.0316678,0.071068,6.975,67.227,589.078,,598,nan,nan,nan,nan,nan,nan,https://www.renewi.com/en
+

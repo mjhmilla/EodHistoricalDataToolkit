@@ -19,21 +19,6 @@
 #include "JsonFunctions.h"
 #include "UtilityFunctions.h"
 
-struct TickerMetricData{
-  std::vector< date::sys_days > dates;
-  std::string ticker;
-  std::vector< std::vector< double > > metrics;
-};
-
-struct MetricTable{
-  date::sys_days dateStart;
-  date::sys_days dateEnd;
-  std::vector< std::string > tickers;
-  std::vector< std::vector< double > > metrics;
-  std::vector< std::vector< size_t > > metricRank;
-  std::vector< size_t > metricRankSum;
-  std::vector< size_t > rank;
-};
 
 //Fun example to get the ranked index of an entry
 //https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
@@ -58,7 +43,7 @@ std::vector< size_t > rank(const std::vector< T > &v, bool sortAscending){
 //==============================================================================
 bool readMetricData(std::string &analysisFolder, 
               std::vector< std::vector< std::string > > &listOfRankingMetrics,
-              std::vector< TickerMetricData > &tickerMetricDataSet,
+              std::vector< FinancialAnalysisToolkit::TickerMetricData > &tickerMetricDataSet,
               date::year_month_day &youngestDate,
               date::year_month_day &oldestDate,
               bool ignoreNegativeValues,
@@ -115,7 +100,7 @@ bool readMetricData(std::string &analysisFolder,
     //
     //Populate the Metric table
     //        
-    TickerMetricData tickerMetricDataEntry;
+    FinancialAnalysisToolkit::TickerMetricData tickerMetricDataEntry;
     tickerMetricDataEntry.ticker = ticker;
 
     std::vector< double > metricData;
@@ -213,15 +198,15 @@ bool readMetricData(std::string &analysisFolder,
 
 //==============================================================================
 void createMetricTable( 
-      std::vector< TickerMetricData > &tickerMetricDataSet,
-      std::vector< MetricTable > &metricTableSet,
+      std::vector< FinancialAnalysisToolkit::TickerMetricData > &tickerMetricDataSet,
+      std::vector< FinancialAnalysisToolkit::MetricTable > &metricTableSet,
       date::year_month_day &youngestDate,
       date::year_month_day &oldestDate,
       unsigned int referenceMonth,
       bool analyzeQuarters, 
       bool verbose){
 
-  MetricTable metricTableEntry;      
+  FinancialAnalysisToolkit::MetricTable metricTableEntry;      
 
   unsigned int durationMonths = 12;
   if(analyzeQuarters){
@@ -291,7 +276,7 @@ void createMetricTable(
 }
 
 //==============================================================================
-void sortMetricTable(std::vector< MetricTable > &metricTableSet,
+void sortMetricTable(std::vector< FinancialAnalysisToolkit::MetricTable > &metricTableSet,
      std::vector< std::vector < std::string > > &listOfRankingMetrics){
 
   //Evaluate each metric ranking
@@ -349,7 +334,7 @@ void sortMetricTable(std::vector< MetricTable > &metricTableSet,
     tableEntry.rank = rank(tableEntry.metricRankSum,true);
     
     //Reorder all fields according to the ranking
-    MetricTable tableEntryUnsorted = tableEntry;
+    FinancialAnalysisToolkit::MetricTable tableEntryUnsorted = tableEntry;
     for(size_t i=0; i<tableEntry.rank.size();++i){
 
       size_t k = tableEntryUnsorted.rank[i];
@@ -369,7 +354,7 @@ void sortMetricTable(std::vector< MetricTable > &metricTableSet,
 
 //==============================================================================
 void writeMetricTableToJsonFile(
-      std::vector< MetricTable > &metricTableSet,
+      std::vector< FinancialAnalysisToolkit::MetricTable > &metricTableSet,
       std::vector< std::vector< std::string> > &listOfRankingMetrics,
       std::string &fundamentalFolder,
       std::string &historicalFolder,
@@ -579,7 +564,7 @@ int main (int argc, char* argv[]) {
                                                  verbose);
 
     // Read in the data from each file
-    std::vector< TickerMetricData > tickerMetricDataSet;
+    std::vector< FinancialAnalysisToolkit::TickerMetricData > tickerMetricDataSet;
     date::year_month_day youngestDate = date::year{1900}/1/1;
     auto today = date::floor<date::days>(std::chrono::system_clock::now());
     date::year_month_day oldestDate(today);
@@ -598,7 +583,7 @@ int main (int argc, char* argv[]) {
     //Create the ranking table and write to file 
     //==========================================================================
     if(inputsAreValid){
-      std::vector< MetricTable > metricTableSet;
+      std::vector< FinancialAnalysisToolkit::MetricTable > metricTableSet;
 
       createMetricTable( 
             tickerMetricDataSet,

@@ -23,84 +23,9 @@
 
 
 //==============================================================================
-int calcDifferenceInDaysBetweenTwoDates(const std::string &dateA,
-                                        const char* dateAFormat,
-                                        const std::string &dateB,
-                                        const char* dateBFormat){
-
-  std::istringstream dateStream(dateA);
-  dateStream.exceptions(std::ios::failbit);
-  date::sys_days daysA;
-  dateStream >> date::parse(dateAFormat,daysA);
-
-  dateStream.clear();
-  dateStream.str(dateB);
-  date::sys_days daysB;
-  dateStream >> date::parse(dateBFormat,daysB);
-
-  int daysDifference = (daysA-daysB).count();
-
-  return daysDifference;
-
-};
-
-
-//==============================================================================
-int calcIndexOfClosestDateInHistorcalData(const std::string &targetDate,
-                                const char* targetDateFormat,
-                                nlohmann::ordered_json &historicalData,
-                                const char* dateSetFormat,
-                                bool verbose){
-
-
-  int indexA = 0;
-  int indexB = historicalData.size()-1;
-
-  int indexAError = calcDifferenceInDaysBetweenTwoDates(targetDate,
-                targetDateFormat, historicalData[indexA]["date"],dateSetFormat);
-  int indexBError = calcDifferenceInDaysBetweenTwoDates(targetDate,
-                targetDateFormat, historicalData[indexB]["date"],dateSetFormat);
-  int index      = std::round((indexB+indexA)*0.5);
-  int indexError = 0;
-  int changeInError = historicalData.size()-1;
-
-  while( std::abs(indexB-indexA)>1 
-      && std::abs(indexAError)>0 
-      && std::abs(indexBError)>0
-      && changeInError > 0){
-
-    int indexError = calcDifferenceInDaysBetweenTwoDates(targetDate,
-            targetDateFormat, historicalData[index]["date"],dateSetFormat);
-
-    if( indexError*indexAError >= 0){
-      indexA = index;
-      changeInError = std::abs(indexAError-indexError);
-      indexAError=indexError;
-    }else if(indexError*indexBError > 0){
-      indexB = index;
-      changeInError = std::abs(indexBError-indexError);
-      indexBError=indexError;
-    }
-    if(std::abs(indexB-indexA) > 1){
-      index      = std::round((indexB+indexA)*0.5);
-    }
-  }
-
-  if(std::abs(indexAError) <= std::abs(indexBError)){
-    return indexA;
-  }else{
-    return indexB;
-  }
-};
-
-
-//==============================================================================
 void writeReportToTextFile(
       nlohmann::ordered_json &metricTableSet,
       std::vector< std::vector< std::string> > &listOfRankingMetrics,
-      std::string &fundamentalFolder,
-      std::string &historicalFolder,
-      std::string &analysisFolder,
       std::string &reportFolderOutput,
       std::string &outputFileName,
       int numberOfYearsToAnalyze,
@@ -248,20 +173,7 @@ void writeReportToTextFile(
           }                                          
         }
       }
-
-
-      //nlohmann::ordered_json fundamentalData;  
-      //bool loadedFundData =JsonFunctions::loadJsonFile(ticker, 
-      //                          fundamentalFolder, fundamentalData, verbose);        
-
-      //nlohmann::ordered_json historicalData;
-      //bool loadedHistData =JsonFunctions::loadJsonFile(ticker, 
-      //                          historicalFolder, historicalData, verbose); 
-                                
-      //nlohmann::ordered_json analysisData;
-      //bool loadedAnalysisData =JsonFunctions::loadJsonFile(ticker, 
-      //                          analysisFolder, analysisData, verbose); 
-
+                              
       //bool addContext= (loadedFundData && loadedHistData && loadedAnalysisData);  
     }
 
@@ -417,8 +329,10 @@ void writeMetricTableToCsvFile(
            << static_cast<unsigned>(ymdEnd.day());
         std::string endDate = ss.str();
 
-        int indexClosest= calcIndexOfClosestDateInHistorcalData(endDate,"%Y-%m-%d",
-                            historicalData,"%Y-%m-%d",verbose);
+        int indexClosest= 
+          FinancialAnalysisToolkit::calcIndexOfClosestDateInHistorcalData(
+            endDate,"%Y-%m-%d",historicalData,"%Y-%m-%d",verbose);
+            
         double endPrice  = JsonFunctions::getJsonFloat(
                               historicalData[indexClosest]["adjusted_close"]);        
 
@@ -683,8 +597,7 @@ int main (int argc, char* argv[]) {
     reportFileName.append("_report.txt");
 
     writeReportToTextFile(metricTableSet,listOfRankingMetrics,
-      fundamentalFolder,historicalFolder,analysisFolder,reportFolder,
-      reportFileName,numberOfYearsToReport,verbose);  
+      reportFolder,reportFileName,numberOfYearsToReport,verbose);  
 
   } catch (TCLAP::ArgException &e){ 
     std::cerr << "error: "    << e.error() 

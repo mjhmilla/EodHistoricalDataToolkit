@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <sstream>
 
+#include "date.h"
 #include <nlohmann/json.hpp>
 #include "JsonFunctions.h"
 
@@ -28,7 +29,98 @@ class FinancialAnalysisToolkit {
 
   public:
 
+    //==========================================================================
+    struct TickerMetricData{
+      std::vector< date::sys_days > dates;
+      std::string ticker;
+      std::vector< std::vector< double > > metrics;
+    };
 
+    //==========================================================================
+    struct MetricTable{
+      date::sys_days dateStart;
+      date::sys_days dateEnd;
+      std::vector< std::string > tickers;
+      std::vector< std::vector< double > > metrics;
+      std::vector< std::vector< size_t > > metricRank;
+      std::vector< size_t > metricRankSum;
+      std::vector< size_t > rank;
+    };
+
+    //==========================================================================
+    static int calcDifferenceInDaysBetweenTwoDates(const std::string &dateA,
+                                            const char* dateAFormat,
+                                            const std::string &dateB,
+                                            const char* dateBFormat){
+
+      std::istringstream dateStream(dateA);
+      dateStream.exceptions(std::ios::failbit);
+      date::sys_days daysA;
+      dateStream >> date::parse(dateAFormat,daysA);
+
+      dateStream.clear();
+      dateStream.str(dateB);
+      date::sys_days daysB;
+      dateStream >> date::parse(dateBFormat,daysB);
+
+      int daysDifference = (daysA-daysB).count();
+
+      return daysDifference;
+
+    };
+    //==========================================================================
+    static int calcIndexOfClosestDateInHistorcalData(
+                                    const std::string &targetDate,
+                                    const char* targetDateFormat,
+                                    nlohmann::ordered_json &historicalData,
+                                    const char* dateSetFormat,
+                                    bool verbose){
+
+      int indexA = 0;
+      int indexB = historicalData.size()-1;
+
+      int indexAError = calcDifferenceInDaysBetweenTwoDates(
+                          targetDate, targetDateFormat, 
+                          historicalData[indexA]["date"],dateSetFormat);
+                          
+      int indexBError = calcDifferenceInDaysBetweenTwoDates(
+                          targetDate, targetDateFormat, 
+                          historicalData[indexB]["date"],dateSetFormat);
+      int index      = std::round((indexB+indexA)*0.5);
+      int indexError = 0;
+      int changeInError = historicalData.size()-1;
+
+      while( std::abs(indexB-indexA)>1 
+          && std::abs(indexAError)>0 
+          && std::abs(indexBError)>0
+          && changeInError > 0){
+
+        int indexError = calcDifferenceInDaysBetweenTwoDates(
+                          targetDate, targetDateFormat, 
+                          historicalData[index]["date"],dateSetFormat);
+
+        if( indexError*indexAError >= 0){
+          indexA = index;
+          changeInError = std::abs(indexAError-indexError);
+          indexAError=indexError;
+        }else if(indexError*indexBError > 0){
+          indexB = index;
+          changeInError = std::abs(indexBError-indexError);
+          indexBError=indexError;
+        }
+        if(std::abs(indexB-indexA) > 1){
+          index      = std::round((indexB+indexA)*0.5);
+        }
+      }
+
+      if(std::abs(indexAError) <= std::abs(indexBError)){
+        return indexA;
+      }else{
+        return indexB;
+      }
+
+
+    };
     //==========================================================================
     static void getIsinCountryCodes(const std::string& isin, 
                             nlohmann::ordered_json &exchangeList,
