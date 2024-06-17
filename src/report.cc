@@ -23,7 +23,7 @@
 
 
 //==============================================================================
-void writeReportToTextFile(
+void writeMetricTableSortedByTickerToTextFile(
       nlohmann::ordered_json &metricTableSet,
       std::vector< std::vector< std::string> > &listOfRankingMetrics,
       std::string &reportFolderOutput,
@@ -187,22 +187,35 @@ void writeReportToTextFile(
 
 };
 //==============================================================================
-void writeMetricTableToCsvFile(
+//This function writes data on each company to file sorted by period and by
+//the overall rank to two files: a human readable csv file, and a machine
+//readable json file.
+void writeReportTableToFile(
       nlohmann::ordered_json &metricTableSet,
       std::vector< std::vector< std::string> > &listOfRankingMetrics,
       std::string &fundamentalFolder,
       std::string &historicalFolder,
       std::string &analysisFolder,
       std::string &reportFolderOutput,
-      std::string &outputFileName,
+      std::string &outputFileNameWithoutExtension,
       int numberOfYearsToAnalyze,
       bool verbose){
 
-  std::string rankingResultFilePath = reportFolderOutput;
-  rankingResultFilePath.append(outputFileName);
+  std::string outputFileNameJson = outputFileNameWithoutExtension;
+  outputFileNameJson.append(".json");
+  std::string rankingResultFilePathJson = reportFolderOutput;
+  rankingResultFilePathJson.append(outputFileNameJson);
+
+  nlohmann::ordered_json jsonReport;
+
+    
+  std::string outputFileNameCsv = outputFileNameWithoutExtension;
+  outputFileNameCsv.append(".csv");
+  std::string rankingResultFilePathCsv = reportFolderOutput;
+  rankingResultFilePathCsv.append(outputFileNameCsv);
 
   std::ofstream rankingFile;
-  rankingFile.open(rankingResultFilePath);
+  rankingFile.open(rankingResultFilePathCsv);
 
   if(verbose){
     std::cout<<"Writing Metric Tables to csv" << std::endl;
@@ -220,12 +233,14 @@ void writeMetricTableToCsvFile(
     date::year_month_day ymdStart;
     dateSStreamA >> date::parse("%Y-%m-%d",ymdStart);
 
+
     std::string dateStringB;
     JsonFunctions::getJsonString(tableEntry[0]["dateEnd"],dateStringB);
     std::istringstream dateSStreamB(dateStringB);
     dateSStreamB.exceptions(std::ios::failbit);
     date::year_month_day ymdEnd;
     dateSStreamB >> date::parse("%Y-%m-%d",ymdEnd);
+
 
     rankingFile << ymdStart.year()<<"-"<<ymdStart.month()<<"-"<<ymdStart.day()
                 <<'\n';
@@ -267,6 +282,10 @@ void writeMetricTableToCsvFile(
 
     for(size_t i=1; i<tableEntry.size();++i){
 
+      nlohmann::ordered_json jsonTickerEntry=nlohmann::ordered_json::object();
+      jsonTickerEntry.push_back({"dateStart",dateStringA});
+      jsonTickerEntry.push_back({"dateEnd",dateStringB});
+
       std::string ticker;
       JsonFunctions::getJsonString(tableEntry[i]["PrimaryTicker"],ticker);
       int ranking = static_cast<int>(
@@ -278,6 +297,10 @@ void writeMetricTableToCsvFile(
       rankingFile << ticker;
       rankingFile << "," << ranking;
       rankingFile << "," << metricRankSum;
+
+      jsonTickerEntry.push_back({"PrimaryTicker",ticker});
+      jsonTickerEntry.push_back({"Ranking",ranking});
+      jsonTickerEntry.push_back({"MetricRankSum",metricRankSum});
 
       if(verbose){
         std::cout << '\t' << i << '\t' << ticker << std::endl;
@@ -298,6 +321,9 @@ void writeMetricTableToCsvFile(
 
         rankingFile   <<","<< metricRank;
         rankingFile   <<","<< metricValue;
+
+        jsonTickerEntry.push_back({metricNameRank,metricRank});
+        jsonTickerEntry.push_back({metricNameValue,metricValue});        
       }
 
       //Add additional context data
@@ -368,10 +394,17 @@ void writeMetricTableToCsvFile(
             fundamentalData["General"]["AddressData"]["Country"],
             tempString);            
         rankingFile << "," << tempString;
+        
+        jsonTickerEntry.push_back({"Country",tempString});
+
+
         JsonFunctions::getJsonString(
             fundamentalData["General"]["Name"],
             tempString);            
         rankingFile << "," << tempString; 
+
+        jsonTickerEntry.push_back({"Name",tempString});
+
 
         double roic = JsonFunctions::getJsonFloat(
             analysisData[analysisDate]["returnOnInvestedCapital"]);
@@ -389,43 +422,120 @@ void writeMetricTableToCsvFile(
         }
         rankingFile <<","<<roic;
         rankingFile <<","<<costOfCapital;
-        rankingFile << "," <<
+
+        jsonTickerEntry.push_back({"returnOnInvestedCapital",roic});
+        jsonTickerEntry.push_back({"costOfCapital",costOfCapital});
+
+
+        rankingFile << "," << JsonFunctions::getJsonFloat(
+            fundamentalData["SharesStats"]["PercentInsiders"]); 
+
+        jsonTickerEntry.push_back({"PercentInsiders",
             JsonFunctions::getJsonFloat(
-            fundamentalData["SharesStats"]["PercentInsiders"]);            
+                fundamentalData["SharesStats"]["PercentInsiders"])});
+    
+
         rankingFile << "," << 
             JsonFunctions::getJsonFloat(
-            fundamentalData["SharesStats"]["PercentInstitutions"]);            
+            fundamentalData["SharesStats"]["PercentInstitutions"]); 
+
+        jsonTickerEntry.push_back({"PercentInstitutions",
+            JsonFunctions::getJsonFloat(
+                fundamentalData["SharesStats"]["PercentInstitutions"])});            
+
+
         rankingFile << "," << 
             JsonFunctions::getJsonFloat(
-            fundamentalData["Highlights"]["MarketCapitalizationMln"]);      
+            fundamentalData["Highlights"]["MarketCapitalizationMln"]); 
+
+        jsonTickerEntry.push_back({"MarketCapitalizationMln",
+            JsonFunctions::getJsonFloat(
+            fundamentalData["Highlights"]["MarketCapitalizationMln"])});              
+
+
         JsonFunctions::getJsonString(
             fundamentalData["General"]["IPODate"],
-            tempString);       
+            tempString);     
+
         rankingFile << "," << tempString;  
+
+        jsonTickerEntry.push_back({"IPODate",tempString});   
+
+
         rankingFile << "," << endPrice;
+
+        jsonTickerEntry.push_back({"adjusted_close",endPrice});   
+
+
         rankingFile << "," << JsonFunctions::getJsonFloat(
             fundamentalData["AnalystRatings"]["TargetPrice"]);
+        
+        jsonTickerEntry.push_back({"AnalystRatings_TargetPrice",
+            JsonFunctions::getJsonFloat(
+            fundamentalData["AnalystRatings"]["TargetPrice"])});
+
+
         rankingFile << "," << 
             JsonFunctions::getJsonFloat(
             fundamentalData["AnalystRatings"]["StrongBuy"]); 
+
+        jsonTickerEntry.push_back({"AnalystRatings_StrongBuy",
+            JsonFunctions::getJsonFloat(
+            fundamentalData["AnalystRatings"]["StrongBuy"])});
+
+
         rankingFile << "," << 
             JsonFunctions::getJsonFloat(
             fundamentalData["AnalystRatings"]["Buy"]); 
+
+        jsonTickerEntry.push_back({"AnalystRatings_Buy",
+            JsonFunctions::getJsonFloat(
+            fundamentalData["AnalystRatings"]["Buy"])});
+
+
         rankingFile << "," << 
             JsonFunctions::getJsonFloat(
             fundamentalData["AnalystRatings"]["Hold"]); 
+
+        jsonTickerEntry.push_back({"AnalystRatings_Hold",
+            JsonFunctions::getJsonFloat(
+            fundamentalData["AnalystRatings"]["Hold"])});
+
         rankingFile << "," << 
             JsonFunctions::getJsonFloat(
             fundamentalData["AnalystRatings"]["Sell"]); 
+
+        jsonTickerEntry.push_back({"AnalystRatings_Sell",
+            JsonFunctions::getJsonFloat(
+            fundamentalData["AnalystRatings"]["Sell"])});
+
+
         rankingFile << "," << 
             JsonFunctions::getJsonFloat(
             fundamentalData["AnalystRatings"]["StrongSell"]); 
+
+        jsonTickerEntry.push_back({"AnalystRatings_StrongSell",
+            JsonFunctions::getJsonFloat(
+            fundamentalData["AnalystRatings"]["StrongSell"])});
+
         JsonFunctions::getJsonString(
             fundamentalData["General"]["WebURL"],
-            tempString);            
+            tempString);           
+
         rankingFile << "," << tempString;
+
+        jsonTickerEntry.push_back({"WebURL",tempString});
+
+        JsonFunctions::getJsonString(
+            fundamentalData["General"]["Description"],
+            tempString);
+
+        jsonTickerEntry.push_back({"Description",tempString});
+
+
       }
       rankingFile <<'\n';
+      jsonReport.push_back(jsonTickerEntry);
     }
     rankingFile <<'\n';
     ++indexEntry;
@@ -433,7 +543,14 @@ void writeMetricTableToCsvFile(
       break;
     }
   }
+
   rankingFile.close();
+
+  std::ofstream outputFileStream(rankingResultFilePathJson,
+      std::ios_base::trunc | std::ios_base::out);
+  outputFileStream << jsonReport;
+  outputFileStream.close();  
+
 };
 
 
@@ -584,19 +701,20 @@ int main (int argc, char* argv[]) {
     std::filesystem::path rankingConfigFilePath = rankingConfigurationFile;
     std::string rankingConfigFileName = rankingConfigFilePath.filename().string();
 
-    std::string csvFileName = rankingConfigFileName;
-    csvFileName = csvFileName.substr(0,csvFileName.length()-4);                                               
-    csvFileName.append("_summary.csv");
+    std::string fileNameWithoutExtension = rankingConfigFileName;
+    fileNameWithoutExtension = 
+      fileNameWithoutExtension.substr(0,fileNameWithoutExtension.length()-4);                                               
+    fileNameWithoutExtension.append("_report");
 
-    writeMetricTableToCsvFile(metricTableSet,listOfRankingMetrics,
+    writeReportTableToFile(metricTableSet,listOfRankingMetrics,
       fundamentalFolder,historicalFolder,analysisFolder,reportFolder,
-      csvFileName,numberOfYearsToReport,verbose);
+      fileNameWithoutExtension,numberOfYearsToReport,verbose);
 
     std::string reportFileName = rankingConfigFileName;
     reportFileName = reportFileName.substr(0,reportFileName.length()-4);                                               
-    reportFileName.append("_report.txt");
+    reportFileName.append("_sortedByTicker.txt");
 
-    writeReportToTextFile(metricTableSet,listOfRankingMetrics,
+    writeMetricTableSortedByTickerToTextFile(metricTableSet,listOfRankingMetrics,
       reportFolder,reportFileName,numberOfYearsToReport,verbose);  
 
   } catch (TCLAP::ArgException &e){ 
