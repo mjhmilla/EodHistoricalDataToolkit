@@ -22,22 +22,36 @@
 #include "UtilityFunctions.h"
 
 const double PointsPerInch       = 72;
-const double InchesPerCentimeter = 1.0/2.54;
+const double InchesPerCentimeter  = 1.0/2.54;
 
-
+//==============================================================================
 struct PlotSettings{
   std::string fontName;
   double axisLabelFontSize;
+  double axisTickFontSize;
   double legendFontSize;
   double titleFontSize;  
   double lineWidth;
-  double plotWidthInPoints;
-  double plotHeighInPoints;
-  double canvasWidthInPoints;
-  double canvasHeightInPoints;
+  double axisLineWidth;
+  double plotWidth;
+  double plotHeight;
+  double canvasWidth;
+  double canvasHeight;
+  PlotSettings():
+    fontName("Times"),
+    axisLabelFontSize(8.0),
+    axisTickFontSize(8.0),
+    legendFontSize(6.0),
+    titleFontSize(12.0),
+    lineWidth(0.5),
+    axisLineWidth(1.0),
+    plotWidth(6.0*InchesPerCentimeter*PointsPerInch),
+    plotHeight(6.0*InchesPerCentimeter*PointsPerInch),
+    canvasWidth(0.),
+    canvasHeight(0.){}  
 };
 
-
+//==============================================================================
 //For now this assumes '%Y-%m-%d'
 double convertToFractionalYear(std::string &dateStr){
   date::year_month_day dateYmd;
@@ -69,27 +83,146 @@ double convertToFractionalYear(std::string &dateStr){
   return date;
 };
 
-/*
-void createStockPricePlot(
-      std::string &primaryTicker,
-      std::string &historicalFolder,
-      std::string &companyName,
-      std::string &currencyCode){
+//==============================================================================
+void configurePlot(sciplot::Plot2D &plotUpd,
+                   const std::string &xAxisLabel,
+                   const std::string &yAxisLabel,
+                   const PlotSettings &settings){
+                      
+  plotUpd.xlabel(xAxisLabel)
+    .fontName(settings.fontName)
+    .fontSize(settings.axisLabelFontSize);
+
+  plotUpd.xtics()
+    .fontName(settings.fontName)
+    .fontSize(settings.axisTickFontSize);
+
+  plotUpd.ylabel(yAxisLabel)
+    .fontName(settings.fontName)
+    .fontSize(settings.axisLabelFontSize);
+
+  plotUpd.ytics()
+    .fontName(settings.fontName)
+    .fontSize(settings.axisTickFontSize);
+
+  plotUpd.border().lineWidth(settings.axisLineWidth);
+
+  plotUpd.fontName(settings.fontName);
+  plotUpd.fontSize(settings.legendFontSize);                    
+
+  plotUpd.size(settings.plotWidth,settings.plotHeight);
 
 };
-*/
+
+//==============================================================================
+void createHistoricalDataPlot(
+      sciplot::Plot2D &plotHistoricalDataUpd,
+      const nlohmann::ordered_json &reportEntry,
+      const std::string &historicalFolder,
+      const PlotSettings &settings,
+      bool verbose){
+
+  std::string primaryTicker;
+  JsonFunctions::getJsonString(reportEntry["PrimaryTicker"],primaryTicker);
+
+  std::string companyName;
+  JsonFunctions::getJsonString(reportEntry["Name"],companyName);
+
+  std::string currencyCode;
+  JsonFunctions::getJsonString(reportEntry["CurrencyCode"],currencyCode);
+
+  std::string country;
+  JsonFunctions::getJsonString(reportEntry["Country"],country);
+
+  //Load the historical data
+  nlohmann::ordered_json historicalData;
+  bool loadedHistoricalData = JsonFunctions::loadJsonFile(primaryTicker,
+    historicalFolder, historicalData, verbose);  
+
+  //Go through the historical data and pull out the date information
+  //and adjusted_close information
+  date::sys_days dateDay, dateDayFirstOfYear;
+  date::year_month_day dateYmd;
+  bool firstEntry = true;
+
+  sciplot::Vec x0(historicalData.size());
+  sciplot::Vec y0(historicalData.size());
+
+  std::size_t dateCount=0;
+  for( auto const &entry : historicalData){  
+    y0[dateCount] = JsonFunctions::getJsonFloat(entry["adjusted_close"]);
+
+    std::string dateStr;
+    JsonFunctions::getJsonString(entry["date"],dateStr);
+    x0[dateCount] = convertToFractionalYear(dateStr);
+
+    ++dateCount;
+    firstEntry=false;
+  }
+
+  plotHistoricalDataUpd.drawCurve(x0,y0)
+      .label(companyName)
+      .lineColor("black")
+      .lineWidth(settings.lineWidth);
+
+  std::string xAxisLabel("Year");
+
+  std::string yAxisLabel("Adjusted Closing Price (");
+  yAxisLabel.append(currencyCode);
+  yAxisLabel.append(")");
+
+  configurePlot(plotHistoricalDataUpd,xAxisLabel,yAxisLabel,settings);
+
+  plotHistoricalDataUpd.legend().atTopLeft();
+
+
+};
+
+//==============================================================================
+void extractReportTimeSeriesData(
+      const std::string &primaryTicker,
+      const nlohmann::ordered_json &report,
+      const char* dateFieldName,
+      const char* floatFieldName,
+      std::vector<double> &dateSeries,
+      std::vector<double> &floatSeries){
+
+  dateSeries.clear();
+  floatSeries.clear();
+
+  for(auto const &entry: report){
+    std::string primaryTickerEntry;
+    JsonFunctions::getJsonString(entry["PrimaryTicker"],primaryTickerEntry);
+    if(primaryTicker.compare(primaryTickerEntry.c_str())==0){
+      std::string dateEntryStr;
+      JsonFunctions::getJsonString(entry[dateFieldName],dateEntryStr);
+      double timeData = convertToFractionalYear(dateEntryStr);
+      dateSeries.push_back(timeData);
+
+      double floatData = JsonFunctions::getJsonFloat(entry[floatFieldName]);
+      floatSeries.push_back(floatData);
+    }
+  }
+
+}
+
+//==============================================================================
 void plotReportData(
         nlohmann::ordered_json &report,
         std::string &historicalFolder,
         std::string &plotFolderOutput,
+        PlotSettings &settings,
         bool verbose)
 {
 
-  int plotWidthPts = 3*72;
-  int plotHeightPts= 3*72;
 
   for(auto const &reportEntry: report){
 
+
+
+    sciplot::Plot2D plotHistoricalData;
+    createHistoricalDataPlot( plotHistoricalData,reportEntry,historicalFolder, 
+                              settings, verbose);
 
     std::string primaryTicker;
     JsonFunctions::getJsonString(reportEntry["PrimaryTicker"],primaryTicker);
@@ -97,108 +230,58 @@ void plotReportData(
     std::string companyName;
     JsonFunctions::getJsonString(reportEntry["Name"],companyName);
 
-    std::string currencyCode;
-    JsonFunctions::getJsonString(reportEntry["CurrencyCode"],currencyCode);
-
     std::string country;
     JsonFunctions::getJsonString(reportEntry["Country"],country);
 
+    std::vector<double> xPriceToValue;
+    std::vector<double> yPriceToValue;
 
-    //Load the historical data
-    nlohmann::ordered_json historicalData;
-    bool loadedHistoricalData = JsonFunctions::loadJsonFile(primaryTicker,
-      historicalFolder, historicalData, verbose);
-    
-    //Go through the historical data and pull out the date information
-    //and adjusted_close information
-    date::sys_days dateDay, dateDayFirstOfYear;
-    date::year_month_day dateYmd;
-    bool firstEntry = true;
+    extractReportTimeSeriesData(
+        primaryTicker,
+        report,
+        "dateEnd",
+        "priceToValue_value",
+        xPriceToValue,
+        yPriceToValue);
 
-    sciplot::Plot2D plot0, plot1, plot2, plot3, plot4, plot5;
-    sciplot::Vec x0(historicalData.size());
-    sciplot::Vec y0(historicalData.size());
-
-    std::size_t dateCount=0;
-    for( auto const &entry : historicalData){  
-      y0[dateCount] = JsonFunctions::getJsonFloat(entry["adjusted_close"]);
-
-      std::string dateStr;
-      JsonFunctions::getJsonString(entry["date"],dateStr);
-      x0[dateCount] = convertToFractionalYear(dateStr);
-
-      ++dateCount;
-      firstEntry=false;
+    if(xPriceToValue.size()>1){
+      std::reverse(xPriceToValue.begin(),xPriceToValue.end());
+      std::reverse(yPriceToValue.begin(),yPriceToValue.end());
     }
 
-    plot0.drawCurve(x0,y0).label(companyName).lineColor("black");
-    plot0.xlabel("Year");
-    std::string ylabelStr("Adjusted Closing Price (");
-    ylabelStr.append(currencyCode);
-    ylabelStr.append(")");
+    sciplot::Vec x(xPriceToValue.size());
+    sciplot::Vec y(yPriceToValue.size());
+    for(size_t i =0; i < yPriceToValue.size(); ++i){
+      x[i] = xPriceToValue[i];
+      y[i] = yPriceToValue[i];
+    }
 
-    plot0.ylabel(ylabelStr);
-    plot0.size(plotWidthPts,plotHeightPts);
-    plot0.fontName("Times");
-    plot0.fontSize(12);
+    sciplot::Plot2D plotPriceToValue;
+    plotPriceToValue.drawCurve(x,y)
+      .label(companyName)
+      .lineColor("black")
+      .lineWidth(settings.lineWidth);
 
-    //Using dummy data for now
-    plot1.drawCurve(x0,y0).label(companyName).lineColor("black");
-    plot1.xlabel("Time (days)");
-    plot1.ylabel("Adjusted Closing Price ()");
-    plot1.size(plotWidthPts,plotHeightPts);
-    plot1.fontName("Times");
-    plot1.fontSize(12);
-
-    plot2.drawCurve(x0,y0).label(companyName).lineColor("black");
-    plot2.xlabel("Time (days)");
-    plot2.ylabel("Adjusted Closing Price ()");
-    plot2.size(plotWidthPts,plotHeightPts);
-    plot2.fontName("Times");
-    plot2.fontSize(12);
-
-    plot3.drawCurve(x0,y0).label(companyName).lineColor("black");
-    plot3.xlabel("Time (days)");
-    plot3.ylabel("Adjusted Closing Price ()");
-    plot3.size(plotWidthPts,plotHeightPts);
-    plot3.fontName("Times");
-    plot3.fontSize(12);
-
-    plot4.drawCurve(x0,y0).label(companyName).lineColor("black");
-    plot4.xlabel("Time (days)");
-    plot4.ylabel("Adjusted Closing Price ()");
-    plot4.size(plotWidthPts,plotHeightPts);
-    plot4.fontName("Times");
-    plot4.fontSize(12);
-
-    plot5.drawCurve(x0,y0).label(companyName).lineColor("black");
-    plot5.xlabel("Time (days)");
-    plot5.ylabel("Adjusted Closing Price ()");
-    plot5.size(plotWidthPts,plotHeightPts);
-    plot5.fontName("Times");
-    plot5.fontSize(12);
+    std::string tmpStringA("Year");
+    std::string tmpStringB("Price-To-Value");
+    configurePlot(plotPriceToValue,tmpStringA,tmpStringB,settings);
+    plotPriceToValue.legend().atTopLeft();
 
 
-    sciplot::Figure figTicker = {{plot0,plot1,plot2},{plot3,plot4,plot5}};
-
-    std::string title = companyName;
-    title.append(" (");
-    title.append(primaryTicker);
-    title.append(") - ");
-    title.append(country);
+    
+    std::string titleStr = companyName;
+    titleStr.append(" (");
+    titleStr.append(primaryTicker);
+    titleStr.append(") - ");
+    titleStr.append(country);
     
 
-    figTicker.title(title);//.fontName("Times").fontSize(12);
-    //figTicker.fontName("Times");
-    //figTicker.fontSize(12);
-
-    figTicker.palette("dark2");
+    sciplot::Figure figTicker = {{plotHistoricalData, plotPriceToValue}};
+    figTicker.title(titleStr);
 
     sciplot::Canvas canvas = {{figTicker}};
-    canvas.size(1366, 768);
-
-    // Show the plot in a pop-up window
-    canvas.show();
+    canvas.size(settings.plotWidth*2.0,settings.plotHeight);
+    //canvas.show();
 
     // Save the figure to a PDF file
     std::string outputFileName = plotFolderOutput;
@@ -207,10 +290,11 @@ void plotReportData(
     if(idx != std::string::npos){
       plotFileName.at(idx)='_';
     }
-    plotFileName.append(".png");
+    plotFileName.append(".pdf");
     outputFileName.append(plotFileName);
     canvas.save(outputFileName);
 
+    bool here=true;
   }
 
 };
@@ -301,7 +385,10 @@ int main (int argc, char* argv[]) {
     bool reportLoaded = 
       JsonFunctions::loadJsonFile(reportFilePath, report, verbose);
 
-    plotReportData(report,historicalFolder,plotFolder,verbose);                                  
+    PlotSettings settings;
+          
+
+    plotReportData(report,historicalFolder,plotFolder,settings,verbose);                                  
 
   } catch (TCLAP::ArgException &e){ 
     std::cerr << "error: "    << e.error() 
