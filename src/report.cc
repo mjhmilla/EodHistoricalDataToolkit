@@ -397,6 +397,12 @@ void writeReportTableToFile(
         
         jsonTickerEntry.push_back({"Country",tempString});
 
+        JsonFunctions::getJsonString(
+            fundamentalData["General"]["CurrencyCode"],tempString);            
+        rankingFile << "," << tempString;
+        
+        jsonTickerEntry.push_back({"CurrencyCode",tempString});
+
 
         JsonFunctions::getJsonString(
             fundamentalData["General"]["Name"],
