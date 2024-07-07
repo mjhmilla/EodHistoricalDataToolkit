@@ -45,8 +45,8 @@ struct PlotSettings{
     titleFontSize(12.0),
     lineWidth(0.5),
     axisLineWidth(1.0),
-    plotWidth(6.0*InchesPerCentimeter*PointsPerInch),
-    plotHeight(6.0*InchesPerCentimeter*PointsPerInch),
+    plotWidth(12.0*InchesPerCentimeter*PointsPerInch),
+    plotHeight(12.0*InchesPerCentimeter*PointsPerInch),
     canvasWidth(0.),
     canvasHeight(0.){}  
 };
@@ -149,12 +149,22 @@ void createHistoricalDataPlot(
   sciplot::Vec y0(historicalData.size());
 
   std::size_t dateCount=0;
+  double ymin = std::numeric_limits<double>::max();
+  double ymax =-std::numeric_limits<double>::max();
+  
   for( auto const &entry : historicalData){  
     y0[dateCount] = JsonFunctions::getJsonFloat(entry["adjusted_close"]);
 
     std::string dateStr;
     JsonFunctions::getJsonString(entry["date"],dateStr);
     x0[dateCount] = convertToFractionalYear(dateStr);
+
+    if(static_cast<double>(y0[dateCount])<ymin){
+      ymin=static_cast<double>(y0[dateCount]);
+    }
+    if(static_cast<double>(y0[dateCount])>ymax){
+      ymax=static_cast<double>(y0[dateCount]);
+    }
 
     ++dateCount;
     firstEntry=false;
@@ -164,6 +174,20 @@ void createHistoricalDataPlot(
       .label(companyName)
       .lineColor("black")
       .lineWidth(settings.lineWidth);
+
+  if((ymax-ymin)>std::numeric_limits<double>::epsilon()){
+    if(ymin > 0){
+      ymin = 0;
+      ymax=ymax + std::max(0.01,(ymax-ymin)*0.1);
+    }
+    if(ymax < 0){
+      ymax=0;    
+      ymin=ymin - std::max(0.01,(ymax-ymin)*0.1);
+    }
+    plotHistoricalDataUpd.yrange(static_cast<sciplot::StringOrDouble>(ymin),
+                                static_cast<sciplot::StringOrDouble>(ymax));
+  }
+  
 
   std::string xAxisLabel("Year");
 
@@ -205,24 +229,64 @@ void extractReportTimeSeriesData(
   }
 
 }
+//==============================================================================
+void readConfigurationFile(std::string &plotConfigurationFilePath,
+                std::vector< std::vector < std::string > > &subplotMetricNames)
+{
+
+  std::ifstream configFile(plotConfigurationFilePath);
+  if(configFile.is_open()){
+    bool endOfFile=false;
+
+      std::vector< std::string > metricRowVector; 
+      std::string line;
+      do{
+        line.clear();
+        metricRowVector.clear();
+
+        std::getline(configFile,line);
+        
+        if(line.length() > 0){
+          //Extract the individual fields
+          size_t i0=0;
+          size_t i1=line.find_first_of(',',i0);
+          while(i1 > i0){
+            std::string metricName = line.substr(i0,i1-i0);
+            if(metricName.length()>0){
+              metricRowVector.push_back(metricName);
+              metricName.clear();
+            }
+            i0=i1+1;
+            i1 = line.find_first_of(',',i0);
+            if(i1 == std::string::npos){
+              i1 = line.length();
+            }            
+          }
+          if(metricRowVector.size() > 0){
+            subplotMetricNames.push_back(metricRowVector);
+          }
+        }else{
+          endOfFile=true;
+        }
+      }while(!endOfFile);
+  }
+
+};
 
 //==============================================================================
 void plotReportData(
         nlohmann::ordered_json &report,
         std::string &historicalFolder,
         std::string &plotFolderOutput,
+        std::vector< std::vector< std::string >> &subplotMetricNames,
         PlotSettings &settings,
         bool verbose)
 {
 
+  //Continue only if we have a plot configuration loaded.
+
 
   for(auto const &reportEntry: report){
-
-
-
-    sciplot::Plot2D plotHistoricalData;
-    createHistoricalDataPlot( plotHistoricalData,reportEntry,historicalFolder, 
-                              settings, verbose);
 
     std::string primaryTicker;
     JsonFunctions::getJsonString(reportEntry["PrimaryTicker"],primaryTicker);
@@ -233,40 +297,96 @@ void plotReportData(
     std::string country;
     JsonFunctions::getJsonString(reportEntry["Country"],country);
 
-    std::vector<double> xPriceToValue;
-    std::vector<double> yPriceToValue;
+    std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
 
-    extractReportTimeSeriesData(
-        primaryTicker,
-        report,
-        "dateEnd",
-        "priceToValue_value",
-        xPriceToValue,
-        yPriceToValue);
+    for(size_t indexRow=0; 
+        indexRow < subplotMetricNames.size(); ++indexRow){
 
-    if(xPriceToValue.size()>1){
-      std::reverse(xPriceToValue.begin(),xPriceToValue.end());
-      std::reverse(yPriceToValue.begin(),yPriceToValue.end());
+      std::vector < sciplot::PlotVariant > rowOfPlots;
+
+      for(size_t indexCol=0; 
+          indexCol < subplotMetricNames[indexRow].size(); ++indexCol){
+        bool subplotAdded = false;
+
+        //Add historical pricing data
+        if(subplotMetricNames[indexRow][indexCol].compare("historicalData")==0){
+          sciplot::Plot2D plotHistoricalData;
+          createHistoricalDataPlot( plotHistoricalData,reportEntry,
+                                    historicalFolder,settings, verbose);          
+          rowOfPlots.push_back(plotHistoricalData);
+          subplotAdded=true;
+        }
+        
+        //Add metric data
+        if(subplotMetricNames[indexRow][indexCol].compare("empty")!=0 
+          && !subplotAdded){
+
+          std::vector<double> xTmp;
+          std::vector<double> yTmp;
+          extractReportTimeSeriesData(
+              primaryTicker,
+              report,
+              "dateEnd",
+              subplotMetricNames[indexRow][indexCol].c_str(),
+              xTmp,
+              yTmp);     
+          
+          sciplot::Vec x(xTmp.size());
+          sciplot::Vec y(yTmp.size());
+          double ymin = std::numeric_limits<double>::max();
+          double ymax = -std::numeric_limits<double>::max();
+  
+          for(size_t i =0; i < yTmp.size(); ++i){
+            x[i] = xTmp[i];
+            y[i] = yTmp[i];
+            if(yTmp[i]>ymax){
+              ymax=yTmp[i];
+            }
+            if(yTmp[i]<ymin){
+              ymin=yTmp[i];
+            }
+          }
+
+          sciplot::Plot2D plotMetric;
+          plotMetric.drawCurve(x,y)
+            .label(companyName)
+            .lineColor("black")
+            .lineWidth(settings.lineWidth);
+
+          
+          //if((ymax-ymin)>std::numeric_limits<double>::epsilon()){
+          if(ymin > 0){
+            ymin=0.;
+            ymax=ymax + std::max(0.01,(ymax-ymin)*0.1);
+          }
+          if(ymax < 0){
+            ymax=0.;
+            ymin=ymin - std::max(0.01,(ymax-ymin)*0.1);
+          }
+          if((ymax-ymin)<0.01){
+            ymin = -0.01;
+            ymax = 0.01;
+          }
+          plotMetric.yrange(
+              static_cast<sciplot::StringOrDouble>(ymin),
+              static_cast<sciplot::StringOrDouble>(ymax));
+         //} 
+          
+
+          std::string tmpStringA("Year");
+          std::string tmpStringB(subplotMetricNames[indexRow][indexCol].c_str());
+          configurePlot(plotMetric,tmpStringA,tmpStringB,settings);
+          plotMetric.legend().atTopLeft();     
+          rowOfPlots.push_back(plotMetric);
+          subplotAdded=true;
+        }
+
+        //If its empty, do nothing.     
+      }
+      if(rowOfPlots.size()>0){
+        arrayOfPlots.push_back(rowOfPlots);
+      }
     }
-
-    sciplot::Vec x(xPriceToValue.size());
-    sciplot::Vec y(yPriceToValue.size());
-    for(size_t i =0; i < yPriceToValue.size(); ++i){
-      x[i] = xPriceToValue[i];
-      y[i] = yPriceToValue[i];
-    }
-
-    sciplot::Plot2D plotPriceToValue;
-    plotPriceToValue.drawCurve(x,y)
-      .label(companyName)
-      .lineColor("black")
-      .lineWidth(settings.lineWidth);
-
-    std::string tmpStringA("Year");
-    std::string tmpStringB("Price-To-Value");
-    configurePlot(plotPriceToValue,tmpStringA,tmpStringB,settings);
-    plotPriceToValue.legend().atTopLeft();
-
 
     
     std::string titleStr = companyName;
@@ -275,22 +395,47 @@ void plotReportData(
     titleStr.append(") - ");
     titleStr.append(country);
     
+    sciplot::Figure figTicker(arrayOfPlots);
 
-    sciplot::Figure figTicker = {{plotHistoricalData, plotPriceToValue}};
     figTicker.title(titleStr);
 
     sciplot::Canvas canvas = {{figTicker}};
-    canvas.size(settings.plotWidth*2.0,settings.plotHeight);
+    unsigned int nrows = subplotMetricNames.size();
+    unsigned int ncols=0;
+    for(unsigned int i=0; i<subplotMetricNames.size();++i){
+      if(ncols < subplotMetricNames[i].size()){
+        ncols=subplotMetricNames[i].size();
+      }
+    }
+
+    size_t canvasWidth  = 
+      static_cast<size_t>(settings.plotWidth*static_cast<double>(ncols));
+    size_t canvasHeight = 
+      static_cast<size_t>(settings.plotHeight*static_cast<double>(nrows));
+
+    canvas.size(canvasWidth, canvasHeight) ;
     //canvas.show();
 
     // Save the figure to a PDF file
     std::string outputFileName = plotFolderOutput;
-    std::string plotFileName = primaryTicker;
+    unsigned rank = 
+      static_cast<unsigned int>(
+          JsonFunctions::getJsonFloat(reportEntry["Ranking"]));
+    std::ostringstream rankOSS;
+    rankOSS << rank;          
+    std::string rankStr(rankOSS.str());
+    if(rankStr.length() < 5){
+      rankStr.insert(0,5-rankStr.length(),'0');
+    }
+    rankStr.push_back('_');
+
+    std::string plotFileName = rankStr;
+    plotFileName.append(primaryTicker);
     size_t idx = plotFileName.find(".");
     if(idx != std::string::npos){
       plotFileName.at(idx)='_';
     }
-    plotFileName.append(".pdf");
+    plotFileName.append(".png");
     outputFileName.append(plotFileName);
     canvas.save(outputFileName);
 
@@ -306,6 +451,7 @@ int main (int argc, char* argv[]) {
   std::string historicalFolder;
   std::string reportFilePath;
   std::string plotFolder;
+  std::string plotConfigurationFilePath;
 
   bool analyzeYears=true;
   bool analyzeQuarters=false;
@@ -327,6 +473,15 @@ int main (int argc, char* argv[]) {
       true,"","string");
     cmd.add(reportFilePathInput);
 
+    TCLAP::ValueArg<std::string> plotConfigurationFilePathInput("c",
+      "configuration_file", 
+      "The path to the csv file that contains the names of the metrics "
+      "in the _report.json file to plot. Note that the keywords historicalData"
+      "and empty are special: historicalData will produce a plot of the "
+      "adjusted end-of-day stock price, and empty will result in an empty plot",
+      true,"","string");
+    cmd.add(plotConfigurationFilePathInput);
+
     TCLAP::ValueArg<std::string> historicalFolderInput("p",
       "historical_data_folder_path", 
       "The path to the folder that contains the historical (price)"
@@ -338,8 +493,7 @@ int main (int argc, char* argv[]) {
       "The path to the json report file.",
       true,"","string");
     cmd.add(plotFolderOutput);
-
-
+    
     TCLAP::SwitchArg quarterlyAnalysisInput("q","quarterly",
       "Analyze quarterly data. Caution: this is not yet been tested.", false);
     cmd.add(quarterlyAnalysisInput);    
@@ -351,6 +505,7 @@ int main (int argc, char* argv[]) {
     cmd.parse(argc,argv);
 
     exchangeCode              = exchangeCodeInput.getValue();    
+    plotConfigurationFilePath = plotConfigurationFilePathInput.getValue();
     historicalFolder          = historicalFolderInput.getValue();    
     reportFilePath            = reportFilePathInput.getValue();
     plotFolder                = plotFolderOutput.getValue();
@@ -363,6 +518,9 @@ int main (int argc, char* argv[]) {
       std::cout << "  Exchange Code" << std::endl;
       std::cout << "    " << exchangeCode << std::endl;
 
+      std::cout << "  Plot Configuration File" << std::endl;
+      std::cout << "    " << plotConfigurationFilePath << std::endl;
+      
       std::cout << "  Historical Data Folder" << std::endl;
       std::cout << "    " << historicalFolder << std::endl;
 
@@ -387,8 +545,12 @@ int main (int argc, char* argv[]) {
 
     PlotSettings settings;
           
+    std::vector< std::vector < std::string > > subplotMetricNames;
 
-    plotReportData(report,historicalFolder,plotFolder,settings,verbose);                                  
+    readConfigurationFile(plotConfigurationFilePath,subplotMetricNames);
+
+    plotReportData(report,historicalFolder,plotFolder,subplotMetricNames,
+                   settings,verbose);                                  
 
   } catch (TCLAP::ArgException &e){ 
     std::cerr << "error: "    << e.error() 
