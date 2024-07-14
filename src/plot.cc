@@ -27,6 +27,17 @@ const double PointsPerInch       = 72;
 const double InchesPerCentimeter  = 1.0/2.54;
 
 
+//==============================================================================
+enum class ComparisonType{
+  LESS_THAN=0,
+  GREATER_THAN
+};
+
+struct MetricFilter{
+  std::string name;
+  double value;
+  ComparisonType comparison;
+};
 
 //==============================================================================
 struct TickerFigurePath{
@@ -74,6 +85,80 @@ std::vector< size_t > sort_indices(std::vector<T> &v){
 
   return idx;
 }
+//==============================================================================
+void readCountryFilterSet(const std::string &filterFilePath, 
+                       std::vector< std::string > &listOfCountries){
+
+  std::ifstream filterFile(filterFilePath);
+  listOfCountries.clear();
+
+  if(filterFile.is_open()){
+    bool endOfFile=false;
+    std::string line;
+    do{
+      line.clear();
+      std::getline(filterFile,line);              
+      if(line.length() > 0){
+        listOfCountries.push_back(line);
+      }else{
+        endOfFile=true;
+      }
+    }while(!endOfFile);
+  }
+}
+
+//==============================================================================
+void readMetricValueFilterSet(const std::string &filterFilePath,
+                           std::vector< MetricFilter > &metricFilterSet){
+  std::ifstream filterFile(filterFilePath);
+  metricFilterSet.clear();
+  if(filterFile.is_open()){
+
+    bool endOfFile=false;
+    std::string line;
+
+    while(!endOfFile){
+      line.clear();
+
+      std::getline(filterFile,line);
+
+      if(line.length() > 0){
+        MetricFilter metricFilter;
+
+        size_t idx0=0;
+        size_t idx1=0;
+
+        idx1 = line.find_first_of(",",idx0);
+        if(idx1 != std::string::npos){
+          metricFilter.name = line.substr(idx0,idx1-idx0);
+        }
+
+        idx0=idx1+1;
+        idx1 = line.find_last_of(",");
+        if(idx1 != std::string::npos){
+          std::string op = line.substr(idx0,idx1-idx0);
+          if(op.compare("<")==0){
+            metricFilter.comparison = ComparisonType::LESS_THAN;
+          }else if(op.compare(">")==0){
+            metricFilter.comparison = ComparisonType::GREATER_THAN;
+          }else{
+            std::cerr << "Error: readMetricValueFilterSet: Invalid operator of "
+                      << op << " from file " << filterFilePath <<std::endl;
+            std::abort();  
+          }
+        }
+        ++idx1;
+        double value = std::stod(line.substr(idx1, line.length()-idx1));
+        metricFilter.value=value;
+
+        metricFilterSet.push_back(metricFilter);
+      }else{
+        endOfFile=true;
+      }      
+    }
+  }
+}
+
 //==============================================================================
 //For now this assumes '%Y-%m-%d'
 double convertToFractionalYear(std::string &dateStr){
@@ -396,15 +481,66 @@ void getDataRange(const std::vector< double > &data,
 }
 
 //==============================================================================
+bool isCountryValid( const std::string &country,
+                     const std::vector< std::string > &filterByCountry){
+
+  bool isValid = false;
+ 
+  for(auto &countryName : filterByCountry){
+    if(countryName.compare(country) == 0){
+      isValid = true;
+      break;
+    }
+  }
+  return isValid;
+};
+
+//==============================================================================
+bool areMetricsValid(const nlohmann::ordered_json &reportEntry,
+                      const std::vector< MetricFilter > &metricFilterSet){
+
+  bool isValid = true;
+  for(unsigned int i=0; i<metricFilterSet.size();++i){
+    double value = JsonFunctions::getJsonFloat(
+                    reportEntry[metricFilterSet[i].name]);
+    switch(metricFilterSet[i].comparison){
+      case ComparisonType::LESS_THAN : {
+        if(value > metricFilterSet[i].value){
+          isValid=false;
+        }
+      };
+      break;
+      case ComparisonType::GREATER_THAN : {
+        if(value < metricFilterSet[i].value){
+          isValid=false;
+        }
+      };
+      break;
+      default:
+        std::cerr << "Error: areMetricsValid: invalid operator in "
+                     "metricFilterSet" << std::endl;
+        std::abort();                     
+    };
+    if(!isValid){
+      break;
+    }
+  }
+  return isValid;
+};
+                   
+
+//==============================================================================
 void plotReportData(
         const nlohmann::ordered_json &report,
         const std::string &historicalFolder,
         const std::string &plotFolderOutput,
         const std::vector< std::vector< std::string >> &subplotMetricNames,
         const PlotSettings &settings,
-        std::vector< TickerFigurePath > &tickerFigurePath,
+        const std::vector< std::string > &filterByCountry,
+        const std::vector< MetricFilter > &filterByMetricValue,
         int earliestReportingYear,
         int numberOfPlotsToGenerate,
+        std::vector< TickerFigurePath > &tickerFigurePath,        
         bool verbose)
 {
 
@@ -451,7 +587,14 @@ void plotReportData(
       }
     }
 
-    if( year >= earliestReportingYear && plotTicker){
+    //Check if this data meets the criteria. Note: for this to work 
+    //sensibily the report needs to be ordered from the most recent
+    //date to the oldest;
+    bool countryIsValid = isCountryValid(country, filterByCountry);
+    bool metricsAreValid= areMetricsValid(reportEntry,filterByMetricValue);
+
+    if( year >= earliestReportingYear && plotTicker 
+        && countryIsValid && metricsAreValid){
 
       plottedTickers.push_back(primaryTicker);
       std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
@@ -624,6 +767,8 @@ void generateLaTeXReport(
     const std::vector< TickerFigurePath > &tickerFigurePath,
     const std::string &plotFolder,
     const std::string &latexReportName,
+    const std::vector< std::string > &filterByCountry,
+    const std::vector< MetricFilter > &filterByMetricValue,    
     int earliestReportingYear,
     int numberOfPlotsToGenerate,
     bool verbose)
@@ -705,7 +850,12 @@ void generateLaTeXReport(
       }
     }
 
-    if(year >= earliestReportingYear && plotTicker){
+    bool countryIsValid = isCountryValid(country, filterByCountry);
+    bool metricsAreValid= areMetricsValid(reportEntry,filterByMetricValue);
+
+
+    if(year >= earliestReportingYear && plotTicker
+        && countryIsValid && metricsAreValid){
 
       plottedTickers.push_back(primaryTicker);
 
@@ -774,6 +924,10 @@ int main (int argc, char* argv[]) {
   std::string reportFilePath;
   std::string plotFolder;
   std::string plotConfigurationFilePath;
+  std::string fileFilterByCountry;
+  std::string fileFilterByMetricValue;
+  std::string fileNameLaTexReport;
+
   int numberOfPlotsToGenerate = -1;
   int earliestReportingYear = 2023;
   bool analyzeYears=true;
@@ -795,6 +949,23 @@ int main (int argc, char* argv[]) {
       "The path to the json report file.",
       true,"","string");
     cmd.add(reportFilePathInput);
+
+    TCLAP::ValueArg<std::string> reportLatexFileNameInput("t","latex_report_file_name", 
+      "The name of the LaTeX file to write.",
+      true,"","string");
+    cmd.add(reportLatexFileNameInput);
+
+    TCLAP::ValueArg<std::string> fileFilterByCountryInput("l","filter_country", 
+      "List of countries to include, listed one per line",
+      false,"","string");
+    cmd.add(fileFilterByCountryInput);    
+
+    TCLAP::ValueArg<std::string> fileFilterByMetricValueInput("m","filter_metric_values", 
+      "A csv file with 3 columns: metric name, operator (> or <), threshold"
+      "value. Multiple rows can be added, but, each metric name must exist in"
+      " the json report file.",
+      false,"","string");
+    cmd.add(fileFilterByMetricValueInput);    
 
     TCLAP::ValueArg<std::string> plotConfigurationFilePathInput("c",
       "configuration_file", 
@@ -839,6 +1010,9 @@ int main (int argc, char* argv[]) {
     plotConfigurationFilePath = plotConfigurationFilePathInput.getValue();
     historicalFolder          = historicalFolderInput.getValue();    
     reportFilePath            = reportFilePathInput.getValue();
+    fileNameLaTexReport       = reportLatexFileNameInput.getValue();
+    fileFilterByCountry       = fileFilterByCountryInput.getValue();
+    fileFilterByMetricValue   = fileFilterByMetricValueInput.getValue();
     numberOfPlotsToGenerate   = numberOfPlotsToGenerateInput.getValue();
     earliestReportingYear     = earliestReportingYearInput.getValue();
     plotFolder                = plotFolderOutput.getValue();
@@ -859,7 +1033,13 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Plot Configuration File" << std::endl;
       std::cout << "    " << plotConfigurationFilePath << std::endl;
-      
+
+      std::cout << "  Country filter file" << std::endl;
+      std::cout << "    " << fileFilterByCountry << std::endl;
+
+      std::cout << "  Metric value filter file" << std::endl;
+      std::cout << "    " << fileFilterByMetricValue << std::endl;
+
       std::cout << "  Historical Data Folder" << std::endl;
       std::cout << "    " << historicalFolder << std::endl;
 
@@ -891,20 +1071,34 @@ int main (int argc, char* argv[]) {
 
     std::vector< TickerFigurePath > tickerFigurePath;
 
-    plotReportData(report,historicalFolder,plotFolder,subplotMetricNames,
-                   settings,tickerFigurePath,earliestReportingYear, 
-                   numberOfPlotsToGenerate,verbose);  
+    std::vector< std::string > filterByCountry;
+    if(fileFilterByCountry.length()>0){
+      readCountryFilterSet(fileFilterByCountry,filterByCountry);
+    }
 
-    std::string latexReportName 
-      = reportFilePath.substr(reportFilePath.find_last_of("/\\")+1);
-    latexReportName 
-      = latexReportName.substr(0, latexReportName.find_last_of("."));
-    latexReportName.append(".tex");
+    std::vector< MetricFilter > filterByMetricValue;
+    if(fileFilterByMetricValue.length()>0){
+      readMetricValueFilterSet(fileFilterByMetricValue, filterByMetricValue);
+    }
 
+    plotReportData( report,
+                    historicalFolder,
+                    plotFolder,
+                    subplotMetricNames,
+                    settings,
+                    filterByCountry,
+                    filterByMetricValue,
+                    earliestReportingYear, 
+                    numberOfPlotsToGenerate,
+                    tickerFigurePath,
+                    verbose);  
+ 
     generateLaTeXReport(report,
                         tickerFigurePath,
                         plotFolder,
-                        latexReportName,
+                        fileNameLaTexReport,
+                        filterByCountry,
+                        filterByMetricValue,                        
                         earliestReportingYear,
                         numberOfPlotsToGenerate,
                         verbose);
