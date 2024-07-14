@@ -4,6 +4,8 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
+#include <vector>
+#include <numeric>
 #include <limits>
 
 #include <chrono>
@@ -58,7 +60,20 @@ struct PlotSettings{
     canvasWidth(0.),
     canvasHeight(0.){}  
 };
+//==============================================================================
+//From:
+//https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
+template <typename T>
+std::vector< size_t > sort_indices(std::vector<T> &v){
+  std::vector< size_t > idx(v.size());
+  std::iota(idx.begin(),idx.end(),0);
 
+  std::stable_sort(idx.begin(),idx.end(),
+                    [&v](size_t i1, size_t i2){return v[i1]<v[i2];});
+  std::stable_sort(v.begin(),v.end());
+
+  return idx;
+}
 //==============================================================================
 //For now this assumes '%Y-%m-%d'
 double convertToFractionalYear(std::string &dateStr){
@@ -91,6 +106,20 @@ double convertToFractionalYear(std::string &dateStr){
   return date;
 };
 //==============================================================================
+void deleteCharacters(std::string &textUpd, 
+                            std::vector< char > &charactersToDelete){
+
+    for(auto &delChar : charactersToDelete){
+      size_t idx = textUpd.find(delChar,0);
+      while(idx != std::string::npos){
+        if(idx != std::string::npos){
+          textUpd.erase(idx,1);
+        }
+        idx = textUpd.find(delChar,idx);
+      }
+    }
+}
+//==============================================================================
 void escapeSpecialCharacters(std::string &textUpd, 
                             std::vector< char > &charactersToEscape){
 
@@ -105,7 +134,7 @@ void escapeSpecialCharacters(std::string &textUpd,
     }
 }
 //==============================================================================
-void convertCamelCaseSpacedText(std::string &labelUpd){
+void convertCamelCaseToSpacedText(std::string &labelUpd){
   //Convert a camel-case labelUpd to a spaced label                      
   labelUpd[0] = std::toupper(labelUpd[0]);
   
@@ -158,11 +187,15 @@ void createHistoricalDataPlot(
       const PlotSettings &settings,
       bool verbose){
 
+  std::vector< char > charactersToDelete;  
+  charactersToDelete.push_back('\'');
+
   std::string primaryTicker;
   JsonFunctions::getJsonString(reportEntry["PrimaryTicker"],primaryTicker);
 
   std::string companyName;
   JsonFunctions::getJsonString(reportEntry["Name"],companyName);
+  deleteCharacters(companyName,charactersToDelete);
 
   std::string currencyCode;
   JsonFunctions::getJsonString(reportEntry["CurrencyCode"],currencyCode);
@@ -187,6 +220,8 @@ void createHistoricalDataPlot(
   std::size_t dateCount=0;
   double ymin = std::numeric_limits<double>::max();
   double ymax =-std::numeric_limits<double>::max();
+  double xmin = std::numeric_limits<double>::max();
+  double xmax =-std::numeric_limits<double>::max();
   
   for( auto const &entry : historicalData){  
     y0[dateCount] = JsonFunctions::getJsonFloat(entry["adjusted_close"]);
@@ -201,7 +236,12 @@ void createHistoricalDataPlot(
     if(static_cast<double>(y0[dateCount])>ymax){
       ymax=static_cast<double>(y0[dateCount]);
     }
-
+    if(static_cast<double>(x0[dateCount])<xmin){
+      xmin=static_cast<double>(x0[dateCount]);
+    }
+    if(static_cast<double>(x0[dateCount])>xmax){
+      xmax=static_cast<double>(x0[dateCount]);
+    }
     ++dateCount;
     firstEntry=false;
   }
@@ -210,19 +250,33 @@ void createHistoricalDataPlot(
       .label(companyName)
       .lineColor("black")
       .lineWidth(settings.lineWidth);
-
-  if((ymax-ymin)>std::numeric_limits<double>::epsilon()){
-    if(ymin > 0){
-      ymin = 0;
-      ymax=ymax + std::max(0.01,(ymax-ymin)*0.1);
-    }
-    if(ymax < 0){
-      ymax=0;    
-      ymin=ymin - std::max(0.01,(ymax-ymin)*0.1);
-    }
-    plotHistoricalDataUpd.yrange(static_cast<sciplot::StringOrDouble>(ymin),
-                                static_cast<sciplot::StringOrDouble>(ymax));
+    
+  if((xmax-xmin)<1.0){
+    xmax = 0.5*(xmin+xmax)+0.5;
+    xmin = xmax-1.;
   }
+  if((ymax-ymin)<0.1){
+    ymax = 0.5*(ymin+ymax)+0.05;
+    ymin = ymax-0.1;
+  }
+
+  if(ymin > 0){
+    ymin=0;
+  }
+  if(ymax < 0){
+    ymax=0;
+  }
+
+  ymax = ymax + 0.2*(ymax-ymin);
+
+  plotHistoricalDataUpd.xrange(
+      static_cast<sciplot::StringOrDouble>(xmin),
+      static_cast<sciplot::StringOrDouble>(xmax));              
+
+  plotHistoricalDataUpd.yrange(
+      static_cast<sciplot::StringOrDouble>(ymin),
+      static_cast<sciplot::StringOrDouble>(ymax));
+
   
 
   std::string xAxisLabel("Year");
@@ -249,6 +303,7 @@ void extractReportTimeSeriesData(
 
   dateSeries.clear();
   floatSeries.clear();
+  std::vector< double > tmpFloatSeries;
 
   for(auto const &entry: report){
     std::string primaryTickerEntry;
@@ -260,8 +315,13 @@ void extractReportTimeSeriesData(
       dateSeries.push_back(timeData);
 
       double floatData = JsonFunctions::getJsonFloat(entry[floatFieldName]);
-      floatSeries.push_back(floatData);
+      tmpFloatSeries.push_back(floatData);
     }
+  }
+
+  std::vector< size_t > indicesSorted = sort_indices(dateSeries);
+  for(size_t i=0; i<indicesSorted.size();++i){
+    floatSeries.push_back( tmpFloatSeries[ indicesSorted[i] ] );
   }
 
 }
@@ -308,6 +368,32 @@ void readConfigurationFile(std::string &plotConfigurationFilePath,
   }
 
 };
+//==============================================================================
+void getDataRange(const std::vector< double > &data, 
+                        std::vector< double > &dataRange,
+                        double minimumRange){
+
+  double ymin = std::numeric_limits<double>::max();
+  double ymax = -std::numeric_limits<double>::max();
+
+  for(size_t i =0; i < data.size(); ++i){
+    if(data[i]>ymax){
+      ymax=data[i];
+    }
+    if(data[i]<ymin){
+      ymin=data[i];
+    }
+  }
+  if(ymax-ymin < minimumRange){
+    ymax = 0.5*(ymax+ymin)+0.5*minimumRange;
+    ymin = ymax - minimumRange;
+  }
+
+  dataRange.clear();
+  dataRange.push_back(ymin);
+  dataRange.push_back(ymax);
+
+}
 
 //==============================================================================
 void plotReportData(
@@ -324,6 +410,10 @@ void plotReportData(
 
   //Continue only if we have a plot configuration loaded.
   int entryCount=0;
+  std::vector< char > charactersToDelete;  
+  charactersToDelete.push_back('\'');
+
+  std::vector< std::string > plottedTickers;
 
   for(auto const &reportEntry: report){
 
@@ -333,6 +423,7 @@ void plotReportData(
 
     std::string companyName;
     JsonFunctions::getJsonString(reportEntry["Name"],companyName);
+    deleteCharacters(companyName,charactersToDelete);
 
     std::string country;
     JsonFunctions::getJsonString(reportEntry["Country"],country);
@@ -346,11 +437,23 @@ void plotReportData(
     dateStartStream >> date::parse("%Y-%m-%d",ymdStart);
     int year = static_cast< int >(ymdStart.year());
 
-    if( year >= earliestReportingYear){
+    bool debuggingThisTicker=false;
+    //if(primaryTicker.compare("LOW.US")==0){
+    //  debuggingThisTicker=true;
+    //}
 
-    
+    //Check to see if we have already plotted this ticker
+    bool plotTicker=true;
+    for(size_t i=0; i<plottedTickers.size();++i){
+      if(plottedTickers[i].compare(primaryTicker) == 0){
+        plotTicker=false;
+        break;
+      }
+    }
 
+    if( year >= earliestReportingYear && plotTicker){
 
+      plottedTickers.push_back(primaryTicker);
       std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
 
       for(size_t indexRow=0; 
@@ -387,17 +490,12 @@ void plotReportData(
             
             sciplot::Vec x(xTmp.size());
             sciplot::Vec y(yTmp.size());
-            double ymin = std::numeric_limits<double>::max();
-            double ymax = -std::numeric_limits<double>::max();
-    
-            for(size_t i =0; i < yTmp.size(); ++i){
-              x[i] = xTmp[i];
-              y[i] = yTmp[i];
-              if(yTmp[i]>ymax){
-                ymax=yTmp[i];
-              }
-              if(yTmp[i]<ymin){
-                ymin=yTmp[i];
+
+            for(size_t i=0; i<xTmp.size();++i){
+              x[i]=xTmp[i];
+              y[i]=yTmp[i];
+              if(debuggingThisTicker){
+                std::cout << x[i] << '\t' << y[i] << std::endl;
               }
             }
 
@@ -407,25 +505,25 @@ void plotReportData(
               .lineColor("black")
               .lineWidth(settings.lineWidth);
 
-            
-            //if((ymax-ymin)>std::numeric_limits<double>::epsilon()){
-            if(ymin > 0){
-              ymin=0.;
-              ymax=ymax + std::max(0.01,(ymax-ymin)*0.1);
+            std::vector< double > xRange,yRange;
+            getDataRange(xTmp,xRange,1.0);
+            getDataRange(yTmp,yRange,std::numeric_limits< double >::lowest());
+            if(yRange[0] > 0){
+              yRange[0] = 0;
             }
-            if(ymax < 0){
-              ymax=0.;
-              ymin=ymin - std::max(0.01,(ymax-ymin)*0.1);
+            if(yRange[1] < 0){
+              yRange[1] = 0;
             }
-            if((ymax-ymin)<0.01){
-              ymin = -0.01;
-              ymax = 0.01;
-            }
+            //Add some blank space to the top of the plot
+            yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
+
+            plotMetric.xrange(
+                static_cast<sciplot::StringOrDouble>(xRange[0]),
+                static_cast<sciplot::StringOrDouble>(xRange[1]));              
+
             plotMetric.yrange(
-                static_cast<sciplot::StringOrDouble>(ymin),
-                static_cast<sciplot::StringOrDouble>(ymax));
-          //} 
-            
+                static_cast<sciplot::StringOrDouble>(yRange[0]),
+                static_cast<sciplot::StringOrDouble>(yRange[1]));
 
             std::string tmpStringA("Year");
             std::string tmpStringB(subplotMetricNames[indexRow][indexCol].c_str());
@@ -433,8 +531,8 @@ void plotReportData(
             size_t pos = tmpStringB.find("_value",0);
             tmpStringB = tmpStringB.substr(0,pos);
 
-            convertCamelCaseSpacedText(tmpStringA);
-            convertCamelCaseSpacedText(tmpStringB);
+            convertCamelCaseToSpacedText(tmpStringA);
+            convertCamelCaseToSpacedText(tmpStringB);
 
             configurePlot(plotMetric,tmpStringA,tmpStringB,settings);
             plotMetric.legend().atTopLeft();     
@@ -475,7 +573,10 @@ void plotReportData(
         static_cast<size_t>(settings.plotHeight*static_cast<double>(nrows));
 
       canvas.size(canvasWidth, canvasHeight) ;
-      //canvas.show();
+
+      if(debuggingThisTicker){
+        canvas.show();
+      }
 
       // Save the figure to a PDF file
       std::string outputFileName = plotFolderOutput;
@@ -527,6 +628,8 @@ void generateLaTeXReport(
     int numberOfPlotsToGenerate,
     bool verbose)
 {
+  std::vector< std::string > plottedTickers;
+
   std::vector< std::string > tabularMetrics;
   tabularMetrics.push_back("MarketCapitalizationMln");
   tabularMetrics.push_back("IPODate");
@@ -593,7 +696,18 @@ void generateLaTeXReport(
     dateStartStream >> date::parse("%Y-%m-%d",ymdStart);
     int year = static_cast< int >(ymdStart.year());
 
-    if(year >= earliestReportingYear){
+    //Check to see if we have already plotted this ticker
+    bool plotTicker=true;
+    for(size_t i=0; i<plottedTickers.size();++i){
+      if(plottedTickers[i].compare(primaryTicker) == 0){
+        plotTicker=false;
+        break;
+      }
+    }
+
+    if(year >= earliestReportingYear && plotTicker){
+
+      plottedTickers.push_back(primaryTicker);
 
       size_t indexFigure=0;
       bool found=false;
@@ -628,7 +742,7 @@ void generateLaTeXReport(
       for(auto &entryMetric : tabularMetrics){
         double entryValue = JsonFunctions::getJsonFloat(reportEntry[entryMetric]);
         std::string labelMetric = entryMetric;
-        convertCamelCaseSpacedText(labelMetric);
+        convertCamelCaseToSpacedText(labelMetric);
         latexReport << labelMetric << " & " << entryValue << "\\\\" << std::endl;
       }
       latexReport << "\\end{tabular}" << std::endl << std::endl;
