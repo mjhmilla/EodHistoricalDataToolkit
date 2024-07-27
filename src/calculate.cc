@@ -789,6 +789,8 @@ int main (int argc, char* argv[]) {
     std::string tickerName = fileName.substr(0,lastIndex);
     std::size_t foundExtension = fileName.find(validFileExtension);
 
+    nlohmann::ordered_json fundamentalData;
+
     if( foundExtension != std::string::npos ){
         std::string updTickerName("");
         JsonFunctions::getPrimaryTickerName(fundamentalFolder, 
@@ -803,24 +805,60 @@ int main (int argc, char* argv[]) {
           }
         }
 
-        if(updTickerName.length() > 0){        
-            fileName = updTickerName;
-            fileName.append(".json");
+        //Try to load the primary ticker
+        if(validInput && updTickerName.length()>0){
+          std::string updFileName = updTickerName;
+          updFileName.append(".json");
+          validInput = JsonFunctions::loadJsonFile(updFileName, fundamentalFolder, 
+                                                  fundamentalData, verbose);
+          if(validInput){
+            fileName = updFileName;
             tickerName = updTickerName;
-        }else{
-          validInput = false;
+          }                                                  
+        }
+
+        //If the primary ticker doesn't load (or exist) then use the file
+        //from the local exchange
+        if(!validInput || updTickerName.length()==0){
+          validInput = JsonFunctions::loadJsonFile(fileName, fundamentalFolder, 
+                                                  fundamentalData, verbose);
           if(verbose){
-            std::cout << "  Skipping: PrimaryTicker is not listed" << std::endl; 
-          }
-        }                                                        
+            if(validInput){
+              std::cout << "  Proceeding with "<< tickerName 
+                        << " : " << updTickerName 
+                        << " failed to load " << std::endl;
+
+            }else{
+              std::cout << "  Skipping: both " 
+                        << tickerName << " and " << updTickerName
+                        << " failed to load" << std::endl;
+            }
+          }                                                  
+        }
+
+        //if(!validInput){
+        //  if(verbose){
+        //     
+        //  }          
+        //}
+
+        //if(updTickerName.length() > 0){        
+        //    fileName = updTickerName;
+        //    fileName.append(".json");
+        //    tickerName = updTickerName;
+        //}else{
+        //  validInput = false;
+        //  if(verbose){
+        //    std::cout << "  Skipping: PrimaryTicker is not listed" << std::endl; 
+        //  }
+        //}   
+
+    }else{
+      //Skip: this file doesn't have an extension
+      validInput = false;      
     }
 
-    //Try to load the fundamental file
-    nlohmann::ordered_json fundamentalData;
-    if(validInput){
-      validInput = JsonFunctions::loadJsonFile(fileName, fundamentalFolder, 
-                                               fundamentalData, verbose);
-    }
+
 
     //Extract the list of entry dates for the fundamental data
     std::vector< std::string > datesFundamental;

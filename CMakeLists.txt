@@ -48,12 +48,12 @@ ADD_EXECUTABLE(
   src/rank.cc)  
 
 ADD_EXECUTABLE(
-  report
-  src/report.cc)  
+  preprocess
+  src/preprocess.cc)  
 
 ADD_EXECUTABLE(
-  plot
-  src/plot.cc)  
+  postprocess
+  src/postprocess.cc)  
 
 ADD_EXECUTABLE(
   scan
