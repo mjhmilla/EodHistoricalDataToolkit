@@ -23,34 +23,42 @@ Make sure that the EOD urls contain {YOUR_API_TOKEN} and {EXCHANGE_CODE} in the 
 
 # Processing steps:
 
-1. Fetch the list of exchanges
+1. Make sure these folders exist and are empty in the exchange (e.g. STU) folders:
+ - fundamentalData
+ - historicalData
+ - analysisData
+ - rankData
+ - preprocess
+ - postprocess
+
+2. Fetch the list of exchanges
 """./fetchExchanges.sh"""
 
-2. Fetch the list of exchange tickers from the Stuttgart stock exchange
+3. Fetch the list of exchange tickers from the Stuttgart stock exchange
 """./fetchExchangeTickers.sh STU"""
 
-3. Fetch the fundamental data (typically cannot be done in one batch)
+4. Fetch the fundamental data (typically cannot be done in one batch)
 """./fetchFundamentalData.sh STU"""
 
-4. Fill the gaps in the fundamental data set
+5. Fill the gaps in the fundamental data set
 """./updateGapsInFundamentalData.sh STU"""
 
-5. Fetch the historical data
+6. Fetch the historical data
 """./fetchHistoricalData.sh STU"""
 
-6. Scan the fundamental data: looks for fundamental data files that are missing the PrimaryTicker field or the ISIN
+7. Scan the fundamental data: looks for fundamental data files that are missing the PrimaryTicker field or the ISIN
 """./scanData.sh STU"""
 
-7. Generate a patch for the files with missing data: this is done by using data from the TradingView.com. The three arguments are: the local exchange (STU - Stuttgart), a larger exchange that might have the missing data (F - Frankfurt), and the code for the local exchange on TradingView (SWB is the code for the Stuttgart stock exchange on TradingView).
+8. Generate a patch for the files with missing data: this is done by using data from the TradingView.com. The three arguments are: the local exchange (STU - Stuttgart), a larger exchange that might have the missing data (F - Frankfurt), and the code for the local exchange on TradingView (SWB is the code for the Stuttgart stock exchange on TradingView).
 """./generateDataPatch.sh STU F SWB"""
 
-8. Apply the patch by copying in the data found from the larger exchange/TradingView (STU.patch.matching_isin.json) into the fundamental data files
+9. Apply the patch by copying in the data found from the larger exchange/TradingView (STU.patch.matching_isin.json) into the fundamental data files
 """./appyPatch.sh STU STU.patch.matching_isin.json"""
 
-9. Calculate all of the metrics used later. At the moment this primarily consists of metrics that are ultimately used to evaluate the value of the company (using the discounted cash flow model in Ch. 3 of The little book of Valuation by Aswath Damodaran). 
+10. Calculate all of the metrics used later. At the moment this primarily consists of metrics that are ultimately used to evaluate the value of the company (using the discounted cash flow model in Ch. 3 of The little book of Valuation by Aswath Damodaran). 
 """./calculate.sh STU"""
 
-10. Rank the full list of companies according to the minimum of the sum of metric ranks. 
+11. Rank the full list of companies according to the minimum of the sum of metric ranks. 
 
 """./rank.sh STU rankByValueRCashFlowExcessRoic.csv"""
 
@@ -62,11 +70,11 @@ Here we rank by the companies that do the best on priceToValue, residual free ca
 
 Note that rankByValueRCashFlowExcessRoic.csv needs to be in the exchange folder (STU in this case)
 
-11. Aggregate all of the necessary data to generate the illustrated reports. The arguments are the exchange (STU), the ranking criteria file (rankByValueRCashFlowExcessRoic.csv) and the output of the last step that contains the ranking which is stored in the rankData folder (rankByValueRCashFlowExcessRoic_ranking.json)
+12. Aggregate all of the necessary data to generate the illustrated reports. The arguments are the exchange (STU), the ranking criteria file (rankByValueRCashFlowExcessRoic.csv) and the output of the last step that contains the ranking which is stored in the rankData folder (rankByValueRCashFlowExcessRoic_ranking.json)
 
 """./preprocessing.sh STU rankByValueRCashFlowExcessRoic.csv rankByValueRCashFlowExcessRoic_ranking.json""" 
 
-12. Generate the figures and the LaTeX files needed to automatically create a pdf report summarizing this data
+13. Generate the figures and the LaTeX files needed to automatically create a pdf report summarizing this data
 
 """./postprocessing.sh STU plotByValueRCashFlowExcessRoic.csv rankByValueRCashFlowExcessRoic_report.json"""
 

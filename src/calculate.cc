@@ -792,45 +792,45 @@ int main (int argc, char* argv[]) {
     nlohmann::ordered_json fundamentalData;
 
     if( foundExtension != std::string::npos ){
-        std::string updTickerName("");
+        std::string primaryTickerName("");
         JsonFunctions::getPrimaryTickerName(fundamentalFolder, 
                                             fileName,
-                                            updTickerName);
+                                            primaryTickerName);
         ++validFileCount;                                            
         if(verbose){
           std::cout << validFileCount << "." << '\t' << fileName << std::endl;
-          if(updTickerName.compare(tickerName) != 0){
-            std::cout << "  " << '\t' << updTickerName 
+          if(primaryTickerName.compare(tickerName) != 0){
+            std::cout << "  " << '\t' << primaryTickerName 
                       << " (PrimaryTicker) " << std::endl;
           }
         }
 
         //Try to load the primary ticker
-        if(validInput && updTickerName.length()>0){
-          std::string updFileName = updTickerName;
-          updFileName.append(".json");
-          validInput = JsonFunctions::loadJsonFile(updFileName, fundamentalFolder, 
+        if(validInput && primaryTickerName.length()>0){
+          std::string primaryFileName = primaryTickerName;
+          primaryFileName.append(".json");
+          validInput = JsonFunctions::loadJsonFile(primaryFileName, fundamentalFolder, 
                                                   fundamentalData, verbose);
           if(validInput){
-            fileName = updFileName;
-            tickerName = updTickerName;
+            fileName = primaryFileName;
+            tickerName = primaryTickerName;
           }                                                  
         }
 
         //If the primary ticker doesn't load (or exist) then use the file
         //from the local exchange
-        if(!validInput || updTickerName.length()==0){
+        if(!validInput || primaryTickerName.length()==0){
           validInput = JsonFunctions::loadJsonFile(fileName, fundamentalFolder, 
                                                   fundamentalData, verbose);
           if(verbose){
             if(validInput){
               std::cout << "  Proceeding with "<< tickerName 
-                        << " : " << updTickerName 
+                        << " : " << primaryTickerName 
                         << " failed to load " << std::endl;
 
             }else{
               std::cout << "  Skipping: both " 
-                        << tickerName << " and " << updTickerName
+                        << tickerName << " and " << primaryTickerName
                         << " failed to load" << std::endl;
             }
           }                                                  

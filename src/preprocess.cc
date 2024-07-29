@@ -301,6 +301,11 @@ void writeReportTableToFile(
       int metricRankSum = static_cast<int>(
                       JsonFunctions::getJsonFloat(tableEntry[i]["MetricRankSum"]));
 
+      bool here=false;
+      if(ticker.compare("NVO.US")==0){
+        here=true;
+      }
+
       rankingFile << ticker;
       rankingFile << "," << ranking;
       rankingFile << "," << metricRankSum;

@@ -492,12 +492,15 @@ bool isCountryValid( const std::string &country,
                      const std::vector< std::string > &filterByCountry){
 
   bool isValid = false;
- 
-  for(auto &countryName : filterByCountry){
-    if(countryName.compare(country) == 0){
-      isValid = true;
-      break;
+  if(filterByCountry.size()>0){
+    for(auto &countryName : filterByCountry){
+      if(countryName.compare(country) == 0){
+        isValid = true;
+        break;
+      }
     }
+  }else{
+    isValid=true;
   }
   return isValid;
 };
@@ -507,29 +510,31 @@ bool areMetricsValid(const nlohmann::ordered_json &reportEntry,
                       const std::vector< MetricFilter > &metricFilterSet){
 
   bool isValid = true;
-  for(unsigned int i=0; i<metricFilterSet.size();++i){
-    double value = JsonFunctions::getJsonFloat(
-                    reportEntry[metricFilterSet[i].name]);
-    switch(metricFilterSet[i].comparison){
-      case ComparisonType::LESS_THAN : {
-        if(value > metricFilterSet[i].value){
-          isValid=false;
-        }
+  if(metricFilterSet.size()>0){
+    for(unsigned int i=0; i<metricFilterSet.size();++i){
+      double value = JsonFunctions::getJsonFloat(
+                      reportEntry[metricFilterSet[i].name]);
+      switch(metricFilterSet[i].comparison){
+        case ComparisonType::LESS_THAN : {
+          if(value > metricFilterSet[i].value){
+            isValid=false;
+          }
+        };
+        break;
+        case ComparisonType::GREATER_THAN : {
+          if(value < metricFilterSet[i].value){
+            isValid=false;
+          }
+        };
+        break;
+        default:
+          std::cerr << "Error: areMetricsValid: invalid operator in "
+                       "metricFilterSet" << std::endl;
+          std::abort();                     
       };
-      break;
-      case ComparisonType::GREATER_THAN : {
-        if(value < metricFilterSet[i].value){
-          isValid=false;
-        }
-      };
-      break;
-      default:
-        std::cerr << "Error: areMetricsValid: invalid operator in "
-                     "metricFilterSet" << std::endl;
-        std::abort();                     
-    };
-    if(!isValid){
-      break;
+      if(!isValid){
+        break;
+      }
     }
   }
   return isValid;
@@ -550,6 +555,10 @@ void plotReportData(
         std::vector< TickerFigurePath > &tickerFigurePath,        
         bool verbose)
 {
+
+  if(verbose){
+    std::cout << "Generating plots" << std::endl;
+  }
 
   //Continue only if we have a plot configuration loaded.
   int entryCount=0;
@@ -653,9 +662,7 @@ void plotReportData(
             plotMetric.drawCurve(x,y)
               .label(companyName)
               .lineColor("black")
-              .lineWidth(settings.lineWidth)
-              .pointType(3)
-              .pointSize(10);
+              .lineWidth(settings.lineWidth);
 
             std::vector< double > xRange,yRange;
             getDataRange(xTmp,xRange,1.0);
@@ -769,10 +776,17 @@ void plotReportData(
         break;
       }
 
+      if(verbose){
+       std::cout << entryCount << ". " << plotFileName << std::endl; 
+      }
+
       bool here=true;
     }
   }
 
+  if(verbose){
+    std::cout << std::endl; 
+  }
 };
 
 void generateLaTeXReport(
@@ -786,6 +800,11 @@ void generateLaTeXReport(
     int numberOfPlotsToGenerate,
     bool verbose)
 {
+
+  if(verbose){
+    std::cout << "Gerating LaTeX report" << std::endl; 
+  }
+
   std::vector< std::string > plottedTickers;
 
   std::vector< std::string > tabularMetrics;
@@ -921,12 +940,17 @@ void generateLaTeXReport(
         break;
       }
     }
+    if(verbose){
+      std::cout << entryCount << ". " << primaryTicker << std::endl;
+    }
   }
   
 
   latexReport << "\\end{document}" << std::endl;
   latexReport.close();
-
+    if(verbose){
+      std::cout << std::endl;
+    }
 };
 
 //==============================================================================
