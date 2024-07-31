@@ -596,10 +596,10 @@ void plotReportData(
     //}
 
     //Check to see if we have already plotted this ticker
-    bool plotTicker=true;
+    bool tickerIsNew=true;
     for(size_t i=0; i<plottedTickers.size();++i){
       if(plottedTickers[i].compare(primaryTicker) == 0){
-        plotTicker=false;
+        tickerIsNew=false;
         break;
       }
     }
@@ -607,11 +607,11 @@ void plotReportData(
     //Check if this data meets the criteria. Note: for this to work 
     //sensibily the report needs to be ordered from the most recent
     //date to the oldest;
-    bool countryIsValid = isCountryValid(country, filterByCountry);
-    bool metricsAreValid= areMetricsValid(reportEntry,filterByMetricValue);
+    bool countryPassesFilter = isCountryValid(country, filterByCountry);
+    bool metricsPassFilter   = areMetricsValid(reportEntry,filterByMetricValue);
     bool entryAddedToReport=false;
-    if( year >= earliestReportingYear && plotTicker 
-        && countryIsValid && metricsAreValid){
+    if( year >= earliestReportingYear && tickerIsNew 
+        && countryPassesFilter && metricsPassFilter){
 
       plottedTickers.push_back(primaryTicker);
       std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
@@ -786,9 +786,18 @@ void plotReportData(
       if(entryAddedToReport){
         std::cout << entryCount << ". " << primaryTicker << std::endl;
       }else{
-        std::cout << " Skipping " << primaryTicker << std::endl; 
-      }
-       
+        std::cout << " Skipping " << primaryTicker << std::endl;
+
+        if(!countryPassesFilter){
+          std::cout <<" Filtered out by country" << std::endl;
+        }
+        if(!metricsPassFilter){
+          std::cout <<" Filtered out by metric" << std::endl;
+        }
+        if(!tickerIsNew){
+          std::cout << " Already plotted " << primaryTicker << std::endl; 
+        }
+      }       
     }
   }
 
@@ -848,7 +857,7 @@ void generateLaTeXReport(
   std::vector< char > charactersToEscape;
   charactersToEscape.push_back('%');
   charactersToEscape.push_back('&');
-
+  charactersToEscape.push_back('$');
 
   int entryCount=0;
   for(auto const &reportEntry: report){
@@ -882,20 +891,20 @@ void generateLaTeXReport(
     int year = static_cast< int >(ymdStart.year());
 
     //Check to see if we have already plotted this ticker
-    bool plotTicker=true;
+    bool tickerIsNew=true;
     for(size_t i=0; i<plottedTickers.size();++i){
       if(plottedTickers[i].compare(primaryTicker) == 0){
-        plotTicker=false;
+        tickerIsNew=false;
         break;
       }
     }
 
-    bool countryIsValid = isCountryValid(country, filterByCountry);
-    bool metricsAreValid= areMetricsValid(reportEntry,filterByMetricValue);
+    bool countryPassesFilter = isCountryValid(country, filterByCountry);
+    bool metricsPassFilter= areMetricsValid(reportEntry,filterByMetricValue);
     bool entryAddedToReport=false;
 
-    if(year >= earliestReportingYear && plotTicker
-        && countryIsValid && metricsAreValid){
+    if(year >= earliestReportingYear && tickerIsNew
+        && countryPassesFilter && metricsPassFilter){
 
       plottedTickers.push_back(primaryTicker);
 
@@ -952,9 +961,21 @@ void generateLaTeXReport(
       if(entryAddedToReport){
         std::cout << entryCount << ". " << primaryTicker << std::endl;
       }else{
-        std::cout <<  "  Skipping " << primaryTicker << std::endl;
-      }
+        std::cout << " Skipping " << primaryTicker << std::endl;
+
+        if(!countryPassesFilter){
+          std::cout <<" Filtered out by country" << std::endl;
+        }
+        if(!metricsPassFilter){
+          std::cout <<" Filtered out by metric" << std::endl;
+        }
+        if(!tickerIsNew){
+          std::cout << " Already plotted " << primaryTicker << std::endl; 
+        }
+      }       
     }
+
+
   }
   
 
