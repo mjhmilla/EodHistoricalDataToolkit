@@ -557,7 +557,8 @@ void plotReportData(
 {
 
   if(verbose){
-    std::cout << "Generating plots" << std::endl;
+    std::cout << std::endl << "Generating plots" << std::endl << std::endl;
+
   }
 
   //Continue only if we have a plot configuration loaded.
@@ -590,7 +591,7 @@ void plotReportData(
     int year = static_cast< int >(ymdStart.year());
 
     bool debuggingThisTicker=false;
-    //if(primaryTicker.compare("LOW.US")==0){
+    //if(primaryTicker.compare("DGE.LSE")==0){
     //  debuggingThisTicker=true;
     //}
 
@@ -608,7 +609,7 @@ void plotReportData(
     //date to the oldest;
     bool countryIsValid = isCountryValid(country, filterByCountry);
     bool metricsAreValid= areMetricsValid(reportEntry,filterByMetricValue);
-
+    bool entryAddedToReport=false;
     if( year >= earliestReportingYear && plotTicker 
         && countryIsValid && metricsAreValid){
 
@@ -771,16 +772,23 @@ void plotReportData(
       tickerFigurePath.push_back(entryTickerFigurePath);
 
       ++entryCount;
+      entryAddedToReport=true;
 
       if(entryCount > numberOfPlotsToGenerate && numberOfPlotsToGenerate > 0){
         break;
       }
-
-      if(verbose){
-       std::cout << entryCount << ". " << plotFileName << std::endl; 
+      bool here=false;
+      if(plotFileName.compare("00116_DGE_LSE.pdf")==0){
+        here=true;
       }
-
-      bool here=true;
+    }
+    if(verbose){
+      if(entryAddedToReport){
+        std::cout << entryCount << ". " << primaryTicker << std::endl;
+      }else{
+        std::cout << " Skipping " << primaryTicker << std::endl; 
+      }
+       
     }
   }
 
@@ -884,7 +892,7 @@ void generateLaTeXReport(
 
     bool countryIsValid = isCountryValid(country, filterByCountry);
     bool metricsAreValid= areMetricsValid(reportEntry,filterByMetricValue);
-
+    bool entryAddedToReport=false;
 
     if(year >= earliestReportingYear && plotTicker
         && countryIsValid && metricsAreValid){
@@ -935,13 +943,17 @@ void generateLaTeXReport(
       latexReport << "\\newpage" << std::endl;
 
       ++entryCount;
-
+      entryAddedToReport=true;
       if(entryCount > numberOfPlotsToGenerate && numberOfPlotsToGenerate > 0){
         break;
       }
     }
     if(verbose){
-      std::cout << entryCount << ". " << primaryTicker << std::endl;
+      if(entryAddedToReport){
+        std::cout << entryCount << ". " << primaryTicker << std::endl;
+      }else{
+        std::cout <<  "  Skipping " << primaryTicker << std::endl;
+      }
     }
   }
   
