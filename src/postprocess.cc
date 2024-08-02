@@ -486,6 +486,26 @@ void getDataRange(const std::vector< double > &data,
   dataRange.push_back(ymax);
 
 }
+//==============================================================================
+bool isTickerValid(const std::string &tickerName, 
+                   const nlohmann::ordered_json &filterByTicker ){
+
+  bool tickerIsValid = false;
+  if(filterByTicker.size()>0){
+    for(auto const &tickerEntry: filterByTicker){
+      std::string tickerEntryStr(""); 
+      JsonFunctions::getJsonString(tickerEntry, tickerEntryStr);
+      if(tickerName.compare(tickerEntryStr)==0){
+        tickerIsValid=true;
+        break;
+      }
+    }                    
+  }else{
+    tickerIsValid=true;
+  }
+
+  return tickerIsValid;
+}
 
 //==============================================================================
 bool isCountryValid( const std::string &country,
@@ -549,6 +569,7 @@ void plotReportData(
         const std::vector< std::vector< std::string >> &subplotMetricNames,
         const PlotSettings &settings,
         const std::vector< std::string > &filterByCountry,
+        const nlohmann::ordered_json &filterByTicker,
         const std::vector< MetricFilter > &filterByMetricValue,
         int earliestReportingYear,
         int numberOfPlotsToGenerate,
@@ -607,11 +628,18 @@ void plotReportData(
     //Check if this data meets the criteria. Note: for this to work 
     //sensibily the report needs to be ordered from the most recent
     //date to the oldest;
+    bool here=false;
+    if(primaryTicker.compare("GOOG.US")==0){
+      here=true;
+    }
+
+    bool tickerPassesFilter  = isTickerValid(primaryTicker,filterByTicker);
     bool countryPassesFilter = isCountryValid(country, filterByCountry);
     bool metricsPassFilter   = areMetricsValid(reportEntry,filterByMetricValue);
     bool entryAddedToReport=false;
+
     if( year >= earliestReportingYear && tickerIsNew 
-        && countryPassesFilter && metricsPassFilter){
+        && countryPassesFilter && tickerPassesFilter && metricsPassFilter){
 
       plottedTickers.push_back(primaryTicker);
       std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
@@ -791,6 +819,9 @@ void plotReportData(
         if(!countryPassesFilter){
           std::cout <<" Filtered out by country" << std::endl;
         }
+        if(!tickerPassesFilter){
+          std::cout <<" Filtered out by ticker" << std::endl;
+        }
         if(!metricsPassFilter){
           std::cout <<" Filtered out by metric" << std::endl;
         }
@@ -812,6 +843,7 @@ void generateLaTeXReport(
     const std::string &plotFolder,
     const std::string &latexReportName,
     const std::vector< std::string > &filterByCountry,
+    const nlohmann::ordered_json &filterByTicker,
     const std::vector< MetricFilter > &filterByMetricValue,    
     int earliestReportingYear,
     int numberOfPlotsToGenerate,
@@ -899,12 +931,13 @@ void generateLaTeXReport(
       }
     }
 
+    bool tickerPassesFilter  = isTickerValid(primaryTicker,filterByTicker);
     bool countryPassesFilter = isCountryValid(country, filterByCountry);
     bool metricsPassFilter= areMetricsValid(reportEntry,filterByMetricValue);
     bool entryAddedToReport=false;
 
     if(year >= earliestReportingYear && tickerIsNew
-        && countryPassesFilter && metricsPassFilter){
+        && countryPassesFilter && tickerPassesFilter && metricsPassFilter){
 
       plottedTickers.push_back(primaryTicker);
 
@@ -966,6 +999,9 @@ void generateLaTeXReport(
         if(!countryPassesFilter){
           std::cout <<" Filtered out by country" << std::endl;
         }
+        if(!tickerPassesFilter){
+          std::cout <<" Filtered out by ticker" << std::endl;
+        }
         if(!metricsPassFilter){
           std::cout <<" Filtered out by metric" << std::endl;
         }
@@ -994,6 +1030,7 @@ int main (int argc, char* argv[]) {
   std::string reportFilePath;
   std::string plotFolder;
   std::string plotConfigurationFilePath;
+  std::string fileFilterByTicker;
   std::string fileFilterByCountry;
   std::string fileFilterByMetricValue;
   std::string fileNameLaTexReport;
@@ -1024,6 +1061,11 @@ int main (int argc, char* argv[]) {
       "The name of the LaTeX file to write.",
       true,"","string");
     cmd.add(reportLatexFileNameInput);
+
+    TCLAP::ValueArg<std::string> fileFilterByTickerInput("s","filter_ticker", 
+      "List of tickers to include as a json array",
+      false,"","string");
+    cmd.add(fileFilterByTickerInput); 
 
     TCLAP::ValueArg<std::string> fileFilterByCountryInput("l","filter_country", 
       "List of countries to include, listed one per line",
@@ -1083,6 +1125,7 @@ int main (int argc, char* argv[]) {
     fileNameLaTexReport       = reportLatexFileNameInput.getValue();
     fileFilterByCountry       = fileFilterByCountryInput.getValue();
     fileFilterByMetricValue   = fileFilterByMetricValueInput.getValue();
+    fileFilterByTicker        = fileFilterByTickerInput.getValue();
     numberOfPlotsToGenerate   = numberOfPlotsToGenerateInput.getValue();
     earliestReportingYear     = earliestReportingYearInput.getValue();
     plotFolder                = plotFolderOutput.getValue();
@@ -1106,6 +1149,9 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Country filter file" << std::endl;
       std::cout << "    " << fileFilterByCountry << std::endl;
+
+      std::cout << "  Ticker filter file" << std::endl;
+      std::cout << "    " << fileFilterByTicker << std::endl;
 
       std::cout << "  Metric value filter file" << std::endl;
       std::cout << "    " << fileFilterByMetricValue << std::endl;
@@ -1151,12 +1197,19 @@ int main (int argc, char* argv[]) {
       readMetricValueFilterSet(fileFilterByMetricValue, filterByMetricValue);
     }
 
+    nlohmann::ordered_json filterByTicker;
+    if(fileFilterByTicker.length()>0){
+      bool filterByTickerLoaded = 
+        JsonFunctions::loadJsonFile(fileFilterByTicker, filterByTicker, verbose);    
+    }
+
     plotReportData( report,
                     historicalFolder,
                     plotFolder,
                     subplotMetricNames,
                     settings,
                     filterByCountry,
+                    filterByTicker,
                     filterByMetricValue,
                     earliestReportingYear, 
                     numberOfPlotsToGenerate,
@@ -1168,6 +1221,7 @@ int main (int argc, char* argv[]) {
                         plotFolder,
                         fileNameLaTexReport,
                         filterByCountry,
+                        filterByTicker,
                         filterByMetricValue,                        
                         earliestReportingYear,
                         numberOfPlotsToGenerate,
