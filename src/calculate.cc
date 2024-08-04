@@ -665,6 +665,16 @@ int main (int argc, char* argv[]) {
   bool zeroNansInResearchAndDevelopment       = relaxedCalculation;
   bool zeroNansInDividendsPaid                = relaxedCalculation;
   bool zeroNansInDepreciation                 = relaxedCalculation;
+
+
+  //2024/8/4 MM: added this because the analysis of some securities is
+  //             getting trashed by nans in fields that should actually be
+  //             nan. For example, META is not a business that has inventory
+  //             and so this is not reported. Naturally when inventory doesn't
+  //             appear, or is set to nan, it then turns the results of all
+  //             analysis done using this term to nan. And this, unfortunately,
+  //             later means that these securities are ignored in later analysis.
+  bool zeroAllNans                            = relaxedCalculation;
   bool appendTermRecord                       = relaxedCalculation;
   std::vector< std::string >  termNames;
   std::vector< double >       termValues;  
@@ -836,29 +846,10 @@ int main (int argc, char* argv[]) {
           }                                                  
         }
 
-        //if(!validInput){
-        //  if(verbose){
-        //     
-        //  }          
-        //}
-
-        //if(updTickerName.length() > 0){        
-        //    fileName = updTickerName;
-        //    fileName.append(".json");
-        //    tickerName = updTickerName;
-        //}else{
-        //  validInput = false;
-        //  if(verbose){
-        //    std::cout << "  Skipping: PrimaryTicker is not listed" << std::endl; 
-        //  }
-        //}   
-
     }else{
       //Skip: this file doesn't have an extension
       validInput = false;      
     }
-
-
 
     //Extract the list of entry dates for the fundamental data
     std::vector< std::string > datesFundamental;
@@ -1036,16 +1027,6 @@ int main (int argc, char* argv[]) {
 
         std::string date = datesCommon[indexDate]; 
 
-        /*
-        double taxRateEntry = FinancialAnalysisToolkit::
-                                calcTaxRateFromTheTaxProvision(fundamentalData, 
-                                            date, 
-                                            timePeriod.c_str(), 
-                                            false, 
-                                            tmpResultName,
-                                            termNames,
-                                            termValues);
-        */
         if(flag_usingTaxTable){
           int year  = std::stoi(date.substr(0,4));
           int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
@@ -1069,6 +1050,7 @@ int main (int argc, char* argv[]) {
                             date,
                             timePeriod.c_str(),
                             appendTermRecord,
+                            zeroAllNans,
                             termNames,
                             termValues);
 
@@ -1151,6 +1133,10 @@ int main (int argc, char* argv[]) {
 
         //======================================================================
         //Evaluate the risk free rate as the yield on a 10 year US bond
+        //  It would be ideal, of course, to have the bond yields in the
+        //  home country of the stock. I have not yet endevoured to find this
+        //  information. Since US bonds are internationally 
+        //  (in London and Tokyo) this is perhaps not a horrible approximation.
         //======================================================================
         int indexBondYield = indicesClosestBondYieldDates[indexDate];
         std::string closestBondYieldDate= datesBondYields[indexBondYield]; 
@@ -1158,7 +1144,8 @@ int main (int argc, char* argv[]) {
         double bondYield = std::nan("1");
         try{
           bondYield = JsonFunctions::getJsonFloat(
-              jsonBondYield["US"]["10y_bond_yield"][closestBondYieldDate]); 
+              jsonBondYield["US"]["10y_bond_yield"][closestBondYieldDate],
+              zeroAllNans); 
           bondYield = bondYield * (0.01); //Convert from percent to decimal form      
         }catch( std::invalid_argument const& ex){
           std::cout << " Bond yield record (" << closestBondYieldDate << ")"
@@ -1201,6 +1188,7 @@ int main (int argc, char* argv[]) {
                               meanInterestCover,
                               jsonDefaultSpread,
                               appendTermRecord,
+                              zeroAllNans,
                               termNames,
                               termValues);
 
@@ -1222,24 +1210,7 @@ int main (int argc, char* argv[]) {
         }else{
           taxRate = defaultTaxRate;
         }        
-        /*
-        double taxRate = FinancialAnalysisToolkit::
-            calcTaxRateFromTheTaxProvision(fundamentalData,
-                        date,
-                        timePeriod.c_str(),
-                        appendTermRecord,
-                        parentName,
-                        termNames,
-                        termValues);
-        if(std::isnan(taxRate) || std::isinf(taxRate)){
-          taxRate = meanTaxRate;
-          if(appendTermRecord){
-            termValues[termValues.size()-1]=taxRate;
-          }
-        }
-        */
-        
-                        
+                                
         double afterTaxCostOfDebt = (riskFreeRate+defaultSpread)*(1.0-taxRate);
         termNames.push_back("afterTaxCostOfDebt_riskFreeRate");
         termNames.push_back("afterTaxCostOfDebt_defaultSpread");
@@ -1264,7 +1235,7 @@ int main (int argc, char* argv[]) {
           shortLongTermDebtTotal = 
             JsonFunctions::getJsonFloat(
               fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                             ["longTermDebt"]);
+                             ["longTermDebt"], zeroAllNans);
         }
 
         //======================================================================        
@@ -1273,7 +1244,7 @@ int main (int argc, char* argv[]) {
         double commonStockSharesOutstanding = 
           JsonFunctions::getJsonFloat(
             fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                            ["commonStockSharesOutstanding"]);
+                            ["commonStockSharesOutstanding"], zeroAllNans);
 
         unsigned int indexHistoricalData = 
           indicesCommonHistoricalDates[indexDate];   
@@ -1283,7 +1254,8 @@ int main (int argc, char* argv[]) {
         double adjustedClose = std::nan("1");
         try{
           adjustedClose = JsonFunctions::getJsonFloat(
-                              historicalData[ indexHistoricalData ]["adjusted_close"]);       
+                      historicalData[ indexHistoricalData ]["adjusted_close"],
+                      zeroAllNans);       
         }catch( std::invalid_argument const& ex){
           std::cout << " Historical record (" << closestHistoricalDate << ")"
                     << " is missing an opening share price."
@@ -1348,7 +1320,7 @@ int main (int argc, char* argv[]) {
 
         double totalStockHolderEquity = JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                               ["totalStockholderEquity"]); 
+                               ["totalStockholderEquity"],zeroAllNans); 
         std::string emptyParentName("");
         double roic = FinancialAnalysisToolkit::
           calcReturnOnInvestedCapital(fundamentalData,
@@ -1357,6 +1329,7 @@ int main (int argc, char* argv[]) {
                                       zeroNansInDividendsPaid, 
                                       appendTermRecord, 
                                       emptyParentName,
+                                      zeroAllNans,
                                       termNames, 
                                       termValues);
 
@@ -1370,6 +1343,7 @@ int main (int argc, char* argv[]) {
                                         timePeriod.c_str(), 
                                         appendTermRecord, 
                                         emptyParentName,
+                                        zeroAllNans,
                                         termNames, 
                                         termValues);
 
@@ -1378,6 +1352,7 @@ int main (int argc, char* argv[]) {
                             date,
                             timePeriod.c_str(),
                             appendTermRecord,
+                            zeroAllNans,
                             termNames,
                             termValues);
 
@@ -1386,6 +1361,7 @@ int main (int argc, char* argv[]) {
                                 date,
                                 timePeriod.c_str(), 
                                 appendTermRecord,
+                                zeroAllNans,
                                 termNames,
                                 termValues);          
 
@@ -1395,6 +1371,7 @@ int main (int argc, char* argv[]) {
                                     timePeriod.c_str(), 
                                     taxRate,
                                     appendTermRecord,
+                                    zeroAllNans,
                                     termNames,
                                     termValues);
 
@@ -1404,6 +1381,7 @@ int main (int argc, char* argv[]) {
                                           timePeriod.c_str(),
                                           zeroNanInShortTermDebt,
                                           appendTermRecord,
+                                          zeroAllNans,
                                           termNames,
                                           termValues);
 
@@ -1414,6 +1392,7 @@ int main (int argc, char* argv[]) {
                               timePeriod.c_str(),
                               zeroNansInDepreciation,
                               appendTermRecord, 
+                              zeroAllNans,
                               termNames, 
                               termValues);  
 
@@ -1430,6 +1409,7 @@ int main (int argc, char* argv[]) {
                                   trailingPastPeriods,
                                   zeroNansInResearchAndDevelopment,
                                   appendTermRecord,
+                                  zeroAllNans,
                                   termNames,
                                   termValues);
         }
@@ -1444,6 +1424,7 @@ int main (int argc, char* argv[]) {
                                      zeroNansInDepreciation,
                                      replaceNanInShortLongDebtWithLongDebt,
                                      appendTermRecord,
+                                     zeroAllNans,
                                      termNames,
                                      termValues);
         }
@@ -1457,6 +1438,7 @@ int main (int argc, char* argv[]) {
                                  taxRate,
                                  zeroNansInDepreciation,
                                  appendTermRecord,
+                                 zeroAllNans,
                                  termNames, 
                                  termValues);
 
@@ -1475,6 +1457,7 @@ int main (int argc, char* argv[]) {
               taxRate,
               numberOfYearsForTerminalValuation,
               appendTermRecord,
+              zeroAllNans,
               termNames,
               termValues);
 
@@ -1532,6 +1515,7 @@ int main (int argc, char* argv[]) {
                                 replaceNanInShortLongDebtWithLongDebt, 
                                 appendTermRecord,                                
                                 rFcfToEvLabel,
+                                zeroAllNans,
                                 termNames,
                                 termValues);
 

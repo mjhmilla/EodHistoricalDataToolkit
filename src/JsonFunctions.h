@@ -48,9 +48,14 @@ class JsonFunctions {
       return success;
     };
 
-    static double getJsonFloat(const nlohmann::ordered_json &jsonEntry){
+    static double getJsonFloat(const nlohmann::ordered_json &jsonEntry,
+                               bool zeroNans=false){
       if(  jsonEntry.is_null()){
-        return std::nan("1");
+        if(zeroNans){
+          return 0.0;
+        }else{
+          return std::nan("1");
+        }
       }else{
         if(jsonEntry.is_number_unsigned()){
           return static_cast<double>(jsonEntry.get<unsigned int>());
@@ -64,11 +69,17 @@ class JsonFunctions {
           throw std::invalid_argument("json entry is not a float or string");      
         }
       }
+
     };
 
-    static bool getJsonBool(const nlohmann::ordered_json &jsonEntry){
+    static bool getJsonBool(const nlohmann::ordered_json &jsonEntry,
+                            bool zeroNans=false){
       if(  jsonEntry.is_null()){
-        return std::nan("1");
+        if(zeroNans){
+          return 0.0;
+        }else{
+          return std::nan("1");
+        }
       }else{
         if(  jsonEntry.is_boolean()){
           return jsonEntry.get<bool>();

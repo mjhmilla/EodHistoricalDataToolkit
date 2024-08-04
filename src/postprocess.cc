@@ -506,6 +506,131 @@ bool isTickerValid(const std::string &tickerName,
 
   return tickerIsValid;
 }
+//==============================================================================
+bool isIndustryValid(const nlohmann::ordered_json &reportEntry, 
+                   const nlohmann::ordered_json &filterByIndustry ){
+
+  bool industryIsValid = false;
+
+  if(filterByIndustry.size()>0){
+
+    std::string reportGicSector(""), reportGicGroup(""), reportGicIndustry(""), 
+                reportGicSubIndustry("");
+
+    JsonFunctions::getJsonString(reportEntry["GicSector"],
+                                 reportGicSector);            
+
+    JsonFunctions::getJsonString(reportEntry["GicGroup"],
+                                 reportGicGroup);            
+
+    JsonFunctions::getJsonString(reportEntry["GicIndustry"],
+                                 reportGicIndustry);
+
+    JsonFunctions::getJsonString(reportEntry["GicSubIndustry"],
+                                 reportGicSubIndustry);                    
+
+    unsigned int includeCount = 0;
+    unsigned int excludeCount = 0;
+    bool includeFilter = false;
+    bool excludeFilter = false;
+    for(auto const &industryEntry: filterByIndustry){
+      std::string gicSector(""), gicGroup(""), 
+                  gicIndustry(""), gicSubIndustry(""), filterCommand("");
+ 
+      JsonFunctions::getJsonString( industryEntry["Filter"],   
+                                    filterCommand);
+
+      if(industryEntry.contains("GicSector")){
+        JsonFunctions::getJsonString( industryEntry["GicSector"], 
+                                      gicSector);
+      }
+      if(industryEntry.contains("GicGroup")){
+        JsonFunctions::getJsonString( industryEntry["GicGroup"],  
+                                      gicGroup);
+      }
+      if(industryEntry.contains("GicIndustry")){
+        JsonFunctions::getJsonString( industryEntry["GicIndustry"], 
+                                      gicIndustry);
+      }
+      if(industryEntry.contains("GicSubIndustry")){
+        JsonFunctions::getJsonString( industryEntry["GicSubIndustry"], 
+                                      gicSubIndustry);
+      }
+
+      bool entryMatches=true;
+
+      if(gicSector.length() > 0 && reportGicSector.length()>0){
+        if(gicSector.compare(reportGicSector) !=0 ){
+          entryMatches=false;
+        }
+      }
+      if(gicGroup.length() > 0 && reportGicGroup.length()>0){
+        if(gicGroup.compare(reportGicGroup) !=0 ){
+          entryMatches=false;
+        }       
+      }
+      if(gicIndustry.length() > 0 && reportGicIndustry.length()>0){
+        if(gicIndustry.compare(reportGicIndustry) !=0 ){
+          entryMatches=false;
+        }               
+      }
+      if(gicSubIndustry.length() > 0 && reportGicSubIndustry.length()>0){
+        if(gicSubIndustry.compare(reportGicSubIndustry) !=0 ){
+          entryMatches=false;
+        }                       
+      }
+
+      if(filterCommand.compare("Exclude")==0){
+        if(entryMatches){
+          ++excludeCount;
+        }
+        excludeFilter=true;
+      }else if(filterCommand.compare("Include")==0){
+        if(entryMatches){
+          ++includeCount;
+        }
+        includeFilter=true;
+      }else{
+          std::cout << "  Error: filter_industry " 
+                    << industryEntry.type_name() 
+                    << " Filter should be Exclude/Include but is instead "
+                    << filterCommand 
+                    << std::endl;
+      }
+    }  
+
+    if( !includeFilter && excludeFilter){
+      if(excludeCount > 0){
+        industryIsValid = false;
+      }else{
+        industryIsValid=true;
+      }
+    }
+
+    if( includeFilter && !excludeFilter){
+      if(includeCount > 0){
+        industryIsValid = true;
+      }else{
+        industryIsValid=false;
+      }
+    }
+    
+    if(includeFilter && excludeFilter){
+      if(includeCount > 0){
+        industryIsValid=true;
+      }
+      if(excludeCount > 0){
+        industryIsValid = false;
+      }
+    }
+
+
+  }else{
+    industryIsValid=true;
+  }
+
+  return industryIsValid;
+}
 
 //==============================================================================
 bool isCountryValid( const std::string &country,
@@ -569,6 +694,7 @@ void plotReportData(
         const std::vector< std::vector< std::string >> &subplotMetricNames,
         const PlotSettings &settings,
         const std::vector< std::string > &filterByCountry,
+        const nlohmann::ordered_json &filterByIndustry,
         const nlohmann::ordered_json &filterByTicker,
         const std::vector< MetricFilter > &filterByMetricValue,
         int earliestReportingYear,
@@ -634,12 +760,14 @@ void plotReportData(
     }
 
     bool tickerPassesFilter  = isTickerValid(primaryTicker,filterByTicker);
+    bool industryPassesFilter = isIndustryValid(reportEntry,filterByIndustry);
     bool countryPassesFilter = isCountryValid(country, filterByCountry);
     bool metricsPassFilter   = areMetricsValid(reportEntry,filterByMetricValue);
     bool entryAddedToReport=false;
 
     if( year >= earliestReportingYear && tickerIsNew 
-        && countryPassesFilter && tickerPassesFilter && metricsPassFilter){
+        && countryPassesFilter && industryPassesFilter 
+        && tickerPassesFilter && metricsPassFilter){
 
       plottedTickers.push_back(primaryTicker);
       std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
@@ -819,6 +947,9 @@ void plotReportData(
         if(!countryPassesFilter){
           std::cout <<" Filtered out by country" << std::endl;
         }
+        if(!industryPassesFilter){
+          std::cout <<" Filtered out by industry" << std::endl;
+        }        
         if(!tickerPassesFilter){
           std::cout <<" Filtered out by ticker" << std::endl;
         }
@@ -843,6 +974,7 @@ void generateLaTeXReport(
     const std::string &plotFolder,
     const std::string &latexReportName,
     const std::vector< std::string > &filterByCountry,
+    const nlohmann::ordered_json &filterByIndustry,
     const nlohmann::ordered_json &filterByTicker,
     const std::vector< MetricFilter > &filterByMetricValue,    
     int earliestReportingYear,
@@ -931,13 +1063,15 @@ void generateLaTeXReport(
       }
     }
 
-    bool tickerPassesFilter  = isTickerValid(primaryTicker,filterByTicker);
-    bool countryPassesFilter = isCountryValid(country, filterByCountry);
+    bool tickerPassesFilter   = isTickerValid(primaryTicker,filterByTicker);
+    bool industryPassesFilter = isIndustryValid(reportEntry, filterByIndustry);
+    bool countryPassesFilter  = isCountryValid(country, filterByCountry);
     bool metricsPassFilter= areMetricsValid(reportEntry,filterByMetricValue);
     bool entryAddedToReport=false;
 
     if(year >= earliestReportingYear && tickerIsNew
-        && countryPassesFilter && tickerPassesFilter && metricsPassFilter){
+        && countryPassesFilter && industryPassesFilter 
+        && tickerPassesFilter && metricsPassFilter){
 
       plottedTickers.push_back(primaryTicker);
 
@@ -999,6 +1133,9 @@ void generateLaTeXReport(
         if(!countryPassesFilter){
           std::cout <<" Filtered out by country" << std::endl;
         }
+        if(!industryPassesFilter){
+          std::cout <<" Filtered out by industry" << std::endl;
+        }
         if(!tickerPassesFilter){
           std::cout <<" Filtered out by ticker" << std::endl;
         }
@@ -1032,6 +1169,7 @@ int main (int argc, char* argv[]) {
   std::string plotConfigurationFilePath;
   std::string fileFilterByTicker;
   std::string fileFilterByCountry;
+  std::string fileFilterByIndustry;
   std::string fileFilterByMetricValue;
   std::string fileNameLaTexReport;
 
@@ -1072,12 +1210,19 @@ int main (int argc, char* argv[]) {
       false,"","string");
     cmd.add(fileFilterByCountryInput);    
 
+    TCLAP::ValueArg<std::string> fileFilterByIndustryInput("g","filter_industry", 
+      "Json file of the GIC (GicSector, GicGroup, GicIndustry, GicSubIndustry)"
+      " categories of industries to include/exclude.",
+      false,"","string");
+    cmd.add(fileFilterByIndustryInput);    
+
     TCLAP::ValueArg<std::string> fileFilterByMetricValueInput("m","filter_metric_values", 
       "A csv file with 3 columns: metric name, operator (> or <), threshold"
       "value. Multiple rows can be added, but, each metric name must exist in"
       " the json report file.",
       false,"","string");
     cmd.add(fileFilterByMetricValueInput);    
+
 
     TCLAP::ValueArg<std::string> plotConfigurationFilePathInput("c",
       "configuration_file", 
@@ -1126,6 +1271,7 @@ int main (int argc, char* argv[]) {
     fileFilterByCountry       = fileFilterByCountryInput.getValue();
     fileFilterByMetricValue   = fileFilterByMetricValueInput.getValue();
     fileFilterByTicker        = fileFilterByTickerInput.getValue();
+    fileFilterByIndustry      = fileFilterByIndustryInput.getValue();
     numberOfPlotsToGenerate   = numberOfPlotsToGenerateInput.getValue();
     earliestReportingYear     = earliestReportingYearInput.getValue();
     plotFolder                = plotFolderOutput.getValue();
@@ -1149,6 +1295,9 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Country filter file" << std::endl;
       std::cout << "    " << fileFilterByCountry << std::endl;
+
+      std::cout << "  Industry filter file" << std::endl;
+      std::cout << "    " << fileFilterByIndustry << std::endl;
 
       std::cout << "  Ticker filter file" << std::endl;
       std::cout << "    " << fileFilterByTicker << std::endl;
@@ -1200,7 +1349,15 @@ int main (int argc, char* argv[]) {
     nlohmann::ordered_json filterByTicker;
     if(fileFilterByTicker.length()>0){
       bool filterByTickerLoaded = 
-        JsonFunctions::loadJsonFile(fileFilterByTicker, filterByTicker, verbose);    
+        JsonFunctions::loadJsonFile(fileFilterByTicker, filterByTicker, 
+                                    verbose);    
+    }
+
+    nlohmann::ordered_json filterByIndustry;
+    if(fileFilterByIndustry.length()>0){
+      bool filterByIndustryLoaded = 
+        JsonFunctions::loadJsonFile(fileFilterByIndustry, filterByIndustry, 
+                                    verbose);
     }
 
     plotReportData( report,
@@ -1209,6 +1366,7 @@ int main (int argc, char* argv[]) {
                     subplotMetricNames,
                     settings,
                     filterByCountry,
+                    filterByIndustry,
                     filterByTicker,
                     filterByMetricValue,
                     earliestReportingYear, 
@@ -1221,6 +1379,7 @@ int main (int argc, char* argv[]) {
                         plotFolder,
                         fileNameLaTexReport,
                         filterByCountry,
+                        filterByIndustry,
                         filterByTicker,
                         filterByMetricValue,                        
                         earliestReportingYear,
