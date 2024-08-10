@@ -26,9 +26,19 @@
 const double PointsPerInch       = 72;
 const double InchesPerCentimeter  = 1.0/2.54;
 
+const double Percentiles[5]={0.05, 0.25, 0.5, 0.75, 0.95};
 
 //==============================================================================
-enum class ComparisonType{
+enum PercentileIndices{
+  P05=0,
+  P25,
+  P50,
+  P75,
+  P95,
+  NUM_PERCENTILES
+};
+
+enum ComparisonType{
   LESS_THAN=0,
   GREATER_THAN
 };
@@ -37,6 +47,21 @@ struct MetricFilter{
   std::string name;
   double value;
   ComparisonType comparison;
+};
+//==============================================================================
+struct SummaryStatistics{
+  std::vector< double > percentiles;
+  double min;
+  double max;
+  double current;
+  std::string name;
+};
+
+//==============================================================================
+struct TickerSummary{
+  std::string ticker;
+  unsigned int rank;
+  std::vector<  SummaryStatistics > summaryStatistics;
 };
 
 //==============================================================================
@@ -266,11 +291,47 @@ void configurePlot(sciplot::Plot2D &plotUpd,
   plotUpd.size(settings.plotWidth,settings.plotHeight);
 
 };
+//==============================================================================
+void extractSummaryStatistics(sciplot::Vec &data, SummaryStatistics &summary){
+  std::vector<double> dataDbl;
+  for(size_t i=0; i<data.size(); ++i){
+    dataDbl.push_back(data[i]);
+  }
+  summary.current = dataDbl[dataDbl.size()-1];
+
+  std::sort(dataDbl.begin(),dataDbl.end());
+
+  summary.min = dataDbl[0];
+  summary.max = dataDbl[dataDbl.size()-1];
+
+  size_t numberOfPercentiles = sizeof(Percentiles) / sizeof(double);
+
+  if(dataDbl.size() > 1){
+    for(size_t i = 0; i < numberOfPercentiles; ++i){
+      double idxDbl = Percentiles[i]*(dataDbl.size()-1);
+      int indexA = std::floor(idxDbl);
+      int indexB = std::ceil(idxDbl);
+      double weightB = idxDbl - static_cast<double>(indexA);
+      double weightA = 1.0-weightB;
+      double valueA = dataDbl[indexA];
+      double valueB = dataDbl[indexB];
+      double value = valueA*weightA + valueB*weightB;
+      summary.percentiles.push_back(value);
+    }
+  }else{
+    for(size_t i = 0; i < numberOfPercentiles; ++i){
+      summary.percentiles.push_back(dataDbl[0]);
+    }
+  }
+
+};
+
 
 //==============================================================================
 void createHistoricalDataPlot(
       sciplot::Plot2D &plotHistoricalDataUpd,
       const nlohmann::ordered_json &reportEntry,
+      SummaryStatistics &summaryStatsUpd,
       const std::string &historicalFolder,
       const PlotSettings &settings,
       bool verbose){
@@ -293,8 +354,11 @@ void createHistoricalDataPlot(
 
   //Load the historical data
   nlohmann::ordered_json historicalData;
-  bool loadedHistoricalData = JsonFunctions::loadJsonFile(primaryTicker,
-    historicalFolder, historicalData, verbose);  
+  bool loadedHistoricalData =
+            JsonFunctions::loadJsonFile(primaryTicker,
+                                        historicalFolder, 
+                                        historicalData, 
+                                        verbose);  
 
   //Go through the historical data and pull out the date information
   //and adjusted_close information
@@ -333,6 +397,9 @@ void createHistoricalDataPlot(
     ++dateCount;
     firstEntry=false;
   }
+
+  extractSummaryStatistics(y0,summaryStatsUpd);
+  summaryStatsUpd.name = "historicalData";
 
   plotHistoricalDataUpd.drawCurve(x0,y0)
       .label(companyName)
@@ -684,8 +751,65 @@ bool areMetricsValid(const nlohmann::ordered_json &reportEntry,
   }
   return isValid;
 };
-                   
+//==============================================================================
+void drawBoxAndWhisker(
+      sciplot::Plot2D &plotUpd,
+      double x,   
+      double xWidth,   
+      const std::vector< double > &y,
+      const PlotSettings &settings,
+      bool verbose){
 
+  sciplot::Vec xBox(5);
+  sciplot::Vec yBox(5);
+
+  xBox[0]= x-xWidth*0.5;
+  xBox[1]= x+xWidth*0.5;
+  xBox[2]= x+xWidth*0.5;
+  xBox[3]= x-xWidth*0.5;
+  xBox[4]= x-xWidth*0.5;
+
+  yBox[0]= y[P25];
+  yBox[1]= y[P25];
+  yBox[2]= y[P75];
+  yBox[3]= y[P75];
+  yBox[4]= y[P25];
+
+  plotUpd.drawCurve(xBox,yBox)
+         .lineColor("gray")
+         .lineWidth(settings.lineWidth);
+
+  sciplot::Vec xLine(2);
+  sciplot::Vec yLine(2);
+  xLine[0] = x;
+  xLine[1] = x;
+  yLine[0] = y[P75];
+  yLine[1] = y[P95];
+
+  plotUpd.drawCurve(xLine,yLine)
+         .lineColor("gray")
+         .lineWidth(settings.lineWidth);
+  
+  xLine[0] = x;
+  xLine[1] = x;
+  yLine[0] = y[P25];
+  yLine[1] = y[P05];
+
+  plotUpd.drawCurve(xLine,yLine)
+         .lineColor("gray")
+         .lineWidth(settings.lineWidth);
+
+  xLine[0] = x-xWidth*0.5;
+  xLine[1] = x+xWidth*0.5;
+  yLine[0] = y[P50];
+  yLine[1] = y[P50];
+
+  plotUpd.drawCurve(xLine,yLine)
+         .lineColor("gray")
+         .lineWidth(settings.lineWidth);
+
+
+};
 //==============================================================================
 void plotReportData(
         const nlohmann::ordered_json &report,
@@ -715,6 +839,8 @@ void plotReportData(
 
   std::vector< std::string > plottedTickers;
 
+  std::vector < TickerSummary > marketSummary;
+
   for(auto const &reportEntry: report){
 
 
@@ -730,6 +856,7 @@ void plotReportData(
 
     std::string dateStart;
     JsonFunctions::getJsonString(reportEntry["dateStart"],dateStart);
+
 
     std::istringstream dateStartStream(dateStart);
     dateStartStream.exceptions(std::ios::failbit);
@@ -769,6 +896,11 @@ void plotReportData(
         && countryPassesFilter && industryPassesFilter 
         && tickerPassesFilter && metricsPassFilter){
 
+      TickerSummary tickerSummary;
+      tickerSummary.ticker=primaryTicker;
+      tickerSummary.rank= JsonFunctions::getJsonFloat( reportEntry["Ranking"]);
+
+
       plottedTickers.push_back(primaryTicker);
       std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
 
@@ -782,10 +914,15 @@ void plotReportData(
           bool subplotAdded = false;
 
           //Add historical pricing data
+
           if(subplotMetricNames[indexRow][indexCol].compare("historicalData")==0){
             sciplot::Plot2D plotHistoricalData;
+            SummaryStatistics priceSummaryStats;
             createHistoricalDataPlot( plotHistoricalData,reportEntry,
-                                      historicalFolder,settings, verbose);          
+                                      priceSummaryStats,historicalFolder,
+                                      settings, verbose);          
+            tickerSummary.summaryStatistics.push_back(priceSummaryStats);
+
             rowOfPlots.push_back(plotHistoricalData);
             subplotAdded=true;
           }
@@ -814,6 +951,10 @@ void plotReportData(
                 std::cout << x[i] << '\t' << y[i] << std::endl;
               }
             }
+            SummaryStatistics metricSummaryStatistics;
+            metricSummaryStatistics.name=subplotMetricNames[indexRow][indexCol];
+            extractSummaryStatistics(y,metricSummaryStatistics);
+            tickerSummary.summaryStatistics.push_back(metricSummaryStatistics);
 
             sciplot::Plot2D plotMetric;
             plotMetric.drawCurve(x,y)
@@ -927,8 +1068,12 @@ void plotReportData(
 
       tickerFigurePath.push_back(entryTickerFigurePath);
 
+      marketSummary.push_back(tickerSummary);
       ++entryCount;
       entryAddedToReport=true;
+
+
+
 
       if(entryCount > numberOfPlotsToGenerate && numberOfPlotsToGenerate > 0){
         break;
@@ -961,6 +1106,98 @@ void plotReportData(
         }
       }       
     }
+  }
+
+  //Generate the Market SummaryPlot
+  if(entryCount > 0){
+    std::vector< std::vector < sciplot::Plot2D > > arrayOfPlot2D;
+
+    arrayOfPlot2D.resize(subplotMetricNames.size());  
+
+    for(size_t i=0; i<subplotMetricNames.size();++i){
+      arrayOfPlot2D[i].resize(subplotMetricNames[i].size());
+    }
+
+    double x=1;
+    double xWidth = 0.4;
+    for(auto const &entrySummary : marketSummary){          
+      for(auto const &entryMetric : entrySummary.summaryStatistics){
+        
+        //Get the subplot row and column;
+        size_t row=0;
+        size_t col=0;
+        for(size_t i=0; i<subplotMetricNames.size();++i){
+          for(size_t j=0; j<subplotMetricNames[i].size();++j){
+            if(entryMetric.name.compare(subplotMetricNames[i][j] )==0){
+              row=i;
+              col=j;
+            }
+          }
+        }
+        //Add the box and whisker plot
+        drawBoxAndWhisker(
+            arrayOfPlot2D[row][col],
+            x,
+            xWidth,
+            entryMetric.percentiles,
+            settings,
+            verbose);
+        //Draw the current value as a point
+        sciplot::Vec xVec(2);
+        sciplot::Vec yVec(2);
+        xVec[0]=x-xWidth*0.5;
+        xVec[1]=x+xWidth*0.5;
+        yVec[0]=entryMetric.current;
+        yVec[1]=entryMetric.current;
+        arrayOfPlot2D[row][col].drawCurve(xVec,yVec)
+                               .lineWidth(settings.lineWidth)
+                               .lineColor("black");
+      }
+      x=x+1.0;
+    }
+    //Set the labels
+    std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlotVariant;
+
+    for(size_t i=0; i<subplotMetricNames.size();++i){
+      std::vector< sciplot::PlotVariant >  rowOfPlotVariant;
+      for(size_t j=0; j<subplotMetricNames[i].size();++j){
+        std::string tmpStringA("Reported Company Number");
+        std::string tmpStringB(subplotMetricNames[i][j].c_str());
+
+        size_t pos = tmpStringB.find("_value",0);
+        tmpStringB = tmpStringB.substr(0,pos);
+
+        convertCamelCaseToSpacedText(tmpStringB);        
+        configurePlot(arrayOfPlot2D[i][j],tmpStringA,tmpStringB,settings);
+        arrayOfPlot2D[i][j].legend().hide();
+        rowOfPlotVariant.push_back(arrayOfPlot2D[i][j]);
+      }      
+      arrayOfPlotVariant.push_back(rowOfPlotVariant);
+    }
+
+    sciplot::Figure figSummary(arrayOfPlotVariant);
+    figSummary.title("Summary");
+    sciplot::Canvas canvas = {{figSummary}};
+    unsigned int nrows = subplotMetricNames.size();
+    unsigned int ncols=0;
+    for(unsigned int i=0; i<subplotMetricNames.size();++i){
+      if(ncols < subplotMetricNames[i].size()){
+        ncols=subplotMetricNames[i].size();
+      }
+    }
+
+    size_t canvasWidth  = 
+      static_cast<size_t>(settings.plotWidth*static_cast<double>(ncols));
+    size_t canvasHeight = 
+      static_cast<size_t>(settings.plotHeight*static_cast<double>(nrows));
+
+    canvas.size(canvasWidth, canvasHeight) ;    
+
+    // Save the figure to a PDF file
+    std::string outputFileName = plotFolderOutput;
+    std::string plotFileName = "summary.pdf";
+    outputFileName.append(plotFileName);
+    canvas.save(outputFileName);
   }
 
   if(verbose){
@@ -1016,12 +1253,37 @@ void generateLaTeXReport(
   latexReport << "\\usepackage{times}"<<std::endl;
   latexReport << "\\usepackage{graphicx}"<<std::endl;
   latexReport << "\\usepackage{hyperref}"<<std::endl;
+  latexReport << "\\usepackage{multicol}"<<std::endl;
   latexReport << "\\begin{document}"<<std::endl;
   
   std::vector< char > charactersToEscape;
   charactersToEscape.push_back('%');
   charactersToEscape.push_back('&');
   charactersToEscape.push_back('$');
+
+  //Add the summary figure
+  latexReport << "\\begin{figure}[h]" << std::endl;
+  latexReport << "  \\begin{center}" << std::endl;
+  latexReport << "    \\includegraphics{summary.pdf}" << std::endl;
+  latexReport << "    \\caption{Summary statistics of the companies in this"
+                    " report listed in order}" << std::endl;
+  latexReport << " \\end{center}" << std::endl;
+  latexReport << "\\end{figure}"<< std::endl;
+  latexReport << std::endl;
+
+  latexReport << "\\begin{multicols}{5}" << std::endl;
+  latexReport << "\\begin{enumerate}" << std::endl;
+  latexReport << "\\itemsep0pt" << std::endl;
+  for(size_t i =0; i<tickerFigurePath.size(); ++i){
+    latexReport << "\\item " <<  tickerFigurePath[i].primaryTicker << std::endl;
+  }
+  latexReport << "\\end{enumerate}" << std::endl;
+  latexReport << std::endl;
+  latexReport << "\\end{multicols}" << std::endl;
+
+
+  latexReport << "\\break" << std::endl;
+  latexReport << "\\newpage" << std::endl;
 
   int entryCount=0;
   for(auto const &reportEntry: report){
