@@ -1304,11 +1304,146 @@ void plotReportData(
     std::cout << std::endl; 
   }
 };
+//==============================================================================
+void appendValuationTable(std::ofstream &latexReport, 
+                          const std::string &primaryTicker, 
+                          const std::string &analysisFolder,
+                          bool verbose){
 
+  std::string fullFilePath=analysisFolder;
+  fullFilePath.append(primaryTicker).append(".json");  
+
+  nlohmann::ordered_json analysis;
+
+  bool analysisLoaded = JsonFunctions::loadJsonFile(fullFilePath, analysis, verbose);
+
+  std::string key = analysis.begin().key();
+
+  if(analysisLoaded){
+    latexReport << "Inputs are indicated using (*). Note the constant equity"
+                << " risk premium should be replaced with " 
+                << "\\href{https://aswathdamodaran.blogspot.com/2024/07/country-risk-my-2024-data-update.html}{Prof. Damodaran's country risk} method."
+                << "  The values of 0.05 are appropriate for safe developed "
+                << " countries: not all countries in EOD's database are safe" 
+                << " and developed. "
+                << std::endl << std::endl;
+
+
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\multicolumn{2}{c}{\\textbf{Discounted Cashflow Value}} \\\\" 
+                    << std::endl;
+    latexReport << "\\multicolumn{2}{c}{"<<  key <<"} \\\\" << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;
+
+    latexReport << "\\multicolumn{2}{c}{Part I: After-tax cost of debt} \\\\" 
+                    << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;
+    latexReport << "A: Risk-free-rate [1] & " 
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfEquityAsAPercentage_riskFreeRate"],true)
+                << " \\\\" << std::endl;
+    latexReport << " & \\\\" << std::endl;
+    latexReport << "\\multicolumn{2}{c}{ Cost of equity } \\\\" << std::endl;
+    latexReport << "\\hline "
+                << "B: equity risk premium* & " 
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfEquityAsAPercentage_equityRiskPremium"],true)
+                << " \\\\" << std::endl;
+    latexReport << "C: beta & " 
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfEquityAsAPercentage_beta"],true)
+                << " \\\\" << std::endl;
+    latexReport << "D: cost of equity & " 
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfEquityAsAPercentage"],true)
+                << " \\\\" << std::endl;
+    latexReport << "\\multicolumn{2}{c}{ D = A + B*C} \\\\" << std::endl;
+    latexReport << " & \\\\" << std::endl;
+
+    latexReport << "\\multicolumn{2}{c}{ After-tax cost of debt } \\\\" << std::endl;
+    latexReport << "\\hline "
+                << "E: Operating income & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["interestCover_operatingIncome"],true)
+                << " \\\\" << std::endl;
+    latexReport << "F: Interest expense & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["interestCover_interestExpense"],true)
+                << " \\\\" << std::endl;
+    latexReport << "G: Interest cover & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["interestCover"],true)
+                << " \\\\" << std::endl;
+    latexReport << "\\multicolumn{2}{c}{ G = E/F} \\\\" << std::endl;
+    latexReport << " & \\\\" << std::endl;
+    latexReport << "I. Default spread [2] & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["defaultSpread"],true)
+                << " \\\\" << std::endl;
+    latexReport << "J. tax rate [3] & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["afterTaxCostOfDebt_taxRate"],true)
+                << " \\\\" << std::endl;
+    latexReport << "K. after-tax cost of debt & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["afterTaxCostOfDebt"],true)
+                << " \\\\" << std::endl;
+    latexReport << "\\multicolumn{2}{c}{ K = (A+I)*(1.0-J)} \\\\" << std::endl;
+                
+
+    //latexReport << "\\multicolumn{2}{c}{ After-tax cost of debt } \\\\" << std::endl;
+    //latexReport << "\\hline "
+    //            << "Market Capitalization & "
+    //            << JsonFunctions::getJsonFloat(
+    //                analysis[key]["costOfCapital_marketCapitalization"],true)
+    //            << " \\\\" << std::endl;
+
+    //latexReport << "\\multicolumn{2}{c}{ Cost of capital } \\\\" << std::endl;
+    //latexReport << "\\hline "
+    //            << "Market Capitalization & "
+    //            << JsonFunctions::getJsonFloat(
+    //                analysis[key]["costOfCapital_marketCapitalization"],true)
+    //            << " \\\\" << std::endl;
+    //latexReport << "After-tax cost of debt & "
+    //            << JsonFunctions::getJsonFloat(
+    //                analysis[key]["costOfCapital_marketCapitalization"],true)
+    //            << " \\\\" << std::endl;    
+
+
+
+    latexReport << "\\end{tabular}" << std::endl << std::endl;
+
+    latexReport << "\\underline{References}" << std::endl;
+    latexReport << "\\begin{enumerate}" << std::endl;
+    latexReport << "\\item The U.S. 10 year bond rate is used to estimate "
+                << "the risk-free-rate in all countries across time. This will obviously"
+                << "not be appropriate for all countries, but I've had difficulty "
+                << "amassing 10-year international bond records going back in time. \\\\" 
+                << "\\href{https://fred.stlouisfed.org/series/DGS10}{Federal Reserve Bank of St. Louis}" 
+                << std::endl;
+    latexReport << "\\item " 
+                << "\\href{https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html}{Prof. Damodaran's Ratings File}" 
+                << std::endl;           
+    latexReport << "\\item " 
+                << "\\href{https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/}{Corporate Tax Rates By Country}" 
+                << std::endl;                            
+    latexReport << "\\end{enumerate}" << std::endl;
+
+
+
+
+
+  }
+                                  
+
+};
+//==============================================================================
 void generateLaTeXReport(
     const nlohmann::ordered_json &report,
     const std::vector< TickerFigurePath > &tickerFigurePath,
     const std::string &plotFolder,
+    const std::string &analysisFolder,
+    const std::vector< std::vector< std::string > > &subplotMetricNames,
     const std::string &latexReportName,
     const std::vector< std::string > &filterByCountry,
     const nlohmann::ordered_json &filterByIndustry,
@@ -1377,6 +1512,7 @@ void generateLaTeXReport(
   for(size_t i =0; i<tickerFigurePath.size(); ++i){
     latexReport << "\\item " <<  tickerFigurePath[i].primaryTicker << std::endl;
   }
+  latexReport << "\\item Market capitalization weighted average" << std::endl;
   latexReport << "\\end{enumerate}" << std::endl;
   latexReport << std::endl;
   latexReport << "\\end{multicols}" << std::endl;
@@ -1481,6 +1617,20 @@ void generateLaTeXReport(
       }
       latexReport << "\\end{tabular}" << std::endl << std::endl;
       //latexReport << "\\end{center}" << std::endl;
+
+      if(analysisFolder.length()>0){
+        bool found=false;
+        for(size_t i=0; i<subplotMetricNames.size(); ++i){
+          for(size_t j=0; j<subplotMetricNames[i].size(); ++j){
+            if(subplotMetricNames[i][j].compare("priceToValue_value")==0){
+              appendValuationTable(latexReport,primaryTicker,analysisFolder,verbose);
+            }
+          }  
+        }
+
+        
+      }
+
       latexReport << "\\end{multicols}" << std::endl;
 
 
@@ -1534,6 +1684,7 @@ int main (int argc, char* argv[]) {
   std::string exchangeCode;
   std::string historicalFolder;
   std::string reportFilePath;
+  std::string analysisFolder;
   std::string plotFolder;
   std::string plotConfigurationFilePath;
   std::string fileFilterByTicker;
@@ -1563,6 +1714,11 @@ int main (int argc, char* argv[]) {
       "The path to the json report file.",
       true,"","string");
     cmd.add(reportFilePathInput);
+
+    TCLAP::ValueArg<std::string> analysisFolderInput("a","analysis_calculation_file_path", 
+      "The path to the folder that contains all of the analysis calculations.",
+      true,"","string");
+    cmd.add(analysisFolderInput);
 
     TCLAP::ValueArg<std::string> reportLatexFileNameInput("t","latex_report_file_name", 
       "The name of the LaTeX file to write.",
@@ -1643,6 +1799,7 @@ int main (int argc, char* argv[]) {
     fileFilterByIndustry      = fileFilterByIndustryInput.getValue();
     numberOfPlotsToGenerate   = numberOfPlotsToGenerateInput.getValue();
     earliestReportingYear     = earliestReportingYearInput.getValue();
+    analysisFolder            = analysisFolderInput.getValue();
     plotFolder                = plotFolderOutput.getValue();
     analyzeQuarters           = quarterlyAnalysisInput.getValue();
     analyzeYears              = !analyzeQuarters;
@@ -1679,6 +1836,9 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Report File Path" << std::endl;
       std::cout << "    " << reportFilePath << std::endl;
+
+      std::cout << "  Analysis Folder" << std::endl;
+      std::cout << "    " << analysisFolder << std::endl;
 
       std::cout << "  Plot Folder" << std::endl;
       std::cout << "    " << plotFolder << std::endl;
@@ -1746,6 +1906,8 @@ int main (int argc, char* argv[]) {
     generateLaTeXReport(report,
                         tickerFigurePath,
                         plotFolder,
+                        analysisFolder,
+                        subplotMetricNames,
                         fileNameLaTexReport,
                         filterByCountry,
                         filterByIndustry,
