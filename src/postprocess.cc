@@ -47,6 +47,10 @@ struct MetricFilter{
   std::string name;
   double value;
   ComparisonType comparison;
+  MetricFilter():
+    name(""),
+    value(0),
+    comparison(LESS_THAN){};
 };
 //==============================================================================
 struct SummaryStatistics{
@@ -55,13 +59,24 @@ struct SummaryStatistics{
   double max;
   double current;
   std::string name;
+  SummaryStatistics():
+    min(0),
+    max(0),
+    current(0),
+    name(""){};
+
 };
 
 //==============================================================================
 struct TickerSummary{
   std::string ticker;
   unsigned int rank;
+  double marketCapitalizationMln;
   std::vector<  SummaryStatistics > summaryStatistics;
+  TickerSummary():
+    ticker(""),
+    rank(std::numeric_limits<unsigned int>::max()),
+    marketCapitalizationMln(0){};
 };
 
 //==============================================================================
@@ -304,10 +319,9 @@ void extractSummaryStatistics(sciplot::Vec &data, SummaryStatistics &summary){
   summary.min = dataDbl[0];
   summary.max = dataDbl[dataDbl.size()-1];
 
-  size_t numberOfPercentiles = sizeof(Percentiles) / sizeof(double);
 
   if(dataDbl.size() > 1){
-    for(size_t i = 0; i < numberOfPercentiles; ++i){
+    for(size_t i = 0; i < NUM_PERCENTILES; ++i){
       double idxDbl = Percentiles[i]*(dataDbl.size()-1);
       int indexA = std::floor(idxDbl);
       int indexB = std::ceil(idxDbl);
@@ -319,7 +333,7 @@ void extractSummaryStatistics(sciplot::Vec &data, SummaryStatistics &summary){
       summary.percentiles.push_back(value);
     }
   }else{
-    for(size_t i = 0; i < numberOfPercentiles; ++i){
+    for(size_t i = 0; i < NUM_PERCENTILES; ++i){
       summary.percentiles.push_back(dataDbl[0]);
     }
   }
@@ -757,6 +771,7 @@ void drawBoxAndWhisker(
       double x,   
       double xWidth,   
       const std::vector< double > &y,
+      const char* lineColor,
       const PlotSettings &settings,
       bool verbose){
 
@@ -776,7 +791,7 @@ void drawBoxAndWhisker(
   yBox[4]= y[P25];
 
   plotUpd.drawCurve(xBox,yBox)
-         .lineColor("gray")
+         .lineColor(lineColor)
          .lineWidth(settings.lineWidth);
 
   sciplot::Vec xLine(2);
@@ -787,7 +802,7 @@ void drawBoxAndWhisker(
   yLine[1] = y[P95];
 
   plotUpd.drawCurve(xLine,yLine)
-         .lineColor("gray")
+         .lineColor(lineColor)
          .lineWidth(settings.lineWidth);
   
   xLine[0] = x;
@@ -796,7 +811,7 @@ void drawBoxAndWhisker(
   yLine[1] = y[P05];
 
   plotUpd.drawCurve(xLine,yLine)
-         .lineColor("gray")
+         .lineColor(lineColor)
          .lineWidth(settings.lineWidth);
 
   xLine[0] = x-xWidth*0.5;
@@ -805,7 +820,7 @@ void drawBoxAndWhisker(
   yLine[1] = y[P50];
 
   plotUpd.drawCurve(xLine,yLine)
-         .lineColor("gray")
+         .lineColor(lineColor)
          .lineWidth(settings.lineWidth);
 
 
@@ -899,7 +914,8 @@ void plotReportData(
       TickerSummary tickerSummary;
       tickerSummary.ticker=primaryTicker;
       tickerSummary.rank= JsonFunctions::getJsonFloat( reportEntry["Ranking"]);
-
+      tickerSummary.marketCapitalizationMln = 
+          JsonFunctions::getJsonFloat( reportEntry["MarketCapitalizationMln"]);
 
       plottedTickers.push_back(primaryTicker);
       std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
@@ -1110,17 +1126,35 @@ void plotReportData(
 
   //Generate the Market SummaryPlot
   if(entryCount > 0){
-    std::vector< std::vector < sciplot::Plot2D > > arrayOfPlot2D;
 
+    //To evaluate the summary statistics of the tickers in the report
+    std::vector< SummaryStatistics > marketSummaryStatistics;
+    double sumOfWeights = 0.;
+    marketSummaryStatistics.resize(marketSummary[0].summaryStatistics.size());
+    for(size_t i=0; i<marketSummaryStatistics.size();++i){
+      marketSummaryStatistics[i].percentiles.resize(NUM_PERCENTILES);
+      marketSummaryStatistics[i].name = 
+        marketSummary[0].summaryStatistics[i].name;
+
+      for(size_t j=0; j<NUM_PERCENTILES;++j){
+        marketSummaryStatistics[i].percentiles[j]=0.;
+      }
+    }
+
+    std::vector< std::vector < sciplot::Plot2D > > arrayOfPlot2D;
     arrayOfPlot2D.resize(subplotMetricNames.size());  
 
     for(size_t i=0; i<subplotMetricNames.size();++i){
-      arrayOfPlot2D[i].resize(subplotMetricNames[i].size());
+      arrayOfPlot2D[i].resize(subplotMetricNames[i].size());          
     }
+
+
 
     double x=1;
     double xWidth = 0.4;
-    for(auto const &entrySummary : marketSummary){          
+    for(auto const &entrySummary : marketSummary){      
+      size_t indexMetric=0;   
+      sumOfWeights += entrySummary.marketCapitalizationMln; 
       for(auto const &entryMetric : entrySummary.summaryStatistics){
         
         //Get the subplot row and column;
@@ -1140,6 +1174,7 @@ void plotReportData(
             x,
             xWidth,
             entryMetric.percentiles,
+            "gray",
             settings,
             verbose);
         //Draw the current value as a point
@@ -1152,9 +1187,74 @@ void plotReportData(
         arrayOfPlot2D[row][col].drawCurve(xVec,yVec)
                                .lineWidth(settings.lineWidth)
                                .lineColor("black");
+
+        marketSummaryStatistics[indexMetric].current += 
+          entryMetric.current*entrySummary.marketCapitalizationMln;
+        marketSummaryStatistics[indexMetric].min += 
+          entryMetric.min*entrySummary.marketCapitalizationMln;
+        marketSummaryStatistics[indexMetric].max += 
+          entryMetric.max*entrySummary.marketCapitalizationMln;
+        for( size_t i = 0;  i< NUM_PERCENTILES;  ++i){
+          marketSummaryStatistics[indexMetric].percentiles[i] +=
+            entryMetric.percentiles[i]*entrySummary.marketCapitalizationMln;
+        }
+
+        ++indexMetric;                               
       }
       x=x+1.0;
     }
+
+    //Normalize the market summary statistics
+    for(size_t i=0; i < marketSummaryStatistics.size(); ++i){
+      marketSummaryStatistics[i].min = 
+        marketSummaryStatistics[i].min/sumOfWeights;
+      marketSummaryStatistics[i].max = 
+        marketSummaryStatistics[i].max/sumOfWeights;
+      marketSummaryStatistics[i].current = 
+        marketSummaryStatistics[i].current/sumOfWeights;
+
+      for(size_t j=0; j<NUM_PERCENTILES; ++j){
+        marketSummaryStatistics[i].percentiles[j]=
+          marketSummaryStatistics[i].percentiles[j]/sumOfWeights;
+      }
+    }
+
+    //Plot the market summary
+    //Get the subplot row and column;
+    for(auto const &entry : marketSummaryStatistics){
+        size_t row=0;
+        size_t col=0;
+        for(size_t i=0; i<subplotMetricNames.size();++i){
+          for(size_t j=0; j<subplotMetricNames[i].size();++j){
+            if(entry.name.compare(
+                              subplotMetricNames[i][j] )==0){
+              row=i;
+              col=j;
+            }
+          }
+        }
+        //Add the box and whisker plot
+        drawBoxAndWhisker(
+            arrayOfPlot2D[row][col],
+            x,
+            xWidth,
+            entry.percentiles,
+            "green",
+            settings,
+            verbose);
+        //Draw the current value as a point
+        sciplot::Vec xVec(2);
+        sciplot::Vec yVec(2);
+        xVec[0]=x-xWidth*0.5;
+        xVec[1]=x+xWidth*0.5;
+        yVec[0]=entry.current;
+        yVec[1]=entry.current;
+        arrayOfPlot2D[row][col].drawCurve(xVec,yVec)
+                               .lineWidth(settings.lineWidth)
+                               .lineColor("blue");
+
+    }
+
     //Set the labels
     std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlotVariant;
 
@@ -1362,11 +1462,17 @@ void generateLaTeXReport(
       latexReport << "\\end{figure}"<< std::endl;
       latexReport << std::endl;
 
+      latexReport << "\\begin{multicols}{2}" << std::endl;
+
       latexReport << description << std::endl;
       latexReport << std::endl;
 
-      latexReport << "\\begin{center}" << std::endl;
+      //latexReport << "\\begin{center}" << std::endl;
+
+
+
       latexReport << "\\begin{tabular}{l l}" << std::endl;
+      latexReport << "\\multicolumn{2}{c}{\\textbf{Contextual Data}} \\\\" << std::endl;
       for(auto &entryMetric : tabularMetrics){
         double entryValue = JsonFunctions::getJsonFloat(reportEntry[entryMetric]);
         std::string labelMetric = entryMetric;
@@ -1374,7 +1480,8 @@ void generateLaTeXReport(
         latexReport << labelMetric << " & " << entryValue << "\\\\" << std::endl;
       }
       latexReport << "\\end{tabular}" << std::endl << std::endl;
-      latexReport << "\\end{center}" << std::endl;
+      //latexReport << "\\end{center}" << std::endl;
+      latexReport << "\\end{multicols}" << std::endl;
 
 
       latexReport << "\\break" << std::endl;
