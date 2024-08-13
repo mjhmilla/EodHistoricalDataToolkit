@@ -1320,22 +1320,20 @@ void appendValuationTable(std::ofstream &latexReport,
   std::string key = analysis.begin().key();
 
   if(analysisLoaded){
+    latexReport << std::endl << std::endl << "\\bigskip" << std::endl;
     latexReport << "Inputs are indicated using (*). Note the constant equity"
                 << " risk premium should be replaced with " 
                 << "\\href{https://aswathdamodaran.blogspot.com/2024/07/country-risk-my-2024-data-update.html}{Prof. Damodaran's country risk} method."
                 << "  The values of 0.05 are appropriate for safe developed "
                 << " countries: not all countries in EOD's database are safe" 
-                << " and developed. "
-                << std::endl << std::endl;
-
+                << " and developed. ";
+    latexReport << std::endl << "\\bigskip" << std::endl<< std::endl;
 
     latexReport << "\\begin{tabular}{l l}" << std::endl;
     latexReport << "\\multicolumn{2}{c}{\\textbf{Discounted Cashflow Value}} \\\\" 
                     << std::endl;
     latexReport << "\\multicolumn{2}{c}{"<<  key <<"} \\\\" << std::endl;
-    latexReport << "\\hline & \\\\" << std::endl;
-
-    latexReport << "\\multicolumn{2}{c}{Part I: After-tax cost of debt} \\\\" 
+    latexReport << "\\hline \\multicolumn{2}{c}{Part I: After-tax cost of debt} \\\\" 
                     << std::endl;
     latexReport << "\\hline & \\\\" << std::endl;
     latexReport << "A: Risk-free-rate [1] & " 
@@ -1388,37 +1386,96 @@ void appendValuationTable(std::ofstream &latexReport,
                 << JsonFunctions::getJsonFloat(
                     analysis[key]["afterTaxCostOfDebt"],true)
                 << " \\\\" << std::endl;
-    latexReport << "\\multicolumn{2}{c}{ K = (A+I)*(1.0-J)} \\\\" << std::endl;
-                
-
-    //latexReport << "\\multicolumn{2}{c}{ After-tax cost of debt } \\\\" << std::endl;
-    //latexReport << "\\hline "
-    //            << "Market Capitalization & "
-    //            << JsonFunctions::getJsonFloat(
-    //                analysis[key]["costOfCapital_marketCapitalization"],true)
-    //            << " \\\\" << std::endl;
-
-    //latexReport << "\\multicolumn{2}{c}{ Cost of capital } \\\\" << std::endl;
-    //latexReport << "\\hline "
-    //            << "Market Capitalization & "
-    //            << JsonFunctions::getJsonFloat(
-    //                analysis[key]["costOfCapital_marketCapitalization"],true)
-    //            << " \\\\" << std::endl;
-    //latexReport << "After-tax cost of debt & "
-    //            << JsonFunctions::getJsonFloat(
-    //                analysis[key]["costOfCapital_marketCapitalization"],true)
-    //            << " \\\\" << std::endl;    
+    latexReport << "\\multicolumn{2}{c}{ K = (A+I)*(1.0-J)} \\\\" 
+                << std::endl;    
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;
 
 
+    //Part II
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part II: Cost of capital} \\\\" 
+                << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;                
+    latexReport << "L. Market capitalization & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfCapital_marketCapitalization"],true)
+                << " \\\\" << std::endl;
+    latexReport << "M. Short \\& long term debt  & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfCapital_shortLongTermDebtTotal"],true)
+                << " \\\\" << std::endl;
+    latexReport << "N. Cost of capital & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfCapital"],true)
+                << " \\\\" << std::endl;
+    latexReport << "\\multicolumn{2}{c}{ N = (D*L + K*M)/(L+M)} \\\\" 
+                << std::endl;              
+    latexReport << "O. Mature firm debt capital fraction* & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfCapitalMature_matureFirmDebtCapitalFraction"],true)
+                << " \\\\" << std::endl;    
+    latexReport << "\\hline & \\\\" << std::endl;               
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;
 
-    latexReport << "\\end{tabular}" << std::endl << std::endl;
+
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part III: Reinvestment rate} \\\\" 
+                << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;   
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;
+
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part IV: Operating income growth} \\\\" 
+                << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;   
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;                
+
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part V: Retention ratio} \\\\" 
+                << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;   
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;                
+
+
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part VI: Net income growth} \\\\" 
+                << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;   
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;                
+
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part VII: Income during growth period} \\\\" 
+                << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;   
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;  
+
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part VIII: Income during stable period} \\\\" 
+                << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;   
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;  
+
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part IX: Discounted cash flows } \\\\" 
+                << std::endl;
+    latexReport << "\\hline & \\\\" << std::endl;   
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;  
 
     latexReport << "\\underline{References}" << std::endl;
     latexReport << "\\begin{enumerate}" << std::endl;
     latexReport << "\\item The U.S. 10 year bond rate is used to estimate "
-                << "the risk-free-rate in all countries across time. This will obviously"
-                << "not be appropriate for all countries, but I've had difficulty "
-                << "amassing 10-year international bond records going back in time. \\\\" 
+                << "the risk-free-rate in all countries across time. This is"
+                << " obviously only appropriate if you can actually purchase "
+                << " US 10 year treasury bonds. \\\\" 
                 << "\\href{https://fred.stlouisfed.org/series/DGS10}{Federal Reserve Bank of St. Louis}" 
                 << std::endl;
     latexReport << "\\item " 
@@ -1606,7 +1663,7 @@ void generateLaTeXReport(
       //latexReport << "\\begin{center}" << std::endl;
 
 
-
+      latexReport << "\\bigskip" << std::endl;
       latexReport << "\\begin{tabular}{l l}" << std::endl;
       latexReport << "\\multicolumn{2}{c}{\\textbf{Contextual Data}} \\\\" << std::endl;
       for(auto &entryMetric : tabularMetrics){
