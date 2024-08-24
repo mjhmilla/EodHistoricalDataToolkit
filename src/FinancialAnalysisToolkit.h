@@ -886,7 +886,9 @@ class FinancialAnalysisToolkit {
       net capital expenditures =  capital expenditure - depreciation  [a]
 
       where capital expendature is the change in plant, property and equipment
-      from the previous year.
+      from the previous year we can instead use:
+
+      capital expenditure = PPE - PPE_previousYear
 
       References
         https://www.investopedia.com/terms/c/capitalexpenditure.asp
@@ -894,26 +896,58 @@ class FinancialAnalysisToolkit {
         Damodaran, A.(2011). The Little Book of Valuation. Wiley.
       */
 
-      double plantPropertyEquipment = JsonFunctions::getJsonFloat(
+      double capitalExpenditures = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][date.c_str()]
-          ["propertyPlantEquipment"], zeroNans);
+          ["capitalExpenditures"], false);
+
+      double plantPropertyEquipment=0;
+      double plantPropertyEquipmentPrevious=0;
+
+
+      if(std::isnan(capitalExpenditures) && zeroNans){
+
+        capitalExpenditures=0.;
+
+        //Use an alternative method to calculate capital expenditures
+        plantPropertyEquipment = JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timeUnit][date.c_str()]
+            ["propertyPlantEquipment"], false);
       
-      double plantPropertyEquipmentPrevious = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][previousDate.c_str()]
-          ["propertyPlantEquipment"], zeroNans);
+        plantPropertyEquipmentPrevious = JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timeUnit][previousDate.c_str()]
+            ["propertyPlantEquipment"], false);
+
+        //If one of the PPE's is populated copy it over to the PPE that is
+        //nan: this is a better approximation of the PPE than 0.
+        if(zeroNans){          
+          if(    std::isnan(plantPropertyEquipment) 
+             && !std::isnan(plantPropertyEquipmentPrevious)){
+              plantPropertyEquipment=plantPropertyEquipmentPrevious;
+          }          
+          if(   !std::isnan(plantPropertyEquipment) 
+             &&  std::isnan(plantPropertyEquipmentPrevious)){
+              plantPropertyEquipmentPrevious=plantPropertyEquipment;
+          }          
+          if(    std::isnan(plantPropertyEquipment) 
+             &&  std::isnan(plantPropertyEquipmentPrevious)){
+              plantPropertyEquipment=0;
+              plantPropertyEquipmentPrevious=0;            
+          }
+        }
+
+        capitalExpenditures   = plantPropertyEquipment
+                               -plantPropertyEquipmentPrevious;
+        
+      }
 
       double depreciation = JsonFunctions::getJsonFloat(
         jsonData[FIN][CF][timeUnit][date.c_str()]["depreciation"],zeroNans);
 
-      if(zeroNansInDepreciation && std::isnan(depreciation)){
-        depreciation=0.;
-      }
-
-      double netCapitalExpenditures = 
-        (plantPropertyEquipment-plantPropertyEquipmentPrevious)
-        - depreciation;
+      double netCapitalExpenditures =  capitalExpenditures - depreciation;          
 
       if(appendTermRecord){
+        termNames.push_back(parentCategoryName 
+          + "netCapitalExpenditures_capitalExpenditures");
         termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures_plantPropertyEquipment");
         termNames.push_back(parentCategoryName 
@@ -923,6 +957,7 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures");
 
+        termValues.push_back(capitalExpenditures);
         termValues.push_back(plantPropertyEquipment);
         termValues.push_back(plantPropertyEquipmentPrevious);
         termValues.push_back(depreciation);

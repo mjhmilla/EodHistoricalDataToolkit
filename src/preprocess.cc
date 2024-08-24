@@ -302,7 +302,7 @@ void writeReportTableToFile(
                       JsonFunctions::getJsonFloat(tableEntry[i]["MetricRankSum"]));
 
       bool here=false;
-      if(ticker.compare("NVO.US")==0){
+      if(ticker.compare("MBI.STU")==0){
         here=true;
       }
 
