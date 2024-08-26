@@ -1388,11 +1388,11 @@ void appendValuationTable(std::ofstream &latexReport,
                 << JsonFunctions::getJsonFloat(
                     analysis[key]["defaultSpread"],true)
                 << " \\\\" << std::endl;
-    latexReport << "$J_1$. tax rate [3] & "
+    latexReport << "$J_1$. Tax rate [3] & "
                 << JsonFunctions::getJsonFloat(
                     analysis[key]["afterTaxCostOfDebt_taxRate"],true)
                 << " \\\\" << std::endl;
-    latexReport << "$K_1$. after-tax cost of debt & "
+    latexReport << "$K_1$. After-tax cost of debt & "
                 << JsonFunctions::getJsonFloat(
                     analysis[key]["afterTaxCostOfDebt"],true)
                 << " \\\\" << std::endl;
@@ -1726,7 +1726,7 @@ void appendValuationTable(std::ofstream &latexReport,
 
 
     latexReport << "\\begin{tabular}{l l}" << std::endl;
-    latexReport << "\\hline \\multicolumn{2}{c}{Part 12: Present value} \\\\" 
+    latexReport << "\\hline \\multicolumn{2}{c}{Part 12: Present value of discounted cash flows (DCM)} \\\\" 
                 << std::endl;
     latexReport << "\\hline ";
 
@@ -1769,13 +1769,41 @@ void appendValuationTable(std::ofstream &latexReport,
 
     latexReport << "\\multicolumn{2}{c}{ $I_{12}=D_{12}\\,(1+E_{12})\\,(1-H_{12})/(G_{12}-E_{12})$} \\\\" 
                 << std::endl; 
-    latexReport << "$J_{12}$. Present value & "
+    latexReport << "$J_{12}$. Present value of discounted cash flows & "
                 << JsonFunctions::getJsonFloat(
                     analysis[key]["presentValueDCF"],true)
                 << " \\\\" << std::endl; 
 
     latexReport << "\\multicolumn{2}{c}{ $J_{12}=\\sum_{i=0}^{5} C_{11}^i/(1+G_{12})^i + I_{12}/(1+G_{12})^5$} \\\\" 
                 << std::endl; 
+    latexReport << "\\end{tabular}" << std::endl 
+                << "\\bigskip" << std::endl<< std::endl;  
+
+
+
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part 13: Price to value} \\\\" 
+                << std::endl;
+    latexReport << "$A_{13}$. Cash balance & "
+                << JsonFunctions::getJsonFloat(
+                    analysis[key]["priceToValue_cash"],true)
+                << " \\\\" << std::endl; 
+    latexReport << "$B_{13}$. Value of minority holdings & ? "
+                << " \\\\" << std::endl; 
+    latexReport << "$C_{13}$. Value of minority interests & ? "
+                << " \\\\" << std::endl; 
+    latexReport << "(from majority stake) &  "
+                << " \\\\" << std::endl; 
+    latexReport << "$D_{13}$. Potential liabilities  & ? "
+                << " \\\\" << std::endl; 
+    latexReport << "(underfunded pension, health care, lawsuits ...) &  "
+                << " \\\\" << std::endl; 
+    latexReport << "$E_{13}$. Value of managment options  & ? "
+                << " \\\\" << std::endl; 
+    latexReport << "$F_{13}$. Number of shares outstanding  & ? "
+                << " \\\\" << std::endl; 
+
+
     latexReport << "$K_{12}$. Market cap. & "
                 << JsonFunctions::getJsonFloat(
                     analysis[key]["priceToValue_marketCapitalization"],true)
@@ -1784,6 +1812,8 @@ void appendValuationTable(std::ofstream &latexReport,
                 << JsonFunctions::getJsonFloat(
                     analysis[key]["priceToValue"],true)
                 << " \\\\" << std::endl; 
+    latexReport << "\\multicolumn{2}{c}{ $L_{12}= K_{12} / J_{12}$} \\\\" 
+                << std::endl; 
 
 
     latexReport << "\\end{tabular}" << std::endl 

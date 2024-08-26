@@ -919,24 +919,21 @@ class FinancialAnalysisToolkit {
 
         //If one of the PPE's is populated copy it over to the PPE that is
         //nan: this is a better approximation of the PPE than 0.
-        if(zeroNans){          
-          if(    std::isnan(plantPropertyEquipment) 
-             && !std::isnan(plantPropertyEquipmentPrevious)){
-              plantPropertyEquipment=plantPropertyEquipmentPrevious;
-          }          
-          if(   !std::isnan(plantPropertyEquipment) 
-             &&  std::isnan(plantPropertyEquipmentPrevious)){
-              plantPropertyEquipmentPrevious=plantPropertyEquipment;
-          }          
-          if(    std::isnan(plantPropertyEquipment) 
-             &&  std::isnan(plantPropertyEquipmentPrevious)){
-              plantPropertyEquipment=0;
-              plantPropertyEquipmentPrevious=0;            
-          }
-        }
-
         capitalExpenditures   = plantPropertyEquipment
                                -plantPropertyEquipmentPrevious;
+
+        if(zeroNans){          
+          if(std::isnan(plantPropertyEquipment)){
+              plantPropertyEquipment=0;
+              capitalExpenditures=0;              
+          }
+          
+          if(std::isnan(plantPropertyEquipmentPrevious)){
+              plantPropertyEquipmentPrevious=0;
+              capitalExpenditures=0;              
+          }          
+        }
+
         
       }
 

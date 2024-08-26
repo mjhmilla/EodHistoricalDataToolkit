@@ -1465,9 +1465,9 @@ int main (int argc, char* argv[]) {
         double cash = JsonFunctions::getJsonFloat(
           fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]["cash"]);
 
-        double netDebt = JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                             ["netDebt"]);
+        //double netDebt = JsonFunctions::getJsonFloat(
+        //      fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+        //                     ["netDebt"]);
 
         double crossHoldings = std::nan("1");
 
@@ -1476,31 +1476,43 @@ int main (int argc, char* argv[]) {
         double optionValue = std::nan("1");
 
         double presentValue = presentValueOfFutureCashFlows
-                            + cash 
-                            - netDebt;
+                            + cash; 
+                            //- netDebt;
 
+        double numberOfSharesOutstanding = JsonFunctions::getJsonFloat(
+              fundamentalData[GEN]["SharesStats"]["SharesOutstanding"]);
+
+        double shareValue = presentValue / numberOfSharesOutstanding;
 
         //Ratio: price to value
-        double priceToValue = marketCapitalization/presentValue;
+        double priceToValue = adjustedClose / shareValue;
         if(appendTermRecord){
           termNames.push_back("priceToValue_presentValueOfFutureCashFlows");
           termNames.push_back("priceToValue_cash");
-          termNames.push_back("priceToValue_netDebt");
+          //termNames.push_back("priceToValue_netDebt");
+
           termNames.push_back("priceToValue_crossHolding_missing");
           termNames.push_back("priceToValue_potentialLiabilities_missing");
           termNames.push_back("priceToValue_stockOptionValuation_missing");
           termNames.push_back("priceToValue_presentValue_approximation");
-          termNames.push_back("priceToValue_marketCapitalization");
+
+          termNames.push_back("priceToValue_sharesOutstanding");
+          termNames.push_back("priceToValue_shareValue_approximation");
+          termNames.push_back("priceToValue_sharePrice");
           termNames.push_back("priceToValue");
 
           termValues.push_back(presentValueOfFutureCashFlows);
           termValues.push_back(cash);
-          termValues.push_back(netDebt);
+          //termValues.push_back(netDebt);
+
           termValues.push_back(crossHoldings);
           termValues.push_back(potentialLiabilities);
           termValues.push_back(optionValue);
           termValues.push_back(presentValue);
-          termValues.push_back(marketCapitalization);
+
+          termValues.push_back(numberOfSharesOutstanding);
+          termValues.push_back(shareValue);
+          termValues.push_back(adjustedClose);
           termValues.push_back(priceToValue);
 
         }
