@@ -4,6 +4,8 @@
 #include <string>
 #include <nlohmann/json.hpp>
 #include <stdlib.h>
+#include <numeric>
+
 
 
 
@@ -11,6 +13,19 @@
 class JsonFunctions {
 
   public:
+
+    //When an accounting value is missing this number is inserted to 
+    //signal that it is missing. This value has been chosen:
+    //
+    //1. To be less than 1 dollar/Eur/Yen etc. Why? Fractions of a dollar/Eur/Yen
+    //   never (?) in financial statements. Seeing this show up in a table later 
+    //   will cause the reader to wonder about it. This also means that this value
+    //   can be used as a signal for a missing value later.
+    //
+    //2. It rounds to zero. 
+    //
+    static constexpr double MISSING_VALUE = 0.00123456;
+
 
     static bool loadJsonFile(const std::string &fileName, 
                              const std::string &folder,
@@ -48,11 +63,22 @@ class JsonFunctions {
       return success;
     };
 
+    static bool isJsonFloatValid(double value){
+      if(std::isnan(value)){
+        return false;
+      }else if(std::abs(value-MISSING_VALUE) < 
+                std::numeric_limits< double >::epsilon()*10.0){
+        return false;
+      }else{
+        return true;
+      }
+    }
+
     static double getJsonFloat(const nlohmann::ordered_json &jsonEntry,
-                               bool zeroNans=false){
+                               bool setNansToMissingValue=false){
       if(  jsonEntry.is_null()){
-        if(zeroNans){
-          return 0.0;
+        if(setNansToMissingValue){
+          return MISSING_VALUE;
         }else{
           return std::nan("1");
         }
@@ -73,10 +99,10 @@ class JsonFunctions {
     };
 
     static bool getJsonBool(const nlohmann::ordered_json &jsonEntry,
-                            bool zeroNans=false){
+                            bool replaceNanWithFalse=false){
       if(  jsonEntry.is_null()){
-        if(zeroNans){
-          return 0.0;
+        if(replaceNanWithFalse){
+          return false;
         }else{
           return std::nan("1");
         }
@@ -120,7 +146,6 @@ class JsonFunctions {
         }
       }
     };
-
 
 };
 

@@ -660,12 +660,6 @@ int main (int argc, char* argv[]) {
   // relaxedCalculation = false: 
   //  Use the data as is directly from EOD without any modification.
 
-  bool zeroNanInShortTermDebt                 = relaxedCalculation;
-  bool replaceNanInShortLongDebtWithLongDebt  = relaxedCalculation;
-  bool zeroNansInResearchAndDevelopment       = relaxedCalculation;
-  bool zeroNansInDividendsPaid                = relaxedCalculation;
-  bool zeroNansInDepreciation                 = relaxedCalculation;
-
 
   //2024/8/4 MM: added this because the analysis of some securities is
   //             getting trashed by nans in fields that should actually be
@@ -674,8 +668,13 @@ int main (int argc, char* argv[]) {
   //             appear, or is set to nan, it then turns the results of all
   //             analysis done using this term to nan. And this, unfortunately,
   //             later means that these securities are ignored in later analysis.
-  bool zeroAllNans                            = relaxedCalculation;
-  bool appendTermRecord                       = relaxedCalculation;
+
+  bool setNansToMissingValue                  = relaxedCalculation;
+
+
+  //When this is true all intermediate values of a calculation are saved
+  //and written to file to permit manual inspection.  
+  bool appendTermRecord                       = true;
   std::vector< std::string >  termNames;
   std::vector< double >       termValues;  
 
@@ -1050,7 +1049,7 @@ int main (int argc, char* argv[]) {
                             date,
                             timePeriod.c_str(),
                             appendTermRecord,
-                            zeroAllNans,
+                            setNansToMissingValue,
                             termNames,
                             termValues);
 
@@ -1145,7 +1144,7 @@ int main (int argc, char* argv[]) {
         try{
           bondYield = JsonFunctions::getJsonFloat(
               jsonBondYield["US"]["10y_bond_yield"][closestBondYieldDate],
-              zeroAllNans); 
+              setNansToMissingValue); 
           bondYield = bondYield * (0.01); //Convert from percent to decimal form      
         }catch( std::invalid_argument const& ex){
           std::cout << " Bond yield record (" << closestBondYieldDate << ")"
@@ -1188,7 +1187,7 @@ int main (int argc, char* argv[]) {
                               meanInterestCover,
                               jsonDefaultSpread,
                               appendTermRecord,
-                              zeroAllNans,
+                              setNansToMissingValue,
                               termNames,
                               termValues);
 
@@ -1230,12 +1229,11 @@ int main (int argc, char* argv[]) {
             fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
                            ["shortLongTermDebtTotal"]);
 
-        if(std::isnan(  shortLongTermDebtTotal) 
-                     && replaceNanInShortLongDebtWithLongDebt){
+        if(std::isnan(  shortLongTermDebtTotal) && relaxedCalculation){
           shortLongTermDebtTotal = 
             JsonFunctions::getJsonFloat(
               fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                             ["longTermDebt"], zeroAllNans);
+                             ["longTermDebt"], setNansToMissingValue);
         }
 
         //======================================================================        
@@ -1244,7 +1242,7 @@ int main (int argc, char* argv[]) {
         double commonStockSharesOutstanding = 
           JsonFunctions::getJsonFloat(
             fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                            ["commonStockSharesOutstanding"], zeroAllNans);
+                            ["commonStockSharesOutstanding"], setNansToMissingValue);
 
         unsigned int indexHistoricalData = 
           indicesCommonHistoricalDates[indexDate];   
@@ -1255,7 +1253,7 @@ int main (int argc, char* argv[]) {
         try{
           adjustedClose = JsonFunctions::getJsonFloat(
                       historicalData[ indexHistoricalData ]["adjusted_close"],
-                      zeroAllNans);       
+                      setNansToMissingValue);       
         }catch( std::invalid_argument const& ex){
           std::cout << " Historical record (" << closestHistoricalDate << ")"
                     << " is missing an opening share price."
@@ -1320,16 +1318,15 @@ int main (int argc, char* argv[]) {
 
         double totalStockHolderEquity = JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                               ["totalStockholderEquity"],zeroAllNans); 
+                               ["totalStockholderEquity"],setNansToMissingValue); 
         std::string emptyParentName("");
         double roic = FinancialAnalysisToolkit::
           calcReturnOnInvestedCapital(fundamentalData,
                                       date,
                                       timePeriod.c_str(),
-                                      zeroNansInDividendsPaid, 
                                       appendTermRecord, 
                                       emptyParentName,
-                                      zeroAllNans,
+                                      setNansToMissingValue,
                                       termNames, 
                                       termValues);
 
@@ -1343,7 +1340,7 @@ int main (int argc, char* argv[]) {
                                         timePeriod.c_str(), 
                                         appendTermRecord, 
                                         emptyParentName,
-                                        zeroAllNans,
+                                        setNansToMissingValue,
                                         termNames, 
                                         termValues);
 
@@ -1352,7 +1349,7 @@ int main (int argc, char* argv[]) {
                             date,
                             timePeriod.c_str(),
                             appendTermRecord,
-                            zeroAllNans,
+                            setNansToMissingValue,
                             termNames,
                             termValues);
 
@@ -1361,7 +1358,7 @@ int main (int argc, char* argv[]) {
                                 date,
                                 timePeriod.c_str(), 
                                 appendTermRecord,
-                                zeroAllNans,
+                                setNansToMissingValue,
                                 termNames,
                                 termValues);          
 
@@ -1371,7 +1368,7 @@ int main (int argc, char* argv[]) {
                                     timePeriod.c_str(), 
                                     taxRate,
                                     appendTermRecord,
-                                    zeroAllNans,
+                                    setNansToMissingValue,
                                     termNames,
                                     termValues);
 
@@ -1379,9 +1376,8 @@ int main (int argc, char* argv[]) {
           calcDebtToCapitalizationRatio(  fundamentalData,
                                           date,
                                           timePeriod.c_str(),
-                                          zeroNanInShortTermDebt,
                                           appendTermRecord,
-                                          zeroAllNans,
+                                          setNansToMissingValue,
                                           termNames,
                                           termValues);
 
@@ -1390,9 +1386,8 @@ int main (int argc, char* argv[]) {
                               date, 
                               previousTimePeriod,
                               timePeriod.c_str(),
-                              zeroNansInDepreciation,
                               appendTermRecord, 
-                              zeroAllNans,
+                              setNansToMissingValue,
                               termNames, 
                               termValues);  
 
@@ -1407,9 +1402,8 @@ int main (int argc, char* argv[]) {
                                   timePeriod.c_str(),
                                   costOfEquityAsAPercentage,
                                   trailingPastPeriods,
-                                  zeroNansInResearchAndDevelopment,
                                   appendTermRecord,
-                                  zeroAllNans,
+                                  setNansToMissingValue,
                                   termNames,
                                   termValues);
         }
@@ -1421,10 +1415,8 @@ int main (int argc, char* argv[]) {
                                      date,
                                      previousTimePeriod,
                                      timePeriod.c_str(),
-                                     zeroNansInDepreciation,
-                                     replaceNanInShortLongDebtWithLongDebt,
                                      appendTermRecord,
-                                     zeroAllNans,
+                                     setNansToMissingValue,
                                      termNames,
                                      termValues);
         }
@@ -1436,9 +1428,8 @@ int main (int argc, char* argv[]) {
                                  previousTimePeriod, 
                                  timePeriod.c_str(),
                                  taxRate,
-                                 zeroNansInDepreciation,
                                  appendTermRecord,
-                                 zeroAllNans,
+                                 setNansToMissingValue,
                                  termNames, 
                                  termValues);
 
@@ -1449,54 +1440,59 @@ int main (int argc, char* argv[]) {
               date,
               previousTimePeriod,
               timePeriod.c_str(),
-              zeroNansInDividendsPaid,
-              zeroNansInDepreciation,
               riskFreeRate,
               costOfCapital,
               costOfCapitalMature,
               taxRate,
               numberOfYearsForTerminalValuation,
               appendTermRecord,
-              zeroAllNans,
+              setNansToMissingValue,
               termNames,
               termValues);
 
         //Market value (make adjustments as described in Damodaran Ch. 3)
         double cash = JsonFunctions::getJsonFloat(
-          fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]["cash"]);
+          fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]["cash"],
+          true);
 
         //double netDebt = JsonFunctions::getJsonFloat(
         //      fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
         //                     ["netDebt"]);
 
-        double crossHoldings = std::nan("1");
+        double crossHoldings = JsonFunctions::MISSING_VALUE;
 
-        double potentialLiabilities = std::nan("1");
+        double potentialLiabilities = JsonFunctions::MISSING_VALUE;
 
-        double optionValue = std::nan("1");
+        double optionValue  = JsonFunctions::MISSING_VALUE;
 
         double presentValue = presentValueOfFutureCashFlows
-                            + cash; 
-                            //- netDebt;
+                            + cash
+                            + crossHoldings
+                            - potentialLiabilities
+                            - optionValue;
 
-        double numberOfSharesOutstanding = JsonFunctions::getJsonFloat(
-              fundamentalData[GEN]["SharesStats"]["SharesOutstanding"]);
+        double priceToValue = presentValue / marketCapitalization;
 
-        double shareValue = presentValue / numberOfSharesOutstanding;
+              
+        double shareValue = JsonFunctions::MISSING_VALUE;
+        if(JsonFunctions::isJsonFloatValid(commonStockSharesOutstanding)){
+          shareValue = presentValue / commonStockSharesOutstanding;
+          priceToValue = adjustedClose / shareValue;
+        }
 
         //Ratio: price to value
-        double priceToValue = adjustedClose / shareValue;
         if(appendTermRecord){
           termNames.push_back("priceToValue_presentValueOfFutureCashFlows");
           termNames.push_back("priceToValue_cash");
           //termNames.push_back("priceToValue_netDebt");
 
-          termNames.push_back("priceToValue_crossHolding_missing");
-          termNames.push_back("priceToValue_potentialLiabilities_missing");
-          termNames.push_back("priceToValue_stockOptionValuation_missing");
+          termNames.push_back("priceToValue_crossHolding");
+          termNames.push_back("priceToValue_potentialLiabilities");
+          termNames.push_back("priceToValue_stockOptionValuation");
           termNames.push_back("priceToValue_presentValue_approximation");
+          termNames.push_back("priceToValue_marketCapitalization");
 
-          termNames.push_back("priceToValue_sharesOutstanding");
+          termNames.push_back("priceToValue_commonStockSharesOutstanding");
           termNames.push_back("priceToValue_shareValue_approximation");
           termNames.push_back("priceToValue_sharePrice");
           termNames.push_back("priceToValue");
@@ -1509,8 +1505,9 @@ int main (int argc, char* argv[]) {
           termValues.push_back(potentialLiabilities);
           termValues.push_back(optionValue);
           termValues.push_back(presentValue);
+          termValues.push_back(marketCapitalization);
 
-          termValues.push_back(numberOfSharesOutstanding);
+          termValues.push_back(commonStockSharesOutstanding);
           termValues.push_back(shareValue);
           termValues.push_back(adjustedClose);
           termValues.push_back(priceToValue);
@@ -1524,10 +1521,9 @@ int main (int argc, char* argv[]) {
                                 adjustedClose, 
                                 date,
                                 timePeriod.c_str(),
-                                replaceNanInShortLongDebtWithLongDebt, 
                                 appendTermRecord,                                
                                 rFcfToEvLabel,
-                                zeroAllNans,
+                                setNansToMissingValue,
                                 termNames,
                                 termValues);
 
