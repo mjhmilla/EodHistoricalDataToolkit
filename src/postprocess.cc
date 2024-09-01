@@ -861,6 +861,7 @@ void plotReportData(
 
     std::string primaryTicker;
     JsonFunctions::getJsonString(reportEntry["PrimaryTicker"],primaryTicker);
+    bool skip=false;
 
     if(!reportEntry.contains("Name")){
       if(verbose){
@@ -869,268 +870,270 @@ void plotReportData(
                   << " historical data file does not exist or cannot be read. "
                   << std::endl << std::endl;
       }
-      break;
+      skip=true;
     }
 
-    std::string companyName;
-    JsonFunctions::getJsonString(reportEntry["Name"],companyName);
-    deleteCharacters(companyName,charactersToDelete);
+    if(!skip){
+      std::string companyName;
+      JsonFunctions::getJsonString(reportEntry["Name"],companyName);
+      deleteCharacters(companyName,charactersToDelete);
 
-    std::string country;
-    JsonFunctions::getJsonString(reportEntry["Country"],country);
+      std::string country;
+      JsonFunctions::getJsonString(reportEntry["Country"],country);
 
-    std::string dateStart;
-    JsonFunctions::getJsonString(reportEntry["dateStart"],dateStart);
+      std::string dateStart;
+      JsonFunctions::getJsonString(reportEntry["dateStart"],dateStart);
 
 
-    std::istringstream dateStartStream(dateStart);
-    dateStartStream.exceptions(std::ios::failbit);
-    date::year_month_day ymdStart;
-    dateStartStream >> date::parse("%Y-%m-%d",ymdStart);
-    int year = static_cast< int >(ymdStart.year());
+      std::istringstream dateStartStream(dateStart);
+      dateStartStream.exceptions(std::ios::failbit);
+      date::year_month_day ymdStart;
+      dateStartStream >> date::parse("%Y-%m-%d",ymdStart);
+      int year = static_cast< int >(ymdStart.year());
 
-    bool debuggingThisTicker=false;
-    //if(primaryTicker.compare("DGE.LSE")==0){
-    //  debuggingThisTicker=true;
-    //}
+      bool debuggingThisTicker=false;
+      //if(primaryTicker.compare("DGE.LSE")==0){
+      //  debuggingThisTicker=true;
+      //}
 
-    //Check to see if we have already plotted this ticker
-    bool tickerIsNew=true;
-    for(size_t i=0; i<plottedTickers.size();++i){
-      if(plottedTickers[i].compare(primaryTicker) == 0){
-        tickerIsNew=false;
-        break;
-      }
-    }
-
-    //Check if this data meets the criteria. Note: for this to work 
-    //sensibily the report needs to be ordered from the most recent
-    //date to the oldest;
-    bool here=false;
-    if(primaryTicker.compare("GOOG.US")==0){
-      here=true;
-    }
-
-    bool tickerPassesFilter  = isTickerValid(primaryTicker,filterByTicker);
-    bool industryPassesFilter = isIndustryValid(reportEntry,filterByIndustry);
-    bool countryPassesFilter = isCountryValid(country, filterByCountry);
-    bool metricsPassFilter   = areMetricsValid(reportEntry,filterByMetricValue);
-    bool entryAddedToReport=false;
-
-    if( year >= earliestReportingYear && tickerIsNew 
-        && countryPassesFilter && industryPassesFilter 
-        && tickerPassesFilter && metricsPassFilter){
-
-      TickerSummary tickerSummary;
-      tickerSummary.ticker=primaryTicker;
-      tickerSummary.rank= JsonFunctions::getJsonFloat( reportEntry["Ranking"]);
-      tickerSummary.marketCapitalizationMln = 
-          JsonFunctions::getJsonFloat( reportEntry["MarketCapitalizationMln"]);
-
-      plottedTickers.push_back(primaryTicker);
-      std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
-
-      for(size_t indexRow=0; 
-          indexRow < subplotMetricNames.size(); ++indexRow){
-
-        std::vector < sciplot::PlotVariant > rowOfPlots;
-
-        for(size_t indexCol=0; 
-            indexCol < subplotMetricNames[indexRow].size(); ++indexCol){
-          bool subplotAdded = false;
-
-          //Add historical pricing data
-
-          if(subplotMetricNames[indexRow][indexCol].compare("historicalData")==0){
-            sciplot::Plot2D plotHistoricalData;
-            SummaryStatistics priceSummaryStats;
-            createHistoricalDataPlot( plotHistoricalData,reportEntry,
-                                      priceSummaryStats,historicalFolder,
-                                      settings, verbose);          
-            tickerSummary.summaryStatistics.push_back(priceSummaryStats);
-
-            rowOfPlots.push_back(plotHistoricalData);
-            subplotAdded=true;
-          }
-          
-          //Add metric data
-          if(subplotMetricNames[indexRow][indexCol].compare("empty")!=0 
-            && !subplotAdded){
-
-            std::vector<double> xTmp;
-            std::vector<double> yTmp;
-            extractReportTimeSeriesData(
-                primaryTicker,
-                report,
-                "dateEnd",
-                subplotMetricNames[indexRow][indexCol].c_str(),
-                xTmp,
-                yTmp);     
-            
-            sciplot::Vec x(xTmp.size());
-            sciplot::Vec y(yTmp.size());
-
-            for(size_t i=0; i<xTmp.size();++i){
-              x[i]=xTmp[i];
-              y[i]=yTmp[i];
-              if(debuggingThisTicker){
-                std::cout << x[i] << '\t' << y[i] << std::endl;
-              }
-            }
-            SummaryStatistics metricSummaryStatistics;
-            metricSummaryStatistics.name=subplotMetricNames[indexRow][indexCol];
-            extractSummaryStatistics(y,metricSummaryStatistics);
-            tickerSummary.summaryStatistics.push_back(metricSummaryStatistics);
-
-            sciplot::Plot2D plotMetric;
-            plotMetric.drawCurve(x,y)
-              .label(companyName)
-              .lineColor("black")
-              .lineWidth(settings.lineWidth);
-
-            std::vector< double > xRange,yRange;
-            getDataRange(xTmp,xRange,1.0);
-            getDataRange(yTmp,yRange,std::numeric_limits< double >::lowest());
-            if(yRange[0] > 0){
-              yRange[0] = 0;
-            }
-            if(yRange[1] < 0){
-              yRange[1] = 0;
-            }
-            //Add some blank space to the top of the plot
-            yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
-
-            plotMetric.xrange(
-                static_cast<sciplot::StringOrDouble>(xRange[0]),
-                static_cast<sciplot::StringOrDouble>(xRange[1]));              
-
-            plotMetric.yrange(
-                static_cast<sciplot::StringOrDouble>(yRange[0]),
-                static_cast<sciplot::StringOrDouble>(yRange[1]));
-
-            if((xRange[1]-xRange[0])<5){
-              plotMetric.xtics().increment(settings.xticMinimumIncrement);
-            }
-
-            std::string tmpStringA("Year");
-            std::string tmpStringB(subplotMetricNames[indexRow][indexCol].c_str());
-
-            size_t pos = tmpStringB.find("_value",0);
-            tmpStringB = tmpStringB.substr(0,pos);
-
-            convertCamelCaseToSpacedText(tmpStringA);
-            convertCamelCaseToSpacedText(tmpStringB);
-
-            configurePlot(plotMetric,tmpStringA,tmpStringB,settings);
-            plotMetric.legend().atTopLeft();     
-            rowOfPlots.push_back(plotMetric);
-            subplotAdded=true;
-          }
-
-          //If its empty, do nothing.     
-        }
-        if(rowOfPlots.size()>0){
-          arrayOfPlots.push_back(rowOfPlots);
+      //Check to see if we have already plotted this ticker
+      bool tickerIsNew=true;
+      for(size_t i=0; i<plottedTickers.size();++i){
+        if(plottedTickers[i].compare(primaryTicker) == 0){
+          tickerIsNew=false;
+          break;
         }
       }
 
-      
-      std::string titleStr = companyName;
-      titleStr.append(" (");
-      titleStr.append(primaryTicker);
-      titleStr.append(") - ");
-      titleStr.append(country);
-      
-      sciplot::Figure figTicker(arrayOfPlots);
-
-      figTicker.title(titleStr);
-
-      sciplot::Canvas canvas = {{figTicker}};
-      unsigned int nrows = subplotMetricNames.size();
-      unsigned int ncols=0;
-      for(unsigned int i=0; i<subplotMetricNames.size();++i){
-        if(ncols < subplotMetricNames[i].size()){
-          ncols=subplotMetricNames[i].size();
-        }
-      }
-
-      size_t canvasWidth  = 
-        static_cast<size_t>(settings.plotWidth*static_cast<double>(ncols));
-      size_t canvasHeight = 
-        static_cast<size_t>(settings.plotHeight*static_cast<double>(nrows));
-
-      canvas.size(canvasWidth, canvasHeight) ;
-
-      if(debuggingThisTicker){
-        canvas.show();
-      }
-
-      // Save the figure to a PDF file
-      std::string outputFileName = plotFolderOutput;
-      unsigned rank = 
-        static_cast<unsigned int>(
-            JsonFunctions::getJsonFloat(reportEntry["Ranking"]));
-      std::ostringstream rankOSS;
-      rankOSS << rank;          
-      std::string rankStr(rankOSS.str());
-      if(rankStr.length() < 5){
-        rankStr.insert(0,5-rankStr.length(),'0');
-      }
-      rankStr.push_back('_');
-
-      std::string plotFileName = rankStr;
-      plotFileName.append(primaryTicker);
-      size_t idx = plotFileName.find(".");
-      if(idx != std::string::npos){
-        plotFileName.at(idx)='_';
-      }
-      plotFileName.append(".pdf");
-      outputFileName.append(plotFileName);
-      canvas.save(outputFileName);
-
-      TickerFigurePath entryTickerFigurePath;
-      entryTickerFigurePath.primaryTicker = primaryTicker;
-      entryTickerFigurePath.figurePath    = plotFileName;
-
-      tickerFigurePath.push_back(entryTickerFigurePath);
-
-      marketSummary.push_back(tickerSummary);
-      ++entryCount;
-      entryAddedToReport=true;
-
-
-
-
-      if(entryCount > numberOfPlotsToGenerate && numberOfPlotsToGenerate > 0){
-        break;
-      }
+      //Check if this data meets the criteria. Note: for this to work 
+      //sensibily the report needs to be ordered from the most recent
+      //date to the oldest;
       bool here=false;
-      if(plotFileName.compare("00116_DGE_LSE.pdf")==0){
+      if(primaryTicker.compare("GOOG.US")==0){
         here=true;
       }
-    }
-    if(verbose){
-      if(entryAddedToReport){
-        std::cout << entryCount << ". " << primaryTicker << std::endl;
-      }else{
-        std::cout << " Skipping " << primaryTicker << std::endl;
 
-        if(!countryPassesFilter){
-          std::cout <<" Filtered out by country" << std::endl;
+      bool tickerPassesFilter  = isTickerValid(primaryTicker,filterByTicker);
+      bool industryPassesFilter = isIndustryValid(reportEntry,filterByIndustry);
+      bool countryPassesFilter = isCountryValid(country, filterByCountry);
+      bool metricsPassFilter   = areMetricsValid(reportEntry,filterByMetricValue);
+      bool entryAddedToReport=false;
+
+      if( year >= earliestReportingYear && tickerIsNew 
+          && countryPassesFilter && industryPassesFilter 
+          && tickerPassesFilter && metricsPassFilter){
+
+        TickerSummary tickerSummary;
+        tickerSummary.ticker=primaryTicker;
+        tickerSummary.rank= JsonFunctions::getJsonFloat( reportEntry["Ranking"]);
+        tickerSummary.marketCapitalizationMln = 
+            JsonFunctions::getJsonFloat( reportEntry["MarketCapitalizationMln"]);
+
+        plottedTickers.push_back(primaryTicker);
+        std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
+
+        for(size_t indexRow=0; 
+            indexRow < subplotMetricNames.size(); ++indexRow){
+
+          std::vector < sciplot::PlotVariant > rowOfPlots;
+
+          for(size_t indexCol=0; 
+              indexCol < subplotMetricNames[indexRow].size(); ++indexCol){
+            bool subplotAdded = false;
+
+            //Add historical pricing data
+
+            if(subplotMetricNames[indexRow][indexCol].compare("historicalData")==0){
+              sciplot::Plot2D plotHistoricalData;
+              SummaryStatistics priceSummaryStats;
+              createHistoricalDataPlot( plotHistoricalData,reportEntry,
+                                        priceSummaryStats,historicalFolder,
+                                        settings, verbose);          
+              tickerSummary.summaryStatistics.push_back(priceSummaryStats);
+
+              rowOfPlots.push_back(plotHistoricalData);
+              subplotAdded=true;
+            }
+            
+            //Add metric data
+            if(subplotMetricNames[indexRow][indexCol].compare("empty")!=0 
+              && !subplotAdded){
+
+              std::vector<double> xTmp;
+              std::vector<double> yTmp;
+              extractReportTimeSeriesData(
+                  primaryTicker,
+                  report,
+                  "dateEnd",
+                  subplotMetricNames[indexRow][indexCol].c_str(),
+                  xTmp,
+                  yTmp);     
+              
+              sciplot::Vec x(xTmp.size());
+              sciplot::Vec y(yTmp.size());
+
+              for(size_t i=0; i<xTmp.size();++i){
+                x[i]=xTmp[i];
+                y[i]=yTmp[i];
+                if(debuggingThisTicker){
+                  std::cout << x[i] << '\t' << y[i] << std::endl;
+                }
+              }
+              SummaryStatistics metricSummaryStatistics;
+              metricSummaryStatistics.name=subplotMetricNames[indexRow][indexCol];
+              extractSummaryStatistics(y,metricSummaryStatistics);
+              tickerSummary.summaryStatistics.push_back(metricSummaryStatistics);
+
+              sciplot::Plot2D plotMetric;
+              plotMetric.drawCurve(x,y)
+                .label(companyName)
+                .lineColor("black")
+                .lineWidth(settings.lineWidth);
+
+              std::vector< double > xRange,yRange;
+              getDataRange(xTmp,xRange,1.0);
+              getDataRange(yTmp,yRange,std::numeric_limits< double >::lowest());
+              if(yRange[0] > 0){
+                yRange[0] = 0;
+              }
+              if(yRange[1] < 0){
+                yRange[1] = 0;
+              }
+              //Add some blank space to the top of the plot
+              yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
+
+              plotMetric.xrange(
+                  static_cast<sciplot::StringOrDouble>(xRange[0]),
+                  static_cast<sciplot::StringOrDouble>(xRange[1]));              
+
+              plotMetric.yrange(
+                  static_cast<sciplot::StringOrDouble>(yRange[0]),
+                  static_cast<sciplot::StringOrDouble>(yRange[1]));
+
+              if((xRange[1]-xRange[0])<5){
+                plotMetric.xtics().increment(settings.xticMinimumIncrement);
+              }
+
+              std::string tmpStringA("Year");
+              std::string tmpStringB(subplotMetricNames[indexRow][indexCol].c_str());
+
+              size_t pos = tmpStringB.find("_value",0);
+              tmpStringB = tmpStringB.substr(0,pos);
+
+              convertCamelCaseToSpacedText(tmpStringA);
+              convertCamelCaseToSpacedText(tmpStringB);
+
+              configurePlot(plotMetric,tmpStringA,tmpStringB,settings);
+              plotMetric.legend().atTopLeft();     
+              rowOfPlots.push_back(plotMetric);
+              subplotAdded=true;
+            }
+
+            //If its empty, do nothing.     
+          }
+          if(rowOfPlots.size()>0){
+            arrayOfPlots.push_back(rowOfPlots);
+          }
         }
-        if(!industryPassesFilter){
-          std::cout <<" Filtered out by industry" << std::endl;
-        }        
-        if(!tickerPassesFilter){
-          std::cout <<" Filtered out by ticker" << std::endl;
+
+        
+        std::string titleStr = companyName;
+        titleStr.append(" (");
+        titleStr.append(primaryTicker);
+        titleStr.append(") - ");
+        titleStr.append(country);
+        
+        sciplot::Figure figTicker(arrayOfPlots);
+
+        figTicker.title(titleStr);
+
+        sciplot::Canvas canvas = {{figTicker}};
+        unsigned int nrows = subplotMetricNames.size();
+        unsigned int ncols=0;
+        for(unsigned int i=0; i<subplotMetricNames.size();++i){
+          if(ncols < subplotMetricNames[i].size()){
+            ncols=subplotMetricNames[i].size();
+          }
         }
-        if(!metricsPassFilter){
-          std::cout <<" Filtered out by metric" << std::endl;
+
+        size_t canvasWidth  = 
+          static_cast<size_t>(settings.plotWidth*static_cast<double>(ncols));
+        size_t canvasHeight = 
+          static_cast<size_t>(settings.plotHeight*static_cast<double>(nrows));
+
+        canvas.size(canvasWidth, canvasHeight) ;
+
+        if(debuggingThisTicker){
+          canvas.show();
         }
-        if(!tickerIsNew){
-          std::cout << " Already plotted " << primaryTicker << std::endl; 
+
+        // Save the figure to a PDF file
+        std::string outputFileName = plotFolderOutput;
+        unsigned rank = 
+          static_cast<unsigned int>(
+              JsonFunctions::getJsonFloat(reportEntry["Ranking"]));
+        std::ostringstream rankOSS;
+        rankOSS << rank;          
+        std::string rankStr(rankOSS.str());
+        if(rankStr.length() < 5){
+          rankStr.insert(0,5-rankStr.length(),'0');
         }
-      }       
+        rankStr.push_back('_');
+
+        std::string plotFileName = rankStr;
+        plotFileName.append(primaryTicker);
+        size_t idx = plotFileName.find(".");
+        if(idx != std::string::npos){
+          plotFileName.at(idx)='_';
+        }
+        plotFileName.append(".pdf");
+        outputFileName.append(plotFileName);
+        canvas.save(outputFileName);
+
+        TickerFigurePath entryTickerFigurePath;
+        entryTickerFigurePath.primaryTicker = primaryTicker;
+        entryTickerFigurePath.figurePath    = plotFileName;
+
+        tickerFigurePath.push_back(entryTickerFigurePath);
+
+        marketSummary.push_back(tickerSummary);
+        ++entryCount;
+        entryAddedToReport=true;
+
+
+
+
+        if(entryCount > numberOfPlotsToGenerate && numberOfPlotsToGenerate > 0){
+          break;
+        }
+        bool here=false;
+        if(plotFileName.compare("00116_DGE_LSE.pdf")==0){
+          here=true;
+        }
+      }
+      if(verbose){
+        if(entryAddedToReport){
+          std::cout << entryCount << ". " << primaryTicker << std::endl;
+        }else{
+          std::cout << " Skipping " << primaryTicker << std::endl;
+
+          if(!countryPassesFilter){
+            std::cout <<" Filtered out by country" << std::endl;
+          }
+          if(!industryPassesFilter){
+            std::cout <<" Filtered out by industry" << std::endl;
+          }        
+          if(!tickerPassesFilter){
+            std::cout <<" Filtered out by ticker" << std::endl;
+          }
+          if(!metricsPassFilter){
+            std::cout <<" Filtered out by metric" << std::endl;
+          }
+          if(!tickerIsNew){
+            std::cout << " Already plotted " << primaryTicker << std::endl; 
+          }
+        }       
+      }
     }
   }
 
@@ -1726,7 +1729,7 @@ void appendValuationTable(std::ofstream &latexReport,
 
 
     latexReport << "\\begin{tabular}{l l}" << std::endl;
-    latexReport << "\\hline \\multicolumn{2}{c}{Part 12: Present value of discounted cash flows (DCM)} \\\\" 
+    latexReport << "\\hline \\multicolumn{2}{c}{Part 12: Present value of DCM} \\\\" 
                 << std::endl;
     latexReport << "\\hline ";
 
@@ -1769,7 +1772,7 @@ void appendValuationTable(std::ofstream &latexReport,
 
     latexReport << "\\multicolumn{2}{c}{ $I_{12}=D_{12}\\,(1+E_{12})\\,(1-H_{12})/(G_{12}-E_{12})$} \\\\" 
                 << std::endl; 
-    latexReport << "$J_{12}$. Present value of discounted cash flows & "
+    latexReport << "$J_{12}$. Present value of DCF & "
                 << JsonFunctions::getJsonFloat(
                     analysis[key]["presentValueDCF"],true)
                 << " \\\\" << std::endl; 
@@ -1796,7 +1799,7 @@ void appendValuationTable(std::ofstream &latexReport,
                 << " \\\\" << std::endl; 
     latexReport << "$D_{13}$. Potential liabilities  & ? "
                 << " \\\\" << std::endl; 
-    latexReport << "(underfunded pension, health care, lawsuits ...) &  "
+    latexReport << "(underfunded pension, lawsuits ...) &  "
                 << " \\\\" << std::endl; 
     latexReport << "$E_{13}$. Value of managment options  & ? "
                 << " \\\\" << std::endl; 
@@ -1934,6 +1937,7 @@ void generateLaTeXReport(
 
     std::string primaryTicker;
     JsonFunctions::getJsonString(reportEntry["PrimaryTicker"],primaryTicker);
+    bool skip=false;
 
     if(!reportEntry.contains("Name")){
       if(verbose){
@@ -1942,150 +1946,150 @@ void generateLaTeXReport(
                   << " historical data file does not exist or cannot be read. "
                   << std::endl << std::endl;
       }
-      break;
+      skip=true;
     }
 
+    if(!skip){
+      std::string companyName;
+      JsonFunctions::getJsonString(reportEntry["Name"],companyName);
+      escapeSpecialCharacters(companyName,charactersToEscape);
 
-    std::string companyName;
-    JsonFunctions::getJsonString(reportEntry["Name"],companyName);
-    escapeSpecialCharacters(companyName,charactersToEscape);
+      std::string country;
+      JsonFunctions::getJsonString(reportEntry["Country"],country);
 
-    std::string country;
-    JsonFunctions::getJsonString(reportEntry["Country"],country);
+      std::string webURL;
+      JsonFunctions::getJsonString(reportEntry["WebURL"],webURL);
 
-    std::string webURL;
-    JsonFunctions::getJsonString(reportEntry["WebURL"],webURL);
-
-    std::string description;
-    JsonFunctions::getJsonString(reportEntry["Description"],description);
-    escapeSpecialCharacters(description,charactersToEscape);
+      std::string description;
+      JsonFunctions::getJsonString(reportEntry["Description"],description);
+      escapeSpecialCharacters(description,charactersToEscape);
 
 
 
-    std::string dateStart;
-    JsonFunctions::getJsonString(reportEntry["dateStart"],dateStart);
+      std::string dateStart;
+      JsonFunctions::getJsonString(reportEntry["dateStart"],dateStart);
 
-    std::istringstream dateStartStream(dateStart);
-    dateStartStream.exceptions(std::ios::failbit);
-    date::year_month_day ymdStart;
-    dateStartStream >> date::parse("%Y-%m-%d",ymdStart);
-    int year = static_cast< int >(ymdStart.year());
+      std::istringstream dateStartStream(dateStart);
+      dateStartStream.exceptions(std::ios::failbit);
+      date::year_month_day ymdStart;
+      dateStartStream >> date::parse("%Y-%m-%d",ymdStart);
+      int year = static_cast< int >(ymdStart.year());
 
-    //Check to see if we have already plotted this ticker
-    bool tickerIsNew=true;
-    for(size_t i=0; i<plottedTickers.size();++i){
-      if(plottedTickers[i].compare(primaryTicker) == 0){
-        tickerIsNew=false;
-        break;
-      }
-    }
-
-    bool tickerPassesFilter   = isTickerValid(primaryTicker,filterByTicker);
-    bool industryPassesFilter = isIndustryValid(reportEntry, filterByIndustry);
-    bool countryPassesFilter  = isCountryValid(country, filterByCountry);
-    bool metricsPassFilter= areMetricsValid(reportEntry,filterByMetricValue);
-    bool entryAddedToReport=false;
-
-    if(year >= earliestReportingYear && tickerIsNew
-        && countryPassesFilter && industryPassesFilter 
-        && tickerPassesFilter && metricsPassFilter){
-
-      plottedTickers.push_back(primaryTicker);
-
-      size_t indexFigure=0;
-      bool found=false;
-      while(!found && indexFigure < tickerFigurePath.size()){
-        if(tickerFigurePath[indexFigure].primaryTicker.compare(primaryTicker)==0){
-          found=true;
-        }else{
-          ++indexFigure;
+      //Check to see if we have already plotted this ticker
+      bool tickerIsNew=true;
+      for(size_t i=0; i<plottedTickers.size();++i){
+        if(plottedTickers[i].compare(primaryTicker) == 0){
+          tickerIsNew=false;
+          break;
         }
       }
 
-      latexReport << std::endl;
+      bool tickerPassesFilter   = isTickerValid(primaryTicker,filterByTicker);
+      bool industryPassesFilter = isIndustryValid(reportEntry, filterByIndustry);
+      bool countryPassesFilter  = isCountryValid(country, filterByCountry);
+      bool metricsPassFilter= areMetricsValid(reportEntry,filterByMetricValue);
+      bool entryAddedToReport=false;
 
-      latexReport << "\\begin{figure}[h]" << std::endl;
-      latexReport << "  \\begin{center}" << std::endl;
-      latexReport << "    \\includegraphics{" 
-                  << tickerFigurePath[indexFigure].figurePath << "}" << std::endl;
-      latexReport << "    \\caption{"
-                  << companyName
-                  << " (" << primaryTicker <<") "
-                  << country << " ( \\url{" << webURL << "} )"
-                  << "}" << std::endl;
-      latexReport << " \\end{center}" << std::endl;
-      latexReport << "\\end{figure}"<< std::endl;
-      latexReport << std::endl;
+      if(year >= earliestReportingYear && tickerIsNew
+          && countryPassesFilter && industryPassesFilter 
+          && tickerPassesFilter && metricsPassFilter){
 
-      latexReport << "\\begin{multicols}{2}" << std::endl;
+        plottedTickers.push_back(primaryTicker);
 
-      latexReport << description << std::endl;
-      latexReport << std::endl;
-
-      //latexReport << "\\begin{center}" << std::endl;
-
-
-      latexReport << "\\bigskip" << std::endl;
-      latexReport << "\\begin{tabular}{l l}" << std::endl;
-      latexReport << "\\multicolumn{2}{c}{\\textbf{Contextual Data}} \\\\" << std::endl;
-      for(auto &entryMetric : tabularMetrics){
-        double entryValue = JsonFunctions::getJsonFloat(reportEntry[entryMetric]);
-        std::string labelMetric = entryMetric;
-        convertCamelCaseToSpacedText(labelMetric);
-        latexReport << labelMetric << " & " << entryValue << "\\\\" << std::endl;
-      }
-      latexReport << "\\end{tabular}" << std::endl << std::endl;
-      //latexReport << "\\end{center}" << std::endl;
-
-      if(analysisFolder.length()>0){
+        size_t indexFigure=0;
         bool found=false;
-        for(size_t i=0; i<subplotMetricNames.size(); ++i){
-          for(size_t j=0; j<subplotMetricNames[i].size(); ++j){
-            if(subplotMetricNames[i][j].compare("priceToValue_value")==0){
-              appendValuationTable(latexReport,primaryTicker,analysisFolder,verbose);
-            }
-          }  
+        while(!found && indexFigure < tickerFigurePath.size()){
+          if(tickerFigurePath[indexFigure].primaryTicker.compare(primaryTicker)==0){
+            found=true;
+          }else{
+            ++indexFigure;
+          }
         }
 
-        
+        latexReport << std::endl;
+
+        latexReport << "\\begin{figure}[h]" << std::endl;
+        latexReport << "  \\begin{center}" << std::endl;
+        latexReport << "    \\includegraphics{" 
+                    << tickerFigurePath[indexFigure].figurePath << "}" << std::endl;
+        latexReport << "    \\caption{"
+                    << companyName
+                    << " (" << primaryTicker <<") "
+                    << country << " ( \\url{" << webURL << "} )"
+                    << "}" << std::endl;
+        latexReport << " \\end{center}" << std::endl;
+        latexReport << "\\end{figure}"<< std::endl;
+        latexReport << std::endl;
+
+        latexReport << "\\begin{multicols}{2}" << std::endl;
+
+        latexReport << description << std::endl;
+        latexReport << std::endl;
+
+        //latexReport << "\\begin{center}" << std::endl;
+
+
+        latexReport << "\\bigskip" << std::endl;
+        latexReport << "\\begin{tabular}{l l}" << std::endl;
+        latexReport << "\\multicolumn{2}{c}{\\textbf{Contextual Data}} \\\\" << std::endl;
+        for(auto &entryMetric : tabularMetrics){
+          double entryValue = JsonFunctions::getJsonFloat(reportEntry[entryMetric]);
+          std::string labelMetric = entryMetric;
+          convertCamelCaseToSpacedText(labelMetric);
+          latexReport << labelMetric << " & " << entryValue << "\\\\" << std::endl;
+        }
+        latexReport << "\\end{tabular}" << std::endl << std::endl;
+        //latexReport << "\\end{center}" << std::endl;
+
+        if(analysisFolder.length()>0){
+          bool found=false;
+          for(size_t i=0; i<subplotMetricNames.size(); ++i){
+            for(size_t j=0; j<subplotMetricNames[i].size(); ++j){
+              if(subplotMetricNames[i][j].compare("priceToValue_value")==0){
+                appendValuationTable(latexReport,primaryTicker,analysisFolder,verbose);
+              }
+            }  
+          }
+
+          
+        }
+
+        latexReport << "\\end{multicols}" << std::endl;
+
+
+        latexReport << "\\break" << std::endl;
+        latexReport << "\\newpage" << std::endl;
+
+        ++entryCount;
+        entryAddedToReport=true;
+        if(entryCount > numberOfPlotsToGenerate && numberOfPlotsToGenerate > 0){
+          break;
+        }
       }
+      if(verbose){
+        if(entryAddedToReport){
+          std::cout << entryCount << ". " << primaryTicker << std::endl;
+        }else{
+          std::cout << " Skipping " << primaryTicker << std::endl;
 
-      latexReport << "\\end{multicols}" << std::endl;
-
-
-      latexReport << "\\break" << std::endl;
-      latexReport << "\\newpage" << std::endl;
-
-      ++entryCount;
-      entryAddedToReport=true;
-      if(entryCount > numberOfPlotsToGenerate && numberOfPlotsToGenerate > 0){
-        break;
+          if(!countryPassesFilter){
+            std::cout <<" Filtered out by country" << std::endl;
+          }
+          if(!industryPassesFilter){
+            std::cout <<" Filtered out by industry" << std::endl;
+          }
+          if(!tickerPassesFilter){
+            std::cout <<" Filtered out by ticker" << std::endl;
+          }
+          if(!metricsPassFilter){
+            std::cout <<" Filtered out by metric" << std::endl;
+          }
+          if(!tickerIsNew){
+            std::cout << " Already plotted " << primaryTicker << std::endl; 
+          }
+        }       
       }
     }
-    if(verbose){
-      if(entryAddedToReport){
-        std::cout << entryCount << ". " << primaryTicker << std::endl;
-      }else{
-        std::cout << " Skipping " << primaryTicker << std::endl;
-
-        if(!countryPassesFilter){
-          std::cout <<" Filtered out by country" << std::endl;
-        }
-        if(!industryPassesFilter){
-          std::cout <<" Filtered out by industry" << std::endl;
-        }
-        if(!tickerPassesFilter){
-          std::cout <<" Filtered out by ticker" << std::endl;
-        }
-        if(!metricsPassFilter){
-          std::cout <<" Filtered out by metric" << std::endl;
-        }
-        if(!tickerIsNew){
-          std::cout << " Already plotted " << primaryTicker << std::endl; 
-        }
-      }       
-    }
-
 
   }
   

@@ -24,7 +24,7 @@ class JsonFunctions {
     //
     //2. It rounds to zero. 
     //
-    static constexpr double MISSING_VALUE = 0.00123456;
+    static constexpr double MISSING_VALUE = 0.000001;
 
 
     static bool loadJsonFile(const std::string &fileName, 

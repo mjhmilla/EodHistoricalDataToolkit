@@ -948,7 +948,7 @@ class FinancialAnalysisToolkit {
         //If I can't calculate free cash flow, take the value that is
         //reported by EOD, if it is available. 
         freeCashFlowReturned=freeCashFlowEOD; 
-        
+
         if(setNansToMissingValue){
           freeCashFlow=JsonFunctions::MISSING_VALUE;
         }else{
@@ -1126,17 +1126,40 @@ class FinancialAnalysisToolkit {
         setNansToMissingValue);
 
 
-      double changeInNonCashWorkingCapital = 
-          ( (inventory-inventoryPrevious)
-            +(netReceivables-netReceivablesPrevious)
-            -(accountsPayable-accountsPayablePrevious));
+      //double changeInNonCashWorkingCapital = 
+      //    ( (inventory-inventoryPrevious)
+      //      +(netReceivables-netReceivablesPrevious)
+      //      -(accountsPayable-accountsPayablePrevious));
 
-      if(     !JsonFunctions::isJsonFloatValid(  inventory)
-           || !JsonFunctions::isJsonFloatValid(  inventoryPrevious)
-           || !JsonFunctions::isJsonFloatValid(  netReceivables)
-           || !JsonFunctions::isJsonFloatValid(  netReceivablesPrevious)
-           || !JsonFunctions::isJsonFloatValid(  accountsPayable)
-           || !JsonFunctions::isJsonFloatValid(  accountsPayablePrevious)){
+
+
+      double changeInNonCashWorkingCapital = 0.;
+      bool valuesAdded=false;
+
+      if(    JsonFunctions::isJsonFloatValid(  inventory)
+          && JsonFunctions::isJsonFloatValid(  inventoryPrevious)){
+        changeInNonCashWorkingCapital += (inventory-inventoryPrevious);
+        valuesAdded=true;
+      }else{
+        inventory         = JsonFunctions::MISSING_VALUE;
+        inventoryPrevious = JsonFunctions::MISSING_VALUE;
+      }
+
+      if(    JsonFunctions::isJsonFloatValid(  netReceivables         )
+          && JsonFunctions::isJsonFloatValid(  netReceivablesPrevious )
+          && JsonFunctions::isJsonFloatValid(  accountsPayable        )
+          && JsonFunctions::isJsonFloatValid(  accountsPayablePrevious)){
+        changeInNonCashWorkingCapital += (netReceivables-netReceivablesPrevious);
+        changeInNonCashWorkingCapital += -1.0*(accountsPayable-accountsPayablePrevious);
+        valuesAdded=true;
+      }else{
+        netReceivables         =JsonFunctions::MISSING_VALUE;
+        netReceivablesPrevious =JsonFunctions::MISSING_VALUE;
+        accountsPayable        =JsonFunctions::MISSING_VALUE;
+        accountsPayablePrevious=JsonFunctions::MISSING_VALUE;
+      }
+
+      if( !valuesAdded ){
         if(setNansToMissingValue){
           changeInNonCashWorkingCapital=JsonFunctions::MISSING_VALUE;
         }else{
@@ -1145,13 +1168,7 @@ class FinancialAnalysisToolkit {
 
       }
 
-      if(!isInputValid){
-        if(setNansToMissingValue){
-          changeInNonCashWorkingCapital = JsonFunctions::MISSING_VALUE;
-        }else{
-          changeInNonCashWorkingCapital = std::nan("1");
-        }
-      }
+
 
             
       if(appendTermRecord){
@@ -1311,11 +1328,13 @@ class FinancialAnalysisToolkit {
           - (changeInNonCashWorkingCapital)
           + netDebtIssued
           + netDebtIssuedAlternative;
-      
+
+      //I'm willing to accept a missing changeInNonCashWorkingCapital as
+      //this value is often missing from Eod's records, and often does not
+      //amount to much in comparision to the other quantities.      
       if(   !JsonFunctions::isJsonFloatValid(netIncome) 
          || !JsonFunctions::isJsonFloatValid(depreciation)
          || !JsonFunctions::isJsonFloatValid(netCapitalExpenditures)
-         || !JsonFunctions::isJsonFloatValid(changeInNonCashWorkingCapital)
          || (   !JsonFunctions::isJsonFloatValid(netDebtIssued) 
              && !JsonFunctions::isJsonFloatValid(netDebtIssuedAlternative))){
         if(setNansToMissingValue){
@@ -1402,9 +1421,11 @@ class FinancialAnalysisToolkit {
           - netCapitalExpenditures
           - changeInNonCashWorkingCapital;     
 
+      //I'm willing to accept a missing changeInNonCashWorkingCapital as
+      //this is often missing from Eod's data and is not large compared to the
+      //other quantities
       if(   !JsonFunctions::isJsonFloatValid(netIncome) 
-         || !JsonFunctions::isJsonFloatValid(netCapitalExpenditures)
-         || !JsonFunctions::isJsonFloatValid(changeInNonCashWorkingCapital)){
+         || !JsonFunctions::isJsonFloatValid(netCapitalExpenditures)){
         if(setNansToMissingValue){
           ownersEarnings = JsonFunctions::MISSING_VALUE;
         }else{
@@ -1519,8 +1540,10 @@ class FinancialAnalysisToolkit {
         (netCapitalExpenditures+changeInNonCashWorkingCapital
         )/afterTaxOperatingIncome;
 
+      //I'm allowing missing values for changeInNonCashWorkingCapital to
+      //be accepted because this field is often not reported ... and 
+      //probably does not account.
       if(     !JsonFunctions::isJsonFloatValid(netCapitalExpenditures)
-          ||  !JsonFunctions::isJsonFloatValid(changeInNonCashWorkingCapital)
           ||  !JsonFunctions::isJsonFloatValid(afterTaxOperatingIncome)){
         if(setNansToMissingValue){
           reinvestmentRate=JsonFunctions::MISSING_VALUE;
@@ -1685,7 +1708,6 @@ class FinancialAnalysisToolkit {
       //I'm willing to accept that researchDevelopment is not reported
       //because this often is not available in EODs reports
       if(   !JsonFunctions::isJsonFloatValid(totalCashFromOperatingActivities)
-         || !JsonFunctions::isJsonFloatValid(researchDevelopment)
          || !JsonFunctions::isJsonFloatValid(capitalExpenditureMean)
          || !JsonFunctions::isJsonFloatValid(costOfEquity)){
         if(setNansToMissingValue){
@@ -1750,7 +1772,15 @@ class FinancialAnalysisToolkit {
       double cashAndEquivalents = JsonFunctions::getJsonFloat(
         fundamentalData[FIN][BAL][timeUnit][date.c_str()]["cashAndEquivalents"],
         setNansToMissingValue);
+
+      double cash = JsonFunctions::getJsonFloat(
+        fundamentalData[FIN][BAL][timeUnit][date.c_str()]["cash"],
+        setNansToMissingValue);
       
+      if(JsonFunctions::isJsonFloatValid(cashAndEquivalents)){
+        cash = 0.;        
+      }
+
       double commonStockSharesOutstanding = JsonFunctions::getJsonFloat(
         fundamentalData[FIN][BAL][timeUnit][date.c_str()]
         ["commonStockSharesOutstanding"],setNansToMissingValue);      
@@ -1764,13 +1794,17 @@ class FinancialAnalysisToolkit {
       // MC: market capitalization
       // Total Debt: total debt
       // C: cash and equivalents
+      //
+      // C: I'm willing to put in cash here if cashAndEquivalents is not
+      //    available. I'm also willing to ignore this field if neither cash
+      //    and cash equivalents are not available.
       double enterpriseValue = marketCapitalization
                               + (shortLongTermDebtTotal+longTermDebt) 
-                              - cashAndEquivalents;
+                              - (cashAndEquivalents + cash);
 
+      
       if(   !JsonFunctions::isJsonFloatValid(sharePriceAdjustedClose)
          || !JsonFunctions::isJsonFloatValid(commonStockSharesOutstanding)
-         || !JsonFunctions::isJsonFloatValid(cashAndEquivalents)
          || (   !JsonFunctions::isJsonFloatValid(shortLongTermDebtTotal)
              && !JsonFunctions::isJsonFloatValid(longTermDebt)) ){
         if(setNansToMissingValue){
@@ -1784,6 +1818,7 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName+"enterpriseValue_shortLongTermDebtTotal");
         termNames.push_back(parentCategoryName+"enterpriseValue_longTermDebt");
         termNames.push_back(parentCategoryName+"enterpriseValue_cashAndEquivalents");
+        termNames.push_back(parentCategoryName+"enterpriseValue_cash");
         termNames.push_back(parentCategoryName+"enterpriseValue_commonStockSharesOutstanding");
         termNames.push_back(parentCategoryName+"enterpriseValue_adjustedClose");
         termNames.push_back(parentCategoryName+"enterpriseValue_marketCapitalization");
@@ -1792,6 +1827,7 @@ class FinancialAnalysisToolkit {
         termValues.push_back(shortLongTermDebtTotal);
         termValues.push_back(longTermDebt);
         termValues.push_back(cashAndEquivalents);
+        termValues.push_back(cash);
         termValues.push_back(commonStockSharesOutstanding);
         termValues.push_back(sharePriceAdjustedClose);
         termValues.push_back(marketCapitalization);

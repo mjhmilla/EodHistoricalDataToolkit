@@ -1525,6 +1525,15 @@ int main (int argc, char* argv[]) {
         double residualFreeCashFlowToEnterpriseValue = 
           residualCashFlow/enterpriseValue;
 
+        if(   !JsonFunctions::isJsonFloatValid(residualCashFlow) 
+           || !JsonFunctions::isJsonFloatValid(enterpriseValue)){
+          if(setNansToMissingValue){
+            residualFreeCashFlowToEnterpriseValue = JsonFunctions::MISSING_VALUE;
+          }else{
+            residualFreeCashFlowToEnterpriseValue = std::nan("1");
+          }
+        }
+
         if(appendTermRecord){
           termNames.push_back("residualFreeCashFlowToEnterpriseValue_residualCashFlow");
           termNames.push_back("residualFreeCashFlowToEnterpriseValue");
