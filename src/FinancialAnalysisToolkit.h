@@ -304,6 +304,19 @@ class FinancialAnalysisToolkit {
       double returnOnInvestedCapital =  
         (netIncome-dividendsPaid) / (longTermDebt+totalShareholderEquity);
 
+      //The ROIC is meaningless unless the denominator is defined.
+      //I'm willing to accept dividends paid being missing from the EOD 
+      //records because many companys do not issue dividends.
+      if(    !JsonFunctions::isJsonFloatValid(longTermDebt) 
+          || !JsonFunctions::isJsonFloatValid(totalShareholderEquity)
+          || !JsonFunctions::isJsonFloatValid(netIncome)){
+        if(setNansToMissingValue){
+          returnOnInvestedCapital = JsonFunctions::MISSING_VALUE;
+        }else{
+          returnOnInvestedCapital = std::nan("1");
+        }
+      }
+
       if(appendTermRecord){
         termNames.push_back(parentCategoryName+"returnOnInvestedCapital_longTermDebt");
         termNames.push_back(parentCategoryName+"returnOnInvestedCapital_totalShareholderEquity");
@@ -341,6 +354,17 @@ class FinancialAnalysisToolkit {
                       ["netIncome"], setNansToMissingValue);
 
       double returnOnEquity = netIncome/totalShareholderEquity;
+
+      if(    !JsonFunctions::isJsonFloatValid(netIncome) 
+          || !JsonFunctions::isJsonFloatValid(totalShareholderEquity)){
+        if(setNansToMissingValue){
+          returnOnEquity = JsonFunctions::MISSING_VALUE;
+        }else{
+          returnOnEquity = std::nan("1");
+        }
+      }
+
+
       if(appendTermRecord){
         termNames.push_back(parentCategoryName+"returnOnEquity_netIncome");
         termNames.push_back(parentCategoryName+"returnOnEquity_totalShareholderEquity");
@@ -380,6 +404,14 @@ class FinancialAnalysisToolkit {
     
       double retentionRatio =  
         (netIncome-dividendsPaid) / (netIncome);
+
+      if( !JsonFunctions::isJsonFloatValid(netIncome)){
+        if(setNansToMissingValue){
+          retentionRatio = JsonFunctions::MISSING_VALUE;
+        }else{
+          retentionRatio = std::nan("1");
+        }
+      }
 
       if(appendTermRecord){
         termNames.push_back(parentCategoryName+"retentionRatio_netIncome");
@@ -426,6 +458,15 @@ class FinancialAnalysisToolkit {
 
       double returnOnAssets= netIncome / totalAssets;
 
+      if(    !JsonFunctions::isJsonFloatValid(netIncome) 
+          || !JsonFunctions::isJsonFloatValid(totalAssets)){
+        if(setNansToMissingValue){
+          returnOnAssets = JsonFunctions::MISSING_VALUE;
+        }else{
+          returnOnAssets = std::nan("1");
+        }
+      }
+
       if(appendTermRecord){
         termNames.push_back("returnOnAssets_netIncome");
         termNames.push_back("returnOnAssets_totalAssets");
@@ -462,6 +503,15 @@ class FinancialAnalysisToolkit {
 
       double grossMargin= (totalRevenue-costOfRevenue)/totalRevenue;
 
+      if(    !JsonFunctions::isJsonFloatValid(totalRevenue) 
+          || !JsonFunctions::isJsonFloatValid(costOfRevenue)){
+        if(setNansToMissingValue){
+          grossMargin = JsonFunctions::MISSING_VALUE;
+        }else{
+          grossMargin = std::nan("1");
+        }
+      }
+
       if(appendTermRecord){
         termNames.push_back("grossMargin_totalRevenue");
         termNames.push_back("grossMargin_costOfRevenue");
@@ -494,6 +544,15 @@ class FinancialAnalysisToolkit {
                       ["totalRevenue"], setNansToMissingValue);
 
       double operatingMargin=operatingIncome/totalRevenue;
+
+      if(    !JsonFunctions::isJsonFloatValid(operatingIncome) 
+          || !JsonFunctions::isJsonFloatValid(totalRevenue)){
+        if(setNansToMissingValue){
+          operatingMargin = JsonFunctions::MISSING_VALUE;
+        }else{
+          operatingMargin = std::nan("1");
+        }
+      }      
 
       if(appendTermRecord){
         termNames.push_back("operatingMargin_operatingIncome");
@@ -599,6 +658,15 @@ class FinancialAnalysisToolkit {
 
       double cashFlowConversionRatio = (freeCashFlow)/netIncome;
 
+      if(    !JsonFunctions::isJsonFloatValid(netIncome) 
+          || !JsonFunctions::isJsonFloatValid(freeCashFlow)){
+        if(setNansToMissingValue){
+          cashFlowConversionRatio = JsonFunctions::MISSING_VALUE;
+        }else{
+          cashFlowConversionRatio = std::nan("1");
+        }
+      }
+
       if(appendTermRecord){
         termNames.push_back(categoryName+"netIncome");
         termNames.push_back("cashFlowConversionRatio");
@@ -639,6 +707,18 @@ class FinancialAnalysisToolkit {
       double debtToCapitalizationRatio=(shortTermDebt+longTermDebt)
                     /(shortTermDebt+longTermDebt+totalStockholderEquity);
 
+
+      if(   !JsonFunctions::isJsonFloatValid(longTermDebt)
+         || !JsonFunctions::isJsonFloatValid(shortTermDebt)
+         || !JsonFunctions::isJsonFloatValid(totalStockholderEquity)){
+        
+        if(setNansToMissingValue){
+          debtToCapitalizationRatio=JsonFunctions::MISSING_VALUE;
+        }else{
+          debtToCapitalizationRatio = std::nan("1");
+        }
+      }    
+
       if(appendTermRecord){
         termNames.push_back("debtToCapitalizationRatio_shortTermDebt");
         termNames.push_back("debtToCapitalizationRatio_longTermDebt");
@@ -676,6 +756,16 @@ class FinancialAnalysisToolkit {
 
       double interestCover=operatingIncome/interestExpense;
 
+      if(   !JsonFunctions::isJsonFloatValid(operatingIncome)
+         || !JsonFunctions::isJsonFloatValid(interestExpense)){
+        
+        if(setNansToMissingValue){
+          interestCover = JsonFunctions::MISSING_VALUE;
+        }else{
+          interestCover = std::nan("1");
+        }
+      }      
+
       if(appendTermRecord){
         termNames.push_back("interestCover_operatingIncome");
         termNames.push_back("interestCover_interestExpense");
@@ -710,11 +800,15 @@ class FinancialAnalysisToolkit {
                             termNames,
                             termValues);
 
-        if(std::isnan(interestCover) || std::isinf(interestCover)){
+        if(!JsonFunctions::isJsonFloatValid(interestCover)){
           interestCover = meanInterestCover;
         }
 
         double defaultSpread = std::nan("1");
+        if(setNansToMissingValue){
+          defaultSpread = JsonFunctions::MISSING_VALUE;
+        }
+
         bool found=false;
         unsigned int i=0;        
         int tableSize = jsonDefaultSpread["US"]["default_spread"].size();
@@ -726,12 +820,14 @@ class FinancialAnalysisToolkit {
               jsonDefaultSpread["US"]["default_spread"].at(tableSize-1).at(1),
               setNansToMissingValue);
 
-        if(interestCover < interestCoverLowestValue){
+        if(interestCover < interestCoverLowestValue 
+          && JsonFunctions::isJsonFloatValid(interestCoverLowestValue)){
           defaultSpread = JsonFunctions::getJsonFloat(
                 jsonDefaultSpread["US"]["default_spread"].at(0).at(2),
                 setNansToMissingValue);
         
-        }else if(interestCover > interestCoverHighestValue){
+        }else if(interestCover > interestCoverHighestValue
+                 && JsonFunctions::isJsonFloatValid(interestCoverHighestValue)){
           defaultSpread = JsonFunctions::getJsonFloat(
                 jsonDefaultSpread["US"]["default_spread"].at(tableSize-1).at(2),
                 setNansToMissingValue);          
@@ -751,16 +847,22 @@ class FinancialAnalysisToolkit {
                 setNansToMissingValue);
 
 
-            if(interestCover >= interestCoverLowerBound
-            && interestCover <= interestCoverUpperBound){
-              defaultSpread = defaultSpreadIntervalValue;
-              found=true;
+            if(    JsonFunctions::isJsonFloatValid(interestCoverLowerBound)
+                && JsonFunctions::isJsonFloatValid(interestCoverUpperBound)
+                && JsonFunctions::isJsonFloatValid(defaultSpreadIntervalValue)){
+
+              if(interestCover >= interestCoverLowerBound
+              && interestCover <= interestCoverUpperBound){
+                defaultSpread = defaultSpreadIntervalValue;
+                found=true;
+              }
             }
             ++i;
           } 
         }
 
-        if(std::isnan(defaultSpread) || std::isinf(defaultSpread)){
+        if(std::isnan(defaultSpread) || std::isinf(defaultSpread) 
+           || !JsonFunctions::isJsonFloatValid(defaultSpread)){
           std::cerr <<
             "Error: the default spread has evaluated to nan or inf"
             " which is only possible if the default spread json file"
@@ -828,13 +930,41 @@ class FinancialAnalysisToolkit {
           + interestExpense
           - taxShieldOnInterestExpense
           - capitalExpenditures;
-      
+
+      double freeCashFlowEOD = JsonFunctions::getJsonFloat(
+          jsonData[FIN][CF][timeUnit][date.c_str()]["freeCashFlow"],
+          setNansToMissingValue);
+
+
+      double freeCashFlowReturned = freeCashFlow;
+      //I'm willing to accept missing values in interest expense and
+      //the tax-shield-on-interest-expense as these values are typically 
+      //small in comparison to the other quantities.
+      if(   !JsonFunctions::isJsonFloatValid(totalCashFromOperatingActivities)
+         || !JsonFunctions::isJsonFloatValid(interestExpense)
+         || !JsonFunctions::isJsonFloatValid(taxShieldOnInterestExpense)
+         || !JsonFunctions::isJsonFloatValid(capitalExpenditures)){
+        
+        //If I can't calculate free cash flow, take the value that is
+        //reported by EOD, if it is available. 
+        freeCashFlowReturned=freeCashFlowEOD; 
+        
+        if(setNansToMissingValue){
+          freeCashFlow=JsonFunctions::MISSING_VALUE;
+        }else{
+          freeCashFlow = std::nan("1");
+        }
+                 
+      }
+
       if(appendTermRecord){
         
         termNames.push_back(resultName + "totalCashFromOperatingActivities");
         termNames.push_back(resultName + "interestExpense");
         termNames.push_back(resultName + "taxShieldOnInterestExpense");
         termNames.push_back(resultName + "capitalExpenditures");
+        termNames.push_back(resultName + "freeCashFlow");
+        termNames.push_back(resultName + "freeCashFlowEOD");
         termNames.push_back(parentCategoryName+"freeCashFlow");
 
         termValues.push_back(totalCashFromOperatingActivities);
@@ -842,10 +972,13 @@ class FinancialAnalysisToolkit {
         termValues.push_back(taxShieldOnInterestExpense);
         termValues.push_back(capitalExpenditures);
         termValues.push_back(freeCashFlow);
+        termValues.push_back(freeCashFlowEOD);
+        termValues.push_back(freeCashFlowReturned);
  
       }
 
-      return freeCashFlow;
+      return freeCashFlowReturned;
+
     };    
 
     //==========================================================================
@@ -885,8 +1018,6 @@ class FinancialAnalysisToolkit {
 
       if(!JsonFunctions::isJsonFloatValid(capitalExpenditures)){
 
-        capitalExpenditures=0.;
-
         //Use an alternative method to calculate capital expenditures
         plantPropertyEquipment = JsonFunctions::getJsonFloat(
           jsonData[FIN][BAL][timeUnit][date.c_str()]
@@ -902,7 +1033,6 @@ class FinancialAnalysisToolkit {
           && JsonFunctions::isJsonFloatValid(plantPropertyEquipmentPrevious)){
           capitalExpenditures   = plantPropertyEquipment
                                 -plantPropertyEquipmentPrevious;
-
         }
               
       }
@@ -911,11 +1041,16 @@ class FinancialAnalysisToolkit {
         jsonData[FIN][CF][timeUnit][date.c_str()]["depreciation"],
         setNansToMissingValue);
 
-      double netCapitalExpenditures = JsonFunctions::MISSING_VALUE;          
+      double netCapitalExpenditures = capitalExpenditures - depreciation;  
 
-      if(JsonFunctions::isJsonFloatValid(capitalExpenditures) 
-      && JsonFunctions::isJsonFloatValid(depreciation)){
-        netCapitalExpenditures = capitalExpenditures - depreciation;  
+      if(!JsonFunctions::isJsonFloatValid(capitalExpenditures) 
+      && !JsonFunctions::isJsonFloatValid(depreciation)){
+        if(setNansToMissingValue){
+          netCapitalExpenditures = JsonFunctions::MISSING_VALUE; 
+        }else{
+          netCapitalExpenditures = std::nan("1");
+        }
+        
       }
 
       if(appendTermRecord){
@@ -964,10 +1099,12 @@ class FinancialAnalysisToolkit {
 
       */
 
+      bool isInputValid=true;
+
       double inventory = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][date.c_str()]["inventory"],
         setNansToMissingValue);
-
+      
       double inventoryPrevious = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["inventory"],
         setNansToMissingValue);
@@ -988,10 +1125,34 @@ class FinancialAnalysisToolkit {
         jsonData[FIN][BAL][timeUnit][previousDate.c_str()]["accountsPayable"],
         setNansToMissingValue);
 
+
       double changeInNonCashWorkingCapital = 
           ( (inventory-inventoryPrevious)
             +(netReceivables-netReceivablesPrevious)
             -(accountsPayable-accountsPayablePrevious));
+
+      if(     !JsonFunctions::isJsonFloatValid(  inventory)
+           || !JsonFunctions::isJsonFloatValid(  inventoryPrevious)
+           || !JsonFunctions::isJsonFloatValid(  netReceivables)
+           || !JsonFunctions::isJsonFloatValid(  netReceivablesPrevious)
+           || !JsonFunctions::isJsonFloatValid(  accountsPayable)
+           || !JsonFunctions::isJsonFloatValid(  accountsPayablePrevious)){
+        if(setNansToMissingValue){
+          changeInNonCashWorkingCapital=JsonFunctions::MISSING_VALUE;
+        }else{
+          changeInNonCashWorkingCapital=std::nan("1");
+        }
+
+      }
+
+      if(!isInputValid){
+        if(setNansToMissingValue){
+          changeInNonCashWorkingCapital = JsonFunctions::MISSING_VALUE;
+        }else{
+          changeInNonCashWorkingCapital = std::nan("1");
+        }
+      }
+
             
       if(appendTermRecord){
         termNames.push_back(parentCategoryName 
@@ -1134,7 +1295,7 @@ class FinancialAnalysisToolkit {
       }else{
 
           //Set any nan values to JsonFunctions::MISSING_VALUE
-          netDebtIssued             = JsonFunctions::MISSING_VALUE;
+          netDebtIssued             = 0.;
 
           if(   !JsonFunctions::isJsonFloatValid(longTermDebt) 
              || !JsonFunctions::isJsonFloatValid(longTermDebtPrevious)){
@@ -1151,6 +1312,19 @@ class FinancialAnalysisToolkit {
           + netDebtIssued
           + netDebtIssuedAlternative;
       
+      if(   !JsonFunctions::isJsonFloatValid(netIncome) 
+         || !JsonFunctions::isJsonFloatValid(depreciation)
+         || !JsonFunctions::isJsonFloatValid(netCapitalExpenditures)
+         || !JsonFunctions::isJsonFloatValid(changeInNonCashWorkingCapital)
+         || (   !JsonFunctions::isJsonFloatValid(netDebtIssued) 
+             && !JsonFunctions::isJsonFloatValid(netDebtIssuedAlternative))){
+        if(setNansToMissingValue){
+          freeCashFlowToEquity = JsonFunctions::MISSING_VALUE;
+        }else{
+          freeCashFlowToEquity = std::nan("1");
+        }
+      }
+
 
       if(appendTermRecord){
         termNames.push_back("freeCashFlowToEquity_netIncome");
@@ -1226,7 +1400,17 @@ class FinancialAnalysisToolkit {
       double ownersEarnings =  
           netIncome
           - netCapitalExpenditures
-          - changeInNonCashWorkingCapital;      
+          - changeInNonCashWorkingCapital;     
+
+      if(   !JsonFunctions::isJsonFloatValid(netIncome) 
+         || !JsonFunctions::isJsonFloatValid(netCapitalExpenditures)
+         || !JsonFunctions::isJsonFloatValid(changeInNonCashWorkingCapital)){
+        if(setNansToMissingValue){
+          ownersEarnings = JsonFunctions::MISSING_VALUE;
+        }else{
+          ownersEarnings = std::nan("1");
+        }
+      }           
 
       if(appendTermRecord){
         termNames.push_back("ownersEarnings_netIncome");
@@ -1258,6 +1442,15 @@ class FinancialAnalysisToolkit {
         jsonData[FIN][IS][timeUnit][date.c_str()]["incomeBeforeTax"], setNansToMissingValue);
 
       double taxRate = taxProvision/incomeBeforeTaxes;
+
+      if(     !JsonFunctions::isJsonFloatValid(taxProvision)
+          ||  !JsonFunctions::isJsonFloatValid(incomeBeforeTaxes)){
+        if(setNansToMissingValue){
+          taxRate=JsonFunctions::MISSING_VALUE;
+        }else{
+          taxRate=std::nan("1");
+        }
+      }
 
       //Update the argument and result record
       if(appendTermRecord){
@@ -1326,6 +1519,16 @@ class FinancialAnalysisToolkit {
         (netCapitalExpenditures+changeInNonCashWorkingCapital
         )/afterTaxOperatingIncome;
 
+      if(     !JsonFunctions::isJsonFloatValid(netCapitalExpenditures)
+          ||  !JsonFunctions::isJsonFloatValid(changeInNonCashWorkingCapital)
+          ||  !JsonFunctions::isJsonFloatValid(afterTaxOperatingIncome)){
+        if(setNansToMissingValue){
+          reinvestmentRate=JsonFunctions::MISSING_VALUE;
+        }else{
+          reinvestmentRate=std::nan("1");
+        }
+      }
+
       if(appendTermRecord){
 
         termNames.push_back(parentCategoryName 
@@ -1381,6 +1584,16 @@ class FinancialAnalysisToolkit {
       double freeCashFlowToFirm =  
         totalCashFromOperatingActivities*(1-taxRate)*(1-reinvestmentRate);
 
+      if(     !JsonFunctions::isJsonFloatValid(totalCashFromOperatingActivities)
+          ||  !JsonFunctions::isJsonFloatValid(taxRate)
+          ||  !JsonFunctions::isJsonFloatValid(reinvestmentRate)){
+        if(setNansToMissingValue){
+          freeCashFlowToFirm=JsonFunctions::MISSING_VALUE;
+        }else{
+          freeCashFlowToFirm=std::nan("1");
+        }
+      }
+
       if(appendTermRecord){
 
         termNames.push_back(resultName + "totalCashFromOperatingActivities");
@@ -1419,24 +1632,15 @@ class FinancialAnalysisToolkit {
         std::vector< std::string> &termNames,
         std::vector< double > &termValues){
 
-      bool isDataNan = false;
 
       double totalCashFromOperatingActivities = JsonFunctions::getJsonFloat( 
         jsonData[FIN][CF][timeUnit][date.c_str()]
         ["totalCashFromOperatingActivities"], setNansToMissingValue);  
 
-      if(!JsonFunctions::isJsonFloatValid(totalCashFromOperatingActivities)){
-        isDataNan=true;
-      }
-
       double researchDevelopment = JsonFunctions::getJsonFloat(
         jsonData[FIN][IS][timeUnit][date.c_str()]["researchDevelopment"],
         setNansToMissingValue);  
       
-      //if(!JsonFunctions::isJsonFloatValid(researchDevelopment)){
-      //  isDataNan=true;
-      //}      
-
       //Extract the mean capital expenditure for the list of dates given
       double capitalExpenditureMean = 0;     
       double capitalExpenditure     = 0; 
@@ -1449,13 +1653,12 @@ class FinancialAnalysisToolkit {
         capitalExpenditureMean += capitalExpenditure;
 
         if(!JsonFunctions::isJsonFloatValid(capitalExpenditure)){
-          isDataNan=true;
           capitalExpenditureMean=capitalExpenditure;
           break;
         }        
       }
 
-      if(!isDataNan){
+      if(JsonFunctions::isJsonFloatValid(capitalExpenditureMean)){
         capitalExpenditureMean = 
           capitalExpenditureMean/
           static_cast<double>(datesToAverageCapitalExpenditures.size());
@@ -1466,9 +1669,6 @@ class FinancialAnalysisToolkit {
         jsonData[FIN][BAL][timeUnit][date.c_str()]["totalStockholderEquity"],
         setNansToMissingValue);
 
-      if(!JsonFunctions::isJsonFloatValid(totalStockholderEquity)){
-        isDataNan=true;
-      }
 
       double costOfEquity = JsonFunctions::MISSING_VALUE; 
       
@@ -1476,15 +1676,23 @@ class FinancialAnalysisToolkit {
          && JsonFunctions::isJsonFloatValid(costOfEquityAsAPercentage) ){
           costOfEquity = totalStockholderEquity*costOfEquityAsAPercentage;
       }
-
-
-      double residualCashFlow = std::nan("1");
-
-      if(!isDataNan){      
-        residualCashFlow =  totalCashFromOperatingActivities
+  
+      double residualCashFlow =  totalCashFromOperatingActivities
                             + researchDevelopment
                             - capitalExpenditureMean
                             - costOfEquity;
+      
+      //I'm willing to accept that researchDevelopment is not reported
+      //because this often is not available in EODs reports
+      if(   !JsonFunctions::isJsonFloatValid(totalCashFromOperatingActivities)
+         || !JsonFunctions::isJsonFloatValid(researchDevelopment)
+         || !JsonFunctions::isJsonFloatValid(capitalExpenditureMean)
+         || !JsonFunctions::isJsonFloatValid(costOfEquity)){
+        if(setNansToMissingValue){
+          residualCashFlow = JsonFunctions::MISSING_VALUE;
+        }else{
+          residualCashFlow = std::nan("1");
+        }
       }
 
       if(appendTermRecord){
@@ -1550,9 +1758,27 @@ class FinancialAnalysisToolkit {
       double marketCapitalization = 
         sharePriceAdjustedClose*commonStockSharesOutstanding;
 
+      //From Investopedia: https://www.investopedia.com/terms/e/enterprisevalue.asp
+      // EV = MC + Total Debt - C
+      // EV: enterprise value
+      // MC: market capitalization
+      // Total Debt: total debt
+      // C: cash and equivalents
       double enterpriseValue = marketCapitalization
                               + (shortLongTermDebtTotal+longTermDebt) 
-                              - commonStockSharesOutstanding;
+                              - cashAndEquivalents;
+
+      if(   !JsonFunctions::isJsonFloatValid(sharePriceAdjustedClose)
+         || !JsonFunctions::isJsonFloatValid(commonStockSharesOutstanding)
+         || !JsonFunctions::isJsonFloatValid(cashAndEquivalents)
+         || (   !JsonFunctions::isJsonFloatValid(shortLongTermDebtTotal)
+             && !JsonFunctions::isJsonFloatValid(longTermDebt)) ){
+        if(setNansToMissingValue){
+          enterpriseValue = JsonFunctions::MISSING_VALUE;
+        }else{
+          enterpriseValue = std::nan("1");
+        }
+      }
 
       if(appendTermRecord){
         termNames.push_back(parentCategoryName+"enterpriseValue_shortLongTermDebtTotal");
@@ -1564,6 +1790,7 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName+"enterpriseValue");
 
         termValues.push_back(shortLongTermDebtTotal);
+        termValues.push_back(longTermDebt);
         termValues.push_back(cashAndEquivalents);
         termValues.push_back(commonStockSharesOutstanding);
         termValues.push_back(sharePriceAdjustedClose);
@@ -1741,6 +1968,21 @@ class FinancialAnalysisToolkit {
       }
       presentValue += terminalValue 
         / std::pow(1.+costOfCapital,numberOfYearsForTerminalValuation);
+
+      if(    !JsonFunctions::isJsonFloatValid( reinvestmentRate)
+          || !JsonFunctions::isJsonFloatValid( returnOnInvestedCapital)
+          || !JsonFunctions::isJsonFloatValid( retentionRatio)
+          || !JsonFunctions::isJsonFloatValid( returnOnEquity)
+          || !JsonFunctions::isJsonFloatValid( totalCashFromOperatingActivities)
+          || !JsonFunctions::isJsonFloatValid( taxRate)){
+
+        if(setNansToMissingValue){
+          presentValue = JsonFunctions::MISSING_VALUE;
+        }else{
+          presentValue = std::nan("1");
+        }
+      }
+
 
       if(appendTermRecord){
         termNames.push_back("presentValueDCF_terminalValue_afterTaxOperatingIncome");

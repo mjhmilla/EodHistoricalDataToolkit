@@ -1471,15 +1471,18 @@ int main (int argc, char* argv[]) {
                             - potentialLiabilities
                             - optionValue;
 
-        double priceToValue = presentValue / marketCapitalization;
+        double priceToValue = marketCapitalization / presentValue;
 
-              
-        double shareValue = JsonFunctions::MISSING_VALUE;
-        if(JsonFunctions::isJsonFloatValid(commonStockSharesOutstanding)){
-          shareValue = presentValue / commonStockSharesOutstanding;
-          priceToValue = adjustedClose / shareValue;
+        if(  !JsonFunctions::isJsonFloatValid(presentValueOfFutureCashFlows)
+          || !JsonFunctions::isJsonFloatValid(marketCapitalization)){
+          if(setNansToMissingValue){
+            priceToValue = JsonFunctions::MISSING_VALUE;
+          }else{
+            priceToValue = std::nan("1");
+          }
+
         }
-
+           
         //Ratio: price to value
         if(appendTermRecord){
           termNames.push_back("priceToValue_presentValueOfFutureCashFlows");
@@ -1491,10 +1494,6 @@ int main (int argc, char* argv[]) {
           termNames.push_back("priceToValue_stockOptionValuation");
           termNames.push_back("priceToValue_presentValue_approximation");
           termNames.push_back("priceToValue_marketCapitalization");
-
-          termNames.push_back("priceToValue_commonStockSharesOutstanding");
-          termNames.push_back("priceToValue_shareValue_approximation");
-          termNames.push_back("priceToValue_sharePrice");
           termNames.push_back("priceToValue");
 
           termValues.push_back(presentValueOfFutureCashFlows);
@@ -1506,10 +1505,6 @@ int main (int argc, char* argv[]) {
           termValues.push_back(optionValue);
           termValues.push_back(presentValue);
           termValues.push_back(marketCapitalization);
-
-          termValues.push_back(commonStockSharesOutstanding);
-          termValues.push_back(shareValue);
-          termValues.push_back(adjustedClose);
           termValues.push_back(priceToValue);
 
         }
