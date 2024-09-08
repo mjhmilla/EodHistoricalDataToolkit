@@ -341,6 +341,7 @@ void extractSummaryStatistics(sciplot::Vec &data, SummaryStatistics &summary){
 };
 
 
+
 //==============================================================================
 void createHistoricalDataPlot(
       sciplot::Plot2D &plotHistoricalDataUpd,
@@ -1317,6 +1318,20 @@ void plotReportData(
     std::cout << std::endl; 
   }
 };
+
+std::string formatJsonEntry( double entry){
+
+
+  std::stringstream ss;
+  if(JsonFunctions::isJsonFloatValid(entry)){
+    ss << entry;
+  }else{
+    ss << "\\cellcolor{RedOrange}" << std::round(entry);
+  }
+  
+  return ss.str();
+
+}
 //==============================================================================
 void appendValuationTable(std::ofstream &latexReport, 
                           const std::string &primaryTicker, 
@@ -1350,23 +1365,23 @@ void appendValuationTable(std::ofstream &latexReport,
                     << std::endl;
     latexReport << "\\hline ";
     latexReport << "$A_1$: Risk-free-rate [1] & " 
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["costOfEquityAsAPercentage_riskFreeRate"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfEquityAsAPercentage_riskFreeRate"],true))
                 << " \\\\" << std::endl;
     latexReport << " & \\\\" << std::endl;
     latexReport << "\\multicolumn{2}{c}{ Cost of equity } \\\\" << std::endl;
     latexReport << "\\hline "
                 << "$B_1$: equity risk premium* & " 
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["costOfEquityAsAPercentage_equityRiskPremium"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfEquityAsAPercentage_equityRiskPremium"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_1$: beta & " 
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["costOfEquityAsAPercentage_beta"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfEquityAsAPercentage_beta"],true))
                 << " \\\\" << std::endl;
     latexReport << "$D_1$: cost of equity & " 
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["costOfEquityAsAPercentage"],true)
+                <<formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfEquityAsAPercentage"],true))
                 << " \\\\" << std::endl;
     latexReport << "\\multicolumn{2}{c}{ $D_1 = A_1 + B_1\\,C_1$} \\\\" << std::endl;
     latexReport << " & \\\\" << std::endl;
@@ -1374,30 +1389,30 @@ void appendValuationTable(std::ofstream &latexReport,
     latexReport << "\\multicolumn{2}{c}{ After-tax cost of debt } \\\\" << std::endl;
     latexReport << "\\hline "
                 << "$E_1$: Operating income & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["interestCover_operatingIncome"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["interestCover_operatingIncome"],true))
                 << " \\\\" << std::endl;
     latexReport << "$F_1$: Interest expense & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["interestCover_interestExpense"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["interestCover_interestExpense"],true))
                 << " \\\\" << std::endl;
     latexReport << "$G_1$: Interest cover & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["interestCover"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["interestCover"],true))
                 << " \\\\" << std::endl;
     latexReport << "\\multicolumn{2}{c}{ $G_1 = E_1/F_1$} \\\\" << std::endl;
     latexReport << " & \\\\" << std::endl;
     latexReport << "$I_1$. Default spread [2] & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["defaultSpread"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["defaultSpread"],true))
                 << " \\\\" << std::endl;
     latexReport << "$J_1$. Tax rate [3] & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["afterTaxCostOfDebt_taxRate"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["afterTaxCostOfDebt_taxRate"],true))
                 << " \\\\" << std::endl;
     latexReport << "$K_1$. After-tax cost of debt & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["afterTaxCostOfDebt"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["afterTaxCostOfDebt"],true))
                 << " \\\\" << std::endl;
     latexReport << "\\multicolumn{2}{c}{ $K_1 = (A_1+I_1)\\,(1.0-J_1)$} \\\\" 
                 << std::endl;    
@@ -1411,22 +1426,22 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
     latexReport << "$A_2$. Market capitalization & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["costOfCapital_marketCapitalization"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfCapital_marketCapitalization"],true))
                 << " \\\\" << std::endl;
     latexReport << "$B_2$. Short \\& long term debt  & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["costOfCapital_shortLongTermDebtTotal"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfCapital_shortLongTermDebtTotal"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_2$. Cost of capital & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["costOfCapital"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfCapital"],true))
                 << " \\\\" << std::endl;
     latexReport << "\\multicolumn{2}{c}{ $C_2 = (D_1\\,A_2 + K_1\\,B_2)/(A_2+B_2)$} \\\\" 
                 << std::endl;              
     latexReport << "$D_2$. Mature firm debt capital fraction* & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["costOfCapitalMature_matureFirmDebtCapitalFraction"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["costOfCapitalMature_matureFirmDebtCapitalFraction"],true))
                 << " \\\\" << std::endl;              
     latexReport << "\\end{tabular}" << std::endl 
                 << "\\bigskip" << std::endl<< std::endl;
@@ -1437,28 +1452,28 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline " << std::endl;    
     latexReport << "$A_3$. Capital expenditures &"
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_capitalExpenditures"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_capitalExpenditures"],true))
                 << " \\\\" << std::endl;                              
     latexReport << "$B_3$. Property plant \\& equip. (PPE) &"
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_plantPropertyEquipment"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_plantPropertyEquipment"],true))
                 << " \\\\" << std::endl;   
     latexReport << "$C_3$. Previous PPE & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_plantPropertyEquipmentPrevious"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_plantPropertyEquipmentPrevious"],true))
                 << " \\\\" << std::endl;                
     latexReport << "\\multicolumn{2}{c}{If cap. exp. is 0 in EOD's records:} \\\\" 
                 << std::endl;                
     latexReport << "\\multicolumn{2}{c}{ $A_3 = B_3 - C_3$} \\\\" 
                 << std::endl;                
     latexReport << "$D_3$. Depreciation & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_depreciation"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_depreciation"],true))
                 << " \\\\" << std::endl;                
     latexReport << "$E_3$. Net Capital Expenditures & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_netCapitalExpenditures"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_netCapitalExpenditures"],true))
                 << " \\\\" << std::endl;                
     latexReport << "\\multicolumn{2}{c}{ $E_3 = A_3 - D_3$} \\\\" 
                 << std::endl;              
@@ -1470,32 +1485,32 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
     latexReport << "$A_4$. Inventory & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_inventory"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_inventory"],true))
                 << " \\\\" << std::endl;                 
     latexReport << "$B_4$. Previous inventory & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_inventoryPrevious"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_inventoryPrevious"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_4$. Net receivables & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_netReceivables"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_netReceivables"],true))
                 << " \\\\" << std::endl;                             
     latexReport << "$D_4$. Previous net receivables & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_netReceivablesPrevious"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_netReceivablesPrevious"],true))
                 << " \\\\" << std::endl;
     latexReport << "$E_4$. Accounts payable & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_accountsPayable"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_accountsPayable"],true))
                 << " \\\\" << std::endl;                                         
     latexReport << "$F_4$. Previous accounts payable & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_accountsPayablePrevious"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_accountsPayablePrevious"],true))
                 << " \\\\" << std::endl;        
     latexReport << "$G_4$. Change in non-cash  & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital"],true))
                 << " \\\\" << std::endl;                                                 
 
     latexReport << " working capital & "
@@ -1511,20 +1526,20 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
     latexReport << "$A_5$. Total cash from & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_totalCashFromOperatingActivities"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_totalCashFromOperatingActivities"],true))
                 << " \\\\" << std::endl;
     latexReport << " operating activities & "
                 << " \\\\" << std::endl;
     latexReport << "$B_5$. After tax op. income & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate_afterTaxOperatingIncome"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate_afterTaxOperatingIncome"],true))
                 << " \\\\" << std::endl;                  
     latexReport << "\\multicolumn{2}{c}{ $B_5 = A_5\\,(1.0-J_1)$} \\\\" 
                 << std::endl;                
     latexReport << "$C_5$. Reinvestment rate & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestmentRate"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestmentRate"],true))
                 << " \\\\" << std::endl;                  
     latexReport << "\\multicolumn{2}{c}{ $C_5 = (E_3+G_4)/B_5$} \\\\" 
                 << std::endl;                
@@ -1536,24 +1551,24 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
     latexReport << "$A_6$. Long term debt & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnInvestedCapital_longTermDebt"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_returnOnInvestedCapital_longTermDebt"],true))
                 << " \\\\" << std::endl; 
     latexReport << "$B_6$. Total stock holder equality & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnInvestedCapital_totalShareholderEquity"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_returnOnInvestedCapital_totalShareholderEquity"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_6$. Net income & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnInvestedCapital_netIncome"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_returnOnInvestedCapital_netIncome"],true))
                 << " \\\\" << std::endl;                 
     latexReport << "$D_6$. Dividends paid & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnInvestedCapital_dividendsPaid"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_returnOnInvestedCapital_dividendsPaid"],true))
                 << " \\\\" << std::endl;                 
     latexReport << "$E_6$. Return on invested capital & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnInvestedCapital"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_returnOnInvestedCapital"],true))
                 << " \\\\" << std::endl;                 
     latexReport << "\\multicolumn{2}{c}{ $E_6 = (C_6-D_6)/(A_6+B_6)$} \\\\" 
                 << std::endl;  
@@ -1566,8 +1581,8 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
     latexReport << "$A_7$. Operating income growth & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_operatingIncomeGrowth"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_operatingIncomeGrowth"],true))
                 << " \\\\" << std::endl;  
     latexReport << "\\multicolumn{2}{c}{ $A_7 = C_5\\,E_6$} \\\\" 
             << std::endl;                            
@@ -1579,16 +1594,16 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
     latexReport << "$A_8$. Net income & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_retentionRatio_netIncome"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_retentionRatio_netIncome"],true))
                 << " \\\\" << std::endl;
     latexReport << "$B_8$. Dividends paid & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_retentionRatio_dividendsPaid"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_retentionRatio_dividendsPaid"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_8$. Retention ratio & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_retentionRatio"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_retentionRatio"],true))
                 << " \\\\" << std::endl;                
     latexReport << "\\multicolumn{2}{c}{ $C_8 = (A_8-B_8)/A_8$} \\\\" 
             << std::endl;   
@@ -1601,16 +1616,16 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
     latexReport << "$A_9$. Net income & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnEquity_netIncome"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_returnOnEquity_netIncome"],true))
                 << " \\\\" << std::endl;
     latexReport << "$B_9$. Total stock holder equity & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnEquity_totalShareholderEquity"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_returnOnEquity_totalShareholderEquity"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_9$. Return on equity & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnEquity"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_returnOnEquity"],true))
                 << " \\\\" << std::endl;                
     latexReport << "\\multicolumn{2}{c}{ $C_9 = A_9/B_9$} \\\\" 
             << std::endl;   
@@ -1623,8 +1638,8 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
     latexReport << "$A_{10}$. Net income growth & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_netIncomeGrowth"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_netIncomeGrowth"],true))
                 << " \\\\" << std::endl;                
     latexReport << "\\multicolumn{2}{c}{ $A_{10} = C_8\\,C_9$} \\\\" 
             << std::endl;  
@@ -1636,86 +1651,86 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl;
     latexReport << "\\hline ";
     latexReport << "$A_{11}^0$. After-tax op. income (year 0) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_0"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_0"],true))
                 << " \\\\" << std::endl;
     latexReport << "$B_{11}^0$. Reinvestment (year 0) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestment_0"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestment_0"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_{11}^0$. Free cash flow to firm  (year 0) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_freeCashFlowToFirm_0"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_freeCashFlowToFirm_0"],true))
                 << " \\\\" << std::endl;
 
     latexReport << "\\hline ";
     latexReport << "$A_{11}^1$. After-tax op. income (year 1) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_1"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_1"],true))
                 << " \\\\" << std::endl;
     latexReport << "$B_{11}^1$. Reinvestment (year 1) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestment_1"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestment_1"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_{11}^1$. Free cash flow to firm  (year 1) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_freeCashFlowToFirm_1"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_freeCashFlowToFirm_1"],true))
                 << " \\\\" << std::endl;
 
     latexReport << "\\hline ";
     latexReport << "$A_{11}^2$. After-tax op. income (year 2) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_2"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_2"],true))
                 << " \\\\" << std::endl;
     latexReport << "$B_{11}^2$. Reinvestment (year 2) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestment_2"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestment_2"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_{11}^2$. Free cash flow to firm  (year 2) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_freeCashFlowToFirm_2"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_freeCashFlowToFirm_2"],true))
                 << " \\\\" << std::endl;
 
     latexReport << "\\hline ";
     latexReport << "$A_{11}^3$. After-tax op. income (year 3) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_3"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_3"],true))
                 << " \\\\" << std::endl;
     latexReport << "$B_{11}^3$. Reinvestment (year 3) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestment_3"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestment_3"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_{11}^3$. Free cash flow to firm  (year 3) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_freeCashFlowToFirm_3"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_freeCashFlowToFirm_3"],true))
                 << " \\\\" << std::endl;
 
     latexReport << "\\hline ";
     latexReport << "$A_{11}^4$. After-tax op. income (year 4) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_4"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_4"],true))
                 << " \\\\" << std::endl;
     latexReport << "$B_{11}^4$. Reinvestment (year 4) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestment_4"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestment_4"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_{11}^4$. Free cash flow to firm  (year 4) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_freeCashFlowToFirm_4"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_freeCashFlowToFirm_4"],true))
                 << " \\\\" << std::endl;
 
     latexReport << "\\hline ";
     latexReport << "$A_{11}^5$. After-tax op. income (year 5) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_5"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_afterTaxOperatingIncome_5"],true))
                 << " \\\\" << std::endl;
     latexReport << "$B_{11}^5$. Reinvestment (year 5) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_reinvestment_5"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_reinvestment_5"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_{11}^5$. Free cash flow to firm  (year 5) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_freeCashFlowToFirm_5"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_freeCashFlowToFirm_5"],true))
                 << " \\\\" << std::endl;                
     latexReport << "\\hline ";
     latexReport << "\\multicolumn{2}{c}{ $A_{11}^{i+1} = A_{11}^{i}\\,(1+A_7)$} \\\\" 
@@ -1734,31 +1749,31 @@ void appendValuationTable(std::ofstream &latexReport,
     latexReport << "\\hline ";
 
     latexReport << "$D_{12}$. After tax op. income (terminal) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_terminalValue_afterTaxOperatingIncome"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_terminalValue_afterTaxOperatingIncome"],true))
                 << " \\\\" << std::endl;    
 
     latexReport << "$E_{12}$. Risk free rate (terminal) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_terminalValue_riskFreeRate"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_terminalValue_riskFreeRate"],true))
                 << " \\\\" << std::endl;    
 
     //F
     latexReport << "$F_{12}$. Cost of capital & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_terminalValue_costOfCapital"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_terminalValue_costOfCapital"],true))
                 << " \\\\" << std::endl;  
 
     //G
     latexReport << "$G_{12}$. Cost of capital (mature) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_terminalValue_costOfCapitalMature"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_terminalValue_costOfCapitalMature"],true))
                 << " \\\\" << std::endl;  
 
     //H
     latexReport << "$H_{12}$. Reinvestment rate  & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_terminalValue_reinvestmentRateStableGrowth"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_terminalValue_reinvestmentRateStableGrowth"],true))
                 << " \\\\" << std::endl;    
     latexReport << "  stable growth (terminal) & "
                 << " \\\\" << std::endl;    
@@ -1766,15 +1781,15 @@ void appendValuationTable(std::ofstream &latexReport,
                 << std::endl; 
 
     latexReport << "$I_{12}$. Terminal value (year 5) & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_terminalValue"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF_terminalValue"],true))
                 << " \\\\" << std::endl;  
 
     latexReport << "\\multicolumn{2}{c}{ $I_{12}=D_{12}\\,(1+E_{12})\\,(1-H_{12})/(G_{12}-E_{12})$} \\\\" 
                 << std::endl; 
     latexReport << "$J_{12}$. Present value of DCF & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["presentValueDCF"],true))
                 << " \\\\" << std::endl; 
 
     latexReport << "\\multicolumn{2}{c}{ $J_{12}=\\sum_{i=0}^{5} C_{11}^i/(1+G_{12})^i + I_{12}/(1+G_{12})^5$} \\\\" 
@@ -1788,8 +1803,8 @@ void appendValuationTable(std::ofstream &latexReport,
     latexReport << "\\hline \\multicolumn{2}{c}{Part 13: Price to value} \\\\" 
                 << std::endl;
     latexReport << "$A_{13}$. Cash balance & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["priceToValue_cash"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["priceToValue_cash"],true))
                 << " \\\\" << std::endl; 
     latexReport << "$B_{13}$. Value of minority holdings & ? "
                 << " \\\\" << std::endl; 
@@ -1808,12 +1823,12 @@ void appendValuationTable(std::ofstream &latexReport,
 
 
     latexReport << "$K_{12}$. Market cap. & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["priceToValue_marketCapitalization"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["priceToValue_marketCapitalization"],true))
                 << " \\\\" << std::endl; 
     latexReport << "$L_{12}$. Price / value & "
-                << JsonFunctions::getJsonFloat(
-                    analysis[key]["priceToValue"],true)
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    analysis[key]["priceToValue"],true))
                 << " \\\\" << std::endl; 
     latexReport << "\\multicolumn{2}{c}{ $L_{12}= K_{12} / J_{12}$} \\\\" 
                 << std::endl; 
@@ -1900,6 +1915,7 @@ void generateLaTeXReport(
   latexReport << "\\usepackage{graphicx}"<<std::endl;
   latexReport << "\\usepackage{hyperref}"<<std::endl;
   latexReport << "\\usepackage{multicol}"<<std::endl;
+  latexReport << "\\usepackage[usenames,dvipsnames,table]{xcolor}"<<std::endl;
   latexReport << "\\begin{document}"<<std::endl;
   
   std::vector< char > charactersToEscape;

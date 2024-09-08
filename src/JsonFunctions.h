@@ -9,7 +9,6 @@
 
 
 
-
 class JsonFunctions {
 
   public:
@@ -97,6 +96,7 @@ class JsonFunctions {
       }
 
     };
+
 
     static bool getJsonBool(const nlohmann::ordered_json &jsonEntry,
                             bool replaceNanWithFalse=false){
