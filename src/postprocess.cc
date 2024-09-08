@@ -569,6 +569,21 @@ void getDataRange(const std::vector< double > &data,
 
 }
 //==============================================================================
+int getTickerFigureNumber(const std::string &tickerName, 
+                          std::vector< TickerFigurePath > &tickerFigurePath ){
+  int tickerNumber=-1;
+
+  if(tickerFigurePath.size()>0){
+    tickerNumber=-1;
+    for(int i=0; i< tickerFigurePath.size();++i){
+      if(tickerName.compare(tickerFigurePath[i].primaryTicker)==0){
+       tickerNumber=i;
+      }
+    }
+  }
+  return tickerNumber;
+}
+//==============================================================================
 bool isTickerValid(const std::string &tickerName, 
                    const nlohmann::ordered_json &filterByTicker ){
 
@@ -914,7 +929,7 @@ void plotReportData(
         here=true;
       }
 
-      bool tickerPassesFilter  = isTickerValid(primaryTicker,filterByTicker);
+      bool tickerPassesFilter  = isTickerValid(primaryTicker,filterByTicker);    
       bool industryPassesFilter = isIndustryValid(reportEntry,filterByIndustry);
       bool countryPassesFilter = isCountryValid(country, filterByCountry);
       bool metricsPassFilter   = areMetricsValid(reportEntry,filterByMetricValue);
@@ -1167,7 +1182,13 @@ void plotReportData(
     double x=1;
     double xWidth = 0.4;
     for(auto const &entrySummary : marketSummary){      
-      size_t indexMetric=0;   
+      size_t indexMetric=0;  
+      int indexTicker = getTickerFigureNumber(entrySummary.ticker,
+                                              tickerFigurePath);
+      if(indexTicker >= 0){
+        x= static_cast<double>(indexTicker+1);
+      }
+
       sumOfWeights += entrySummary.marketCapitalizationMln; 
       for(auto const &entryMetric : entrySummary.summaryStatistics){
         
@@ -1246,6 +1267,9 @@ void plotReportData(
               col=j;
             }
           }
+        }
+        if(!filterByTicker.is_null()){
+          x = static_cast<double>(tickerFigurePath.size())+1.0;
         }
         //Add the box and whisker plot
         drawBoxAndWhisker(
