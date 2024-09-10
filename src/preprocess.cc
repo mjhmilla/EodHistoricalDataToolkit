@@ -262,6 +262,7 @@ void writeReportTableToFile(
                 << ","<<"PercentInsiders"
                 << ","<<"PercentInstitutions"
                 << ","<<"MarketCapitalizationMln"
+                << ","<<"Beta"
                 << ","<<"IPODate"                
                 << ","<<"Price"
                 << ","<<"TargetPrice"
@@ -403,21 +404,21 @@ void writeReportTableToFile(
         //Write the data to file
         std::string tempString;
         JsonFunctions::getJsonString(
-            fundamentalData["General"]["AddressData"]["Country"],
+            fundamentalData[GEN]["AddressData"]["Country"],
             tempString);            
         rankingFile << "," << tempString;
         
         jsonTickerEntry.push_back({"Country",tempString});
 
         JsonFunctions::getJsonString(
-            fundamentalData["General"]["CurrencyCode"],tempString);            
+            fundamentalData[GEN]["CurrencyCode"],tempString);            
         rankingFile << "," << tempString;
         
         jsonTickerEntry.push_back({"CurrencyCode",tempString});
 
 
         JsonFunctions::getJsonString(
-            fundamentalData["General"]["Name"],
+            fundamentalData[GEN]["Name"],
             tempString);            
         rankingFile << "," << tempString; 
 
@@ -461,7 +462,6 @@ void writeReportTableToFile(
             JsonFunctions::getJsonFloat(
                 fundamentalData["SharesStats"]["PercentInstitutions"])});            
 
-
         rankingFile << "," << 
             JsonFunctions::getJsonFloat(
             fundamentalData["Highlights"]["MarketCapitalizationMln"]); 
@@ -470,51 +470,59 @@ void writeReportTableToFile(
             JsonFunctions::getJsonFloat(
             fundamentalData["Highlights"]["MarketCapitalizationMln"])});              
 
+        rankingFile << "," << 
+            JsonFunctions::getJsonFloat(
+            fundamentalData[TECH]["Beta"]); 
+
+        jsonTickerEntry.push_back({"Beta",
+            JsonFunctions::getJsonFloat(
+            fundamentalData[TECH]["Beta"])});
+
 
         JsonFunctions::getJsonString(
-            fundamentalData["General"]["IPODate"],
+            fundamentalData[GEN]["IPODate"],
             tempString);     
         rankingFile << "," << tempString;  
         jsonTickerEntry.push_back({"IPODate",tempString});   
         
         JsonFunctions::getJsonString(
-          fundamentalData["General"]["International/Domestic"],
+          fundamentalData[GEN]["International/Domestic"],
           tempString);
         rankingFile << "," << tempString;
         jsonTickerEntry.push_back({"International/Domestic",tempString});
 
         JsonFunctions::getJsonString(
-          fundamentalData["General"]["Sector"],
+          fundamentalData[GEN]["Sector"],
           tempString);
         rankingFile << "," << tempString;
         jsonTickerEntry.push_back({"Sector",tempString});
 
         JsonFunctions::getJsonString(
-          fundamentalData["General"]["GicSector"],
+          fundamentalData[GEN]["GicSector"],
           tempString);
         rankingFile << "," << tempString;
         jsonTickerEntry.push_back({"GicSector",tempString});
 
         JsonFunctions::getJsonString(
-          fundamentalData["General"]["GicGroup"],
+          fundamentalData[GEN]["GicGroup"],
           tempString);
         rankingFile << "," << tempString;
         jsonTickerEntry.push_back({"GicGroup",tempString});
 
         JsonFunctions::getJsonString(
-          fundamentalData["General"]["GicIndustry"],
+          fundamentalData[GEN]["GicIndustry"],
           tempString);
         rankingFile << "," << tempString;
         jsonTickerEntry.push_back({"GicIndustry",tempString});
 
         JsonFunctions::getJsonString(
-          fundamentalData["General"]["GicSubIndustry"],
+          fundamentalData[GEN]["GicSubIndustry"],
           tempString);
         rankingFile << "," << tempString;
         jsonTickerEntry.push_back({"GicSubIndustry",tempString});
 
         JsonFunctions::getJsonString(
-          fundamentalData["General"]["HomeCategory"],
+          fundamentalData[GEN]["HomeCategory"],
           tempString);
         rankingFile << "," << tempString;
         jsonTickerEntry.push_back({"HomeCategory",tempString});
@@ -575,7 +583,7 @@ void writeReportTableToFile(
             fundamentalData["AnalystRatings"]["StrongSell"])});
 
         JsonFunctions::getJsonString(
-            fundamentalData["General"]["WebURL"],
+            fundamentalData[GEN]["WebURL"],
             tempString);           
 
         rankingFile << "," << tempString;
@@ -583,7 +591,7 @@ void writeReportTableToFile(
         jsonTickerEntry.push_back({"WebURL",tempString});
 
         JsonFunctions::getJsonString(
-            fundamentalData["General"]["Description"],
+            fundamentalData[GEN]["Description"],
             tempString);
 
         jsonTickerEntry.push_back({"Description",tempString});

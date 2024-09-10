@@ -1011,7 +1011,7 @@ int main (int argc, char* argv[]) {
       //
       //To do: compute Beta for every year and company using the data 
       //       that you have.      
-      double beta = JsonFunctions::getJsonFloat(fundamentalData[GEN][TECH]["Beta"]);
+      double beta = JsonFunctions::getJsonFloat(fundamentalData[TECH]["Beta"]);
       if(std::isnan(beta)){
         beta=defaultBeta;
       }
@@ -1134,7 +1134,7 @@ int main (int argc, char* argv[]) {
         //Evaluate the risk free rate as the yield on a 10 year US bond
         //  It would be ideal, of course, to have the bond yields in the
         //  home country of the stock. I have not yet endevoured to find this
-        //  information. Since US bonds are internationally 
+        //  information. Since US bonds are internationally traded
         //  (in London and Tokyo) this is perhaps not a horrible approximation.
         //======================================================================
         int indexBondYield = indicesClosestBondYieldDates[indexDate];
@@ -1199,7 +1199,7 @@ int main (int argc, char* argv[]) {
           int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
           taxRate = getTaxRateFromTable(countryISO2, year, yearMin, 
                                         corpWorldTaxTable);
-          taxRate = taxRate*0.01;                                        
+          taxRate = taxRate*0.01;  //convert from percent to decimal                                     
           if(std::isnan(taxRate)){
             taxRate=meanTaxRate;
           }                    

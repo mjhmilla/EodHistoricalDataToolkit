@@ -1136,6 +1136,8 @@ class FinancialAnalysisToolkit {
       double changeInNonCashWorkingCapital = 0.;
       bool valuesAdded=false;
 
+      //There are a number of companies that produce software or a service
+      //and so never have any inventory to report.
       if(    JsonFunctions::isJsonFloatValid(  inventory)
           && JsonFunctions::isJsonFloatValid(  inventoryPrevious)){
         changeInNonCashWorkingCapital += (inventory-inventoryPrevious);
@@ -1145,6 +1147,8 @@ class FinancialAnalysisToolkit {
         inventoryPrevious = JsonFunctions::MISSING_VALUE;
       }
 
+      //All companies have receivables and accounts payable: these both
+      //need to be present to evaluate the change in non-cash working capital
       if(    JsonFunctions::isJsonFloatValid(  netReceivables         )
           && JsonFunctions::isJsonFloatValid(  netReceivablesPrevious )
           && JsonFunctions::isJsonFloatValid(  accountsPayable        )
@@ -1986,7 +1990,6 @@ class FinancialAnalysisToolkit {
       }
 
       double reinvestmentRateStableGrowth = riskFreeRate/costOfCapitalMature;
-
 
       double terminalAfterTaxOperatingIncome = 
         afterTaxOperatingIncomeVector[numberOfYearsForTerminalValuation];
