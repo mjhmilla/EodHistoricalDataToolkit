@@ -353,7 +353,7 @@ int main (int argc, char* argv[]) {
   std::string historicalFolder;
   std::string eodFolder;
   std::string analyseFolder;
-  bool analyzeQuarterlyData;
+  bool quaterlyTTMAnalysis;
   std::string timePeriod;
   
   std::string defaultSpreadJsonFile;  
@@ -508,9 +508,9 @@ int main (int argc, char* argv[]) {
       " null values (shortLongDebt replaced with longDebt)", false);
     cmd.add(relaxedCalculationInput); 
 
-    TCLAP::SwitchArg quarterlyAnalysisInput("q","quarterly",
-      "Analyze quarterly data. Caution: this is not yet been tested.", false);
-    cmd.add(quarterlyAnalysisInput); 
+    TCLAP::SwitchArg quaterlyTTMAnalysisInput("q","trailing_twelve_months",
+      "Analyze trailing twelve moneths using quarterly data.", false);
+    cmd.add(quaterlyTTMAnalysisInput); 
 
     TCLAP::ValueArg<std::string> analyseFolderOutput("o","output_folder_path", 
       "The path to the folder that will contain the output json files "
@@ -530,7 +530,7 @@ int main (int argc, char* argv[]) {
     historicalFolder      = historicalFolderInput.getValue();
     exchangeCode          = exchangeCodeInput.getValue();    
     analyseFolder         = analyseFolderOutput.getValue();
-    analyzeQuarterlyData  = quarterlyAnalysisInput.getValue();
+    quaterlyTTMAnalysis  = quaterlyTTMAnalysisInput.getValue();
 
     defaultTaxRate      = defaultTaxRateInput.getValue();
     corpTaxesWorldFile  = corpTaxesWorldFileInput.getValue();
@@ -559,7 +559,7 @@ int main (int argc, char* argv[]) {
 
     verbose             = verboseInput.getValue();
 
-    if(analyzeQuarterlyData){
+    if(quaterlyTTMAnalysis){
       timePeriod                  = Q;
       numberOfPeriodsToAverageCapitalExpenditures = 
         numberOfYearsToAverageCapitalExpenditures*4;
@@ -592,8 +592,8 @@ int main (int argc, char* argv[]) {
       std::cout << "  Default interest cover value" << std::endl;
       std::cout << "    " << defaultInterestCover << std::endl;
 
-      std::cout << "  Analyze Quaterly Data" << std::endl;
-      std::cout << "    " << analyzeQuarterlyData << std::endl;
+      std::cout << "  Analyze TTM using Quaterly Data" << std::endl;
+      std::cout << "    " << quaterlyTTMAnalysis << std::endl;
 
       std::cout << "  Default tax rate" << std::endl;
       std::cout << "    " << defaultTaxRate << std::endl;
@@ -818,8 +818,8 @@ int main (int argc, char* argv[]) {
         if(validInput && primaryTickerName.length()>0){
           std::string primaryFileName = primaryTickerName;
           primaryFileName.append(".json");
-          validInput = JsonFunctions::loadJsonFile(primaryFileName, fundamentalFolder, 
-                                                  fundamentalData, verbose);
+          validInput = JsonFunctions::loadJsonFile(primaryFileName, 
+                        fundamentalFolder, fundamentalData, verbose);
           if(validInput){
             fileName = primaryFileName;
             tickerName = primaryTickerName;
@@ -1007,7 +1007,8 @@ int main (int argc, char* argv[]) {
       double meanInterestCover = 0.;
 
       //This assumes that the beta is the same for all time. This is 
-      //obviously wrong, but I only have one data point for beta.      
+      //obviously wrong, but I only have one data point for beta from EOD's
+      //data.      
       //
       //To do: compute Beta for every year and company using the data 
       //       that you have.      
@@ -1016,21 +1017,38 @@ int main (int argc, char* argv[]) {
         beta=defaultBeta;
       }
 
-
       //========================================================================
       // Evaluate the average tax rate and interest cover
       //========================================================================
+      unsigned int numberOfDatesPerIteration=1;
+      if(quaterlyTTMAnalysis){
+        numberOfDatesPerIteration=4;
+      }
+      unsigned int indexOfLastDate = 
+        datesCommon.size() - (numberOfDatesPerIteration-1);
+      
       for( unsigned int indexDate=0;  
-                        indexDate < datesCommon.size(); 
+                        indexDate < indexOfLastDate; 
                       ++indexDate){
 
         std::string date = datesCommon[indexDate]; 
+        
+        //The set of dates used for the TTM analysis
+        std::vector < std::string > dateSet;
+        for(unsigned int j=0; j < numberOfDatesPerIteration; ++j){
+          dateSet.push_back(datesCommon[indexDate+j]);
+        }
+        double dateSetOneYearFraction = 1.0/static_cast<double>(dateSet.size());
 
         if(flag_usingTaxTable){
-          int year  = std::stoi(date.substr(0,4));
-          int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
-          taxRate = getTaxRateFromTable(countryISO2, year, yearMin, 
-                                        corpWorldTaxTable);
+          taxRate=0.0;
+          for(unsigned int j=0; j<dateSet.size();++j){
+            int year  = std::stoi(dateSet[j].substr(0,4));
+            int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
+            taxRate += getTaxRateFromTable(countryISO2, year, yearMin, 
+                                          corpWorldTaxTable);
+          }
+          taxRate = taxRate * dateSetOneYearFraction;
           taxRate = taxRate*0.01;  //The table is in percent                                     
           if(std::isnan(taxRate)){
             taxRate=defaultTaxRate;
@@ -1044,21 +1062,25 @@ int main (int argc, char* argv[]) {
           ++taxRateEntryCount;
         }
 
-        double interestCover = FinancialAnalysisToolkit::
-          calcInterestCover(fundamentalData,
-                            date,
-                            timePeriod.c_str(),
-                            appendTermRecord,
-                            setNansToMissingValue,
-                            termNames,
-                            termValues);
+        double interestCover = 0.;
 
+        for(unsigned int j=0; j<dateSet.size();++j){
+          interestCover += FinancialAnalysisToolkit::
+            calcInterestCover(fundamentalData,
+                              dateSet[j],
+                              timePeriod.c_str(),
+                              appendTermRecord,
+                              setNansToMissingValue,
+                              termNames,
+                              termValues);
+
+        }
+        interestCover = interestCover*dateSetOneYearFraction;
         if(!std::isnan(interestCover) && !std::isinf(interestCover)){
           meanInterestCover += interestCover;
           ++meanInterestCoverEntryCount;
         }
       }        
-
       
       if(taxRateEntryCount > 0){
         meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
@@ -1094,6 +1116,7 @@ int main (int argc, char* argv[]) {
       //  Calculate the metrics for every data entry in the file
       //
       //======================================================================= 
+      // *** YOU ARE HERE ***
       for(int indexDate = 0; 
               indexDate < datesCommon.size();
               ++indexDate){
@@ -1163,9 +1186,9 @@ int main (int argc, char* argv[]) {
           riskFreeRate + equityRiskPremium*beta;
 
         double costOfEquityAsAPercentage=annualcostOfEquityAsAPercentage;
-        if(analyzeQuarterlyData){
-          costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
-        }        
+        //if(quaterlyTTMAnalysis){
+        //  costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
+        //}        
 
         termNames.push_back("costOfEquityAsAPercentage_riskFreeRate");
         termNames.push_back("costOfEquityAsAPercentage_equityRiskPremium");

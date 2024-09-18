@@ -46,6 +46,45 @@ class FinancialAnalysisToolkit {
     };
 
     //==========================================================================
+    static double sumFundamentalDataOverDates(
+        nlohmann::ordered_json &fundamentalData,
+        const char* reportChapter,
+        const char* reportSection,
+        const char* timeUnit,
+        std::vector< std::string > &dates,
+        const char* fieldName,
+        bool setNansToMissingValue){
+
+      double value        = 0;
+      double sumOfValues  = 0;
+      bool valueMissing   = false;
+      for(auto &ele : dates){
+
+        value = JsonFunctions::getJsonFloat( 
+          fundamentalData[reportChapter][reportSection][timeUnit][ele.c_str()]
+            [fieldName],setNansToMissingValue);
+
+        if(!JsonFunctions::isJsonFloatValid(value)){
+          valueMissing=true;
+          break;
+        }
+
+        sumOfValues += value;
+      }
+
+      if(valueMissing){
+        if(setNansToMissingValue){
+          sumOfValues = JsonFunctions::MISSING_VALUE;
+        }else{
+          sumOfValues = std::nan("1");
+        }
+      }
+
+      return sumOfValues;
+
+    };
+
+    //==========================================================================
     static int calcDifferenceInDaysBetweenTwoDates(const std::string &dateA,
                                             const char* dateAFormat,
                                             const std::string &dateB,
