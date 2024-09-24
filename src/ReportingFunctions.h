@@ -271,7 +271,7 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << " \\\\" << std::endl; 
     latexReport << "$B_6$. Total stock holder equality & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnInvestedCapital_totalShareholderEquity"],true))
+                    analysis[key]["presentValueDCF_returnOnInvestedCapital_totalStockholderEquity"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_6$. Net income & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
@@ -336,7 +336,7 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << " \\\\" << std::endl;
     latexReport << "$B_9$. Total stock holder equity & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    analysis[key]["presentValueDCF_returnOnEquity_totalShareholderEquity"],true))
+                    analysis[key]["presentValueDCF_returnOnEquity_totalStockholderEquity"],true))
                 << " \\\\" << std::endl;
     latexReport << "$C_9$. Return on equity & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(

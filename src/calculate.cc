@@ -919,6 +919,8 @@ int main (int argc, char* argv[]) {
                         indicesCommonFundamentalDates,
                         indicesCommonHistoricalDates);
 
+
+
       if(!validInput){
         std::cout << "  Skipping ticker: there is not one matching date between"
                      " the fundamental and historical data sets."
@@ -930,6 +932,24 @@ int main (int argc, char* argv[]) {
                     << std::endl; 
         }
                      
+      }
+
+      int firstDateMinusLastDate = 
+        FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+            datesCommon[0],
+            "%Y-%m-%d",        
+            datesCommon[datesCommon.size()-1],
+            "%Y-%m-%d");
+
+      //If the dates are ordered from oldest to most recent, flip it      
+      if(firstDateMinusLastDate < 0 ){
+        std::reverse(datesCommon.begin(), datesCommon.end());
+
+        std::reverse(indicesCommonHistoricalDates.begin(), 
+                     indicesCommonHistoricalDates.end());
+
+        std::reverse(indicesCommonFundamentalDates.begin(), 
+                     indicesCommonFundamentalDates.end());
       }
 
     }
@@ -990,6 +1010,7 @@ int main (int argc, char* argv[]) {
 
       std::vector< std::string > trailingPastPeriods;
       std::string previousTimePeriod("");
+      std::vector< std::string > previousDateSet;
       unsigned int entryCount = 0;
 
       //========================================================================
@@ -1062,21 +1083,16 @@ int main (int argc, char* argv[]) {
           ++taxRateEntryCount;
         }
 
-        double interestCover = 0.;
-
-        for(unsigned int j=0; j<dateSet.size();++j){
-          interestCover += FinancialAnalysisToolkit::
+        double interestCover = FinancialAnalysisToolkit::
             calcInterestCover(fundamentalData,
-                              dateSet[j],
+                              dateSet,
                               timePeriod.c_str(),
                               appendTermRecord,
                               setNansToMissingValue,
                               termNames,
                               termValues);
 
-        }
-        interestCover = interestCover*dateSetOneYearFraction;
-        if(!std::isnan(interestCover) && !std::isinf(interestCover)){
+        if(JsonFunctions::isJsonFloatValid(interestCover)){
           meanInterestCover += interestCover;
           ++meanInterestCoverEntryCount;
         }
@@ -1088,7 +1104,6 @@ int main (int argc, char* argv[]) {
         meanTaxRate = defaultTaxRate;
       }
       
-
       if(meanInterestCoverEntryCount > 0){
         meanInterestCover = meanInterestCover 
             / static_cast<double>(meanInterestCoverEntryCount);
@@ -1097,36 +1112,40 @@ int main (int argc, char* argv[]) {
       }
 
 
-      //Get the index direction of older data
-      int firstMinusLastCommon = 
-        FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
-            datesCommon[0],
-            "%Y-%m-%d",        
-            datesCommon[datesCommon.size()-1],
-            "%Y-%m-%d");
-      int indexDeltaCommonPrevious = 0;
-      if(firstMinusLastCommon > 0){
-        indexDeltaCommonPrevious = 1;
-      }else{
-        indexDeltaCommonPrevious = -1;
-      }
+      //int indexDeltaCommonPrevious =  numberOfDatesPerIteration;
 
+      //Here the -2*numberOfDatesPerIteration is added to ensure that the
+      //data from the previous time period is available.
+      int indexDateLast = datesCommon.size() 
+                          - (2*numberOfDatesPerIteration)
+                          + 1;
       //=======================================================================
       //
       //  Calculate the metrics for every data entry in the file
       //
       //======================================================================= 
-      // *** YOU ARE HERE ***
+
       for(int indexDate = 0; 
-              indexDate < datesCommon.size();
-              ++indexDate){
+              indexDate < indexDateLast;
+            ++indexDate){
 
         std::string date = datesCommon[indexDate];        
+        
+        //The set of dates used for the TTM analysis
+        std::vector < std::string > dateSet;
+        for(unsigned int j=0; j < numberOfDatesPerIteration; ++j){
+          dateSet.push_back(datesCommon[indexDate+j]);
+        }
 
         //Get the previous date
-        int indexPrevious = indexDate+indexDeltaCommonPrevious;        
-        if(indexPrevious >= 0 && indexPrevious < datesCommon.size()){
+        int indexPrevious = indexDate+numberOfDatesPerIteration;        
+        previousDateSet.resize(0);
+        if(   indexPrevious >= 0 
+           && indexPrevious < (datesCommon.size()-numberOfDatesPerIteration)){
           previousTimePeriod = datesCommon[indexPrevious];
+          for(unsigned int j=0; j < numberOfDatesPerIteration; ++j){
+            previousDateSet.push_back(datesCommon[indexPrevious+j]);
+          }          
         }else{
           previousTimePeriod="";
         }
@@ -1146,7 +1165,7 @@ int main (int argc, char* argv[]) {
                          i<(numberOfPeriodsToAverageCapitalExpenditures-1); 
                        ++i)
         {
-          indexPastPeriods += indexDeltaCommonPrevious;
+          indexPastPeriods += 1;//indexDeltaCommonPrevious;
           if(    indexPastPeriods >= 0 
               && indexPastPeriods < datesCommon.size()){
             trailingPastPeriods.push_back(datesCommon[indexPastPeriods]);
@@ -1205,7 +1224,7 @@ int main (int argc, char* argv[]) {
         //======================================================================        
         double defaultSpread = FinancialAnalysisToolkit::
             calcDefaultSpread(fundamentalData,
-                              date,
+                              dateSet,
                               timePeriod.c_str(),
                               meanInterestCover,
                               jsonDefaultSpread,
@@ -1247,16 +1266,27 @@ int main (int argc, char* argv[]) {
         //======================================================================
         //Evaluate the current total short and long term debt
         //======================================================================
-        double shortLongTermDebtTotal = 
-          JsonFunctions::getJsonFloat(
-            fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                           ["shortLongTermDebtTotal"]);
+        //double shortLongTermDebtTotal = 
+        //  JsonFunctions::getJsonFloat(
+        //    fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+        //                   ["shortLongTermDebtTotal"]);
 
-        if(std::isnan(  shortLongTermDebtTotal) && relaxedCalculation){
+        double shortLongTermDebtTotal = 
+          FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+            fundamentalData, FIN, BAL, timePeriod.c_str(), dateSet, 
+            "shortLongTermDebtTotal",setNansToMissingValue);
+
+        if(!JsonFunctions::isJsonFloatValid(shortLongTermDebtTotal) 
+            && relaxedCalculation){
+
+          //shortLongTermDebtTotal = 
+          //  JsonFunctions::getJsonFloat(
+          //    fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+          //                   ["longTermDebt"], setNansToMissingValue);
           shortLongTermDebtTotal = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                             ["longTermDebt"], setNansToMissingValue);
+            FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+              fundamentalData, FIN, BAL, timePeriod.c_str(), dateSet, 
+              "longTermDebt",setNansToMissingValue);                             
         }
 
         //======================================================================        
@@ -1266,6 +1296,11 @@ int main (int argc, char* argv[]) {
           JsonFunctions::getJsonFloat(
             fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
                             ["commonStockSharesOutstanding"], setNansToMissingValue);
+
+        //double commonStockSharesOutstanding = 
+        //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        //    fundamentalData,FIN,BAL,timePeriod.c_str(),dateSet,
+        //    "commonStockSharesOutstanding", setNansToMissingValue);
 
         unsigned int indexHistoricalData = 
           indicesCommonHistoricalDates[indexDate];   
@@ -1339,13 +1374,20 @@ int main (int argc, char* argv[]) {
         //  have been included.
         //======================================================================        
 
-        double totalStockHolderEquity = JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                               ["totalStockholderEquity"],setNansToMissingValue); 
+        //double totalStockHolderEquity = JsonFunctions::getJsonFloat(
+        //        fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+        //                       ["totalStockholderEquity"],setNansToMissingValue);
+
+        double totalStockHolderEquity =  
+          FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+            fundamentalData,FIN,BAL,timePeriod.c_str(),dateSet,
+            "totalStockholderEquity", setNansToMissingValue);
+
+
         std::string emptyParentName("");
         double roic = FinancialAnalysisToolkit::
           calcReturnOnInvestedCapital(fundamentalData,
-                                      date,
+                                      dateSet,
                                       timePeriod.c_str(),
                                       appendTermRecord, 
                                       emptyParentName,
@@ -1359,7 +1401,7 @@ int main (int argc, char* argv[]) {
 
         double roce = FinancialAnalysisToolkit::
           calcReturnOnCapitalDeployed(  fundamentalData,
-                                        date,
+                                        dateSet,
                                         timePeriod.c_str(), 
                                         appendTermRecord, 
                                         emptyParentName,
@@ -1369,7 +1411,7 @@ int main (int argc, char* argv[]) {
 
         double grossMargin = FinancialAnalysisToolkit::
           calcGrossMargin(  fundamentalData,
-                            date,
+                            dateSet,
                             timePeriod.c_str(),
                             appendTermRecord,
                             setNansToMissingValue,
@@ -1378,7 +1420,7 @@ int main (int argc, char* argv[]) {
 
         double operatingMargin = FinancialAnalysisToolkit::
           calcOperatingMargin(  fundamentalData,
-                                date,
+                                dateSet,
                                 timePeriod.c_str(), 
                                 appendTermRecord,
                                 setNansToMissingValue,
@@ -1387,7 +1429,7 @@ int main (int argc, char* argv[]) {
 
         double cashConversion = FinancialAnalysisToolkit::
           calcCashConversionRatio(  fundamentalData,
-                                    date,
+                                    dateSet,
                                     timePeriod.c_str(), 
                                     taxRate,
                                     appendTermRecord,
@@ -1397,7 +1439,7 @@ int main (int argc, char* argv[]) {
 
         double debtToCapital = FinancialAnalysisToolkit::
           calcDebtToCapitalizationRatio(  fundamentalData,
-                                          date,
+                                          dateSet,
                                           timePeriod.c_str(),
                                           appendTermRecord,
                                           setNansToMissingValue,
@@ -1406,8 +1448,8 @@ int main (int argc, char* argv[]) {
 
         double ownersEarnings = FinancialAnalysisToolkit::
           calcOwnersEarnings( fundamentalData, 
-                              date, 
-                              previousTimePeriod,
+                              dateSet, 
+                              previousDateSet,
                               timePeriod.c_str(),
                               appendTermRecord, 
                               setNansToMissingValue,
@@ -1421,7 +1463,7 @@ int main (int argc, char* argv[]) {
 
           residualCashFlow = FinancialAnalysisToolkit::
             calcResidualCashFlow( fundamentalData,
-                                  date,
+                                  dateSet,
                                   timePeriod.c_str(),
                                   costOfEquityAsAPercentage,
                                   trailingPastPeriods,
@@ -1435,8 +1477,8 @@ int main (int argc, char* argv[]) {
         if(previousTimePeriod.length()>0){
           freeCashFlowToEquity = FinancialAnalysisToolkit::
             calcFreeCashFlowToEquity(fundamentalData, 
-                                     date,
-                                     previousTimePeriod,
+                                     dateSet,
+                                     previousDateSet,
                                      timePeriod.c_str(),
                                      appendTermRecord,
                                      setNansToMissingValue,
@@ -1447,8 +1489,8 @@ int main (int argc, char* argv[]) {
         double freeCashFlowToFirm=std::nan("1");
         freeCashFlowToFirm = FinancialAnalysisToolkit::
           calcFreeCashFlowToFirm(fundamentalData, 
-                                 date, 
-                                 previousTimePeriod, 
+                                 dateSet, 
+                                 previousDateSet, 
                                  timePeriod.c_str(),
                                  taxRate,
                                  appendTermRecord,
@@ -1460,8 +1502,8 @@ int main (int argc, char* argv[]) {
         double presentValueOfFutureCashFlows = FinancialAnalysisToolkit::
             calcPresentValueOfDiscountedFutureCashFlows(  
               fundamentalData,
-              date,
-              previousTimePeriod,
+              dateSet,
+              previousDateSet,
               timePeriod.c_str(),
               riskFreeRate,
               costOfCapital,
@@ -1474,9 +1516,14 @@ int main (int argc, char* argv[]) {
               termValues);
 
         //Market value (make adjustments as described in Damodaran Ch. 3)
-        double cash = JsonFunctions::getJsonFloat(
-          fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]["cash"],
-          true);
+        //double cash = JsonFunctions::getJsonFloat(
+        //  fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]["cash"],
+        //  true);
+
+        double cash = 
+          FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+            fundamentalData,FIN,BAL,timePeriod.c_str(),dateSet,"cash",
+            setNansToMissingValue);
 
         //double netDebt = JsonFunctions::getJsonFloat(
         //      fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
@@ -1537,7 +1584,7 @@ int main (int argc, char* argv[]) {
         double enterpriseValue = FinancialAnalysisToolkit::
             calcEnterpriseValue(fundamentalData, 
                                 adjustedClose, 
-                                date,
+                                dateSet,
                                 timePeriod.c_str(),
                                 appendTermRecord,                                
                                 rFcfToEvLabel,

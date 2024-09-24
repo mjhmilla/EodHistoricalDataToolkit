@@ -63,7 +63,7 @@ class JsonFunctions {
     };
 
     static bool isJsonFloatValid(double value){
-      if(std::isnan(value)){
+      if(std::isnan(value) || std::isinf(value)){
         return false;
       }else if(std::abs(value-MISSING_VALUE) < 
                 std::numeric_limits< double >::epsilon()*10.0){
