@@ -1952,8 +1952,8 @@ class FinancialAnalysisToolkit {
           capitalExpenditureMean/
           static_cast<double>(datesToAverageCapitalExpenditures.size());
 
-        if(std::strcmp(timeUnit,"Q")==0){
-          capitalExpenditure *= 4.0;
+        if(std::strcmp(timeUnit,"quarterly")==0){
+          capitalExpenditureMean *= 4.0;
         }
       }
 
