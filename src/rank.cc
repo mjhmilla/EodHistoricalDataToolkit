@@ -549,11 +549,6 @@ int main (int argc, char* argv[]) {
       std::cout << "  Analyze Quarters (untested)" << std::endl;
       std::cout << "    " << analyzeYears << std::endl;
 
-      if(analyzeQuarters){
-        std::cout << "Exiting: analyze quarters has not been tested "
-                  << std::endl;
-        std::abort();                  
-      }
     }
 
     //Read the list of metrics into a 2D array of strings    

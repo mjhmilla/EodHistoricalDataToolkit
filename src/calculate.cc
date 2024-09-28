@@ -1045,8 +1045,19 @@ int main (int argc, char* argv[]) {
       if(quaterlyTTMAnalysis){
         numberOfDatesPerIteration=4;
       }
-      unsigned int indexOfLastDate = 
-        datesCommon.size() - (numberOfDatesPerIteration-1);
+      unsigned int indexOfLastDate = 0;
+      if(datesCommon.size() > numberOfDatesPerIteration*2){
+        indexOfLastDate = datesCommon.size() - (numberOfDatesPerIteration-1);
+      }else{
+        if(verbose){
+            std::cout <<  "  Skipping: " << numberOfDatesPerIteration*2 
+                      <<  " common dates are needed to proceed but only " 
+                      <<  datesCommon.size() 
+                      << " are available " << std::endl;
+        }
+
+      }
+        
       
       for( unsigned int indexDate=0;  
                         indexDate < indexOfLastDate; 
@@ -1138,10 +1149,15 @@ int main (int argc, char* argv[]) {
         }
 
         //Get the previous date
+        bool here=false;  
+        if(fileName.compare("BMP.STU.json")==0){
+          here=true;
+        }
         int indexPrevious = indexDate+numberOfDatesPerIteration;        
+        int indexFinal    = (datesCommon.size()-numberOfDatesPerIteration);
         previousDateSet.resize(0);
         if(   indexPrevious >= 0 
-           && indexPrevious < (datesCommon.size()-numberOfDatesPerIteration)){
+           && indexPrevious <= indexFinal){
           previousTimePeriod = datesCommon[indexPrevious];
           for(unsigned int j=0; j < numberOfDatesPerIteration; ++j){
             previousDateSet.push_back(datesCommon[indexPrevious+j]);
@@ -1149,6 +1165,20 @@ int main (int argc, char* argv[]) {
         }else{
           previousTimePeriod="";
         }
+
+        if(dateSet.size() != numberOfDatesPerIteration 
+        || previousDateSet.size() != numberOfDatesPerIteration){
+          if(verbose){
+            std::cout << "  Skipping: " << numberOfDatesPerIteration 
+                      << " are needed to proceed but current date set has "
+                      << " only " << dateSet.size() << " and the previous "
+                      << "date set has only " << previousDateSet.size() 
+                      << std::endl;
+          }
+          break;
+        }
+
+
 
         termNames.clear();
         termValues.clear();
@@ -1171,6 +1201,7 @@ int main (int argc, char* argv[]) {
             trailingPastPeriods.push_back(datesCommon[indexPastPeriods]);
           }
         }
+
 
         //======================================================================
         //Evaluate the risk free rate as the yield on a 10 year US bond
@@ -1458,8 +1489,7 @@ int main (int argc, char* argv[]) {
 
         double residualCashFlow = std::nan("1");
 
-        if(trailingPastPeriods.size() 
-            == numberOfPeriodsToAverageCapitalExpenditures){
+        if(trailingPastPeriods.size() > 0){
 
           residualCashFlow = FinancialAnalysisToolkit::
             calcResidualCashFlow( fundamentalData,

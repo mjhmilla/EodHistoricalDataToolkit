@@ -28,7 +28,7 @@ void writeMetricTableSortedByTickerToTextFile(
       std::vector< std::vector< std::string> > &listOfRankingMetrics,
       std::string &reportFolderOutput,
       std::string &outputFileName,
-      int numberOfYearsToAnalyze,
+      int numberOfIntervalsToAnalyze,
       bool verbose){
 
   std::string reportFilePath = reportFolderOutput;
@@ -179,7 +179,8 @@ void writeMetricTableSortedByTickerToTextFile(
 
 
     ++indexEntry;
-    if(numberOfYearsToAnalyze > 0 && indexEntry >= numberOfYearsToAnalyze){
+    if(numberOfIntervalsToAnalyze > 0 
+      && indexEntry >= numberOfIntervalsToAnalyze){
       break;
     }
   }
@@ -198,7 +199,7 @@ void writeReportTableToFile(
       std::string &analysisFolder,
       std::string &reportFolderOutput,
       std::string &outputFileNameWithoutExtension,
-      int numberOfYearsToAnalyze,
+      int numberOfIntervalsToAnalyze,
       bool verbose){
 
   std::string outputFileNameJson = outputFileNameWithoutExtension;
@@ -603,7 +604,8 @@ void writeReportTableToFile(
     }
     rankingFile <<'\n';
     ++indexEntry;
-    if(numberOfYearsToAnalyze > 0 && indexEntry >= numberOfYearsToAnalyze){
+    if(numberOfIntervalsToAnalyze > 0 
+      && indexEntry >= numberOfIntervalsToAnalyze){
       break;
     }
   }
@@ -689,7 +691,7 @@ int main (int argc, char* argv[]) {
     cmd.add(historicalFolderInput);
 
     TCLAP::SwitchArg quarterlyAnalysisInput("q","quarterly",
-      "Analyze quarterly data. Caution: this is not yet been tested.", false);
+      "Analyze quarterly data (TTM).", false);
     cmd.add(quarterlyAnalysisInput);    
 
     TCLAP::SwitchArg verboseInput("v","verbose",
@@ -739,15 +741,15 @@ int main (int argc, char* argv[]) {
       std::cout << "    " << numberOfYearsToReport << std::endl;
 
       std::cout << "  Analyze Quarters (untested)" << std::endl;
-      std::cout << "    " << analyzeYears << std::endl;
+      std::cout << "    " << analyzeQuarters << std::endl;
 
-      if(analyzeQuarters){
-        std::cout << "Exiting: analyze quarters has not been tested "
-                  << std::endl;
-        std::abort();                  
-      }
+
     }
 
+    int numberOfIntervalsToAnalyze = numberOfYearsToReport;
+    if(analyzeQuarters){
+      numberOfIntervalsToAnalyze *= 4;
+    }
 
     //Load the metric table data set
     nlohmann::ordered_json metricTableSet;
@@ -772,14 +774,15 @@ int main (int argc, char* argv[]) {
 
     writeReportTableToFile(metricTableSet,listOfRankingMetrics,
       fundamentalFolder,historicalFolder,analysisFolder,reportFolder,
-      fileNameWithoutExtension,numberOfYearsToReport,verbose);
+      fileNameWithoutExtension,numberOfIntervalsToAnalyze,verbose);
 
-    std::string reportFileName = rankingConfigFileName;
-    reportFileName = reportFileName.substr(0,reportFileName.length()-4);                                               
-    reportFileName.append("_sortedByTicker.txt");
+    //std::string reportFileName = rankingConfigFileName;
+    //reportFileName = reportFileName.substr(0,reportFileName.length()-4);                                               
+    //reportFileName.append("_sortedByTicker.txt");
 
-    writeMetricTableSortedByTickerToTextFile(metricTableSet,listOfRankingMetrics,
-      reportFolder,reportFileName,numberOfYearsToReport,verbose);  
+    //This file is enormous. Skipping for now
+    //writeMetricTableSortedByTickerToTextFile(metricTableSet,listOfRankingMetrics,
+    //  reportFolder,reportFileName,numberOfIntervalsToAnalyze,verbose);  
 
   } catch (TCLAP::ArgException &e){ 
     std::cerr << "error: "    << e.error() 

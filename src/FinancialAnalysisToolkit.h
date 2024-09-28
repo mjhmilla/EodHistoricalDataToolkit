@@ -1935,7 +1935,7 @@ class FinancialAnalysisToolkit {
       double capitalExpenditure     = 0; 
 
       for(auto& iter : datesToAverageCapitalExpenditures){        
-        capitalExpenditure += JsonFunctions::getJsonFloat( 
+        capitalExpenditure = JsonFunctions::getJsonFloat( 
           jsonData[FIN][CF][timeUnit][iter]["capitalExpenditures"], 
           setNansToMissingValue); 
 

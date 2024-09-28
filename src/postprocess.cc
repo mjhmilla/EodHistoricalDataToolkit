@@ -1621,7 +1621,7 @@ int main (int argc, char* argv[]) {
     cmd.add(plotFolderOutput);
     
     TCLAP::SwitchArg quarterlyAnalysisInput("q","quarterly",
-      "Analyze quarterly data. Caution: this is not yet been tested.", false);
+      "Analyze quarterly data (TTM).", false);
     cmd.add(quarterlyAnalysisInput);    
 
     TCLAP::ValueArg numberOfPlotsToGenerateInput("n","number_of_firm_reports",
@@ -1693,11 +1693,7 @@ int main (int argc, char* argv[]) {
       std::cout << "  Plot Folder" << std::endl;
       std::cout << "    " << plotFolder << std::endl;
 
-      if(analyzeQuarters){
-        std::cout << "Exiting: analyze quarters has not been tested "
-                  << std::endl;
-        std::abort();                  
-      }
+
     }
 
 
