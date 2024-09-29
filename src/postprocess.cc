@@ -857,10 +857,10 @@ void plotReportData(
         here=true;
       }
 
-      bool tickerPassesFilter  = isTickerValid(primaryTicker,filterByTicker);    
+      bool tickerPassesFilter   = isTickerValid(primaryTicker,filterByTicker);    
       bool industryPassesFilter = isIndustryValid(reportEntry,filterByIndustry);
-      bool countryPassesFilter = isCountryValid(country, filterByCountry);
-      bool metricsPassFilter   = areMetricsValid(reportEntry,filterByMetricValue);
+      bool countryPassesFilter  = isCountryValid(country, filterByCountry);
+      bool metricsPassFilter    = areMetricsValid(reportEntry,filterByMetricValue);
       bool entryAddedToReport=false;
 
       if( year >= earliestReportingYear && tickerIsNew 
@@ -1277,7 +1277,7 @@ void generateLaTeXReport(
     const nlohmann::ordered_json &report,
     const std::vector< TickerFigurePath > &tickerFigurePath,
     const std::string &plotFolder,
-    const std::string &analysisFolder,
+    const std::string &calculateDataFolder,
     const std::vector< std::vector< std::string > > &subplotMetricNames,
     const std::string &latexReportName,
     const std::vector< std::string > &filterByCountry,
@@ -1467,13 +1467,13 @@ void generateLaTeXReport(
         latexReport << "\\end{tabular}" << std::endl << std::endl;
         //latexReport << "\\end{center}" << std::endl;
 
-        if(analysisFolder.length()>0){
+        if(calculateDataFolder.length()>0){
           bool found=false;
           for(size_t i=0; i<subplotMetricNames.size(); ++i){
             for(size_t j=0; j<subplotMetricNames[i].size(); ++j){
               if(subplotMetricNames[i][j].compare("priceToValue_value")==0){
                 ReportingFunctions::appendValuationTable(latexReport,
-                                primaryTicker,analysisFolder,verbose);
+                                primaryTicker,calculateDataFolder,verbose);
               }
             }  
           }
@@ -1534,7 +1534,7 @@ int main (int argc, char* argv[]) {
   std::string exchangeCode;
   std::string historicalFolder;
   std::string reportFilePath;
-  std::string analysisFolder;
+  std::string calculateDataFolder;
   std::string plotFolder;
   std::string plotConfigurationFilePath;
   std::string fileFilterByTicker;
@@ -1565,10 +1565,10 @@ int main (int argc, char* argv[]) {
       true,"","string");
     cmd.add(reportFilePathInput);
 
-    TCLAP::ValueArg<std::string> analysisFolderInput("a","analysis_calculation_file_path", 
+    TCLAP::ValueArg<std::string> calculateDataFolderInput("a","calculate_data_file_path", 
       "The path to the folder that contains all of the analysis calculations.",
       true,"","string");
-    cmd.add(analysisFolderInput);
+    cmd.add(calculateDataFolderInput);
 
     TCLAP::ValueArg<std::string> reportLatexFileNameInput("t","latex_report_file_name", 
       "The name of the LaTeX file to write.",
@@ -1649,7 +1649,7 @@ int main (int argc, char* argv[]) {
     fileFilterByIndustry      = fileFilterByIndustryInput.getValue();
     numberOfPlotsToGenerate   = numberOfPlotsToGenerateInput.getValue();
     earliestReportingYear     = earliestReportingYearInput.getValue();
-    analysisFolder            = analysisFolderInput.getValue();
+    calculateDataFolder            = calculateDataFolderInput.getValue();
     plotFolder                = plotFolderOutput.getValue();
     analyzeQuarters           = quarterlyAnalysisInput.getValue();
     analyzeYears              = !analyzeQuarters;
@@ -1687,8 +1687,8 @@ int main (int argc, char* argv[]) {
       std::cout << "  Report File Path" << std::endl;
       std::cout << "    " << reportFilePath << std::endl;
 
-      std::cout << "  Analysis Folder" << std::endl;
-      std::cout << "    " << analysisFolder << std::endl;
+      std::cout << "  Calculate Data Folder" << std::endl;
+      std::cout << "    " << calculateDataFolder << std::endl;
 
       std::cout << "  Plot Folder" << std::endl;
       std::cout << "    " << plotFolder << std::endl;
@@ -1752,7 +1752,7 @@ int main (int argc, char* argv[]) {
     generateLaTeXReport(report,
                         tickerFigurePath,
                         plotFolder,
-                        analysisFolder,
+                        calculateDataFolder,
                         subplotMetricNames,
                         fileNameLaTexReport,
                         filterByCountry,

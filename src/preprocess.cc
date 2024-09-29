@@ -174,7 +174,7 @@ void writeMetricTableSortedByTickerToTextFile(
         }
       }
                               
-      //bool addContext= (loadedFundData && loadedHistData && loadedAnalysisData);  
+      //bool addContext= (loadedFundData && loadedHistData && loadedCalculateData);  
     }
 
 
@@ -196,7 +196,7 @@ void writeReportTableToFile(
       std::vector< std::vector< std::string> > &listOfRankingMetrics,
       std::string &fundamentalFolder,
       std::string &historicalFolder,
-      std::string &analysisFolder,
+      std::string &calculateDataFolder,
       std::string &reportFolderOutput,
       std::string &outputFileNameWithoutExtension,
       int numberOfIntervalsToAnalyze,
@@ -350,12 +350,12 @@ void writeReportTableToFile(
       bool loadedHistData =JsonFunctions::loadJsonFile(ticker, 
                                 historicalFolder, historicalData, verbose); 
                                 
-      nlohmann::ordered_json analysisData;
-      bool loadedAnalysisData =JsonFunctions::loadJsonFile(ticker, 
-                                analysisFolder, analysisData, verbose); 
+      nlohmann::ordered_json calculateData;
+      bool loadedCalculateData =JsonFunctions::loadJsonFile(ticker, 
+                                calculateDataFolder, calculateData, verbose); 
 
 
-      bool addContext= (loadedFundData && loadedHistData && loadedAnalysisData);        
+      bool addContext= (loadedFundData && loadedHistData && loadedCalculateData);        
 
       if(addContext){
 
@@ -380,25 +380,25 @@ void writeReportTableToFile(
         date::sys_days dayStart(ymdStart);
         date::sys_days dayEnd(ymdEnd);
 
-        std::string analysisDate("");
-        bool analysisItemFound=false;
-        auto analysisItem = analysisData.begin();
+        std::string calculateDate("");
+        bool calculateItemFound=false;
+        auto calculateItem = calculateData.begin();
 
         do{          
                     
-          analysisDate=analysisItem.key();
-          std::stringstream analysisDateStream(analysisDate);
-          date::sys_days dayAnalysis;
-          analysisDateStream >> date::parse("%Y-%m-%d",dayAnalysis);
-          int dayErrorStart = (dayAnalysis-dayStart).count();
-          int dayErrorEnd = (dayAnalysis-dayEnd).count();
+          calculateDate=calculateItem.key();
+          std::stringstream calculateDateStream(calculateDate);
+          date::sys_days day;
+          calculateDateStream >> date::parse("%Y-%m-%d",day);
+          int dayErrorStart = (day-dayStart).count();
+          int dayErrorEnd = (day-dayEnd).count();
 
           if(dayErrorEnd*dayErrorStart <= 0){
-            analysisItemFound=true;
+            calculateItemFound=true;
           }else{
-            ++analysisItem;              
+            ++calculateItem;              
           }
-        }while( !analysisItemFound && analysisItem != analysisData.end());
+        }while( !calculateItemFound && calculateItem != calculateData.end());
 
 
 
@@ -427,9 +427,9 @@ void writeReportTableToFile(
 
 
         double roic = JsonFunctions::getJsonFloat(
-            analysisData[analysisDate]["returnOnInvestedCapital"]);
+            calculateData[calculateDate]["returnOnInvestedCapital"]);
         double costOfCapital = JsonFunctions::getJsonFloat(
-            analysisData[analysisDate]["costOfCapital"]);
+            calculateData[calculateDate]["costOfCapital"]);
         
         if(!std::isnan(roic) && !std::isnan(costOfCapital)){
           if(roic > costOfCapital){
@@ -624,7 +624,7 @@ void writeReportTableToFile(
 int main (int argc, char* argv[]) {
 
   std::string exchangeCode;
-  std::string analysisFolder;
+  std::string calculateDataFolder;
   std::string fundamentalFolder;
   std::string historicalFolder;
   std::string rankingConfigurationFile;  
@@ -653,11 +653,11 @@ int main (int argc, char* argv[]) {
       true,"","string");
     cmd.add(reportFolderOutput);
 
-    TCLAP::ValueArg<std::string> analysisFolderInput("a","analysis_folder_path", 
-      "The path to the folder contains the analysis json files "
+    TCLAP::ValueArg<std::string> calculateDataFolderInput("a","calculate_folder_path", 
+      "The path to the folder contains the output "
       "produced by the calculate method",
       true,"","string");
-    cmd.add(analysisFolderInput);
+    cmd.add(calculateDataFolderInput);
 
     TCLAP::ValueArg<std::string> rankingFileInput("r","rank_file_path", 
       "The path to the ranking file.",
@@ -701,7 +701,7 @@ int main (int argc, char* argv[]) {
     cmd.parse(argc,argv);
 
     exchangeCode          = exchangeCodeInput.getValue();    
-    analysisFolder        = analysisFolderInput.getValue();
+    calculateDataFolder        = calculateDataFolderInput.getValue();
     fundamentalFolder     = fundamentalFolderInput.getValue();
     historicalFolder      = historicalFolderInput.getValue();    
     rankingFile           = rankingFileInput.getValue();
@@ -719,8 +719,8 @@ int main (int argc, char* argv[]) {
       std::cout << "  Exchange Code" << std::endl;
       std::cout << "    " << exchangeCode << std::endl;
 
-      std::cout << "  Analysis Input Folder" << std::endl;
-      std::cout << "    " << analysisFolder << std::endl;
+      std::cout << "  Calculate Data Input Folder" << std::endl;
+      std::cout << "    " << calculateDataFolder << std::endl;
 
       std::cout << "  Fundamental Data Folder" << std::endl;
       std::cout << "    " << fundamentalFolder << std::endl;
@@ -773,7 +773,7 @@ int main (int argc, char* argv[]) {
     fileNameWithoutExtension.append("_report");
 
     writeReportTableToFile(metricTableSet,listOfRankingMetrics,
-      fundamentalFolder,historicalFolder,analysisFolder,reportFolder,
+      fundamentalFolder,historicalFolder,calculateDataFolder,reportFolder,
       fileNameWithoutExtension,numberOfIntervalsToAnalyze,verbose);
 
     //std::string reportFileName = rankingConfigFileName;

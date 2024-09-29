@@ -41,7 +41,7 @@ std::vector< size_t > rank(const std::vector< T > &v, bool sortAscending){
 
 
 //==============================================================================
-bool readMetricData(std::string &analysisFolder, 
+bool readMetricData(std::string &calculateDataFolder, 
               std::vector< std::vector< std::string > > &listOfRankingMetrics,
               std::vector< FinancialAnalysisToolkit::TickerMetricData > &tickerMetricDataSet,
               date::year_month_day &youngestDate,
@@ -68,7 +68,7 @@ bool readMetricData(std::string &analysisFolder,
   }      
 
   for (const auto & file 
-        : std::filesystem::directory_iterator(analysisFolder)){  
+        : std::filesystem::directory_iterator(calculateDataFolder)){  
 
     ++totalFileCount;
     bool validInput=true;
@@ -93,9 +93,9 @@ bool readMetricData(std::string &analysisFolder,
     //
     //Read in the file
     //
-    nlohmann::ordered_json analysisData;
-    bool loadedAnalysisData =JsonFunctions::loadJsonFile(fileName,
-                                        analysisFolder, analysisData, verbose);     
+    nlohmann::ordered_json calculateData;
+    bool loadedCalculateData =JsonFunctions::loadJsonFile(fileName,
+                                        calculateDataFolder, calculateData, verbose);     
     
     //
     //Populate the Metric table
@@ -110,7 +110,7 @@ bool readMetricData(std::string &analysisFolder,
     //Load the date metric vector                 
     if(validInput){
       
-      for(auto& el: analysisData.items()){
+      for(auto& el: calculateData.items()){
 
         date::year_month_day ymdEntry;
         std::istringstream dateStream(el.key());
@@ -120,7 +120,7 @@ bool readMetricData(std::string &analysisFolder,
         for(int i=0; i < listOfRankingMetrics.size();++i){ 
           //std::cout << el.key() << " " << listOfRankingMetrics[i][0] << std::endl;             
           metricData[i]=JsonFunctions::getJsonFloat(
-              analysisData[el.key()][listOfRankingMetrics[i][0]]);
+              calculateData[el.key()][listOfRankingMetrics[i][0]]);
           if( std::isnan(metricData[i])){
             validData = false;
           }else if(metricData[i] < 0 && ignoreNegativeValues){
@@ -168,7 +168,7 @@ bool readMetricData(std::string &analysisFolder,
   if(verbose){
     std::cout << std::endl;
     std::cout << validFileCount << "/" << totalFileCount
-              << " analysis files contain valid data"
+              << " calculate files contain valid data"
               << std::endl;
     std::cout << std::endl;
     std::cout << "Month of reporting" << std::endl;
@@ -425,7 +425,7 @@ void writeMetricTableToJsonFile(
 int main (int argc, char* argv[]) {
 
   std::string exchangeCode;
-  std::string analysisFolder;
+  std::string calculateDataFolder;
   std::string fundamentalFolder;
   std::string historicalFolder;
   std::string rankFolder;
@@ -450,11 +450,11 @@ int main (int argc, char* argv[]) {
     cmd.add(exchangeCodeInput);  
 
 
-    TCLAP::ValueArg<std::string> analysisFolderInput("i","input_folder_path", 
-      "The path to the folder contains the analysis json files "
+    TCLAP::ValueArg<std::string> calculateDataFolderInput("i","input_folder_path", 
+      "The path to the folder contains the calculated data json files "
       "produced by the calculate method",
       true,"","string");
-    cmd.add(analysisFolderInput);
+    cmd.add(calculateDataFolderInput);
 
     TCLAP::ValueArg<std::string> rankFolderOutput("o","output_folder_path", 
       "The path to the folder will contain the ranking tables produced by "
@@ -466,7 +466,7 @@ int main (int argc, char* argv[]) {
       "ranking_configuration_file", 
       "The path to the file that contains the list of metrics to use when "
       "ranking businesses. Each row must contain two entries: the first is the"
-      "name of a metric that exists in the analysis data (e.g. priceToValue), "
+      "name of a metric that exists in the calculated data (e.g. priceToValue), "
       "and the second entry is either smallestIsBest or biggestIsBest that is "
       "used to ensure that a rank of 1 is always best. If multiple metrics are "
       "given, the final ranking is formed using the sum of each metrics"
@@ -510,7 +510,7 @@ int main (int argc, char* argv[]) {
     cmd.parse(argc,argv);
 
     exchangeCode          = exchangeCodeInput.getValue();    
-    analysisFolder        = analysisFolderInput.getValue();
+    calculateDataFolder   = calculateDataFolderInput.getValue();
     rankFolder            = rankFolderOutput.getValue();
     fundamentalFolder     = fundamentalFolderInput.getValue();
     historicalFolder      = historicalFolderInput.getValue();
@@ -531,8 +531,8 @@ int main (int argc, char* argv[]) {
       std::cout << "  Exchange Code" << std::endl;
       std::cout << "    " << exchangeCode << std::endl;
 
-      std::cout << "  Analysis Input Folder" << std::endl;
-      std::cout << "    " << analysisFolder << std::endl;
+      std::cout << "  Calculate Data Input Folder" << std::endl;
+      std::cout << "    " << calculateDataFolder << std::endl;
 
       std::cout << "  Fundamental Data Folder" << std::endl;
       std::cout << "    " << fundamentalFolder << std::endl;
@@ -565,7 +565,7 @@ int main (int argc, char* argv[]) {
     date::year_month_day oldestDate(today);
 
     if(inputsAreValid){  
-      inputsAreValid = readMetricData(analysisFolder,
+      inputsAreValid = readMetricData(calculateDataFolder,
                                       listOfRankingMetrics,
                                       tickerMetricDataSet,
                                       youngestDate,

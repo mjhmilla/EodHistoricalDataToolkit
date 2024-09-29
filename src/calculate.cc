@@ -383,7 +383,7 @@ int main (int argc, char* argv[]) {
   try{
     TCLAP::CmdLine cmd("The command will analyze fundamental and end-of-data"
     "data (from https://eodhistoricaldata.com/) and "
-    "write the results of the analysis to a json file in an output directory"
+    "write the results of the calculation to a json file in an output directory"
     ,' ', "0.0");
 
 
@@ -514,7 +514,7 @@ int main (int argc, char* argv[]) {
 
     TCLAP::ValueArg<std::string> analyseFolderOutput("o","output_folder_path", 
       "The path to the folder that will contain the output json files "
-      "produced by this analysis",
+      "produced by these calculations",
       true,"","string");
     cmd.add(analyseFolderOutput);
 

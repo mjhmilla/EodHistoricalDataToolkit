@@ -34,10 +34,10 @@ static std::string formatJsonEntry( double entry){
 //==============================================================================
 static void appendValuationTable(std::ofstream &latexReport, 
                            const std::string &primaryTicker, 
-                          const std::string &analysisFolder,
+                          const std::string &calculateDataFolder,
                            bool verbose){
 
-  std::string fullFilePath=analysisFolder;
+  std::string fullFilePath=calculateDataFolder;
   fullFilePath.append(primaryTicker).append(".json");  
 
   nlohmann::ordered_json analysis;
