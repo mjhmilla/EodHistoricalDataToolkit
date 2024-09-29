@@ -20,6 +20,7 @@
 #include "UtilityFunctions.h"
 
 
+
 //Fun example to get the ranked index of an entry
 //https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
 
@@ -37,17 +38,29 @@ std::vector< size_t > rank(const std::vector< T > &v, bool sortAscending){
   return idx;
 } 
 
+bool isMinMax(double num){
 
+  bool isMinMax=false;
+  if( std::abs( num - std::numeric_limits<double>::max() ) 
+                    < std::numeric_limits<double>::epsilon() ){
+    isMinMax = true;
+  }
+  if( std::abs( num - std::numeric_limits<double>::min() ) == 0 
+                    < std::numeric_limits<double>::epsilon()){
+    isMinMax = true;
+  }
+
+  return isMinMax;
+};
 
 
 //==============================================================================
 bool readMetricData(std::string &calculateDataFolder, 
-              std::vector< std::vector< std::string > > &listOfRankingMetrics,
-              std::vector< FinancialAnalysisToolkit::TickerMetricData > &tickerMetricDataSet,
-              date::year_month_day &youngestDate,
-              date::year_month_day &oldestDate,
-              bool ignoreNegativeValues,
-              bool verbose){
+      std::vector< std::vector< std::string > > &listOfRankingMetrics,
+      std::vector< FinancialAnalysisToolkit::TickerMetricData > &tickerMetricDataSet,
+      date::year_month_day &youngestDate,
+      date::year_month_day &oldestDate,
+      bool verbose){
 
   bool inputsAreValid=true;
   int validFileCount=0;
@@ -95,7 +108,7 @@ bool readMetricData(std::string &calculateDataFolder,
     //
     nlohmann::ordered_json calculateData;
     bool loadedCalculateData =JsonFunctions::loadJsonFile(fileName,
-                                        calculateDataFolder, calculateData, verbose);     
+                      calculateDataFolder, calculateData, verbose);     
     
     //
     //Populate the Metric table
@@ -121,11 +134,23 @@ bool readMetricData(std::string &calculateDataFolder,
           //std::cout << el.key() << " " << listOfRankingMetrics[i][0] << std::endl;             
           metricData[i]=JsonFunctions::getJsonFloat(
               calculateData[el.key()][listOfRankingMetrics[i][0]]);
-          if( std::isnan(metricData[i])){
-            validData = false;
-          }else if(metricData[i] < 0 && ignoreNegativeValues){
-            validData = false;
-          }
+
+          //if( !JsonFunctions::isJsonFloatValid(metricData[i])  
+          //    || (metricData[i] < 0 && rankNegativeValuesLast) ){
+            //validData = false;
+            //Rather than excluding this data we will just give it 
+            //a value to ensure that it will be at the end of the rankings
+          //  if(listOfRankingMetrics[i][1].compare("biggestIsBest")==0){
+          //    metricData[i] = std::numeric_limits<double>::min(); //This is a small value  
+          //  }
+          //  if(listOfRankingMetrics[i][1].compare("smallestIsBest")==0){
+          //    metricData[i] = std::numeric_limits<double>::max();
+          //  }      
+          //}
+
+          //}else if(metricData[i] < 0 && rankNegativeValuesLast){
+          //  validData = false;
+          //}
         }
         if(validData){
           dateString.push_back(el.key());
@@ -142,8 +167,7 @@ bool readMetricData(std::string &calculateDataFolder,
           }
           if(ymdEntry > youngestDate){
             youngestDate=ymdEntry;
-          }
-          
+          }          
         }
       }
 
@@ -276,14 +300,16 @@ void createMetricTable(
 }
 
 //==============================================================================
-void sortMetricTable(std::vector< FinancialAnalysisToolkit::MetricTable > &metricTableSet,
-     std::vector< std::vector < std::string > > &listOfRankingMetrics){
+void sortMetricTable(
+    std::vector< FinancialAnalysisToolkit::MetricTable > &metricTableSet,
+    std::vector< std::vector < std::string > > &listOfRankingMetrics,
+    bool rankNegativeValuesLast){
 
   //Evaluate each metric ranking
   for(auto &tableEntry : metricTableSet){
     
     tableEntry.metricRank.resize(tableEntry.metrics.size());
-    tableEntry.metricRankSum.resize(tableEntry.metrics.size());
+    //tableEntry.metricRankSum.resize(tableEntry.metrics.size());
 
     for(size_t i =0; i<tableEntry.metricRank.size();++i){
       tableEntry.metricRank[i].resize(tableEntry.metrics[i].size());
@@ -296,7 +322,23 @@ void sortMetricTable(std::vector< FinancialAnalysisToolkit::MetricTable > &metri
     for(size_t j=0; j < tableEntry.metrics[0].size(); ++j){
       for(size_t i =0; i < tableEntry.metrics.size(); ++i){
         column[i] = tableEntry.metrics[i][j];
+
+        if( !JsonFunctions::isJsonFloatValid(tableEntry.metrics[i][j])){
+          bool here=true;
+        }
+        if( !JsonFunctions::isJsonFloatValid(tableEntry.metrics[i][j])  
+            || (tableEntry.metrics[i][j] < 0 && rankNegativeValuesLast) ){
+
+          if(listOfRankingMetrics[j][1].compare("biggestIsBest")==0){
+            column[i] = std::numeric_limits<double>::min(); 
+          }
+          if(listOfRankingMetrics[j][1].compare("smallestIsBest")==0){
+            column[i] = std::numeric_limits<double>::max();
+          }      
+        }
       }
+
+
       //Get the sorted indices 
       bool sortAscending=true;
       if(listOfRankingMetrics[j][1].compare("biggestIsBest")==0){
@@ -305,20 +347,20 @@ void sortMetricTable(std::vector< FinancialAnalysisToolkit::MetricTable > &metri
       std::vector< size_t > columnRank = rank(column,sortAscending);
 
       for(size_t i =0; i < tableEntry.metrics.size(); ++i){
-        tableEntry.metricRank[i][j] = columnRank[i];
+        tableEntry.metricRank[i][j] = columnRank[i];        
       }
     }
     //Evaluate the combined ranking
-    tableEntry.metricRankSum.resize(tableEntry.metrics.size());
-    std::fill(tableEntry.metricRankSum.begin(),
-              tableEntry.metricRankSum.end(),0);
+    //tableEntry.metricRankSum.resize(tableEntry.metrics.size());
+    //std::fill(tableEntry.metricRankSum.begin(),
+    //          tableEntry.metricRankSum.end(),0);
 
-    for(size_t i=0; i<tableEntry.metricRank.size();++i){
-      for(size_t j=0; j<tableEntry.metricRank[i].size();++j){
-        size_t k = tableEntry.metricRank[i][j];
-        tableEntry.metricRankSum[k]+=i;
-      }
-    }
+    //for(size_t i=0; i<tableEntry.metricRank.size();++i){
+    //  for(size_t j=0; j<tableEntry.metricRank[i].size();++j){
+    //    size_t k = tableEntry.metricRank[i][j];
+    //    tableEntry.metricRankSum[k]+=i;
+    //  }
+    //}
 
     //Swap the: now the index holds the rank.
     std::vector< std::vector< size_t > > metricRankUnsorted;
@@ -331,9 +373,11 @@ void sortMetricTable(std::vector< FinancialAnalysisToolkit::MetricTable > &metri
       }
     }
 
-    tableEntry.rank = rank(tableEntry.metricRankSum,true);
+    //tableEntry.rank = rank(tableEntry.metricRankSum,true);
     
     //Reorder all fields according to the ranking
+
+    /*
     FinancialAnalysisToolkit::MetricTable tableEntryUnsorted = tableEntry;
     for(size_t i=0; i<tableEntry.rank.size();++i){
 
@@ -347,23 +391,115 @@ void sortMetricTable(std::vector< FinancialAnalysisToolkit::MetricTable > &metri
         tableEntry.metricRank[i][j] = tableEntryUnsorted.metricRank[k][j];
       }
     }
+    */
 
   }
 
 };
 
 //==============================================================================
+void writeTickerRankingJsonFile(
+  std::string &calculateDataFolder,  
+  std::vector< FinancialAnalysisToolkit::MetricTable > &metricTableSet,
+  std::vector< std::vector< std::string> > &listOfRankingMetrics,
+  std::string &rankFolderOutput,
+  bool verbose){
+
+  if(verbose){
+    std::cout<<"Writing Ticker Metric Tables to json" << std::endl;
+  }
+
+
+  int validFileCount=0;
+  int totalFileCount=0;      
+  std::string analysisExt = ".json";  
+
+  //Go through each ticker
+  for (const auto & file 
+        : std::filesystem::directory_iterator(calculateDataFolder)){  
+
+    ++totalFileCount;
+    bool validInput=true;
+
+    //
+    // Get the ticker name
+    //    
+    std::string fileName   = file.path().filename(); 
+    std::size_t fileExtPos = fileName.find(analysisExt);
+    std::string ticker;
+
+    if( fileExtPos == std::string::npos ){
+      validInput=false;
+      if(verbose){
+        std::cout <<"Error file name should end in .json but this does not:"
+                  <<fileName << std::endl; 
+      }
+    }else{
+      ticker = fileName.substr(0,fileExtPos);
+    }
+
+    //Extract all of the ranking data from metric table set for this ticker
+    if(validInput){
+      nlohmann::ordered_json tickerRankingData;
+
+      for(auto &metricTableItem: metricTableSet){
+        nlohmann::ordered_json jsonEntry=nlohmann::ordered_json::object();
+        date::sys_days dateEnd;
+
+        
+        for(size_t i=0; i < metricTableItem.tickers.size();++i){
+          if(ticker.compare(metricTableItem.tickers[i])==0){
+
+            for(size_t j=0; j < metricTableItem.metrics[0].size();++j){
+
+              std::string name=listOfRankingMetrics[j][0];
+              std::string nameRank = name;
+              nameRank.append("_rank");
+              jsonEntry.push_back({name,metricTableItem.metrics[i][j]});
+              jsonEntry.push_back({nameRank,metricTableItem.metricRank[i][j]});
+
+            }
+            date::year_month_day ymdEnd   = metricTableItem.dateEnd;
+
+
+            std::stringstream dateEnd;
+            dateEnd   <<      ymdEnd.year()   
+                      <<"-"<< unsigned{ymdEnd.month()}   
+                      <<"-"<< ymdEnd.day();
+
+            std::string date = dateEnd.str();
+            tickerRankingData[date]=jsonEntry;
+          }
+        }
+      }
+      std::string outputFilePath(rankFolderOutput);
+      std::string outputFileName(fileName.c_str());    
+      outputFilePath.append(outputFileName);
+
+      std::ofstream outputFileStream(outputFilePath,
+          std::ios_base::trunc | std::ios_base::out);
+      outputFileStream << tickerRankingData;
+      outputFileStream.close();
+
+
+    }
+
+
+  
+  }
+
+
+}
+//==============================================================================
 void writeMetricTableToJsonFile(
       std::vector< FinancialAnalysisToolkit::MetricTable > &metricTableSet,
       std::vector< std::vector< std::string> > &listOfRankingMetrics,
-      std::string &fundamentalFolder,
-      std::string &historicalFolder,
       std::string &rankFolderOutput,
       std::string &outputFileName,
       bool verbose){
 
   if(verbose){
-    std::cout<<"Writing Metric Tables to json" << std::endl;
+    std::cout<<"Writing Metric Ranking Table to json" << std::endl;
   }
 
   nlohmann::ordered_json jsonMetricTableSet;
@@ -395,8 +531,8 @@ void writeMetricTableToJsonFile(
         std::cout << '\t' << i << '\t' << tableEntry.tickers[i] << std::endl;
       }
       jsonTickerEntry.push_back({"PrimaryTicker", tableEntry.tickers[i]});
-      jsonTickerEntry.push_back({"Ranking",       tableEntry.rank[i]});      
-      jsonTickerEntry.push_back({"MetricRankSum", tableEntry.metricRankSum[i]});
+      //jsonTickerEntry.push_back({"Ranking",       tableEntry.rank[i]});      
+      //jsonTickerEntry.push_back({"MetricRankSum", tableEntry.metricRankSum[i]});
       for(size_t j=0; j<tableEntry.metrics[i].size();++j){
         std::string metricValueName = listOfRankingMetrics[j][0];
         std::string metricRankName  = listOfRankingMetrics[j][0]; 
@@ -426,14 +562,12 @@ int main (int argc, char* argv[]) {
 
   std::string exchangeCode;
   std::string calculateDataFolder;
-  std::string fundamentalFolder;
-  std::string historicalFolder;
   std::string rankFolder;
   std::string rankingFilePath;
   bool analyzeYears=true;
   bool analyzeQuarters=false;
   unsigned int referenceMonth = 12;
-  bool ignoreNegativeValues=true; 
+  bool rankNegativeValuesLast=true; 
 
   int maxDifferenceInDays = 15; //a half month at most.
 
@@ -474,20 +608,6 @@ int main (int argc, char* argv[]) {
       true,"","string");
     cmd.add(rankingFilePathInput);
 
-    TCLAP::ValueArg<std::string> fundamentalFolderInput("f",
-      "fundamental_data_folder_path", 
-      "The path to the folder that contains the fundamental data json files from "
-      "https://eodhistoricaldata.com/ to analyze",
-      true,"","string");
-    cmd.add(fundamentalFolderInput);
-
-    TCLAP::ValueArg<std::string> historicalFolderInput("p",
-      "historical_data_folder_path", 
-      "The path to the folder that contains the historical (price)"
-      " data json files from https://eodhistoricaldata.com/ to analyze",
-      true,"","string");
-    cmd.add(historicalFolderInput);
-
     TCLAP::SwitchArg quarterlyAnalysisInput("q","quarterly",
       "Analyze quarterly data. Caution: this is not yet been tested.", false);
     cmd.add(quarterlyAnalysisInput);    
@@ -498,9 +618,9 @@ int main (int argc, char* argv[]) {
       false,1,"unsigned int");
     cmd.add(referenceMonthInput);
 
-    TCLAP::SwitchArg ignoreNegativeValuesInput("n","ignore_negative_values",
-      "Ignore negative values", false);
-    cmd.add(ignoreNegativeValuesInput);    
+    TCLAP::SwitchArg rankNegativeValuesLastInput("n","rank_negative_values_last",
+      "Rank negative values last", false);
+    cmd.add(rankNegativeValuesLastInput);    
 
 
     TCLAP::SwitchArg verboseInput("v","verbose",
@@ -512,13 +632,11 @@ int main (int argc, char* argv[]) {
     exchangeCode          = exchangeCodeInput.getValue();    
     calculateDataFolder   = calculateDataFolderInput.getValue();
     rankFolder            = rankFolderOutput.getValue();
-    fundamentalFolder     = fundamentalFolderInput.getValue();
-    historicalFolder      = historicalFolderInput.getValue();
     rankingFilePath       = rankingFilePathInput.getValue();
     analyzeQuarters       = quarterlyAnalysisInput.getValue();
     analyzeYears          = !analyzeQuarters;
     referenceMonth        = referenceMonthInput.getValue();
-    ignoreNegativeValues  = ignoreNegativeValuesInput.getValue();
+    rankNegativeValuesLast  = rankNegativeValuesLastInput.getValue();
 
     if(referenceMonth < 1 || referenceMonth > 12){
       std::cout << "Exiting: referenceMonth must be between 1-12" << std::endl;
@@ -534,12 +652,6 @@ int main (int argc, char* argv[]) {
       std::cout << "  Calculate Data Input Folder" << std::endl;
       std::cout << "    " << calculateDataFolder << std::endl;
 
-      std::cout << "  Fundamental Data Folder" << std::endl;
-      std::cout << "    " << fundamentalFolder << std::endl;
-
-      std::cout << "  Historical Data Folder" << std::endl;
-      std::cout << "    " << historicalFolder << std::endl;
-
       std::cout << "  Ranking Output Folder" << std::endl;
       std::cout << "    " << rankFolder << std::endl;
 
@@ -552,7 +664,8 @@ int main (int argc, char* argv[]) {
     }
 
     //Read the list of metrics into a 2D array of strings    
-    std::vector< std::vector< std::string > > listOfRankingMetrics;    
+    std::vector< std::vector< std::string > > listOfRankingMetrics; 
+       
     bool inputsAreValid = UtilityFunctions::readListOfRankingMetrics(
                                                  rankingFilePath,
                                                  listOfRankingMetrics,
@@ -570,7 +683,6 @@ int main (int argc, char* argv[]) {
                                       tickerMetricDataSet,
                                       youngestDate,
                                       oldestDate,
-                                      ignoreNegativeValues,
                                       verbose);
     }
 
@@ -589,22 +701,29 @@ int main (int argc, char* argv[]) {
             analyzeQuarters, 
             verbose);
       
-      sortMetricTable(metricTableSet, listOfRankingMetrics);
+      sortMetricTable(metricTableSet, 
+        listOfRankingMetrics,
+        rankNegativeValuesLast);
 
-      std::string jsonFileName = std::filesystem::path(rankingFilePath).stem();
-      jsonFileName.append("_ranking.json");
+      //std::string jsonFileName = std::filesystem::path(rankingFilePath).stem();
+      //jsonFileName.append("_ranking.json");
 
-      writeMetricTableToJsonFile(metricTableSet,
-                            listOfRankingMetrics,
-                            fundamentalFolder,
-                            historicalFolder,
-                            rankFolder,
-                            jsonFileName,
-                            verbose);    
+      //writeMetricTableToJsonFile(metricTableSet,
+      //                      listOfRankingMetrics,
+      //                      rankFolder,
+      //                      jsonFileName,
+      //                      verbose);    
 
-      std::string csvFileName = std::filesystem::path(rankingFilePath).stem();
-      csvFileName.append("_ranking.csv");
-                        
+      //std::string csvFileName = std::filesystem::path(rankingFilePath).stem();
+      //csvFileName.append("_ranking.csv");
+
+      writeTickerRankingJsonFile(
+        calculateDataFolder,  
+        metricTableSet,
+        listOfRankingMetrics,
+        rankFolder,
+        verbose);     
+
     }
 
 

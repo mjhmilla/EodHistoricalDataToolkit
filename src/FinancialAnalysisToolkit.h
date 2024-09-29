@@ -41,8 +41,8 @@ class FinancialAnalysisToolkit {
       std::vector< std::string > tickers;
       std::vector< std::vector< double > > metrics;
       std::vector< std::vector< size_t > > metricRank;
-      std::vector< size_t > metricRankSum;
-      std::vector< size_t > rank;
+      //std::vector< size_t > metricRankSum;
+      //std::vector< size_t > rank;
     };
 
     //==========================================================================

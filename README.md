@@ -26,7 +26,7 @@ Make sure that the EOD urls contain {YOUR_API_TOKEN} and {EXCHANGE_CODE} in the 
 1. Make sure these folders exist and are empty in the exchange (e.g. STU) folders:
  - fundamentalData
  - historicalData
- - analysisData
+ - calculateData
  - rankData
  - preprocess
  - postprocess
