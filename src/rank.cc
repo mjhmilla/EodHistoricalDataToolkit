@@ -402,6 +402,7 @@ void writeTickerRankingJsonFile(
   std::string &calculateDataFolder,  
   std::vector< FinancialAnalysisToolkit::MetricTable > &metricTableSet,
   std::vector< std::vector< std::string> > &listOfRankingMetrics,
+  bool rankNegativeValuesLast,
   std::string &rankFolderOutput,
   bool verbose){
 
@@ -454,11 +455,20 @@ void writeTickerRankingJsonFile(
 
               std::string name=listOfRankingMetrics[j][0];
               std::string nameRank = name;
+              std::string nameValid= name;
               nameRank.append("_rank");
+              nameValid.append("_valid");
+              bool valid = JsonFunctions::isJsonFloatValid(
+                              metricTableItem.metrics[i][j]);
+              if( !valid || (metricTableItem.metrics[i][j] < 0 
+                             && rankNegativeValuesLast)){
+                valid = false;
+              }                              
               jsonEntry.push_back({name,metricTableItem.metrics[i][j]});
               jsonEntry.push_back({nameRank,metricTableItem.metricRank[i][j]});
-
+              jsonEntry.push_back({nameValid,valid});
             }
+            jsonEntry.push_back({"totalTickerCount",metricTableItem.tickers.size()});
             date::year_month_day ymdEnd   = metricTableItem.dateEnd;
 
 
@@ -721,6 +731,7 @@ int main (int argc, char* argv[]) {
         calculateDataFolder,  
         metricTableSet,
         listOfRankingMetrics,
+        rankNegativeValuesLast,
         rankFolder,
         verbose);     
 
