@@ -25,7 +25,6 @@
 
 const double PointsPerInch       = 72;
 const double InchesPerCentimeter  = 1.0/2.54;
-
 const double Percentiles[5]={0.05, 0.25, 0.5, 0.75, 0.95};
 
 //==============================================================================
