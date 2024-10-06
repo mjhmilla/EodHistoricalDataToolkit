@@ -22,96 +22,65 @@
 #include "JsonFunctions.h"
 #include "UtilityFunctions.h"
 #include "ReportingFunctions.h"
+#include "PlottingFunctions.h"
 
-const double PointsPerInch        = 72;
-const double InchesPerCentimeter  = 1.0/2.54;
-const double Percentiles[5]       ={0.05, 0.25, 0.5, 0.75, 0.95};
+
+const char* BoxAndWhiskerColorA="web-blue";
+const char* BoxAndWhiskerColorB="gray0";
 
 //==============================================================================
-struct PlotSettings{
-  std::string fontName;
-  double axisLabelFontSize;
-  double axisTickFontSize;
-  double legendFontSize;
-  double titleFontSize;  
-  double lineWidth;
-  double axisLineWidth;
-  double plotWidth;
-  double plotHeight;
-  double canvasWidth;
-  double canvasHeight;
-  double xticMinimumIncrement;
-  PlotSettings():
-    fontName("Times"),
-    axisLabelFontSize(12.0),
-    axisTickFontSize(12.0),
-    legendFontSize(12.0),
-    titleFontSize(14.0),
-    lineWidth(1),
-    axisLineWidth(1.0),
-    plotWidth(8.0*InchesPerCentimeter*PointsPerInch),
-    plotHeight(8.0*InchesPerCentimeter*PointsPerInch),
-    canvasWidth(0.),
-    canvasHeight(0.),
-    xticMinimumIncrement(1.0){}  
+struct TickerMetaData{
+  std::string primaryTicker;
+  std::string companyName;
+  std::string currencyCode;
+  std::string country;
+  TickerMetaData():
+    primaryTicker(""),
+    companyName(""),
+    currencyCode(""),
+    country(""){}
 };
+
 
 
 //==============================================================================
-enum PercentileIndices{
-  P05=0,
-  P25,
-  P50,
-  P75,
-  P95,
-  NUM_PERCENTILES
-};
+void sanitizeStringForLaTeX(std::string &stringForLatex){
 
-struct SummaryStatistics{
-  std::vector< double > percentiles;
-  double min;
-  double max;
-  double current;
-  std::string name;
-  SummaryStatistics():
-    min(0),
-    max(0),
-    current(0),
-    name(""){};
-};
+  std::vector< char > charactersToDelete;  
+  charactersToDelete.push_back('\'');
+  UtilityFunctions::deleteCharacters(stringForLatex,charactersToDelete);
 
+  std::vector< char > charactersToEscape;
+  charactersToDelete.push_back('&');
+  charactersToDelete.push_back('$');
+  charactersToDelete.push_back('#');
+
+  UtilityFunctions::escapeSpecialCharacters(stringForLatex, charactersToEscape);
+
+
+}
 //==============================================================================
-void configurePlot(sciplot::Plot2D &plotUpd,
-                   const std::string &xAxisLabel,
-                   const std::string &yAxisLabel,
-                   const PlotSettings &settings){
+void getTickerMetaData(    
+    const nlohmann::ordered_json &fundamentalData,
+    TickerMetaData &tickerMetaDataUpd){
 
-  plotUpd.xlabel(xAxisLabel)
-    .fontName(settings.fontName)
-    .fontSize(settings.axisLabelFontSize);
+  JsonFunctions::getJsonString( fundamentalData[GEN]["PrimaryTicker"],
+                                tickerMetaDataUpd.primaryTicker);
 
-  plotUpd.xtics()
-    .fontName(settings.fontName)
-    .fontSize(settings.axisTickFontSize);
+  JsonFunctions::getJsonString( fundamentalData[GEN]["Name"],
+                                tickerMetaDataUpd.companyName);
+                                
+  sanitizeStringForLaTeX(tickerMetaDataUpd.companyName);                                
 
-  
-  plotUpd.ylabel(yAxisLabel)
-    .fontName(settings.fontName)
-    .fontSize(settings.axisLabelFontSize);
+  JsonFunctions::getJsonString( fundamentalData[GEN]["CurrencyCode"],
+                                tickerMetaDataUpd.currencyCode);
+  sanitizeStringForLaTeX(tickerMetaDataUpd.currencyCode);
 
-  plotUpd.ytics()
-    .fontName(settings.fontName)
-    .fontSize(settings.axisTickFontSize);
-
-  plotUpd.border().lineWidth(settings.axisLineWidth);
-
-  plotUpd.fontName(settings.fontName);
-  plotUpd.fontSize(settings.legendFontSize);                    
-
-  plotUpd.size(settings.plotWidth,settings.plotHeight);
+  JsonFunctions::getJsonString(fundamentalData[GEN]["CountryName"],
+                               tickerMetaDataUpd.country);  
+  sanitizeStringForLaTeX(tickerMetaDataUpd.country);      
 
 };
-
 //==============================================================================
 //From:
 //https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
@@ -127,66 +96,9 @@ std::vector< size_t > sort_indices(std::vector<T> &v){
   return idx;
 }
 
-//==============================================================================
-void extractSummaryStatistics(sciplot::Vec &data, SummaryStatistics &summary){
-  std::vector<double> dataDbl;
-  for(size_t i=0; i<data.size(); ++i){
-    dataDbl.push_back(data[i]);
-  }
-  summary.current = dataDbl[dataDbl.size()-1];
-
-  std::sort(dataDbl.begin(),dataDbl.end());
-
-  summary.min = dataDbl[0];
-  summary.max = dataDbl[dataDbl.size()-1];
 
 
-  if(dataDbl.size() > 1){
-    for(size_t i = 0; i < NUM_PERCENTILES; ++i){
-      double idxDbl = Percentiles[i]*(dataDbl.size()-1);
-      int indexA = std::floor(idxDbl);
-      int indexB = std::ceil(idxDbl);
-      double weightB = idxDbl - static_cast<double>(indexA);
-      double weightA = 1.0-weightB;
-      double valueA = dataDbl[indexA];
-      double valueB = dataDbl[indexB];
-      double value = valueA*weightA + valueB*weightB;
-      summary.percentiles.push_back(value);
-    }
-  }else{
-    for(size_t i = 0; i < NUM_PERCENTILES; ++i){
-      summary.percentiles.push_back(dataDbl[0]);
-    }
-  }
 
-};
-
-//==============================================================================
-void getDataRange(const std::vector< double > &data, 
-                        std::vector< double > &dataRange,
-                        double minimumRange){
-
-  double ymin = std::numeric_limits<double>::max();
-  double ymax = -std::numeric_limits<double>::max();
-
-  for(size_t i =0; i < data.size(); ++i){
-    if(data[i]>ymax){
-      ymax=data[i];
-    }
-    if(data[i]<ymin){
-      ymin=data[i];
-    }
-  }
-  if(ymax-ymin < minimumRange){
-    ymax = 0.5*(ymax+ymin)+0.5*minimumRange;
-    ymin = ymax - minimumRange;
-  }
-
-  dataRange.clear();
-  dataRange.push_back(ymin);
-  dataRange.push_back(ymax);
-
-}
 
 //==============================================================================
 void createHistoricalDataPlot(
@@ -194,8 +106,8 @@ void createHistoricalDataPlot(
       const std::string &companyName,
       const std::string &currencyCode,
       sciplot::Plot2D &plotHistoricalDataUpd,      
-      SummaryStatistics &summaryStatsUpd,
-      const PlotSettings &settings,
+      PlottingFunctions::SummaryStatistics &summaryStatsUpd,
+      const PlottingFunctions::PlotSettings &settings,
       bool verbose){
 
   //Go through the historical data and pull out the date information
@@ -236,7 +148,7 @@ void createHistoricalDataPlot(
     firstEntry=false;
   }
 
-  extractSummaryStatistics(y0,summaryStatsUpd);
+  PlottingFunctions::extractSummaryStatistics(y0,summaryStatsUpd);
   summaryStatsUpd.name = "historicalData";
 
   plotHistoricalDataUpd.drawCurve(x0,y0)
@@ -266,6 +178,19 @@ void createHistoricalDataPlot(
 
   ymax = ymax + 0.2*(ymax-ymin);
 
+  plotHistoricalDataUpd.legend().atTopLeft();  
+
+  PlottingFunctions::drawBoxAndWhisker(
+      plotHistoricalDataUpd,
+      xmax+1,
+      0.5,
+      summaryStatsUpd,
+      BoxAndWhiskerColorA,
+      BoxAndWhiskerColorB,
+      settings,
+      verbose);
+  xmax += 2.0;
+
   plotHistoricalDataUpd.xrange(
       static_cast<sciplot::StringOrDouble>(xmin),
       static_cast<sciplot::StringOrDouble>(xmax));              
@@ -280,17 +205,17 @@ void createHistoricalDataPlot(
   yAxisLabel.append(currencyCode);
   yAxisLabel.append(")");
 
-  configurePlot(plotHistoricalDataUpd,xAxisLabel,yAxisLabel,settings);
+  PlottingFunctions::configurePlot(plotHistoricalDataUpd,xAxisLabel,yAxisLabel,
+                                  settings);
 
-  plotHistoricalDataUpd.legend().atTopLeft();
+
 
 };
 
 //==============================================================================
-void extractReportTimeSeriesData(
+void extractTimeSeriesData(
       const std::string &primaryTicker,
       const nlohmann::ordered_json &calculateData,
-      const char* dateFieldName,
       const char* floatFieldName,
       std::vector<double> &dateSeries,
       std::vector<double> &floatSeries){
@@ -299,13 +224,14 @@ void extractReportTimeSeriesData(
   floatSeries.clear();
   std::vector< double > tmpFloatSeries;
 
-  for(auto const &entry: calculateData){
-    std::string dateEntryStr;
-    JsonFunctions::getJsonString(entry[dateFieldName],dateEntryStr);
+  for(auto const &el: calculateData.items()){
+    
+    std::string dateEntryStr(el.key());
     double timeData = UtilityFunctions::convertToFractionalYear(dateEntryStr);
     dateSeries.push_back(timeData);
 
-    double floatData = JsonFunctions::getJsonFloat(entry[floatFieldName]);
+    double floatData = 
+      JsonFunctions::getJsonFloat(calculateData[el.key()][floatFieldName]);
     tmpFloatSeries.push_back(floatData);
     
   }
@@ -359,51 +285,24 @@ void readConfigurationFile(std::string &plotConfigurationFilePath,
       }while(!endOfFile);
   }
 };
-//==============================================================================
-void sanitizeStringForLaTeX(std::string &stringForLatex){
 
-  std::vector< char > charactersToDelete;  
-  charactersToDelete.push_back('\'');
-  UtilityFunctions::deleteCharacters(stringForLatex,charactersToDelete);
-
-  std::vector< char > charactersToEscape;
-  charactersToDelete.push_back('&');
-  charactersToDelete.push_back('$');
-  charactersToDelete.push_back('#');
-
-  UtilityFunctions::escapeSpecialCharacters(stringForLatex, charactersToEscape);
-
-
-}
 //==============================================================================
 void plotTickerData(
+    const TickerMetaData &tickerMetaData,
     const nlohmann::ordered_json &fundamentalData,
     const nlohmann::ordered_json &historicalData,
     const nlohmann::ordered_json &calculateData,
-    const std::filesystem::path &outputPath,
+    const char* outputPlotPath,
     const std::vector< std::vector< std::string >> &subplotMetricNames,
-    const PlotSettings &plotSettings,
+    const PlottingFunctions::PlotSettings &plotSettings,
     bool verbose)
 {
-
-
-  std::string primaryTicker;
-  JsonFunctions::getJsonString( fundamentalData[GEN]["PrimaryTicker"],
-                                primaryTicker);
-
-  std::string companyName;
-  JsonFunctions::getJsonString( fundamentalData[GEN]["Name"],
-                                companyName);
-  sanitizeStringForLaTeX(companyName);                                
-
-  std::string currencyCode;
-  JsonFunctions::getJsonString( fundamentalData[GEN]["CurrencyCode"],
-                                currencyCode);
-  sanitizeStringForLaTeX(currencyCode);
-
+                         
+  std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
 
   for(size_t indexRow=0; indexRow < subplotMetricNames.size(); 
       ++indexRow){
+
     std::vector < sciplot::PlotVariant > rowOfPlots;
 
     for(size_t indexCol=0; indexCol < subplotMetricNames[indexRow].size(); 
@@ -412,10 +311,10 @@ void plotTickerData(
 
       if(subplotMetricNames[indexRow][indexCol].compare("historicalData")==0){
         sciplot::Plot2D plotHistoricalData;
-        SummaryStatistics priceSummaryStats;
+        PlottingFunctions::SummaryStatistics priceSummaryStats;
         createHistoricalDataPlot( historicalData,
-                                  companyName,
-                                  currencyCode,
+                                  tickerMetaData.companyName,
+                                  tickerMetaData.currencyCode,
                                   plotHistoricalData,
                                   priceSummaryStats,
                                   plotSettings, 
@@ -430,10 +329,9 @@ void plotTickerData(
         && !subplotAdded){
           std::vector<double> xTmp;
           std::vector<double> yTmp;
-          extractReportTimeSeriesData(
-              primaryTicker,
+          extractTimeSeriesData(
+              tickerMetaData.primaryTicker,
               calculateData,
-              "dateEnd",
               subplotMetricNames[indexRow][indexCol].c_str(),
               xTmp,
               yTmp);     
@@ -445,19 +343,20 @@ void plotTickerData(
             x[i]=xTmp[i];
             y[i]=yTmp[i];
           }
-          SummaryStatistics metricSummaryStatistics;
+          PlottingFunctions::SummaryStatistics metricSummaryStatistics;
           metricSummaryStatistics.name=subplotMetricNames[indexRow][indexCol];
-          extractSummaryStatistics(y,metricSummaryStatistics);
+          PlottingFunctions::extractSummaryStatistics(y,metricSummaryStatistics);
 
           sciplot::Plot2D plotMetric;
           plotMetric.drawCurve(x,y)
-            .label(companyName)
+            .label(tickerMetaData.companyName)
             .lineColor("black")
             .lineWidth(plotSettings.lineWidth);
 
           std::vector< double > xRange,yRange;
-          getDataRange(xTmp,xRange,1.0);
-          getDataRange(yTmp,yRange,std::numeric_limits< double >::lowest());
+          PlottingFunctions::getDataRange(xTmp,xRange,1.0);
+          PlottingFunctions::getDataRange(yTmp,yRange,
+                              std::numeric_limits< double >::lowest());
           if(yRange[0] > 0){
             yRange[0] = 0;
           }
@@ -466,6 +365,20 @@ void plotTickerData(
           }
           //Add some blank space to the top of the plot
           yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
+
+          plotMetric.legend().atTopLeft();   
+
+          PlottingFunctions::drawBoxAndWhisker(
+              plotMetric,
+              xRange[1]+1,
+              0.5,
+              metricSummaryStatistics,
+              BoxAndWhiskerColorA,
+              BoxAndWhiskerColorB,
+              plotSettings,
+              verbose);
+
+          xRange[1] += 2.0;
 
           plotMetric.xrange(
               static_cast<sciplot::StringOrDouble>(xRange[0]),
@@ -488,15 +401,48 @@ void plotTickerData(
           UtilityFunctions::convertCamelCaseToSpacedText(tmpStringA);
           UtilityFunctions::convertCamelCaseToSpacedText(tmpStringB);
 
-          configurePlot(plotMetric,tmpStringA,tmpStringB,plotSettings);
-          plotMetric.legend().atTopLeft();     
+          PlottingFunctions::configurePlot(plotMetric,tmpStringA,tmpStringB,
+                                           plotSettings);
+            
           rowOfPlots.push_back(plotMetric);
           subplotAdded=true;        
       }      
-
-
+    }
+    if(rowOfPlots.size()>0){
+      arrayOfPlots.push_back(rowOfPlots);
     }
   }
+
+  std::string titleStr = tickerMetaData.companyName;
+  titleStr.append(" (");
+  titleStr.append(tickerMetaData.primaryTicker);
+  titleStr.append(") - ");
+  titleStr.append(tickerMetaData.country);
+  
+  sciplot::Figure figTicker(arrayOfPlots);
+
+  figTicker.title(titleStr);
+
+  sciplot::Canvas canvas = {{figTicker}};
+  unsigned int nrows = subplotMetricNames.size();
+  unsigned int ncols=0;
+  for(unsigned int i=0; i<subplotMetricNames.size();++i){
+    if(ncols < subplotMetricNames[i].size()){
+      ncols=subplotMetricNames[i].size();
+    }
+  }
+
+  size_t canvasWidth  = 
+    static_cast<size_t>(plotSettings.plotWidth*static_cast<double>(ncols));
+  size_t canvasHeight = 
+    static_cast<size_t>(plotSettings.plotHeight*static_cast<double>(nrows));
+
+  canvas.size(canvasWidth, canvasHeight) ;
+
+  // Save the figure to a PDF file
+  canvas.save(outputPlotPath);
+
+
 
 };
 
@@ -591,7 +537,7 @@ int main (int argc, char* argv[]) {
     }
 
 
-  PlotSettings plotSettings;
+  PlottingFunctions::PlotSettings plotSettings;
   std::vector< std::vector < std::string > > subplotMetricNames;
   readConfigurationFile(plotConfigurationFilePath,subplotMetricNames);
 
@@ -667,16 +613,31 @@ int main (int argc, char* argv[]) {
                                 calculateDataFolder, calculateData, verbose);
 
 
+
+
+
       if(loadedFundData && loadedHistData && loadedCalculateData){
-        nlohmann::ordered_json tickerReportDataUpd;
+
+        TickerMetaData tickerMetaData;
+        getTickerMetaData(fundamentalData, tickerMetaData);
+
         //
         // Generate and save the pdf
         //
+
+        std::filesystem::path outputPlotFilePath = outputFolderPath;
+        std::string plotFileName("fig_");
+        plotFileName.append(tickerFolderName);
+        plotFileName.append(".pdf");
+        outputPlotFilePath.append(plotFileName);
+
+      
         plotTickerData(
+            tickerMetaData,
             fundamentalData,
             historicalData,
             calculateData,
-            outputFolderPath,
+            outputPlotFilePath.c_str(),
             subplotMetricNames,
             plotSettings,
             verbose);
