@@ -278,8 +278,8 @@ void createHistoricalDataPlot(
       const PlotSettings &settings,
       bool verbose){
 
-  std::vector< char > charactersToDelete;  
-  charactersToDelete.push_back('\'');
+  std::string charactersToDelete("");  
+  charactersToDelete.append("\'");
 
   std::string primaryTicker;
   JsonFunctions::getJsonString(reportEntry["PrimaryTicker"],primaryTicker);
@@ -792,8 +792,8 @@ void plotReportData(
 
   //Continue only if we have a plot configuration loaded.
   int entryCount=0;
-  std::vector< char > charactersToDelete;  
-  charactersToDelete.push_back('\'');
+  std::string charactersToDelete("");  
+  charactersToDelete.append("\'");
 
   std::vector< std::string > plottedTickers;
 
@@ -1327,10 +1327,10 @@ void generateLaTeXReport(
   latexReport << "\\usepackage[usenames,dvipsnames,table]{xcolor}"<<std::endl;
   latexReport << "\\begin{document}"<<std::endl;
   
-  std::vector< char > charactersToEscape;
-  charactersToEscape.push_back('%');
-  charactersToEscape.push_back('&');
-  charactersToEscape.push_back('$');
+  std::string charactersToEscape("");
+  charactersToEscape.append("%");
+  charactersToEscape.append("&");
+  charactersToEscape.append("$");
 
   //Add the summary figure
   latexReport << "\\begin{figure}[h]" << std::endl;
@@ -1421,6 +1421,12 @@ void generateLaTeXReport(
 
         plottedTickers.push_back(primaryTicker);
 
+        std::string jsonFileName = primaryTicker;
+        jsonFileName.append(".json");
+        nlohmann::ordered_json calculateData;
+        bool loadedCalculateData =JsonFunctions::loadJsonFile(jsonFileName, 
+                                  calculateDataFolder, calculateData, verbose);  
+
         size_t indexFigure=0;
         bool found=false;
         while(!found && indexFigure < tickerFigurePath.size()){
@@ -1466,13 +1472,17 @@ void generateLaTeXReport(
         latexReport << "\\end{tabular}" << std::endl << std::endl;
         //latexReport << "\\end{center}" << std::endl;
 
+
+
+        std::string date = calculateData.begin().key(); 
+
         if(calculateDataFolder.length()>0){
           bool found=false;
           for(size_t i=0; i<subplotMetricNames.size(); ++i){
             for(size_t j=0; j<subplotMetricNames[i].size(); ++j){
               if(subplotMetricNames[i][j].compare("priceToValue_value")==0){
                 ReportingFunctions::appendValuationTable(latexReport,
-                                primaryTicker,calculateDataFolder,verbose);
+                                primaryTicker,calculateData,date,verbose);
               }
             }  
           }

@@ -28,32 +28,60 @@
 const char* BoxAndWhiskerColorA="web-blue";
 const char* BoxAndWhiskerColorB="gray0";
 
+
+
 //==============================================================================
 struct TickerMetaData{
   std::string primaryTicker;
   std::string companyName;
   std::string currencyCode;
   std::string country;
+  std::string isin;
   TickerMetaData():
     primaryTicker(""),
     companyName(""),
     currencyCode(""),
-    country(""){}
+    country(""),
+    isin(""){}
+};
+//==============================================================================
+enum JSON_FIELD_TYPE{
+  FLOAT=0,
+  STRING,
+  BOOL,
+  JSON_FIELD_TYPE_SIZE
 };
 
+struct JsonFieldAddress{
+  std::vector< std::string > fieldNames;
+  JSON_FIELD_TYPE type;
+  JsonFieldAddress():fieldNames(),type(FLOAT){};
+};
 
+//==============================================================================
+bool isNameInList(std::string &name, std::vector< std::string > &listOfNames){
+  bool nameIsInList = false;
+  size_t i = 0;
+  while(nameIsInList == false && i < listOfNames.size()){
+    if(name.compare(listOfNames[i])==0){
+      nameIsInList=true;
+    }
+    ++i;
+  }
+  return nameIsInList;
+};
 
 //==============================================================================
 void sanitizeStringForLaTeX(std::string &stringForLatex){
 
-  std::vector< char > charactersToDelete;  
-  charactersToDelete.push_back('\'');
+  std::string charactersToDelete("");  
+  charactersToDelete.append("\'");
   UtilityFunctions::deleteCharacters(stringForLatex,charactersToDelete);
 
-  std::vector< char > charactersToEscape;
-  charactersToDelete.push_back('&');
-  charactersToDelete.push_back('$');
-  charactersToDelete.push_back('#');
+  std::string charactersToEscape("");
+  charactersToEscape.append("&");
+  charactersToEscape.append("$");
+  charactersToEscape.append("#");
 
   UtilityFunctions::escapeSpecialCharacters(stringForLatex, charactersToEscape);
 
@@ -68,9 +96,11 @@ void getTickerMetaData(
                                 tickerMetaDataUpd.primaryTicker);
 
   JsonFunctions::getJsonString( fundamentalData[GEN]["Name"],
-                                tickerMetaDataUpd.companyName);
-                                
+                                tickerMetaDataUpd.companyName);                                
   sanitizeStringForLaTeX(tickerMetaDataUpd.companyName);                                
+
+  JsonFunctions::getJsonString( fundamentalData[GEN]["ISIN"],
+                                tickerMetaDataUpd.isin);                                
 
   JsonFunctions::getJsonString( fundamentalData[GEN]["CurrencyCode"],
                                 tickerMetaDataUpd.currencyCode);
@@ -287,7 +317,7 @@ void readConfigurationFile(std::string &plotConfigurationFilePath,
 };
 
 //==============================================================================
-void plotTickerData(
+bool plotTickerData(
     const TickerMetaData &tickerMetaData,
     const nlohmann::ordered_json &fundamentalData,
     const nlohmann::ordered_json &historicalData,
@@ -297,7 +327,8 @@ void plotTickerData(
     const PlottingFunctions::PlotSettings &plotSettings,
     bool verbose)
 {
-                         
+  bool success = true;               
+
   std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
 
   for(size_t indexRow=0; indexRow < subplotMetricNames.size(); 
@@ -442,8 +473,285 @@ void plotTickerData(
   // Save the figure to a PDF file
   canvas.save(outputPlotPath);
 
+  return success;
+
+};
+//==============================================================================
+bool generateLaTeXReportWrapper(
+    const char* wrapperFilePath,
+    const std::string &reportFileName,
+    const TickerMetaData &tickerMetaData,
+    bool verbose)
+{
+  bool success = true;
+  if(verbose){
+    std::cout << "Gerating LaTeX report wrapper file for " 
+              << tickerMetaData.primaryTicker  << std::endl << std::endl; 
+  }
 
 
+  std::ofstream latexReport;
+  try{
+    latexReport.open(wrapperFilePath);
+  }catch(std::ofstream::failure &ofstreamErr){
+    std::cerr << std::endl << std::endl
+              << "Skipping writing " << tickerMetaData.primaryTicker              
+              << " because an exception was thrown while trying to open ofstream:"
+              << wrapperFilePath << std::endl << std::endl
+              << ofstreamErr.what()
+              << std::endl;    
+    success = false;
+  }
+
+  //Append the opening latex commands
+  latexReport << "\\documentclass[11pt,onecolumn,a4paper]{article}" 
+              << std::endl;
+  latexReport << "\\usepackage[hmargin={1.35cm,1.35cm},vmargin={2.0cm,3.0cm},"
+                    "footskip=0.75cm,headsep=0.25cm]{geometry}"<<std::endl;
+  latexReport << "\\usepackage{graphicx,caption}"<<std::endl;
+  latexReport << "\\usepackage{times}"<<std::endl;
+  latexReport << "\\usepackage{graphicx}"<<std::endl;
+  latexReport << "\\usepackage{hyperref}"<<std::endl;
+  latexReport << "\\usepackage{multicol}"<<std::endl;
+  latexReport << "\\usepackage[usenames,dvipsnames,table]{xcolor}"<<std::endl;
+  latexReport << "\\begin{document}"<<std::endl;
+  latexReport << "\\input{" << reportFileName << "}" << std::endl;
+  latexReport << "\\end{document}" << std::endl;
+  latexReport.close();
+
+  return success;
+};
+
+//==============================================================================
+bool generateLaTeXReport(
+    const TickerMetaData &tickerMetaData,
+    const nlohmann::ordered_json &fundamentalData,
+    const nlohmann::ordered_json &historicalData,
+    const nlohmann::ordered_json &calculateData,
+    const char* plotFileName,
+    const char* outputReportPath,
+    const std::vector< std::vector< std::string >> &subplotMetricNames,
+    bool replaceNansWithMissingData,
+    bool verbose)
+{
+
+  bool skip = false;
+
+  if(verbose){
+    std::cout << "Gerating LaTeX report for " 
+              << tickerMetaData.primaryTicker  << std::endl; 
+  }
+
+  std::vector< JsonFieldAddress > tabularMetrics;
+  JsonFieldAddress metric;
+
+  metric.fieldNames.push_back("General");
+  metric.fieldNames.push_back("ISIN");
+  metric.type = JSON_FIELD_TYPE::STRING;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("General");
+  metric.fieldNames.push_back("IPODate");
+  metric.type = JSON_FIELD_TYPE::STRING;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("Highlights");
+  metric.fieldNames.push_back("MarketCapitalizationMln");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+  
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("Technicals");
+  metric.fieldNames.push_back("Beta");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("Valuation");
+  metric.fieldNames.push_back("EnterpriseValueEbitda");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("SharesStats");
+  metric.fieldNames.push_back("PercentInsiders");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("SharesStats");
+  metric.fieldNames.push_back("PercentInstitutions");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("AnalystRatings");
+  metric.fieldNames.push_back("TargetPrice");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("AnalystRatings");
+  metric.fieldNames.push_back("StrongBuy");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("AnalystRatings");
+  metric.fieldNames.push_back("Buy");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("AnalystRatings");
+  metric.fieldNames.push_back("Hold");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("AnalystRatings");
+  metric.fieldNames.push_back("Sell");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("AnalystRatings");
+  metric.fieldNames.push_back("StrongSell");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  std::string latexReportPath(outputReportPath);
+  std::ofstream latexReport;
+
+  try{
+    latexReport.open(latexReportPath);
+  }catch(std::ofstream::failure &ofstreamErr){
+    std::cerr << std::endl << std::endl 
+              << "Skipping writing " << latexReportPath              
+              << " because an exception was thrown while trying to open ofstream:"
+              << latexReportPath << std::endl << std::endl
+              << ofstreamErr.what()
+              << std::endl;    
+    skip=true;
+  }
+
+
+  if(!skip){
+
+    std::string webURL;
+    JsonFunctions::getJsonString(fundamentalData[GEN]["WebURL"],webURL);
+
+    std::string description;
+    JsonFunctions::getJsonString(
+        fundamentalData[GEN]["Description"],description);
+    sanitizeStringForLaTeX(description);
+
+    latexReport << std::endl;
+
+    latexReport << "\\begin{figure}[h]" << std::endl;
+    latexReport << "  \\begin{center}" << std::endl;
+    latexReport << "    \\includegraphics{" 
+                <<      plotFileName << "}" << std::endl;
+    latexReport << "    \\caption{"
+                << tickerMetaData.companyName
+                << " (" << tickerMetaData.primaryTicker <<") "
+                << tickerMetaData.country << " ( \\url{" << webURL << "} )"
+                << "}" << std::endl;
+    latexReport << " \\end{center}" << std::endl;
+    latexReport << "\\end{figure}"<< std::endl;
+    latexReport << std::endl;
+
+    latexReport << "\\begin{multicols}{2}" << std::endl;
+
+    latexReport << description << std::endl;
+    latexReport << std::endl;
+
+    //latexReport << "\\begin{center}" << std::endl;
+
+
+    latexReport << "\\bigskip" << std::endl;
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\multicolumn{2}{c}{\\textbf{Contextual Data}} \\\\" << std::endl;
+
+    for(size_t  indexTabularMetrics=0; 
+                indexTabularMetrics < tabularMetrics.size();
+              ++indexTabularMetrics)
+    {
+      JsonFieldAddress entryMetric = tabularMetrics[indexTabularMetrics];
+      std::string labelMetric = entryMetric.fieldNames.back();
+      UtilityFunctions::convertCamelCaseToSpacedText(labelMetric);
+
+      bool fieldExists = JsonFunctions::doesFieldExist(fundamentalData, 
+                                                entryMetric.fieldNames);
+
+      if(fieldExists){
+        switch(entryMetric.type){
+          case JSON_FIELD_TYPE::BOOL : {
+            bool value = JsonFunctions::getJsonBool(fundamentalData,
+                              entryMetric.fieldNames, 
+                              replaceNansWithMissingData);
+
+            latexReport << labelMetric << " & " << value  << "\\\\" << std::endl;                          
+          }
+          break;
+          case JSON_FIELD_TYPE::FLOAT : {
+            double value = JsonFunctions::getJsonFloat(fundamentalData,
+                            entryMetric.fieldNames, 
+                            replaceNansWithMissingData);
+
+            latexReport << labelMetric << " & " << value << "\\\\" << std::endl;                          
+          }
+          break;
+          case JSON_FIELD_TYPE::STRING : {
+            std::string value;
+            JsonFunctions::getJsonString(fundamentalData,
+                              entryMetric.fieldNames, 
+                              value);
+
+            latexReport << labelMetric << " & " << value << "\\\\" << std::endl;                          
+          }
+          break;
+        };
+      }else{
+        latexReport << labelMetric << " & " << " - "  << "\\\\" << std::endl;
+      }
+    }
+    latexReport << "\\end{tabular}" << std::endl << std::endl;
+
+    std::string date = calculateData.begin().key();
+
+    for(size_t i=0; i<subplotMetricNames.size(); ++i){
+      for(size_t j=0; j<subplotMetricNames[i].size(); ++j){
+        if(subplotMetricNames[i][j].compare("priceToValue")==0){
+          ReportingFunctions::appendValuationTable(
+            latexReport,
+            tickerMetaData.primaryTicker,
+            calculateData,
+            date,
+            verbose);
+        }
+      }  
+    }      
+
+    latexReport << "\\end{multicols}" << std::endl;
+    latexReport << "\\break"          << std::endl;
+    latexReport << "\\newpage"        << std::endl;
+  }
+
+  latexReport << "\\end{document}" << std::endl;
+  latexReport.close();
+
+  if(verbose){
+    if(!skip){
+      std::cout  << tickerMetaData.primaryTicker << std::endl;
+    }else{
+      std::cout << " Skipping " << tickerMetaData.primaryTicker << std::endl;
+    }       
+  }
+
+  return !skip;
 };
 
 //==============================================================================
@@ -536,14 +844,19 @@ int main (int argc, char* argv[]) {
       std::cout << "    " << plotConfigurationFilePath << std::endl;          
     }
 
+  bool replaceNansWithMissingData = true;
 
   PlottingFunctions::PlotSettings plotSettings;
   std::vector< std::vector < std::string > > subplotMetricNames;
   readConfigurationFile(plotConfigurationFilePath,subplotMetricNames);
 
+  std::vector< std::string > processedTickers;
+
   int totalFileCount = 0;
   int validFileCount = 0;
   std::string analysisExt = ".json";  
+
+
 
   //Go through every ticker file in the calculate folder:
   //1. Create a ticker folder in the reporting folder
@@ -578,12 +891,14 @@ int main (int argc, char* argv[]) {
     }
 
 
+
     if(validInput){
 
 
       //
       // Create the output folder
-      //
+      //      
+
       std::string ticker = fileName.substr(0,fileExtPos);
       std::string tickerFolderName = ticker;
       std::replace(tickerFolderName.begin(),tickerFolderName.end(),'.','_');
@@ -603,7 +918,7 @@ int main (int argc, char* argv[]) {
       nlohmann::ordered_json fundamentalData;  
       bool loadedFundData =JsonFunctions::loadJsonFile(ticker, 
                                 fundamentalFolder, fundamentalData, verbose);
-                                  
+
       nlohmann::ordered_json historicalData;
       bool loadedHistData =JsonFunctions::loadJsonFile(ticker, 
                                 historicalFolder, historicalData, verbose); 
@@ -614,35 +929,84 @@ int main (int argc, char* argv[]) {
 
 
 
-
-
       if(loadedFundData && loadedHistData && loadedCalculateData){
+
 
         TickerMetaData tickerMetaData;
         getTickerMetaData(fundamentalData, tickerMetaData);
+        bool isTickerProcessed = isNameInList(tickerMetaData.primaryTicker, 
+                                            processedTickers);  
 
         //
         // Generate and save the pdf
         //
+        if(!isTickerProcessed && tickerMetaData.companyName.length() > 0){
 
-        std::filesystem::path outputPlotFilePath = outputFolderPath;
-        std::string plotFileName("fig_");
-        plotFileName.append(tickerFolderName);
-        plotFileName.append(".pdf");
-        outputPlotFilePath.append(plotFileName);
+          std::filesystem::path outputPlotFilePath = outputFolderPath;
+          std::string plotFileName("fig_");
+          plotFileName.append(tickerFolderName);
+          plotFileName.append(".pdf");
+          outputPlotFilePath.append(plotFileName);
+        
+          bool successPlotTickerData = 
+            plotTickerData(
+              tickerMetaData,
+              fundamentalData,
+              historicalData,
+              calculateData,
+              outputPlotFilePath.c_str(),
+              subplotMetricNames,
+              plotSettings,
+              false);
 
-      
-        plotTickerData(
-            tickerMetaData,
-            fundamentalData,
-            historicalData,
-            calculateData,
-            outputPlotFilePath.c_str(),
-            subplotMetricNames,
-            plotSettings,
-            verbose);
+          std::filesystem::path outputReportFilePath = outputFolderPath;
+          std::string reportFileName(tickerFolderName);
+          reportFileName.append(".tex");
+          outputReportFilePath.append(reportFileName);
 
-        ++validFileCount;     
+          bool successGenerateLaTeXReport = 
+            generateLaTeXReport(
+              tickerMetaData,
+              fundamentalData,
+              historicalData,
+              calculateData,
+              plotFileName.c_str(),
+              outputReportFilePath.c_str(),              
+              subplotMetricNames,
+              replaceNansWithMissingData,
+              false); 
+
+          std::string wrapperFileName("report_");
+          wrapperFileName.append(reportFileName);
+
+          outputReportFilePath = outputFolderPath;
+          outputReportFilePath.append(wrapperFileName);
+
+          bool successGenerateLatexReportWrapper =
+            generateLaTeXReportWrapper(outputReportFilePath.c_str(), 
+                                       reportFileName, 
+                                       tickerMetaData,
+                                       false);
+
+          processedTickers.push_back(tickerMetaData.primaryTicker);
+
+          if(verbose){
+            if(  !successPlotTickerData 
+              || !successGenerateLaTeXReport  
+              || !successGenerateLatexReportWrapper){
+              std::cout << '\t' << "skipping" << std::endl;
+              std::cout << '\t' << successPlotTickerData 
+                        << '\t' << "plotting" << std::endl;
+              std::cout << '\t' << successGenerateLaTeXReport 
+                        << '\t' << "report generation" << std::endl;
+              std::cout << '\t' << successGenerateLatexReportWrapper 
+                        << '\t' << "report wrapper generation" << std::endl;
+
+            }
+          }
+
+          ++validFileCount;     
+        }
       }
 
 

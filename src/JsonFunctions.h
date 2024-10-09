@@ -73,6 +73,161 @@ class JsonFunctions {
       }
     }
 
+    static bool doesFieldExist(const nlohmann::ordered_json &jsonTable,
+                               std::vector< std::string > &fields){
+      bool fieldExists = true;                                
+      for(size_t i=0; i<fields.size();++i){
+        switch(i){
+          case 0:{
+            fieldExists = jsonTable.contains(fields[0]);
+          }break;
+          case 1:{
+            if(fieldExists){
+              fieldExists = jsonTable[fields[0]].contains(fields[1]);
+            }
+          }break;          
+          case 2:{
+            if(fieldExists){
+              fieldExists = jsonTable[fields[0]][fields[1]].contains(fields[2]);
+            }
+          }break;          
+          case 3:{
+            if(fieldExists){
+              fieldExists = jsonTable[fields[0]][fields[1]]
+                                                [fields[2]].contains(fields[3]);
+            }
+          }break;          
+          case 4:{
+            if(fieldExists){
+              fieldExists = jsonTable[fields[0]][fields[1]]
+                                     [fields[2]][fields[3]].contains(fields[4]);
+            }
+          }break;        
+          default:
+            fieldExists=false;  
+        }
+      }
+      return fieldExists;
+    };
+
+    static bool getJsonBool(const nlohmann::ordered_json &jsonTable,
+                               std::vector< std::string > &fields,
+                               bool setNansToMissingValue=false){
+
+      bool value = 0;
+    
+      switch( fields.size() ){
+        case 1:{
+            value = getJsonBool(
+                      jsonTable[fields[0]],
+                      setNansToMissingValue);
+          }
+          break;
+        case 2:{
+            value = getJsonBool(
+                      jsonTable[fields[0]][fields[1]],
+                      setNansToMissingValue);
+          }
+          break;
+        case 3:{
+            value = getJsonBool(
+                      jsonTable[fields[0]][fields[1]][fields[2]],
+                      setNansToMissingValue);
+          }
+          break;
+        case 4:{
+            value = getJsonBool(
+                      jsonTable[fields[0]][fields[1]][fields[2]][fields[3]],
+                      setNansToMissingValue);
+          }
+          break;
+        default: {
+          if(setNansToMissingValue){
+            value = false;
+          }else{
+            value = std::nan("1");
+          }          
+        }
+      };            
+
+      return value;
+    };
+
+    static double getJsonFloat(const nlohmann::ordered_json &jsonTable,
+                               std::vector< std::string > &fields,
+                               bool setNansToMissingValue=false){
+
+      double value = 0;
+    
+      switch( fields.size() ){
+        case 1:{
+            bool valid = true;
+            value = getJsonFloat(
+                      jsonTable[fields[0]],
+                      setNansToMissingValue);
+          }
+          break;
+        case 2:{
+            value = getJsonFloat(
+                      jsonTable[fields[0]][fields[1]],
+                      setNansToMissingValue);
+          }
+          break;
+        case 3:{
+            value = getJsonFloat(
+                      jsonTable[fields[0]][fields[1]][fields[2]],
+                      setNansToMissingValue);
+          }
+          break;
+        case 4:{
+            value = getJsonFloat(
+                      jsonTable[fields[0]][fields[1]][fields[2]][fields[3]],
+                      setNansToMissingValue);
+          }
+          break;
+        default: {
+          if(setNansToMissingValue){
+            value = MISSING_VALUE;
+          }else{
+            value = std::nan("1");
+          }          
+        }
+      };            
+
+      return value;
+    };
+
+    static void getJsonString(const nlohmann::ordered_json &jsonTable,
+                               std::vector< std::string > &fields,
+                               std::string &stringUpd){
+    
+      switch( fields.size() ){
+        case 1:{
+            getJsonString(  jsonTable[fields[0]],
+                            stringUpd);
+          }
+          break;
+        case 2:{
+            getJsonString(  jsonTable[fields[0]][fields[1]],
+                            stringUpd);
+          }
+          break;
+        case 3:{
+            getJsonString(  jsonTable[fields[0]][fields[1]][fields[2]],
+                            stringUpd);
+          }
+          break;
+        case 4:{
+            getJsonString(  jsonTable[fields[0]][fields[1]][fields[2]][fields[3]],
+                            stringUpd);
+          }
+          break;
+        default: {
+          stringUpd = "";          
+        }
+      };            
+    };    
+
     static double getJsonFloat(const nlohmann::ordered_json &jsonEntry,
                                bool setNansToMissingValue=false){
       if(  jsonEntry.is_null()){

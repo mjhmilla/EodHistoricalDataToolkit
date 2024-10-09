@@ -24,26 +24,28 @@ static void convertCamelCaseToSpacedText(std::string &labelUpd){
     }
   }
 
-}
+};
 //==============================================================================
 static void escapeSpecialCharacters(std::string &textUpd, 
-                            std::vector< char > &charactersToEscape){
+                            std::string &charactersToEscape){
 
-    for(auto &escChar : charactersToEscape){
-      size_t idx = textUpd.find(escChar,0);
+    for(size_t i=0; i<charactersToEscape.length();++i){
+      char charToEscape = charactersToEscape[i];
+      size_t idx = textUpd.find(charToEscape,0);
       while(idx != std::string::npos){
         if(idx != std::string::npos){
           textUpd.insert(idx,"\\");
         }
-        idx = textUpd.find(escChar,idx+2);
+        idx = textUpd.find(charToEscape,idx+2);
       }
     }
-}
+};
 //==============================================================================
 static void deleteCharacters(std::string &textUpd, 
-                            std::vector< char > &charactersToDelete){
+                             std::string &charactersToDelete){
 
-    for(auto &delChar : charactersToDelete){
+    for(size_t i=0; i< charactersToDelete.length();++i){
+      char delChar = charactersToDelete[i];
       size_t idx = textUpd.find(delChar,0);
       while(idx != std::string::npos){
         if(idx != std::string::npos){
@@ -52,7 +54,7 @@ static void deleteCharacters(std::string &textUpd,
         idx = textUpd.find(delChar,idx);
       }
     }
-}
+};
 
 
 //==============================================================================
