@@ -133,36 +133,37 @@ public:
     static void extractSummaryStatistics(sciplot::Vec &data, 
                                          SummaryStatistics &summary){
 
-    std::vector<double> dataDbl;
-    for(size_t i=0; i<data.size(); ++i){
-        dataDbl.push_back(data[i]);
-    }
-    summary.current = dataDbl[dataDbl.size()-1];
-
-    std::sort(dataDbl.begin(),dataDbl.end());
-
-    summary.min = dataDbl[0];
-    summary.max = dataDbl[dataDbl.size()-1];
-
-
-    if(dataDbl.size() > 1){
-        for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
-        double idxDbl = Percentiles[i]*(dataDbl.size()-1);
-        int indexA = std::floor(idxDbl);
-        int indexB = std::ceil(idxDbl);
-        double weightB = idxDbl - static_cast<double>(indexA);
-        double weightA = 1.0-weightB;
-        double valueA = dataDbl[indexA];
-        double valueB = dataDbl[indexB];
-        double value = valueA*weightA + valueB*weightB;
-        summary.percentiles.push_back(value);
+      if(data.size() > 0){
+        std::vector<double> dataDbl;
+        for(size_t i=0; i<data.size(); ++i){
+            dataDbl.push_back(data[i]);
         }
-    }else{
-        for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
-        summary.percentiles.push_back(dataDbl[0]);
-        }
-    }
+        summary.current = dataDbl[dataDbl.size()-1];
 
+        std::sort(dataDbl.begin(),dataDbl.end());
+
+        summary.min = dataDbl[0];
+        summary.max = dataDbl[dataDbl.size()-1];
+
+
+        if(dataDbl.size() > 1){
+            for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
+            double idxDbl = Percentiles[i]*(dataDbl.size()-1);
+            int indexA = std::floor(idxDbl);
+            int indexB = std::ceil(idxDbl);
+            double weightB = idxDbl - static_cast<double>(indexA);
+            double weightA = 1.0-weightB;
+            double valueA = dataDbl[indexA];
+            double valueB = dataDbl[indexB];
+            double value = valueA*weightA + valueB*weightB;
+            summary.percentiles.push_back(value);
+            }
+        }else{
+            for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
+            summary.percentiles.push_back(dataDbl[0]);
+            }
+        }
+      }
     };
 
     //==========================================================================

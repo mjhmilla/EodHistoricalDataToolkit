@@ -233,7 +233,7 @@ static void appendValuationTable(std::ofstream &latexReport,
     latexReport << "\\hline " << std::endl;                
     latexReport << "$A_5$. Total cash from & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["presentValueDCF_reinvestmentRate_totalCashFromOperatingActivities"],true))
+                    calculateData[date]["presentValueDCF_reinvestmentRate_operatingIncome"],true))
                 << " \\\\" << std::endl;
     latexReport << " operating activities & "
                 << " \\\\" << std::endl;
@@ -535,7 +535,7 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["priceToValue"],true))
                 << " \\\\" << std::endl; 
-    latexReport << "\\multicolumn{2}{c}{ $G_{2}= C_{2} / J_{12}$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $G_{2}= C_{2} / D_{12}$} \\\\" 
                 << std::endl; 
 
 

@@ -552,6 +552,12 @@ bool generateLaTeXReport(
 
   metric.fieldNames.clear();
   metric.fieldNames.push_back("General");
+  metric.fieldNames.push_back("CurrencyCode");
+  metric.type = JSON_FIELD_TYPE::STRING;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fieldNames.push_back("General");
   metric.fieldNames.push_back("IPODate");
   metric.type = JSON_FIELD_TYPE::STRING;
   tabularMetrics.push_back(metric);
@@ -763,6 +769,8 @@ int main (int argc, char* argv[]) {
   std::string historicalFolder;
   std::string plotConfigurationFilePath;  
   std::string reportFolder;
+  
+  std::string singleFileToEvaluate;
 
   bool verbose;
 
@@ -801,6 +809,12 @@ int main (int argc, char* argv[]) {
       true,"","string");
     cmd.add(historicalFolderInput);
 
+    TCLAP::ValueArg<std::string> singleFileToEvaluateInput("i",
+      "single_ticker_name", 
+      "To evaluate a single ticker only, set the ticker name here.",
+      false,"","string");
+    cmd.add(singleFileToEvaluateInput);    
+
     TCLAP::ValueArg<std::string> plotConfigurationFilePathInput("c",
       "configuration_file", 
       "The path to the csv file that contains the names of the metrics "
@@ -816,6 +830,7 @@ int main (int argc, char* argv[]) {
 
     cmd.parse(argc,argv);
 
+    singleFileToEvaluate      = singleFileToEvaluateInput.getValue();
     exchangeCode              = exchangeCodeInput.getValue();  
     plotConfigurationFilePath = plotConfigurationFilePathInput.getValue();      
     calculateDataFolder       = calculateDataFolderInput.getValue();
@@ -827,6 +842,9 @@ int main (int argc, char* argv[]) {
     if(verbose){
       std::cout << "  Exchange Code" << std::endl;
       std::cout << "    " << exchangeCode << std::endl;
+
+      std::cout << "  Single file name to evaluate" << std::endl;
+      std::cout << "    " << singleFileToEvaluate << std::endl;
 
       std::cout << "  Calculate Data Input Folder" << std::endl;
       std::cout << "    " << calculateDataFolder << std::endl;
@@ -874,7 +892,12 @@ int main (int argc, char* argv[]) {
     //
     // Check the file name
     //    
-    std::string fileName   = file.path().filename(); 
+    std::string fileName   = file.path().filename();
+
+    if(singleFileToEvaluate.length() > 0){
+      fileName = singleFileToEvaluate;
+    }    
+
     std::size_t fileExtPos = fileName.find(analysisExt);
 
     if(verbose){
@@ -889,6 +912,8 @@ int main (int argc, char* argv[]) {
                   << " should end in .json but this does not:" << std::endl; 
       }
     }
+
+
 
 
 
@@ -918,15 +943,22 @@ int main (int argc, char* argv[]) {
       nlohmann::ordered_json fundamentalData;  
       bool loadedFundData =JsonFunctions::loadJsonFile(ticker, 
                                 fundamentalFolder, fundamentalData, verbose);
-
+      if(loadedFundData){
+        loadedFundData = !fundamentalData.empty();
+      }
       nlohmann::ordered_json historicalData;
       bool loadedHistData =JsonFunctions::loadJsonFile(ticker, 
                                 historicalFolder, historicalData, verbose); 
+      if(loadedHistData){
+        loadedHistData = !historicalData.empty();
+      }
                                 
       nlohmann::ordered_json calculateData;
       bool loadedCalculateData =JsonFunctions::loadJsonFile(ticker, 
                                 calculateDataFolder, calculateData, verbose);
-
+      if(loadedCalculateData){
+        loadedCalculateData = !calculateData.empty();
+      }
 
 
       if(loadedFundData && loadedHistData && loadedCalculateData){
@@ -1012,7 +1044,9 @@ int main (int argc, char* argv[]) {
 
     }
 
-
+    if(singleFileToEvaluate.length() ){
+      break;
+    }
   }
  
   if(verbose){

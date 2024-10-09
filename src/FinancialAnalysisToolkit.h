@@ -1352,18 +1352,20 @@ class FinancialAnalysisToolkit {
         inventoryPrevious = JsonFunctions::MISSING_VALUE;
       }
 
-      //All companies have receivables and accounts payable: these both
-      //need to be present to evaluate the change in non-cash working capital
       if(    JsonFunctions::isJsonFloatValid(  netReceivables         )
-          && JsonFunctions::isJsonFloatValid(  netReceivablesPrevious )
-          && JsonFunctions::isJsonFloatValid(  accountsPayable        )
-          && JsonFunctions::isJsonFloatValid(  accountsPayablePrevious)){
+          && JsonFunctions::isJsonFloatValid(  netReceivablesPrevious )){
         changeInNonCashWorkingCapital += (netReceivables-netReceivablesPrevious);
-        changeInNonCashWorkingCapital += -1.0*(accountsPayable-accountsPayablePrevious);
         valuesAdded=true;
       }else{
         netReceivables         =JsonFunctions::MISSING_VALUE;
         netReceivablesPrevious =JsonFunctions::MISSING_VALUE;
+      }
+
+      if(    JsonFunctions::isJsonFloatValid(  accountsPayable        )
+          && JsonFunctions::isJsonFloatValid(  accountsPayablePrevious)){
+        changeInNonCashWorkingCapital += -1.0*(accountsPayable-accountsPayablePrevious);
+        valuesAdded=true;
+      }else{
         accountsPayable        =JsonFunctions::MISSING_VALUE;
         accountsPayablePrevious=JsonFunctions::MISSING_VALUE;
       }
@@ -1755,16 +1757,22 @@ class FinancialAnalysisToolkit {
       //  JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
       //                ["totalCashFromOperatingActivities"]); 
 
-      double totalCashFromOperatingActivities = 
+      //double totalCashFromOperatingActivities = 
+      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+      //    jsonData,FIN,CF,timeUnit,dateSet,"totalCashFromOperatingActivities",
+      //    setNansToMissingValue);
+      
+      double operatingIncome = 
         FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-          jsonData,FIN,CF,timeUnit,dateSet,"totalCashFromOperatingActivities",
+          jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
+
 
       std::string parentName = parentCategoryName;
       parentName.append("reinvestmentRate_");
 
       double afterTaxOperatingIncome = 
-        totalCashFromOperatingActivities*(1.0-taxRate);
+        operatingIncome*(1.0-taxRate);
 
       double netCapitalExpenditures = 
         calcNetCapitalExpenditures( jsonData, 
@@ -1807,7 +1815,7 @@ class FinancialAnalysisToolkit {
       if(appendTermRecord){
 
         termNames.push_back(parentCategoryName 
-          + "reinvestmentRate_totalCashFromOperatingActivities");
+          + "reinvestmentRate_operatingIncome");
         termNames.push_back(parentCategoryName 
           + "reinvestmentRate_taxRate");
         termNames.push_back(parentCategoryName 
@@ -1815,7 +1823,7 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName 
           + "reinvestmentRate");
 
-        termValues.push_back(totalCashFromOperatingActivities);
+        termValues.push_back(operatingIncome);
         termValues.push_back(taxRate);
         termValues.push_back(afterTaxOperatingIncome);
         termValues.push_back(reinvestmentRate);
@@ -2237,20 +2245,20 @@ class FinancialAnalysisToolkit {
       //  JsonFunctions::getJsonFloat(jsonData[FIN][CF][timeUnit][date.c_str()]  
       //                ["totalCashFromOperatingActivities"]); 
 
-      double totalCashFromOperatingActivities = 
+      double operatingIncome = 
         FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-          jsonData,FIN,CF,timeUnit,dateSet,"totalCashFromOperatingActivities",
+          jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
 
       double afterTaxOperatingIncome = 
-        totalCashFromOperatingActivities*(1.0-taxRate);
+        operatingIncome*(1.0-taxRate);
 
       if(appendTermRecord){
-        termNames.push_back("presentValueDCF_afterTaxOperatingIncome_totalCashFromOperatingActivities");
+        termNames.push_back("presentValueDCF_afterTaxOperatingIncome_operatingIncome");
         termNames.push_back("presentValueDCF_afterTaxOperatingIncome_taxRate");
         termNames.push_back("presentValueDCF_afterTaxOperatingIncome");
 
-        termValues.push_back(totalCashFromOperatingActivities);
+        termValues.push_back(operatingIncome);
         termValues.push_back(taxRate);
         termValues.push_back(afterTaxOperatingIncome);
       }
@@ -2313,7 +2321,7 @@ class FinancialAnalysisToolkit {
           || !JsonFunctions::isJsonFloatValid( returnOnInvestedCapital)
           || !JsonFunctions::isJsonFloatValid( retentionRatio)
           || !JsonFunctions::isJsonFloatValid( returnOnEquity)
-          || !JsonFunctions::isJsonFloatValid( totalCashFromOperatingActivities)
+          || !JsonFunctions::isJsonFloatValid( operatingIncome)
           || !JsonFunctions::isJsonFloatValid( taxRate)){
 
         if(setNansToMissingValue){
