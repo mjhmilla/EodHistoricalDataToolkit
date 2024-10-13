@@ -525,6 +525,7 @@ bool generateLaTeXReportWrapper(
 //==============================================================================
 bool generateLaTeXReport(
     const TickerMetaData &tickerMetaData,
+    const std::string &date,
     const nlohmann::ordered_json &fundamentalData,
     const nlohmann::ordered_json &historicalData,
     const nlohmann::ordered_json &calculateData,
@@ -726,7 +727,7 @@ bool generateLaTeXReport(
     }
     latexReport << "\\end{tabular}" << std::endl << std::endl;
 
-    std::string date = calculateData.begin().key();
+    //std::string date = calculateData.begin().key();
 
     for(size_t i=0; i<subplotMetricNames.size(); ++i){
       for(size_t j=0; j<subplotMetricNames[i].size(); ++j){
@@ -769,7 +770,8 @@ int main (int argc, char* argv[]) {
   std::string historicalFolder;
   std::string plotConfigurationFilePath;  
   std::string reportFolder;
-  
+  std::string dateOfTable;
+
   std::string singleFileToEvaluate;
 
   bool verbose;
@@ -815,6 +817,11 @@ int main (int argc, char* argv[]) {
       false,"","string");
     cmd.add(singleFileToEvaluateInput);    
 
+    TCLAP::ValueArg<std::string> dateOfTableInput("d","date", 
+      "Date used to produce the dicounted cash flow model detailed output.",
+      true,"","string");
+    cmd.add(dateOfTableInput);
+
     TCLAP::ValueArg<std::string> plotConfigurationFilePathInput("c",
       "configuration_file", 
       "The path to the csv file that contains the names of the metrics "
@@ -837,6 +844,7 @@ int main (int argc, char* argv[]) {
     fundamentalFolder         = fundamentalFolderInput.getValue();
     historicalFolder          = historicalFolderInput.getValue();    
     reportFolder              = reportFolderOutput.getValue();
+    dateOfTable               = dateOfTableInput.getValue();
     verbose                   = verboseInput.getValue();
 
     if(verbose){
@@ -845,6 +853,11 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Single file name to evaluate" << std::endl;
       std::cout << "    " << singleFileToEvaluate << std::endl;
+
+      if(dateOfTable.length()>0){
+        std::cout << "  Date used to calculate tabular output" << std::endl;
+        std::cout << "    " << dateOfTable << std::endl;
+      }
 
       std::cout << "  Calculate Data Input Folder" << std::endl;
       std::cout << "    " << calculateDataFolder << std::endl;
@@ -996,9 +1009,15 @@ int main (int argc, char* argv[]) {
           reportFileName.append(".tex");
           outputReportFilePath.append(reportFileName);
 
+          std::string date = calculateData.begin().key();
+          if(dateOfTable.length()>0){
+            date=dateOfTable;
+          }
+
           bool successGenerateLaTeXReport = 
             generateLaTeXReport(
               tickerMetaData,
+              date,
               fundamentalData,
               historicalData,
               calculateData,

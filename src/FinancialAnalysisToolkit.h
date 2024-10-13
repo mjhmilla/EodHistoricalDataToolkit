@@ -2023,7 +2023,7 @@ class FinancialAnalysisToolkit {
 
     //==========================================================================
     static double calcEnterpriseValue(nlohmann::ordered_json &fundamentalData, 
-                                    double sharePriceAdjustedClose, 
+                                    double sharePriceClose, 
                                     std::vector< std::string > &dateSet,
                                     const char *timeUnit, 
                                     bool appendTermRecord,                                      
@@ -2094,7 +2094,7 @@ class FinancialAnalysisToolkit {
       //    setNansToMissingValue);    
 
       double marketCapitalization = 
-        sharePriceAdjustedClose*commonStockSharesOutstanding;
+        sharePriceClose*commonStockSharesOutstanding;
 
       //From Investopedia: https://www.investopedia.com/terms/e/enterprisevalue.asp
       // EV = MC + Total Debt - C
@@ -2111,7 +2111,7 @@ class FinancialAnalysisToolkit {
                               - (cashAndEquivalents + cash);
 
       
-      if(   !JsonFunctions::isJsonFloatValid(sharePriceAdjustedClose)
+      if(   !JsonFunctions::isJsonFloatValid(sharePriceClose)
          || !JsonFunctions::isJsonFloatValid(commonStockSharesOutstanding)
          || (   !JsonFunctions::isJsonFloatValid(shortLongTermDebtTotal)
              && !JsonFunctions::isJsonFloatValid(longTermDebt)) ){
@@ -2128,7 +2128,7 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName+"enterpriseValue_cashAndEquivalents");
         termNames.push_back(parentCategoryName+"enterpriseValue_cash");
         termNames.push_back(parentCategoryName+"enterpriseValue_commonStockSharesOutstanding");
-        termNames.push_back(parentCategoryName+"enterpriseValue_adjustedClose");
+        termNames.push_back(parentCategoryName+"enterpriseValue_close");
         termNames.push_back(parentCategoryName+"enterpriseValue_marketCapitalization");
         termNames.push_back(parentCategoryName+"enterpriseValue");
 
@@ -2137,7 +2137,7 @@ class FinancialAnalysisToolkit {
         termValues.push_back(cashAndEquivalents);
         termValues.push_back(cash);
         termValues.push_back(commonStockSharesOutstanding);
-        termValues.push_back(sharePriceAdjustedClose);
+        termValues.push_back(sharePriceClose);
         termValues.push_back(marketCapitalization);
         termValues.push_back(enterpriseValue);      
       }

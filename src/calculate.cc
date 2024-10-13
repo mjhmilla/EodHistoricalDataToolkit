@@ -1297,28 +1297,10 @@ int main (int argc, char* argv[]) {
         //======================================================================
         //Evaluate the current total short and long term debt
         //======================================================================
-        //double shortLongTermDebtTotal = 
-        //  JsonFunctions::getJsonFloat(
-        //    fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-        //                   ["shortLongTermDebtTotal"]);
-
-        double shortLongTermDebtTotal = 
-          FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-            fundamentalData, FIN, BAL, timePeriod.c_str(), dateSet, 
-            "shortLongTermDebtTotal",setNansToMissingValue);
-
-        if(!JsonFunctions::isJsonFloatValid(shortLongTermDebtTotal) 
-            && relaxedCalculation){
-
-          //shortLongTermDebtTotal = 
-          //  JsonFunctions::getJsonFloat(
-          //    fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-          //                   ["longTermDebt"], setNansToMissingValue);
-          shortLongTermDebtTotal = 
-            FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-              fundamentalData, FIN, BAL, timePeriod.c_str(), dateSet, 
-              "longTermDebt",setNansToMissingValue);                             
-        }
+        double longTermDebt = 
+          JsonFunctions::getJsonFloat(
+            fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+                           ["longTermDebt"]);
 
         //======================================================================        
         //Evaluate the current market capitalization
@@ -1328,21 +1310,21 @@ int main (int argc, char* argv[]) {
             fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
                             ["commonStockSharesOutstanding"], setNansToMissingValue);
 
-        //double commonStockSharesOutstanding = 
-        //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-        //    fundamentalData,FIN,BAL,timePeriod.c_str(),dateSet,
-        //    "commonStockSharesOutstanding", setNansToMissingValue);
-
         unsigned int indexHistoricalData = 
           indicesCommonHistoricalDates[indexDate];   
 
         std::string closestHistoricalDate= datesHistorical[indexHistoricalData]; 
 
-        double adjustedClose = std::nan("1");
+        double adjustedClosePrice = std::nan("1");
+        double closePrice = std::nan("1");
         try{
-          adjustedClose = JsonFunctions::getJsonFloat(
+          adjustedClosePrice = JsonFunctions::getJsonFloat(
                       historicalData[ indexHistoricalData ]["adjusted_close"],
-                      setNansToMissingValue);       
+                      setNansToMissingValue); 
+          closePrice = JsonFunctions::getJsonFloat(
+                      historicalData[ indexHistoricalData ]["close"],
+                      setNansToMissingValue);                       
+
         }catch( std::invalid_argument const& ex){
           std::cout << " Historical record (" << closestHistoricalDate << ")"
                     << " is missing an opening share price."
@@ -1350,7 +1332,7 @@ int main (int argc, char* argv[]) {
         }
 
         double marketCapitalization = 
-          adjustedClose*commonStockSharesOutstanding;
+          closePrice*commonStockSharesOutstanding;
 
         //======================================================================        
         //Evaluate a weighted cost of capital
@@ -1358,21 +1340,21 @@ int main (int argc, char* argv[]) {
 
         double costOfCapital = 
           (costOfEquityAsAPercentage*marketCapitalization
-          +afterTaxCostOfDebt*shortLongTermDebtTotal)
-          /(marketCapitalization+shortLongTermDebtTotal);
+          +afterTaxCostOfDebt*longTermDebt)
+          /(marketCapitalization+longTermDebt);
 
 
-        termNames.push_back("costOfCapital_shortLongTermDebtTotal");
+        termNames.push_back("costOfCapital_longTermDebt");
         termNames.push_back("costOfCapital_commonStockSharesOutstanding");
-        termNames.push_back("costOfCapital_adjustedClose");
+        termNames.push_back("costOfCapital_close");
         termNames.push_back("costOfCapital_marketCapitalization");
         termNames.push_back("costOfCapital_costOfEquityAsAPercentage");
         termNames.push_back("costOfCapital_afterTaxCostOfDebt");
         termNames.push_back("costOfCapital");
 
-        termValues.push_back(shortLongTermDebtTotal);
+        termValues.push_back(longTermDebt);
         termValues.push_back(commonStockSharesOutstanding);
-        termValues.push_back(adjustedClose);
+        termValues.push_back(closePrice);
         termValues.push_back(marketCapitalization);
         termValues.push_back(costOfEquityAsAPercentage);
         termValues.push_back(afterTaxCostOfDebt);
@@ -1613,7 +1595,7 @@ int main (int argc, char* argv[]) {
         std::string rFcfToEvLabel = "residualFreeCashFlowToEnterpriseValue_"; 
         double enterpriseValue = FinancialAnalysisToolkit::
             calcEnterpriseValue(fundamentalData, 
-                                adjustedClose, 
+                                closePrice, 
                                 dateSet,
                                 timePeriod.c_str(),
                                 appendTermRecord,                                
