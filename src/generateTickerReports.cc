@@ -819,7 +819,7 @@ int main (int argc, char* argv[]) {
 
     TCLAP::ValueArg<std::string> dateOfTableInput("d","date", 
       "Date used to produce the dicounted cash flow model detailed output.",
-      true,"","string");
+      false,"","string");
     cmd.add(dateOfTableInput);
 
     TCLAP::ValueArg<std::string> plotConfigurationFilePathInput("c",

@@ -1528,14 +1528,14 @@ int main (int argc, char* argv[]) {
               termValues);
 
         //Market value (make adjustments as described in Damodaran Ch. 3)
-        //double cash = JsonFunctions::getJsonFloat(
-        //  fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]["cash"],
-        //  true);
+        double cash = JsonFunctions::getJsonFloat(
+          fundamentalData[FIN][BAL][timePeriod.c_str()][dateSet[0].c_str()]["cash"],
+          true);
 
-        double cash = 
-          FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-            fundamentalData,FIN,BAL,timePeriod.c_str(),dateSet,"cash",
-            setNansToMissingValue);
+        //double cash = 
+        //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        //    fundamentalData,FIN,BAL,timePeriod.c_str(),dateSet[0],"cash",
+        //    setNansToMissingValue);
 
         //double netDebt = JsonFunctions::getJsonFloat(
         //      fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]

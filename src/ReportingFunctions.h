@@ -119,7 +119,7 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["costOfCapital_commonStockSharesOutstanding"],true))
                 << " \\\\" << std::endl;                
-    latexReport << "$B_2$. Adjusted Close & "
+    latexReport << "$B_2$. Close price & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["costOfCapital_close"],true))
                 << " \\\\" << std::endl;                
@@ -176,12 +176,16 @@ static void appendValuationTable(std::ofstream &latexReport,
     latexReport << "$D_3$. Depreciation & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_depreciation"],true))
-                << " \\\\" << std::endl;                
-    latexReport << "$E_3$. Net Capital Expenditures & "
+                << " \\\\" << std::endl;
+    latexReport << "$E_3$. Depreciation est. & "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_depreciationEstimate"],true))
+                << " \\\\" << std::endl;
+    latexReport << "$F_3$. Net Capital Expenditures & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["presentValueDCF_reinvestmentRate_netCapitalExpenditures"],true))
                 << " \\\\" << std::endl;                
-    latexReport << "\\multicolumn{2}{c}{ $E_3 = A_3 - D_3$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $F_3 = A_3 - D_3$ or $F_3 = A_3 - E_3$ } \\\\" 
                 << std::endl;              
     latexReport << "\\end{tabular}" << std::endl 
                 << "\\bigskip" << std::endl<< std::endl;  
@@ -245,7 +249,7 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["presentValueDCF_reinvestmentRate"],true))
                 << " \\\\" << std::endl;                  
-    latexReport << "\\multicolumn{2}{c}{ $C_5 = (E_3+G_4)/B_5$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $C_5 = (F_3+G_4)/B_5$} \\\\" 
                 << std::endl;                
     latexReport << "\\end{tabular}" << std::endl 
                 << "\\bigskip" << std::endl<< std::endl;
@@ -521,9 +525,10 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << " \\\\" << std::endl; 
     latexReport << "$E_{13}$. Value of managment options  & ? "
                 << " \\\\" << std::endl; 
-    latexReport << "$F_{13}$. Number of shares outstanding  & ? "
+    latexReport << "$F_{13}$. Present value approx.  & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date]["priceToValue_presentValue_approximation"],true))
                 << " \\\\" << std::endl; 
-
 
     latexReport << "$C_{2}$. Market cap. & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
@@ -533,7 +538,7 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["priceToValue"],true))
                 << " \\\\" << std::endl; 
-    latexReport << "\\multicolumn{2}{c}{ $G_{2}= C_{2} / D_{12}$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $G_{2}= C_{2} / F_{13}$} \\\\" 
                 << std::endl; 
 
 

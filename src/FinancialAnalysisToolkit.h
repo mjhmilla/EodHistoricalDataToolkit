@@ -1209,6 +1209,9 @@ class FinancialAnalysisToolkit {
               
       }
 
+      if(dateSet[0].compare("2008-09-30")==0){
+        bool here=true;
+      }
       //double depreciation = JsonFunctions::getJsonFloat(
       //  jsonData[FIN][CF][timeUnit][date.c_str()]["depreciation"],
       //  setNansToMissingValue);
@@ -1218,10 +1221,50 @@ class FinancialAnalysisToolkit {
             jsonData,FIN,CF,timeUnit,dateSet,"depreciation",
             setNansToMissingValue);
 
+      //It's tempting to just make this estimation code a part of
+      //the function sumFundamentalDataOverDates
+      double depreciationEstimate=0.;
+      std::vector< double > depreciationSet;
+      for(size_t i=0; i<dateSet.size();++i){
+        depreciationSet.push_back(0.);
+      }
+
+      if(!JsonFunctions::isJsonFloatValid(depreciation)){
+        double n = 0.;
+        for(size_t i=0; i<dateSet.size();++i){
+
+          double depreciationTemp = JsonFunctions::getJsonFloat(
+            jsonData[FIN][CF][timeUnit][dateSet[i].c_str()]["depreciation"],
+            setNansToMissingValue);
+
+            depreciationSet[i]=depreciationTemp;
+
+          if(JsonFunctions::isJsonFloatValid(depreciationTemp)){            
+            n=n+1.0;
+            depreciationEstimate += depreciationTemp;
+          }                    
+        }
+        if(n > 0.){
+          double mDivn = static_cast<double>(dateSet.size())/n; 
+          depreciationEstimate = depreciationEstimate * mDivn;
+        }else{
+          depreciationEstimate=std::nan("1");
+          if(setNansToMissingValue){
+            depreciationEstimate = JsonFunctions::MISSING_VALUE;
+          }
+        }
+      }       
+
+
       double netCapitalExpenditures = capitalExpenditures - depreciation;  
+      if(!JsonFunctions::isJsonFloatValid(depreciation)){
+        netCapitalExpenditures = capitalExpenditures-depreciationEstimate;
+      }
+
 
       if(!JsonFunctions::isJsonFloatValid(capitalExpenditures) 
-      && !JsonFunctions::isJsonFloatValid(depreciation)){
+          || (     !JsonFunctions::isJsonFloatValid(depreciation        )
+               &&  !JsonFunctions::isJsonFloatValid(depreciationEstimate))){
         if(setNansToMissingValue){
           netCapitalExpenditures = JsonFunctions::MISSING_VALUE; 
         }else{
@@ -1239,13 +1282,17 @@ class FinancialAnalysisToolkit {
           + "netCapitalExpenditures_plantPropertyEquipmentPrevious");
         termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures_depreciation");
+        termNames.push_back(parentCategoryName
+          + "netCapitalExpenditures_depreciationEstimate");
         termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures");
+
 
         termValues.push_back(capitalExpenditures);
         termValues.push_back(plantPropertyEquipment);
         termValues.push_back(plantPropertyEquipmentPrevious);
         termValues.push_back(depreciation);
+        termValues.push_back(depreciationEstimate);      
         termValues.push_back(netCapitalExpenditures);
       }
 
