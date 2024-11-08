@@ -244,7 +244,8 @@ bool extractDatesOfClosestMatch(
               unsigned int maxNumberOfDaysInError,
               std::vector< std::string > &datesCommonToAandB,
               std::vector< unsigned int > &indicesOfCommonSetADates,
-              std::vector< unsigned int > &indicesOfCommonSetBDates ){
+              std::vector< unsigned int > &indicesOfCommonSetBDates,
+              bool allowRepeatedDates ){
 
     
   indicesOfCommonSetADates.clear();
@@ -299,6 +300,10 @@ bool extractDatesOfClosestMatch(
     //Find the closest date in SetB data leading up to the fundamental
     //date     
     tempDateSetA = datesSetA[indexSetA];
+
+    if(allowRepeatedDates){
+      indexSetB = indexSetBFirst;
+    }
 
     int daysInError;
     std::string lastValidDate;
@@ -647,6 +652,12 @@ int main (int argc, char* argv[]) {
   int maxDayErrorBondYieldData  = maxDayErrorTabularData; 
   // Bond yield data has a resolution of 1 month
 
+
+  //Accept the closest date no matter the error.
+  //Why? I have no better option - sometimes the outstandingShare dates
+  //go back 10 years while the fundamental data goes back 20.
+  int maxDayErrorOutstandingShareData = std::numeric_limits<int>::infinity(); 
+
   //bool relaxedCalculation = true;
   //Some of entries in EODs data base are frequently null because the values
   //are not reported in the original financial statements. There are two
@@ -852,6 +863,13 @@ int main (int argc, char* argv[]) {
 
     //Extract the list of entry dates for the fundamental data
     std::vector< std::string > datesFundamental;
+    std::vector< std::string > datesOutstandingShares;
+    std::vector< double > outstandingSharesData;
+    std::string timePeriodAlt(timePeriod);
+    if(timePeriodAlt.compare(Y)==0){
+      timePeriodAlt = A;
+    }
+
     if(validInput){
       for(auto& el : fundamentalData[FIN][BAL][timePeriod].items()){
         datesFundamental.push_back(el.key());
@@ -863,6 +881,14 @@ int main (int argc, char* argv[]) {
                     << std::endl; 
         }
       }
+
+      for(auto& el : fundamentalData[OS][timePeriodAlt]){
+        std::string dateFormatted; 
+        JsonFunctions::getJsonString(el["dateFormatted"],dateFormatted);
+        datesOutstandingShares.push_back(dateFormatted);
+        double shares = JsonFunctions::getJsonFloat(el["shares"]);
+        outstandingSharesData.push_back(shares);
+      }      
     }
     //Extract the countryName and ISO
     std::string countryName;
@@ -909,6 +935,7 @@ int main (int argc, char* argv[]) {
     if(validInput){
       //Extract the set of matching dates (within tolerance) between
       //the fundamental and historical data
+      bool allowRepeatedDates=false;
       validInput = extractDatesOfClosestMatch(
                         datesFundamental,
                         "%Y-%m-%d",
@@ -917,7 +944,8 @@ int main (int argc, char* argv[]) {
                         maxDayErrorHistoricalData,
                         datesCommon,
                         indicesCommonFundamentalDates,
-                        indicesCommonHistoricalDates);
+                        indicesCommonHistoricalDates,
+                        allowRepeatedDates);
 
 
 
@@ -964,13 +992,14 @@ int main (int argc, char* argv[]) {
     
     
     std::vector< std::string > datesCommonBond;
-    std::vector< unsigned int > indicesClosestCommonDates;
+    std::vector< unsigned int > indicesClosestCommonDatesToBondYieldDates;
     std::vector< unsigned int > indicesClosestBondYieldDates;
 
     if(validInput){
       //Extract the set of matching dates (within tolerance) between
       //the fundamental, historical, and bond data. The bond data table is
       //quite dense (for the U.S.) so this shouldn't change in size at all.
+      bool allowRepeatedDates=false;
       validInput = extractDatesOfClosestMatch(
                         datesCommon,
                         "%Y-%m-%d",
@@ -978,8 +1007,9 @@ int main (int argc, char* argv[]) {
                         "%Y-%m-%d",
                         maxDayErrorBondYieldData,
                         datesCommonBond,
-                        indicesClosestCommonDates,
-                        indicesClosestBondYieldDates);
+                        indicesClosestCommonDatesToBondYieldDates,
+                        indicesClosestBondYieldDates,
+                        allowRepeatedDates);
 
       if(datesCommon.size() != datesCommonBond.size()){
         validInput = false;
@@ -995,9 +1025,31 @@ int main (int argc, char* argv[]) {
         }
                   
       }
+    }
 
+    /*
+    std::vector< std::string> datesCommonOutstandingShares;
+    std::vector< unsigned int > indicesClosestCommonDatesToOutstandingShares;
+    std::vector< unsigned int > indicesClosestOutstandingShareDates;
 
-    }    
+    if(validInput){
+      bool allowRepeatedDates=true;
+      validInput = extractDatesOfClosestMatch(
+                        datesCommon,
+                        "%Y-%m-%d",
+                        datesOutstandingShares,
+                        "%Y-%m-%d",
+                        maxDayErrorOutstandingShareData,
+                        datesCommonOutstandingShares,
+                        indicesClosestCommonDatesToOutstandingShares,
+                        indicesClosestOutstandingShareDates,
+                        allowRepeatedDates);
+
+      bool here=true;                                
+
+    }
+    */
+    
 
 
     //==========================================================================
@@ -1305,10 +1357,21 @@ int main (int argc, char* argv[]) {
         //======================================================================        
         //Evaluate the current market capitalization
         //======================================================================
-        double commonStockSharesOutstanding = 
-          JsonFunctions::getJsonFloat(
-            fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                            ["commonStockSharesOutstanding"], setNansToMissingValue);
+        double outstandingShares = 0;
+        double lowestErrorInDays = std::numeric_limits<int>::max();
+
+        for(size_t i = 0; i < datesOutstandingShares.size(); ++i){
+          int errorInDays = FinancialAnalysisToolkit::
+                              calcDifferenceInDaysBetweenTwoDates(
+                                date,
+                                "%Y-%m-%d",
+                                datesOutstandingShares[i], 
+                                "%Y-%m-%d");          
+          if( std::abs(errorInDays) < std::abs(lowestErrorInDays) ){
+            lowestErrorInDays = std::abs(errorInDays);
+            outstandingShares = outstandingSharesData[i];
+          }
+        }
 
         unsigned int indexHistoricalData = 
           indicesCommonHistoricalDates[indexDate];   
@@ -1332,7 +1395,7 @@ int main (int argc, char* argv[]) {
         }
 
         double marketCapitalization = 
-          closePrice*commonStockSharesOutstanding;
+          adjustedClosePrice*outstandingShares;
 
         //======================================================================        
         //Evaluate a weighted cost of capital
@@ -1345,16 +1408,16 @@ int main (int argc, char* argv[]) {
 
 
         termNames.push_back("costOfCapital_longTermDebt");
-        termNames.push_back("costOfCapital_commonStockSharesOutstanding");
-        termNames.push_back("costOfCapital_close");
+        termNames.push_back("costOfCapital_outstandingShares");
+        termNames.push_back("costOfCapital_adjusted_close");
         termNames.push_back("costOfCapital_marketCapitalization");
         termNames.push_back("costOfCapital_costOfEquityAsAPercentage");
         termNames.push_back("costOfCapital_afterTaxCostOfDebt");
         termNames.push_back("costOfCapital");
 
         termValues.push_back(longTermDebt);
-        termValues.push_back(commonStockSharesOutstanding);
-        termValues.push_back(closePrice);
+        termValues.push_back(outstandingShares);
+        termValues.push_back(adjustedClosePrice);
         termValues.push_back(marketCapitalization);
         termValues.push_back(costOfEquityAsAPercentage);
         termValues.push_back(afterTaxCostOfDebt);

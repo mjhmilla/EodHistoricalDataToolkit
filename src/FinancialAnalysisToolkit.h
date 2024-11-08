@@ -18,8 +18,10 @@ const char *FIN = "Financials";
 const char *BAL = "Balance_Sheet";
 const char *CF  = "Cash_Flow";
 const char *IS  = "Income_Statement";
+const char *OS  = "outstandingShares";
 
 const char *Y = "yearly";
+const char *A = "annual"; //EOD uses annual in the outstandingShares list.
 const char *Q = "quarterly";
 
 
