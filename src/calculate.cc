@@ -324,12 +324,13 @@ bool extractDatesOfClosestMatch(
       //As long as the historical date is less than or equal to the 
       //fundamental date, increment
       if(daysSetALessSetB >= 0){
-        found = true;
-        daysInError = daysSetALessSetB;
+        daysInError   = daysSetALessSetB;
         lastValidDate = tempDateSetB;
+        found=true;
       }else{
         indexSetB += indexSetBDelta;
       }
+
     }
 
     //Go back to the last valid date and save its information
@@ -652,11 +653,13 @@ int main (int argc, char* argv[]) {
   int maxDayErrorBondYieldData  = maxDayErrorTabularData; 
   // Bond yield data has a resolution of 1 month
 
-
-  //Accept the closest date no matter the error.
-  //Why? I have no better option - sometimes the outstandingShare dates
-  //go back 10 years while the fundamental data goes back 20.
-  int maxDayErrorOutstandingShareData = std::numeric_limits<int>::infinity(); 
+  int maxDayErrorOutstandingShareData = 365; 
+  if(quaterlyTTMAnalysis){
+    maxDayErrorOutstandingShareData = 2*(90);
+  }
+  // EODs reporting of outstandingShares sometimes misses a reporting period
+  // or two. This quantity should not change much, so allow more error here
+  // than with others.
 
   //bool relaxedCalculation = true;
   //Some of entries in EODs data base are frequently null because the values
@@ -865,9 +868,9 @@ int main (int argc, char* argv[]) {
     std::vector< std::string > datesFundamental;
     std::vector< std::string > datesOutstandingShares;
     std::vector< double > outstandingSharesData;
-    std::string timePeriodAlt(timePeriod);
-    if(timePeriodAlt.compare(Y)==0){
-      timePeriodAlt = A;
+    std::string timePeriodOS(timePeriod);
+    if(timePeriodOS.compare(Y)==0){
+      timePeriodOS = A;
     }
 
     if(validInput){
@@ -882,7 +885,7 @@ int main (int argc, char* argv[]) {
         }
       }
 
-      for(auto& el : fundamentalData[OS][timePeriodAlt]){
+      for(auto& el : fundamentalData[OS][timePeriodOS]){
         std::string dateFormatted; 
         JsonFunctions::getJsonString(el["dateFormatted"],dateFormatted);
         datesOutstandingShares.push_back(dateFormatted);
@@ -929,6 +932,7 @@ int main (int argc, char* argv[]) {
 
 
     std::vector< std::string > datesCommon;
+    size_t maxNumberDatesCommon=0;
     std::vector< unsigned int > indicesCommonHistoricalDates;
     std::vector< unsigned int > indicesCommonFundamentalDates;
 
@@ -946,8 +950,6 @@ int main (int argc, char* argv[]) {
                         indicesCommonFundamentalDates,
                         indicesCommonHistoricalDates,
                         allowRepeatedDates);
-
-
 
       if(!validInput){
         std::cout << "  Skipping ticker: there is not one matching date between"
@@ -980,6 +982,8 @@ int main (int argc, char* argv[]) {
                      indicesCommonFundamentalDates.end());
       }
 
+      maxNumberDatesCommon = datesCommon.size();
+
     }
 
     //==========================================================================
@@ -1011,6 +1015,8 @@ int main (int argc, char* argv[]) {
                         indicesClosestBondYieldDates,
                         allowRepeatedDates);
 
+      //Since we are asserting that the common dates and bond yields over lap
+      maxNumberDatesCommon = datesCommon.size();
       if(datesCommon.size() != datesCommonBond.size()){
         validInput = false;
         std::cout << " Skipping: the bond table is missing entries "
@@ -1027,7 +1033,7 @@ int main (int argc, char* argv[]) {
       }
     }
 
-    /*
+    
     std::vector< std::string> datesCommonOutstandingShares;
     std::vector< unsigned int > indicesClosestCommonDatesToOutstandingShares;
     std::vector< unsigned int > indicesClosestOutstandingShareDates;
@@ -1045,10 +1051,12 @@ int main (int argc, char* argv[]) {
                         indicesClosestOutstandingShareDates,
                         allowRepeatedDates);
 
-      bool here=true;                                
-
+      //The outstandingShares records may only go back 10 years while the 
+      //datesCommon might go back over 40 years depending on the company                        
+      maxNumberDatesCommon = datesOutstandingShares.size();
+                           
     }
-    */
+    
     
 
 
@@ -1098,13 +1106,13 @@ int main (int argc, char* argv[]) {
         numberOfDatesPerIteration=4;
       }
       unsigned int indexOfLastDate = 0;
-      if(datesCommon.size() > numberOfDatesPerIteration*2){
-        indexOfLastDate = datesCommon.size() - (numberOfDatesPerIteration-1);
+      if(maxNumberDatesCommon > numberOfDatesPerIteration*2){
+        indexOfLastDate = maxNumberDatesCommon - (numberOfDatesPerIteration-1);
       }else{
         if(verbose){
             std::cout <<  "  Skipping: " << numberOfDatesPerIteration*2 
                       <<  " common dates are needed to proceed but only " 
-                      <<  datesCommon.size() 
+                      <<  maxNumberDatesCommon 
                       << " are available " << std::endl;
         }
 
@@ -1179,9 +1187,12 @@ int main (int argc, char* argv[]) {
 
       //Here the -2*numberOfDatesPerIteration is added to ensure that the
       //data from the previous time period is available.
-      int indexDateLast = datesCommon.size() 
+
+
+      int indexDateLast = maxNumberDatesCommon 
                           - (2*numberOfDatesPerIteration)
                           + 1;
+                       
       //=======================================================================
       //
       //  Calculate the metrics for every data entry in the file
@@ -1206,7 +1217,7 @@ int main (int argc, char* argv[]) {
           here=true;
         }
         int indexPrevious = indexDate+numberOfDatesPerIteration;        
-        int indexFinal    = (datesCommon.size()-numberOfDatesPerIteration);
+        int indexFinal    = (maxNumberDatesCommon-numberOfDatesPerIteration);
         previousDateSet.resize(0);
         if(   indexPrevious >= 0 
            && indexPrevious <= indexFinal){
@@ -1249,7 +1260,7 @@ int main (int argc, char* argv[]) {
         {
           indexPastPeriods += 1;//indexDeltaCommonPrevious;
           if(    indexPastPeriods >= 0 
-              && indexPastPeriods < datesCommon.size()){
+              && indexPastPeriods < maxNumberDatesCommon){
             trailingPastPeriods.push_back(datesCommon[indexPastPeriods]);
           }
         }
@@ -1357,21 +1368,13 @@ int main (int argc, char* argv[]) {
         //======================================================================        
         //Evaluate the current market capitalization
         //======================================================================
-        double outstandingShares = 0;
-        double lowestErrorInDays = std::numeric_limits<int>::max();
 
-        for(size_t i = 0; i < datesOutstandingShares.size(); ++i){
-          int errorInDays = FinancialAnalysisToolkit::
-                              calcDifferenceInDaysBetweenTwoDates(
-                                date,
-                                "%Y-%m-%d",
-                                datesOutstandingShares[i], 
-                                "%Y-%m-%d");          
-          if( std::abs(errorInDays) < std::abs(lowestErrorInDays) ){
-            lowestErrorInDays = std::abs(errorInDays);
-            outstandingShares = outstandingSharesData[i];
-          }
-        }
+
+        unsigned int indexOutstandingShares = 
+          indicesClosestOutstandingShareDates[indexDate];
+        double outstandingShares = outstandingSharesData[indexOutstandingShares];
+
+
 
         unsigned int indexHistoricalData = 
           indicesCommonHistoricalDates[indexDate];   
