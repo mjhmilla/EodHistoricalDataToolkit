@@ -891,7 +891,14 @@ int main (int argc, char* argv[]) {
         datesOutstandingShares.push_back(dateFormatted);
         double shares = JsonFunctions::getJsonFloat(el["shares"]);
         outstandingSharesData.push_back(shares);
-      }      
+      }   
+
+      if(datesOutstandingShares.size() == 0){
+        validInput = false;
+        std::cout << "  Skipping: outstandingShares data contains no date entries" 
+                  << std::endl;         
+      }
+
     }
     //Extract the countryName and ISO
     std::string countryName;
@@ -931,7 +938,7 @@ int main (int argc, char* argv[]) {
 
 
 
-    std::vector< std::string > datesCommon;
+    std::vector< std::string > datesCommonFundHist;
     size_t maxNumberDatesCommon=0;
     std::vector< unsigned int > indicesCommonHistoricalDates;
     std::vector< unsigned int > indicesCommonFundamentalDates;
@@ -946,7 +953,7 @@ int main (int argc, char* argv[]) {
                         datesHistorical,
                         "%Y-%m-%d",
                         maxDayErrorHistoricalData,
-                        datesCommon,
+                        datesCommonFundHist,
                         indicesCommonFundamentalDates,
                         indicesCommonHistoricalDates,
                         allowRepeatedDates);
@@ -966,14 +973,14 @@ int main (int argc, char* argv[]) {
 
       int firstDateMinusLastDate = 
         FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
-            datesCommon[0],
+            datesCommonFundHist[0],
             "%Y-%m-%d",        
-            datesCommon[datesCommon.size()-1],
+            datesCommonFundHist[datesCommonFundHist.size()-1],
             "%Y-%m-%d");
 
       //If the dates are ordered from oldest to most recent, flip it      
       if(firstDateMinusLastDate < 0 ){
-        std::reverse(datesCommon.begin(), datesCommon.end());
+        std::reverse(datesCommonFundHist.begin(), datesCommonFundHist.end());
 
         std::reverse(indicesCommonHistoricalDates.begin(), 
                      indicesCommonHistoricalDates.end());
@@ -982,9 +989,75 @@ int main (int argc, char* argv[]) {
                      indicesCommonFundamentalDates.end());
       }
 
-      maxNumberDatesCommon = datesCommon.size();
+      maxNumberDatesCommon = datesCommonFundHist.size();
 
     }
+
+    //==========================================================================
+    //Extract the common dates of reporting between the fundamental data
+    //historical data, and the reports on outstandingShares
+    //==========================================================================
+
+    std::vector< std::string> datesCommon;
+    std::vector< unsigned int > indicesClosestCommonDatesToOutstandingShares;
+    std::vector< unsigned int > indicesClosestOutstandingShareDates;
+
+    if(validInput){
+      bool allowRepeatedDates=true;
+      validInput = extractDatesOfClosestMatch(
+                        datesCommonFundHist,
+                        "%Y-%m-%d",
+                        datesOutstandingShares,
+                        "%Y-%m-%d",
+                        maxDayErrorOutstandingShareData,
+                        datesCommon,
+                        indicesClosestCommonDatesToOutstandingShares,
+                        indicesClosestOutstandingShareDates,
+                        allowRepeatedDates);
+
+      //The outstandingShares records may only go back 10 years while the 
+      //datesCommon might go back over 40 years depending on the company                        
+      maxNumberDatesCommon = datesCommon.size();
+
+      //Remove the missing dates from indiciesCommonFundamentalDates
+      //and indiciesCommonHistoricalDates
+      
+      if(datesCommon.size() < datesCommonFundHist.size()){
+        size_t indexA = 0;
+        while(indexA < datesCommonFundHist.size()){
+          std::string dateA = datesCommonFundHist[indexA];
+          bool found = false;
+          for(auto& dateB : datesCommon){
+            if(dateA.compare(dateB) == 0){
+              found = true;
+              break;
+            }
+          }
+          if(found == false){
+            datesCommonFundHist.erase(
+                datesCommonFundHist.begin()+indexA);
+            indicesCommonFundamentalDates.erase(
+                indicesCommonFundamentalDates.begin()+indexA);
+            indicesCommonHistoricalDates.erase(
+                indicesCommonHistoricalDates.begin()+indexA);
+          }else{
+            ++indexA;
+          }        
+        }                                    
+      }
+
+      if(   (datesCommon.size() != datesCommonFundHist.size()) 
+         || (datesCommon.size() != indicesCommonFundamentalDates.size()) 
+         || (datesCommon.size() != indicesCommonHistoricalDates.size()) 
+        ) 
+       {
+        validInput = false;
+        std::cout << " Skipping: failed to find common set of dates for the "
+                  << "fundamental, historical, and outstandingShares datasets" 
+                  << std::endl;                  
+      }
+    }
+    
 
     //==========================================================================
     //Extract the closest order of the bond yields
@@ -1016,8 +1089,7 @@ int main (int argc, char* argv[]) {
                         allowRepeatedDates);
 
       //Since we are asserting that the common dates and bond yields over lap
-      maxNumberDatesCommon = datesCommon.size();
-      if(datesCommon.size() != datesCommonBond.size()){
+      if(datesCommonFundHist.size() != datesCommonBond.size()){
         validInput = false;
         std::cout << " Skipping: the bond table is missing entries "
                   << " that are in the set of common dates between "
@@ -1034,29 +1106,7 @@ int main (int argc, char* argv[]) {
     }
 
     
-    std::vector< std::string> datesCommonOutstandingShares;
-    std::vector< unsigned int > indicesClosestCommonDatesToOutstandingShares;
-    std::vector< unsigned int > indicesClosestOutstandingShareDates;
 
-    if(validInput){
-      bool allowRepeatedDates=true;
-      validInput = extractDatesOfClosestMatch(
-                        datesCommon,
-                        "%Y-%m-%d",
-                        datesOutstandingShares,
-                        "%Y-%m-%d",
-                        maxDayErrorOutstandingShareData,
-                        datesCommonOutstandingShares,
-                        indicesClosestCommonDatesToOutstandingShares,
-                        indicesClosestOutstandingShareDates,
-                        allowRepeatedDates);
-
-      //The outstandingShares records may only go back 10 years while the 
-      //datesCommon might go back over 40 years depending on the company                        
-      maxNumberDatesCommon = datesOutstandingShares.size();
-                           
-    }
-    
     
 
 
@@ -1658,10 +1708,10 @@ int main (int argc, char* argv[]) {
         }
 
         //Residual cash flow to enterprise value
-        std::string rFcfToEvLabel = "residualFreeCashFlowToEnterpriseValue_"; 
+        std::string rFcfToEvLabel = "enterpriseValueToResidualCashFlow_"; 
         double enterpriseValue = FinancialAnalysisToolkit::
             calcEnterpriseValue(fundamentalData, 
-                                closePrice, 
+                                marketCapitalization, 
                                 dateSet,
                                 timePeriod.c_str(),
                                 appendTermRecord,                                
@@ -1670,23 +1720,23 @@ int main (int argc, char* argv[]) {
                                 termNames,
                                 termValues);
 
-        double residualFreeCashFlowToEnterpriseValue = 
-          residualCashFlow/enterpriseValue;
+        double enterpriseValueToResidualCashFlow = 
+          enterpriseValue/residualCashFlow;
 
         if(   !JsonFunctions::isJsonFloatValid(residualCashFlow) 
            || !JsonFunctions::isJsonFloatValid(enterpriseValue)){
           if(setNansToMissingValue){
-            residualFreeCashFlowToEnterpriseValue = JsonFunctions::MISSING_VALUE;
+            enterpriseValueToResidualCashFlow = JsonFunctions::MISSING_VALUE;
           }else{
-            residualFreeCashFlowToEnterpriseValue = std::nan("1");
+            enterpriseValueToResidualCashFlow = std::nan("1");
           }
         }
 
         if(appendTermRecord){
-          termNames.push_back("residualFreeCashFlowToEnterpriseValue_residualCashFlow");
-          termNames.push_back("residualFreeCashFlowToEnterpriseValue");
+          termNames.push_back("enterpriseValueToResidualCashFlow_residualCashFlow");
+          termNames.push_back("enterpriseValueToResidualCashFlow");
           termValues.push_back(residualCashFlow);
-          termValues.push_back(residualFreeCashFlowToEnterpriseValue);
+          termValues.push_back(enterpriseValueToResidualCashFlow);
         }
 
 

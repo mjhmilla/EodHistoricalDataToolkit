@@ -2072,7 +2072,7 @@ class FinancialAnalysisToolkit {
 
     //==========================================================================
     static double calcEnterpriseValue(nlohmann::ordered_json &fundamentalData, 
-                                    double sharePriceClose, 
+                                    double marketCapitalization, 
                                     std::vector< std::string > &dateSet,
                                     const char *timeUnit, 
                                     bool appendTermRecord,                                      
@@ -2132,9 +2132,9 @@ class FinancialAnalysisToolkit {
         cash = 0.;        
       }
 
-      double commonStockSharesOutstanding = JsonFunctions::getJsonFloat(
-        fundamentalData[FIN][BAL][timeUnit][dateSet[0].c_str()]
-        ["commonStockSharesOutstanding"],setNansToMissingValue);  
+      //double commonStockSharesOutstanding = JsonFunctions::getJsonFloat(
+      //  fundamentalData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+      //  ["commonStockSharesOutstanding"],setNansToMissingValue);  
 
       //double commonStockSharesOutstanding = 
       //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
@@ -2142,8 +2142,8 @@ class FinancialAnalysisToolkit {
       //    "commonStockSharesOutstanding",
       //    setNansToMissingValue);    
 
-      double marketCapitalization = 
-        sharePriceClose*commonStockSharesOutstanding;
+      //double marketCapitalization = 
+      //  sharePriceClose*commonStockSharesOutstanding;
 
       //From Investopedia: https://www.investopedia.com/terms/e/enterprisevalue.asp
       // EV = MC + Total Debt - C
@@ -2160,10 +2160,8 @@ class FinancialAnalysisToolkit {
                               - (cashAndEquivalents + cash);
 
       
-      if(   !JsonFunctions::isJsonFloatValid(sharePriceClose)
-         || !JsonFunctions::isJsonFloatValid(commonStockSharesOutstanding)
-         || (   !JsonFunctions::isJsonFloatValid(shortLongTermDebtTotal)
-             && !JsonFunctions::isJsonFloatValid(longTermDebt)) ){
+      if(    !JsonFunctions::isJsonFloatValid(shortLongTermDebtTotal)
+             && !JsonFunctions::isJsonFloatValid(longTermDebt) ){
         if(setNansToMissingValue){
           enterpriseValue = JsonFunctions::MISSING_VALUE;
         }else{
@@ -2176,8 +2174,6 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentCategoryName+"enterpriseValue_longTermDebt");
         termNames.push_back(parentCategoryName+"enterpriseValue_cashAndEquivalents");
         termNames.push_back(parentCategoryName+"enterpriseValue_cash");
-        termNames.push_back(parentCategoryName+"enterpriseValue_commonStockSharesOutstanding");
-        termNames.push_back(parentCategoryName+"enterpriseValue_close");
         termNames.push_back(parentCategoryName+"enterpriseValue_marketCapitalization");
         termNames.push_back(parentCategoryName+"enterpriseValue");
 
@@ -2185,8 +2181,6 @@ class FinancialAnalysisToolkit {
         termValues.push_back(longTermDebt);
         termValues.push_back(cashAndEquivalents);
         termValues.push_back(cash);
-        termValues.push_back(commonStockSharesOutstanding);
-        termValues.push_back(sharePriceClose);
         termValues.push_back(marketCapitalization);
         termValues.push_back(enterpriseValue);      
       }
