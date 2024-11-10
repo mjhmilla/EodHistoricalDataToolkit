@@ -867,7 +867,6 @@ int main (int argc, char* argv[]) {
     //Extract the list of entry dates for the fundamental data
     std::vector< std::string > datesFundamental;
     std::vector< std::string > datesOutstandingShares;
-    std::vector< double > outstandingSharesData;
     std::string timePeriodOS(timePeriod);
     if(timePeriodOS.compare(Y)==0){
       timePeriodOS = A;
@@ -885,12 +884,10 @@ int main (int argc, char* argv[]) {
         }
       }
 
-      for(auto& el : fundamentalData[OS][timePeriodOS]){
+      for(auto& el : fundamentalData[OS][timePeriodOS.c_str()]){
         std::string dateFormatted; 
         JsonFunctions::getJsonString(el["dateFormatted"],dateFormatted);
         datesOutstandingShares.push_back(dateFormatted);
-        double shares = JsonFunctions::getJsonFloat(el["shares"]);
-        outstandingSharesData.push_back(shares);
       }   
 
       if(datesOutstandingShares.size() == 0){
@@ -1418,12 +1415,15 @@ int main (int argc, char* argv[]) {
         //======================================================================        
         //Evaluate the current market capitalization
         //======================================================================
-
-
-        unsigned int indexOutstandingShares = 
-          indicesClosestOutstandingShareDates[indexDate];
-        double outstandingShares = outstandingSharesData[indexOutstandingShares];
-
+        double outstandingShares = std::nan("1");
+        for(auto& el : fundamentalData[OS][timePeriodOS.c_str()]){
+          std::string dateOS("");
+          JsonFunctions::getJsonString(el["dateFormatted"],dateOS);
+          if(date.compare(dateOS)==0){
+            outstandingShares = JsonFunctions::getJsonFloat(el["shares"],false);
+            break;
+          }
+        }
 
 
         unsigned int indexHistoricalData = 

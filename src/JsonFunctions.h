@@ -238,9 +238,9 @@ class JsonFunctions {
         }
       }else{
         if(jsonEntry.is_number_unsigned()){
-          return static_cast<double>(jsonEntry.get<unsigned int>());
+          return jsonEntry.get<double>();
         }else if(jsonEntry.is_number_integer()){
-          return static_cast<double>(jsonEntry.get<int>());
+          return jsonEntry.get<double>();
         }else if( jsonEntry.is_number_float()){
           return jsonEntry.get<double>();
         }else if (jsonEntry.is_string()){

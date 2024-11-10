@@ -115,13 +115,13 @@ static void appendValuationTable(std::ofstream &latexReport,
     latexReport << "\\hline \\multicolumn{2}{c}{Part 2: Cost of capital} \\\\" 
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
-    latexReport << "$A_2$. Common shares outstanding & "
+    latexReport << "$A_2$. Outstanding shares & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["costOfCapital_commonStockSharesOutstanding"],true))
+                    calculateData[date]["costOfCapital_outstandingShares"],true))
                 << " \\\\" << std::endl;                
-    latexReport << "$B_2$. Close price & "
+    latexReport << "$B_2$. Adjusted close price & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["costOfCapital_close"],true))
+                    calculateData[date]["costOfCapital_adjusted_close"],true))
                 << " \\\\" << std::endl;                
     latexReport << "$C_2$. Market capitalization & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
