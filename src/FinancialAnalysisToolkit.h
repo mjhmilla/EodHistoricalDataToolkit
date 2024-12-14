@@ -2293,6 +2293,12 @@ class FinancialAnalysisToolkit {
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
 
+      //double revenue = 
+      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+      //    jsonData,FIN,IS,timeUnit,dateSet,"totalRevenue",
+      //    setNansToMissingValue);
+
+
       double afterTaxOperatingIncome = 
         operatingIncome*(1.0-taxRate);
 

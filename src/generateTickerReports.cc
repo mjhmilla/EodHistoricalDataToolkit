@@ -16,8 +16,6 @@
 
 #include <sciplot/sciplot.hpp>
 
-#include <filesystem>
-
 #include "FinancialAnalysisToolkit.h"
 #include "JsonFunctions.h"
 #include "UtilityFunctions.h"
@@ -156,8 +154,10 @@ void createHistoricalDataPlot(
   double xmax =-std::numeric_limits<double>::max();
   
   for( auto const &entry : historicalData){  
-    y0[dateCount] = JsonFunctions::getJsonFloat(entry["adjusted_close"]);
-
+    double y = JsonFunctions::getJsonFloat(entry["adjusted_close"]);
+    //double ylog10 = std::copysignf(std::log10(std::fabs(y)), y);
+    //y0[dateCount]= ylog10;
+    y0[dateCount]=y;
     std::string dateStr;
     JsonFunctions::getJsonString(entry["date"],dateStr);
     x0[dateCount] = UtilityFunctions::convertToFractionalYear(dateStr);
@@ -177,8 +177,11 @@ void createHistoricalDataPlot(
     ++dateCount;
     firstEntry=false;
   }
+  
+  --dateCount;
 
   PlottingFunctions::extractSummaryStatistics(y0,summaryStatsUpd);
+  
   summaryStatsUpd.name = "historicalData";
 
   plotHistoricalDataUpd.drawCurve(x0,y0)
@@ -193,6 +196,17 @@ void createHistoricalDataPlot(
   if((xmax-xmin)<5){
     plotHistoricalDataUpd.xtics().increment(settings.xticMinimumIncrement);
   }
+
+  /*
+  ymax = summaryStatsUpd.percentiles[summaryStatsUpd.percentiles.size()-2];
+  ymin = summaryStatsUpd.percentiles[1];
+  if(y0[dateCount] < ymin){
+    ymin = y0[dateCount];
+  }
+  if(y0[dateCount] > ymax){
+    ymax = y0[dateCount];
+  }
+  */
 
   if((ymax-ymin)<0.1){
     ymax = 0.5*(ymin+ymax)+0.05;
@@ -371,7 +385,11 @@ bool plotTickerData(
           sciplot::Vec y(yTmp.size());
 
           for(size_t i=0; i<xTmp.size();++i){
-            x[i]=xTmp[i];
+            x[i]= xTmp[i];
+            //double ylog10= std::copysignf(std::log10(std::fabs(yTmp[i])),
+            //                              yTmp[i]);
+            //y[i]= ylog10;
+            //yTmp[i]=ylog10;
             y[i]=yTmp[i];
           }
           PlottingFunctions::SummaryStatistics metricSummaryStatistics;
@@ -396,6 +414,20 @@ bool plotTickerData(
           }
           //Add some blank space to the top of the plot
           yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
+
+          /*
+          yRange[1] = metricSummaryStatistics.percentiles[
+                        metricSummaryStatistics.percentiles.size()-2];
+          yRange[0] = metricSummaryStatistics.percentiles[1];
+
+          if(yTmp[yTmp.size()-1] < yRange[0]){
+            yRange[0] = yTmp[yTmp.size()-1];
+          }
+          if(yTmp[yTmp.size()-1] > yRange[1]){
+            yRange[1] = yTmp[yTmp.size()-1];
+          }
+          */
+
 
           plotMetric.legend().atTopLeft();   
 
@@ -778,7 +810,7 @@ int main (int argc, char* argv[]) {
 
   try{
     TCLAP::CmdLine cmd("The command will produce reports in the form of text "
-    "and tables about the companies that are best ranked."
+    "and tables about the companies in the chosen exchange with valid data."
     ,' ', "0.0");
 
     TCLAP::ValueArg<std::string> exchangeCodeInput("x","exchange_code", 
@@ -875,6 +907,12 @@ int main (int argc, char* argv[]) {
       std::cout << "    " << plotConfigurationFilePath << std::endl;          
     }
 
+  } catch (TCLAP::ArgException &e){ 
+    std::cerr << "error: "    << e.error() 
+              << " for arg "  << e.argId() << std::endl; 
+  }
+
+
   bool replaceNansWithMissingData = true;
 
   PlottingFunctions::PlotSettings plotSettings;
@@ -941,7 +979,7 @@ int main (int argc, char* argv[]) {
       std::string tickerFolderName = ticker;
       std::replace(tickerFolderName.begin(),tickerFolderName.end(),'.','_');
 
-      std::string outputFolderName = reportFolderOutput;
+      std::string outputFolderName = reportFolder;
       outputFolderName.append(tickerFolderName);
 
       std::filesystem::path outputFolderPath = outputFolderName;
@@ -1079,10 +1117,6 @@ int main (int argc, char* argv[]) {
 
 
 
-  } catch (TCLAP::ArgException &e){ 
-    std::cerr << "error: "    << e.error() 
-              << " for arg "  << e.argId() << std::endl; 
-  }
 
 
   return 0;
