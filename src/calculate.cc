@@ -1416,12 +1416,18 @@ int main (int argc, char* argv[]) {
         //Evaluate the current market capitalization
         //======================================================================
         double outstandingShares = std::nan("1");
+        int smallestDateDifference=std::numeric_limits<int>::max();        
+        std::string closestDate("");
         for(auto& el : fundamentalData[OS][timePeriodOS.c_str()]){
           std::string dateOS("");
-          JsonFunctions::getJsonString(el["dateFormatted"],dateOS);
-          if(date.compare(dateOS)==0){
-            outstandingShares = JsonFunctions::getJsonFloat(el["shares"],false);
-            break;
+          JsonFunctions::getJsonString(el["dateFormatted"],dateOS);         
+          int dateDifference = 
+            FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+              date,"%Y-%m-%d",dateOS,"%Y-%m-%d");
+          if(std::abs(dateDifference)<smallestDateDifference){
+            closestDate = dateOS;
+            smallestDateDifference=std::abs(dateDifference);
+            outstandingShares = JsonFunctions::getJsonFloat(el["shares"]);
           }
         }
 

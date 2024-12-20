@@ -3,8 +3,11 @@
 #include <fstream>
 #include <string>
 #include <cmath>
+#include <limits>
 #include <filesystem>
 
+#include <chrono>
+#include "date.h"
 #include <iostream>
 #include <sstream>
 #include <nlohmann/json.hpp>
@@ -12,7 +15,154 @@
 
 #include "FinancialAnalysisToolkit.h"
 #include "JsonFunctions.h"
+#include <sciplot/sciplot.hpp>
+#include "PlottingFunctions.h"
 
+struct MetricSummaryDataSet{
+  std::vector< std::string > ticker;
+  std::vector< std::vector < date::sys_days > > date;  
+  std::vector< std::vector< double > > metric;
+  std::vector< std::vector< int > > metricRank;
+  std::vector< size_t > rank;
+  std::vector < std::vector < PlottingFunctions::SummaryStatistics > > summary;
+};
+
+//==============================================================================
+
+void rankMetricData(nlohmann::ordered_json &marketReportConfig, 
+                    MetricSummaryDataSet &metricDataSet,             
+                    bool verbose){
+
+};
+
+//==============================================================================
+
+bool appendMetricData(std::string &tickerFileName,  
+                  std::string &fundamentalFolder,                 
+                  std::string &historicalFolder,
+                  std::string &calculateDataFolder,
+                  nlohmann::ordered_json &marketReportConfig, 
+                  date::year_month_day &targetDate,
+                  int maxTargetDateErrorInDays,
+                  MetricSummaryDataSet &metricDataSet,             
+                  bool verbose){
+
+  bool inputsAreValid=true;
+
+  bool rankingFieldExists = marketReportConfig.contains("ranking");
+
+  if(rankingFieldExists){
+
+    std::vector< double > metricVector;
+    std::vector< date::sys_days > dateVector;
+    std::vector< PlottingFunctions::SummaryStatistics> summaryVector;
+
+    nlohmann::ordered_json targetJsonTable;
+    bool loadedCalculateData = false;
+
+    for( auto const &rankingItem : marketReportConfig["ranking"].items()){
+      //Retrieve the metric data
+      std::string metricName(rankingItem.key());
+
+      std::string folder; 
+      JsonFunctions::getJsonString(rankingItem.value()["folder"],folder);
+
+      std::vector< std::string > fieldVector;
+      std::string fieldName("");
+      for( auto const &fieldEntry : rankingItem.value()["field"]){
+        JsonFunctions::getJsonString(fieldEntry,fieldName);
+        fieldVector.push_back(fieldName);
+      }      
+
+      // Fetch the target data file
+      std::string fullPathFileName("");      
+      if(folder == "calculateData"){
+        fullPathFileName = calculateDataFolder;                      
+      }else{
+        std::cerr << "Error: in ranking " << metricName 
+                  << " the folder field is " << folder 
+                  << " but should calculateData" 
+                  << std::endl;
+        std::abort();                  
+      }
+
+      fullPathFileName.append(tickerFileName);      
+
+      //Only load this file once.
+      if(!loadedCalculateData){
+        loadedCalculateData = 
+          JsonFunctions::loadJsonFile(fullPathFileName,
+                                      targetJsonTable,
+                                      verbose); 
+      }                                    
+
+      // Read in all of the data for the metric.
+      // Each of the different file types have different formats and so each 
+      // needs its own function to load the data
+
+      if(loadedCalculateData){
+        int smallestDayError = std::numeric_limits< int >::max();
+        date::sys_days targetDay = targetDate;
+        date::sys_days closestDate = date::year{1900}/1/1;
+        double targetMetricValue = 0.;
+
+        std::vector< double > metricData;
+
+        for(auto &metricItem : targetJsonTable.items()){
+          std::string itemDate(metricItem.key());
+          std::istringstream itemDateStream(itemDate);
+          itemDateStream.exceptions(std::ios::failbit);
+          date::sys_days itemDays;
+          itemDateStream >> date::parse("%Y-%m-%d",itemDays);
+
+          double metricValue = 
+            JsonFunctions::getJsonFloat(targetJsonTable[itemDate],fieldVector);
+          bool metricValueValid = JsonFunctions::isJsonFloatValid(metricValue);
+
+          if(metricValueValid){
+            metricData.push_back(metricValue);          
+          }
+
+          int dayError = (targetDay-itemDays).count();
+          if(dayError < smallestDayError && dayError >= 0 && metricValueValid){
+            smallestDayError = dayError;
+            closestDate = itemDays;
+            targetMetricValue = metricValue;
+          }
+            
+        }
+
+        sciplot::Vec metricDataVec(metricData.size());
+        for(size_t i=0; i< metricData.size(); ++i){
+          metricDataVec[i] = metricData[i];
+        }
+                                
+        PlottingFunctions::SummaryStatistics metricSummary;
+        PlottingFunctions::extractSummaryStatistics(metricDataVec,metricSummary); 
+
+        if(smallestDayError <= maxTargetDateErrorInDays){
+          metricVector.push_back(targetMetricValue);
+        }else{
+          metricVector.push_back(
+              std::numeric_limits< double >::signaling_NaN());
+        }
+        dateVector.push_back(closestDate);
+        summaryVector.push_back(metricSummary);
+      }else{
+        inputsAreValid=false;
+      }
+    }
+    if(inputsAreValid){
+      metricDataSet.ticker.push_back(tickerFileName);
+      metricDataSet.date.push_back(dateVector);
+      metricDataSet.metric.push_back(metricVector);
+      metricDataSet.summary.push_back(summaryVector);
+    }
+  }
+
+
+  return inputsAreValid;
+}
 
 bool applyFilter(std::string &tickerFileName,  
                  std::string &fundamentalFolder,
@@ -420,6 +570,44 @@ int main (int argc, char* argv[]) {
       }                
 
     }
+
+    //
+    // Collect all of the metrics used for ranking
+    //
+    auto today = date::floor<date::days>(std::chrono::system_clock::now());
+    date::year_month_day targetDate(today);
+    int maxTargetDateErrorInDays = 365;
+
+    MetricSummaryDataSet metricDataSet;    
+    if(filteredTickers.size() > 0){
+      for (size_t i=0; i<filteredTickers.size(); ++i){
+        
+
+        bool appendedMetricData = 
+            appendMetricData(filteredTickers[i],  
+                        fundamentalFolder,                 
+                        historicalFolder,
+                        calculateDataFolder,
+                        marketReportConfig,
+                        targetDate,
+                        maxTargetDateErrorInDays,
+                        metricDataSet,                        
+                        verbose);
+        
+        if(verbose && !appendedMetricData){
+          std::cout << "Skipping: " 
+                    << filteredTickers[i] 
+                    << ": missing valid metric data."
+                    << std::endl;
+        }                        
+      }
+
+      rankMetricData(marketReportConfig,metricDataSet,verbose);
+
+    }
+
+    bool here=true;
+
   }
 
   return 0;

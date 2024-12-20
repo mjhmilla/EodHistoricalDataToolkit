@@ -130,8 +130,10 @@ public:
     }
 
     //==========================================================================
-    static void extractSummaryStatistics(sciplot::Vec &data, 
+    static bool extractSummaryStatistics(sciplot::Vec &data, 
                                          SummaryStatistics &summary){
+
+      bool validSummaryStatistics = true;                                          
 
       if(data.size() > 0){
         std::vector<double> dataDbl;
@@ -144,7 +146,6 @@ public:
 
         summary.min = dataDbl[0];
         summary.max = dataDbl[dataDbl.size()-1];
-
 
         if(dataDbl.size() > 1){
             for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
@@ -160,10 +161,14 @@ public:
             }
         }else{
             for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
-            summary.percentiles.push_back(dataDbl[0]);
+                summary.percentiles.push_back(dataDbl[0]);
             }
+            validSummaryStatistics=false;
         }
+      }else{
+        validSummaryStatistics=false;
       }
+      return validSummaryStatistics;
     };
 
     //==========================================================================

@@ -29,6 +29,7 @@ class FinancialAnalysisToolkit {
 
   public:
 
+
     //==========================================================================
     struct TickerMetricData{
       std::vector< date::sys_days > dates;

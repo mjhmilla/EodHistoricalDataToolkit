@@ -180,69 +180,74 @@ void createHistoricalDataPlot(
   
   --dateCount;
 
-  PlottingFunctions::extractSummaryStatistics(y0,summaryStatsUpd);
-  
-  summaryStatsUpd.name = "historicalData";
-
-  plotHistoricalDataUpd.drawCurve(x0,y0)
-      .label(companyName)
-      .lineColor("black")
-      .lineWidth(settings.lineWidth);
+  if(dateCount > 0){
+    bool validSummaryStats = 
+      PlottingFunctions::extractSummaryStatistics(y0,summaryStatsUpd);
     
-  if((xmax-xmin)<1.0){
-    xmax = 0.5*(xmin+xmax)+0.5;
-    xmin = xmax-1.;
+    summaryStatsUpd.name = "historicalData";
+
+    plotHistoricalDataUpd.drawCurve(x0,y0)
+        .label(companyName)
+        .lineColor("black")
+        .lineWidth(settings.lineWidth);
+      
+    if((xmax-xmin)<1.0){
+      xmax = 0.5*(xmin+xmax)+0.5;
+      xmin = xmax-1.;
+    }
+    if((xmax-xmin)<5){
+      plotHistoricalDataUpd.xtics().increment(settings.xticMinimumIncrement);
+    }
+
+    /*
+    ymax = summaryStatsUpd.percentiles[summaryStatsUpd.percentiles.size()-2];
+    ymin = summaryStatsUpd.percentiles[1];
+    if(y0[dateCount] < ymin){
+      ymin = y0[dateCount];
+    }
+    if(y0[dateCount] > ymax){
+      ymax = y0[dateCount];
+    }
+    */
+
+    if((ymax-ymin)<0.1){
+      ymax = 0.5*(ymin+ymax)+0.05;
+      ymin = ymax-0.1;
+    }
+
+    if(ymin > 0){
+      ymin=0;
+    }
+    if(ymax < 0){
+      ymax=0;
+    }
+
+    ymax = ymax + 0.2*(ymax-ymin);
+
+    plotHistoricalDataUpd.legend().atTopLeft();  
+
+    if(validSummaryStats){
+      PlottingFunctions::drawBoxAndWhisker(
+          plotHistoricalDataUpd,
+          xmax+1,
+          0.5,
+          summaryStatsUpd,
+          BoxAndWhiskerColorA,
+          BoxAndWhiskerColorB,
+          settings,
+          verbose);
+        xmax += 2.0;        
+    }
+
+    plotHistoricalDataUpd.xrange(
+        static_cast<sciplot::StringOrDouble>(xmin),
+        static_cast<sciplot::StringOrDouble>(xmax));              
+
+    plotHistoricalDataUpd.yrange(
+        static_cast<sciplot::StringOrDouble>(ymin),
+        static_cast<sciplot::StringOrDouble>(ymax));
+
   }
-  if((xmax-xmin)<5){
-    plotHistoricalDataUpd.xtics().increment(settings.xticMinimumIncrement);
-  }
-
-  /*
-  ymax = summaryStatsUpd.percentiles[summaryStatsUpd.percentiles.size()-2];
-  ymin = summaryStatsUpd.percentiles[1];
-  if(y0[dateCount] < ymin){
-    ymin = y0[dateCount];
-  }
-  if(y0[dateCount] > ymax){
-    ymax = y0[dateCount];
-  }
-  */
-
-  if((ymax-ymin)<0.1){
-    ymax = 0.5*(ymin+ymax)+0.05;
-    ymin = ymax-0.1;
-  }
-
-  if(ymin > 0){
-    ymin=0;
-  }
-  if(ymax < 0){
-    ymax=0;
-  }
-
-  ymax = ymax + 0.2*(ymax-ymin);
-
-  plotHistoricalDataUpd.legend().atTopLeft();  
-
-  PlottingFunctions::drawBoxAndWhisker(
-      plotHistoricalDataUpd,
-      xmax+1,
-      0.5,
-      summaryStatsUpd,
-      BoxAndWhiskerColorA,
-      BoxAndWhiskerColorB,
-      settings,
-      verbose);
-  xmax += 2.0;
-
-  plotHistoricalDataUpd.xrange(
-      static_cast<sciplot::StringOrDouble>(xmin),
-      static_cast<sciplot::StringOrDouble>(xmax));              
-
-  plotHistoricalDataUpd.yrange(
-      static_cast<sciplot::StringOrDouble>(ymin),
-      static_cast<sciplot::StringOrDouble>(ymax));
-
   std::string xAxisLabel("Year");
 
   std::string yAxisLabel("Adjusted Closing Price (");
@@ -257,7 +262,7 @@ void createHistoricalDataPlot(
 };
 
 //==============================================================================
-void extractTimeSeriesData(
+void extractValidTimeSeriesData(
       const std::string &primaryTicker,
       const nlohmann::ordered_json &calculateData,
       const char* floatFieldName,
@@ -269,14 +274,18 @@ void extractTimeSeriesData(
   std::vector< double > tmpFloatSeries;
 
   for(auto const &el: calculateData.items()){
-    
-    std::string dateEntryStr(el.key());
-    double timeData = UtilityFunctions::convertToFractionalYear(dateEntryStr);
-    dateSeries.push_back(timeData);
 
     double floatData = 
       JsonFunctions::getJsonFloat(calculateData[el.key()][floatFieldName]);
-    tmpFloatSeries.push_back(floatData);
+
+    if(JsonFunctions::isJsonFloatValid(floatData)){
+    
+      tmpFloatSeries.push_back(floatData);
+
+      std::string dateEntryStr(el.key());
+      double timeData = UtilityFunctions::convertToFractionalYear(dateEntryStr);
+      dateSeries.push_back(timeData);
+    }
     
   }
 
@@ -374,85 +383,82 @@ bool plotTickerData(
         && !subplotAdded){
           std::vector<double> xTmp;
           std::vector<double> yTmp;
-          extractTimeSeriesData(
+          bool removeInvalidData=true;
+          extractValidTimeSeriesData(
               tickerMetaData.primaryTicker,
               calculateData,
               subplotMetricNames[indexRow][indexCol].c_str(),
               xTmp,
               yTmp);     
           
-          sciplot::Vec x(xTmp.size());
-          sciplot::Vec y(yTmp.size());
 
-          for(size_t i=0; i<xTmp.size();++i){
-            x[i]= xTmp[i];
-            //double ylog10= std::copysignf(std::log10(std::fabs(yTmp[i])),
-            //                              yTmp[i]);
-            //y[i]= ylog10;
-            //yTmp[i]=ylog10;
-            y[i]=yTmp[i];
-          }
-          PlottingFunctions::SummaryStatistics metricSummaryStatistics;
-          metricSummaryStatistics.name=subplotMetricNames[indexRow][indexCol];
-          PlottingFunctions::extractSummaryStatistics(y,metricSummaryStatistics);
-
+          bool timeSeriesValid = (xTmp.size()>0 && yTmp.size() > 0);
           sciplot::Plot2D plotMetric;
-          plotMetric.drawCurve(x,y)
-            .label(tickerMetaData.companyName)
-            .lineColor("black")
-            .lineWidth(plotSettings.lineWidth);
 
-          std::vector< double > xRange,yRange;
-          PlottingFunctions::getDataRange(xTmp,xRange,1.0);
-          PlottingFunctions::getDataRange(yTmp,yRange,
-                              std::numeric_limits< double >::lowest());
-          if(yRange[0] > 0){
-            yRange[0] = 0;
-          }
-          if(yRange[1] < 0){
-            yRange[1] = 0;
-          }
-          //Add some blank space to the top of the plot
-          yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
+          if(timeSeriesValid){
+            sciplot::Vec x(xTmp.size());
+            sciplot::Vec y(yTmp.size());
 
-          /*
-          yRange[1] = metricSummaryStatistics.percentiles[
-                        metricSummaryStatistics.percentiles.size()-2];
-          yRange[0] = metricSummaryStatistics.percentiles[1];
+            for(size_t i=0; i<xTmp.size();++i){
+              x[i]= xTmp[i];
+              //double ylog10= std::copysignf(std::log10(std::fabs(yTmp[i])),
+              //                              yTmp[i]);
+              //y[i]= ylog10;
+              //yTmp[i]=ylog10;
+              y[i]=yTmp[i];
+            }
+            PlottingFunctions::SummaryStatistics metricSummaryStatistics;
+            metricSummaryStatistics.name=subplotMetricNames[indexRow][indexCol];
+            bool validSummaryStats = 
+              PlottingFunctions::extractSummaryStatistics(y,
+                                  metricSummaryStatistics);
+          
+            plotMetric.drawCurve(x,y)
+              .label(tickerMetaData.companyName)
+              .lineColor("black")
+              .lineWidth(plotSettings.lineWidth);
 
-          if(yTmp[yTmp.size()-1] < yRange[0]){
-            yRange[0] = yTmp[yTmp.size()-1];
-          }
-          if(yTmp[yTmp.size()-1] > yRange[1]){
-            yRange[1] = yTmp[yTmp.size()-1];
-          }
-          */
+            std::vector< double > xRange,yRange;
+            PlottingFunctions::getDataRange(xTmp,xRange,1.0);
+            PlottingFunctions::getDataRange(yTmp,yRange,
+                                std::numeric_limits< double >::lowest());
+            if(yRange[0] > 0){
+              yRange[0] = 0;
+            }
+            if(yRange[1] < 0){
+              yRange[1] = 0;
+            }
+            //Add some blank space to the top of the plot
+            yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
 
 
-          plotMetric.legend().atTopLeft();   
+            plotMetric.legend().atTopLeft();   
 
-          PlottingFunctions::drawBoxAndWhisker(
-              plotMetric,
-              xRange[1]+1,
-              0.5,
-              metricSummaryStatistics,
-              BoxAndWhiskerColorA,
-              BoxAndWhiskerColorB,
-              plotSettings,
-              verbose);
+            if(validSummaryStats){
+              PlottingFunctions::drawBoxAndWhisker(
+                  plotMetric,
+                  xRange[1]+1,
+                  0.5,
+                  metricSummaryStatistics,
+                  BoxAndWhiskerColorA,
+                  BoxAndWhiskerColorB,
+                  plotSettings,
+                  verbose);
+            }
 
-          xRange[1] += 2.0;
+            xRange[1] += 2.0;
 
-          plotMetric.xrange(
-              static_cast<sciplot::StringOrDouble>(xRange[0]),
-              static_cast<sciplot::StringOrDouble>(xRange[1]));              
+            plotMetric.xrange(
+                static_cast<sciplot::StringOrDouble>(xRange[0]),
+                static_cast<sciplot::StringOrDouble>(xRange[1]));              
 
-          plotMetric.yrange(
-              static_cast<sciplot::StringOrDouble>(yRange[0]),
-              static_cast<sciplot::StringOrDouble>(yRange[1]));
+            plotMetric.yrange(
+                static_cast<sciplot::StringOrDouble>(yRange[0]),
+                static_cast<sciplot::StringOrDouble>(yRange[1]));
 
-          if((xRange[1]-xRange[0])<5){
-            plotMetric.xtics().increment(plotSettings.xticMinimumIncrement);
+            if((xRange[1]-xRange[0])<5){
+              plotMetric.xtics().increment(plotSettings.xticMinimumIncrement);
+            }
           }
 
           std::string tmpStringA("Year");
@@ -1101,7 +1107,7 @@ int main (int argc, char* argv[]) {
 
     }
 
-    if(singleFileToEvaluate.length() ){
+    if(singleFileToEvaluate.length() > 0){
       break;
     }
   }
