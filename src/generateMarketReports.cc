@@ -23,15 +23,159 @@ struct MetricSummaryDataSet{
   std::vector< std::vector < date::sys_days > > date;  
   std::vector< std::vector< double > > metric;
   std::vector< std::vector< int > > metricRank;
+  std::vector< double > metricRankSum;
   std::vector< size_t > rank;
+  std::vector< size_t > sortedIndex;
   std::vector < std::vector < PlottingFunctions::SummaryStatistics > > summary;
+};
+
+// Fun example to get the ranked index of an entry
+// https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
+
+template <typename T>
+std::vector<size_t> calcSortedVectorIndicies(const std::vector<T> &v, 
+                                            bool sortAscending)
+{
+  std::vector<size_t> idx(v.size());
+  std::iota(idx.begin(), idx.end(), 0);
+  if (sortAscending)
+  {
+    std::stable_sort(idx.begin(), idx.end(),
+                     [&v](size_t i1, size_t i2)
+                     { return v[i1] < v[i2]; });
+  }
+  else
+  {
+    std::stable_sort(idx.begin(), idx.end(),
+                     [&v](size_t i1, size_t i2)
+                     { return v[i1] > v[i2]; });
+  }
+  return idx;
+};
+
+//==============================================================================
+template <typename T>
+std::vector< size_t > getRank(const std::vector<T> &indiciesOfSortedVector){
+
+  std::vector<size_t> rank(indiciesOfSortedVector.size());
+  for(size_t i = 0; i < indiciesOfSortedVector.size(); ++i){
+    rank[indiciesOfSortedVector[i]] = i;
+  }     
+  return rank;                           
+
 };
 
 //==============================================================================
 
 void rankMetricData(nlohmann::ordered_json &marketReportConfig, 
                     MetricSummaryDataSet &metricDataSet,             
-                    bool verbose){
+                    bool verbose)
+{
+
+  //Evaluate the ranking of the individual metrics
+
+  size_t indexMetric=0;
+
+  metricDataSet.rank.resize(metricDataSet.metric.size());
+  metricDataSet.metricRankSum.resize(metricDataSet.metric.size());
+  metricDataSet.sortedIndex.resize(metricDataSet.metric.size());
+
+  metricDataSet.metricRank.resize(metricDataSet.metric.size());
+  for(size_t i=0; i<metricDataSet.metric.size();++i){
+    metricDataSet.metricRank[i].resize(metricDataSet.metric[i].size());
+    metricDataSet.rank[i]         =0;
+    metricDataSet.metricRankSum[i]=0;
+    metricDataSet.sortedIndex[i]  =0;
+  }
+
+  for( auto const &rankingItem : marketReportConfig["ranking"].items()){
+    //Retrieve the metric data
+    std::string metricName(rankingItem.key());
+
+    double lowerBound = 
+      JsonFunctions::getJsonFloat(rankingItem.value()["lowerBound"]);
+
+    double upperBound = 
+      JsonFunctions::getJsonFloat(rankingItem.value()["upperBound"]);
+
+    std::string direction;
+    JsonFunctions::getJsonString(rankingItem.value()["direction"],direction);
+
+    bool sortAscending=false;
+    if(direction.compare("smallestIsBest")==0){
+      sortAscending=true;
+    }else if(direction.compare("biggestIsBest")==0){
+      sortAscending=false;
+    }else{
+      std::cout << "Error: ranking metric " 
+                << metricName
+                << " at index " << indexMetric
+                << " has a sort direction of "
+                << " but this field can only be smallestIsBest/biggestIsBest"
+                << std::endl;
+      std::abort();              
+    }
+
+    std::vector< double > column;
+    for(size_t indexRow=0; 
+      indexRow < metricDataSet.metric.size(); ++indexRow ){
+      
+      double value = metricDataSet.metric[indexRow][indexMetric];
+
+      if(!std::isnan(lowerBound)){
+        if(value < lowerBound){
+          value = std::numeric_limits<double>::max();
+        }
+      }
+      if(!std::isnan(upperBound)){
+        if(value > upperBound){
+          value = std::numeric_limits<double>::max();
+        }
+      }
+      if(std::isnan(value)){
+        if(sortAscending){
+          if(!std::isnan(upperBound)){
+            value = upperBound;
+          }else{
+            value = std::numeric_limits<double>::max();
+          }
+        }else{
+          if(!std::isnan(lowerBound)){
+            value = lowerBound;
+          }else{
+            value = -std::numeric_limits<double>::max();
+          }
+        }
+      }
+      column.push_back(value);
+    }
+
+    std::vector< size_t > indicesOfSortedVector = 
+      calcSortedVectorIndicies(column, sortAscending);
+
+    std::vector< size_t > columnRank = getRank(indicesOfSortedVector);
+
+    double weight = 
+      JsonFunctions::getJsonFloat(rankingItem.value()["weight"]);
+
+
+    for(size_t indexRow=0; indexRow < column.size(); ++indexRow){
+      metricDataSet.metricRank[indexRow][indexMetric] = columnRank[indexRow];
+      double value = 
+        static_cast<double>(metricDataSet.metricRank[indexRow][indexMetric]);
+      value *= weight;
+      metricDataSet.metricRankSum[indexRow] += value;
+    }
+    ++indexMetric;
+
+  }
+
+  metricDataSet.sortedIndex = 
+    calcSortedVectorIndicies(metricDataSet.metricRankSum, true);
+  metricDataSet.rank = getRank(metricDataSet.sortedIndex);    
+
+
+  bool here=true;
 
 };
 
