@@ -100,7 +100,8 @@ public:
         min(0),
         max(0),
         current(0),
-        name(""){};
+        name(""){
+        };
     };
 
     //==========================================================================
@@ -140,7 +141,7 @@ public:
         for(size_t i=0; i<data.size(); ++i){
             dataDbl.push_back(data[i]);
         }
-        summary.current = dataDbl[dataDbl.size()-1];
+        summary.current = std::nan("-1");
 
         std::sort(dataDbl.begin(),dataDbl.end());
 

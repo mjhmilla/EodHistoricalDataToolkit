@@ -18,6 +18,8 @@
 #include <sciplot/sciplot.hpp>
 #include "PlottingFunctions.h"
 
+
+
 struct MetricSummaryDataSet{
   std::vector< std::string > ticker;
   std::vector< std::vector < date::sys_days > > date;  
@@ -26,7 +28,8 @@ struct MetricSummaryDataSet{
   std::vector< double > metricRankSum;
   std::vector< size_t > rank;
   std::vector< size_t > sortedIndex;
-  std::vector < std::vector < PlottingFunctions::SummaryStatistics > > summary;
+  std::vector < std::vector < PlottingFunctions::SummaryStatistics > > summaryStatistics;
+  std::vector < double > weight;
 };
 
 // Fun example to get the ranked index of an entry
@@ -67,25 +70,28 @@ std::vector< size_t > getRank(const std::vector<T> &indiciesOfSortedVector){
 
 //==============================================================================
 
-void rankMetricData(nlohmann::ordered_json &marketReportConfig, 
-                    MetricSummaryDataSet &metricDataSet,             
+void rankMetricData(const nlohmann::ordered_json &marketReportConfig, 
+                    MetricSummaryDataSet &metricDataSetUpd,             
                     bool verbose)
 {
 
-  //Evaluate the ranking of the individual metrics
+  if(verbose){
+    std::cout << std::endl << "Ranking metric data ..." << std::endl;
+  }
 
+  //Evaluate the ranking of the individual metrics
   size_t indexMetric=0;
 
-  metricDataSet.rank.resize(metricDataSet.metric.size());
-  metricDataSet.metricRankSum.resize(metricDataSet.metric.size());
-  metricDataSet.sortedIndex.resize(metricDataSet.metric.size());
+  metricDataSetUpd.rank.resize(metricDataSetUpd.metric.size());
+  metricDataSetUpd.metricRankSum.resize(metricDataSetUpd.metric.size());
+  metricDataSetUpd.sortedIndex.resize(metricDataSetUpd.metric.size());
 
-  metricDataSet.metricRank.resize(metricDataSet.metric.size());
-  for(size_t i=0; i<metricDataSet.metric.size();++i){
-    metricDataSet.metricRank[i].resize(metricDataSet.metric[i].size());
-    metricDataSet.rank[i]         =0;
-    metricDataSet.metricRankSum[i]=0;
-    metricDataSet.sortedIndex[i]  =0;
+  metricDataSetUpd.metricRank.resize(metricDataSetUpd.metric.size());
+  for(size_t i=0; i<metricDataSetUpd.metric.size();++i){
+    metricDataSetUpd.metricRank[i].resize(metricDataSetUpd.metric[i].size());
+    metricDataSetUpd.rank[i]         =0;
+    metricDataSetUpd.metricRankSum[i]=0;
+    metricDataSetUpd.sortedIndex[i]  =0;
   }
 
   for( auto const &rankingItem : marketReportConfig["ranking"].items()){
@@ -118,9 +124,9 @@ void rankMetricData(nlohmann::ordered_json &marketReportConfig,
 
     std::vector< double > column;
     for(size_t indexRow=0; 
-      indexRow < metricDataSet.metric.size(); ++indexRow ){
+      indexRow < metricDataSetUpd.metric.size(); ++indexRow ){
       
-      double value = metricDataSet.metric[indexRow][indexMetric];
+      double value = metricDataSetUpd.metric[indexRow][indexMetric];
 
       if(!std::isnan(lowerBound)){
         if(value < lowerBound){
@@ -160,19 +166,19 @@ void rankMetricData(nlohmann::ordered_json &marketReportConfig,
 
 
     for(size_t indexRow=0; indexRow < column.size(); ++indexRow){
-      metricDataSet.metricRank[indexRow][indexMetric] = columnRank[indexRow];
+      metricDataSetUpd.metricRank[indexRow][indexMetric] = columnRank[indexRow];
       double value = 
-        static_cast<double>(metricDataSet.metricRank[indexRow][indexMetric]);
+        static_cast<double>(metricDataSetUpd.metricRank[indexRow][indexMetric]);
       value *= weight;
-      metricDataSet.metricRankSum[indexRow] += value;
+      metricDataSetUpd.metricRankSum[indexRow] += value;
     }
     ++indexMetric;
 
   }
 
-  metricDataSet.sortedIndex = 
-    calcSortedVectorIndicies(metricDataSet.metricRankSum, true);
-  metricDataSet.rank = getRank(metricDataSet.sortedIndex);    
+  metricDataSetUpd.sortedIndex = 
+    calcSortedVectorIndicies(metricDataSetUpd.metricRankSum, true);
+  metricDataSetUpd.rank = getRank(metricDataSetUpd.sortedIndex);    
 
 
   bool here=true;
@@ -181,25 +187,29 @@ void rankMetricData(nlohmann::ordered_json &marketReportConfig,
 
 //==============================================================================
 
-bool appendMetricData(std::string &tickerFileName,  
-                  std::string &fundamentalFolder,                 
-                  std::string &historicalFolder,
-                  std::string &calculateDataFolder,
-                  nlohmann::ordered_json &marketReportConfig, 
-                  date::year_month_day &targetDate,
+bool appendMetricData(const std::string &tickerFileName,  
+                  const std::string &fundamentalFolder,                 
+                  const std::string &historicalFolder,
+                  const std::string &calculateDataFolder,
+                  const nlohmann::ordered_json &marketReportConfig, 
+                  const date::year_month_day &targetDate,
                   int maxTargetDateErrorInDays,
-                  MetricSummaryDataSet &metricDataSet,             
+                  MetricSummaryDataSet &metricDataSetUpd,             
                   bool verbose){
 
   bool inputsAreValid=true;
 
   bool rankingFieldExists = marketReportConfig.contains("ranking");
 
+  bool weightFieldExists = marketReportConfig.contains("market_weighting");
+  
+
   if(rankingFieldExists){
 
     std::vector< double > metricVector;
     std::vector< date::sys_days > dateVector;
-    std::vector< PlottingFunctions::SummaryStatistics> summaryVector;
+    std::vector< PlottingFunctions::SummaryStatistics> percentileVector;
+    double weight=1.0;
 
     nlohmann::ordered_json targetJsonTable;
     bool loadedCalculateData = false;
@@ -245,9 +255,12 @@ bool appendMetricData(std::string &tickerFileName,
       // needs its own function to load the data
 
       if(loadedCalculateData){
+
+
         int smallestDayError = std::numeric_limits< int >::max();
         date::sys_days targetDay = targetDate;
-        date::sys_days closestDate = date::year{1900}/1/1;
+        date::sys_days closestDay = date::year{1900}/1/1;
+        std::string closestDate;
         double targetMetricValue = 0.;
 
         std::vector< double > metricData;
@@ -269,11 +282,34 @@ bool appendMetricData(std::string &tickerFileName,
 
           int dayError = (targetDay-itemDays).count();
           if(dayError < smallestDayError && dayError >= 0 && metricValueValid){
-            smallestDayError = dayError;
-            closestDate = itemDays;
+            smallestDayError  = dayError;
+            closestDay        = itemDays;
             targetMetricValue = metricValue;
+            closestDate       = itemDate;
           }
             
+        }
+
+        if(weightFieldExists){
+          std::string folderWeighting; 
+          JsonFunctions::getJsonString( 
+            marketReportConfig["market_weighting"]["folder"],folderWeighting);
+
+          if( (folderWeighting.compare("calculateData") != 0) ){
+            std::cout << "Error: market_weighting:folder in the "
+                      << "market configuration  file should be calculateData "
+                      << " but is instead " << folderWeighting
+                      << std::endl;
+          }
+
+          std::vector< std::string > fieldAddress;
+          for(auto &el : marketReportConfig["market_weighting"]["field"]){
+            fieldAddress.push_back(el);
+          }
+
+          weight = JsonFunctions::getJsonFloat(
+                        targetJsonTable[closestDate],fieldAddress);
+
         }
 
         sciplot::Vec metricDataVec(metricData.size());
@@ -281,8 +317,10 @@ bool appendMetricData(std::string &tickerFileName,
           metricDataVec[i] = metricData[i];
         }
                                 
-        PlottingFunctions::SummaryStatistics metricSummary;
-        PlottingFunctions::extractSummaryStatistics(metricDataVec,metricSummary); 
+        PlottingFunctions::SummaryStatistics percentileSummary;
+        PlottingFunctions::extractSummaryStatistics(metricDataVec,
+                                                    percentileSummary); 
+        percentileSummary.current = targetMetricValue;                                                    
 
         if(smallestDayError <= maxTargetDateErrorInDays){
           metricVector.push_back(targetMetricValue);
@@ -290,17 +328,18 @@ bool appendMetricData(std::string &tickerFileName,
           metricVector.push_back(
               std::numeric_limits< double >::signaling_NaN());
         }
-        dateVector.push_back(closestDate);
-        summaryVector.push_back(metricSummary);
+        dateVector.push_back(closestDay);
+        percentileVector.push_back(percentileSummary);
       }else{
         inputsAreValid=false;
       }
     }
     if(inputsAreValid){
-      metricDataSet.ticker.push_back(tickerFileName);
-      metricDataSet.date.push_back(dateVector);
-      metricDataSet.metric.push_back(metricVector);
-      metricDataSet.summary.push_back(summaryVector);
+      metricDataSetUpd.ticker.push_back(tickerFileName);
+      metricDataSetUpd.date.push_back(dateVector);
+      metricDataSetUpd.metric.push_back(metricVector);
+      metricDataSetUpd.summaryStatistics.push_back(percentileVector);
+      metricDataSetUpd.weight.push_back(weight);
     }
   }
 
@@ -308,17 +347,17 @@ bool appendMetricData(std::string &tickerFileName,
   return inputsAreValid;
 }
 
-bool applyFilter(std::string &tickerFileName,  
-                 std::string &fundamentalFolder,
-                 std::string &historicalFolder,
-                 std::string &calculateDataFolder,
-                 nlohmann::ordered_json &marketReportConfig,
+//==============================================================================
+
+bool applyFilter(const std::string &tickerFileName,  
+                 const std::string &fundamentalFolder,
+                 const std::string &historicalFolder,
+                 const std::string &calculateDataFolder,
+                 const nlohmann::ordered_json &marketReportConfig,
                  bool replaceNansWithMissingData,
                  bool verbose){
 
   bool valueFilter = true;
-
-
 
   bool filterFieldExists = marketReportConfig.contains("filter");
 
@@ -490,6 +529,151 @@ bool applyFilter(std::string &tickerFileName,
   return valueFilter;
 };
 
+//==============================================================================
+void plotReportData(const nlohmann::ordered_json &marketReportConfig, 
+                    const MetricSummaryDataSet &metricDataSet,
+                    const PlottingFunctions::PlotSettings &settings,
+                    const std::string &marketReportFolder,
+                    bool verbose)
+{
+
+  bool rankingFieldExists = marketReportConfig.contains("ranking");
+
+
+
+  if(rankingFieldExists){
+
+    size_t numberOfRankingItems = marketReportConfig["ranking"].size();
+    std::vector< std::vector< sciplot::PlotVariant > > arrayOfPlotVariant;
+
+
+    std::vector< std::vector< sciplot::Plot2D >> arrayOfPlot2D;
+    arrayOfPlot2D.resize(numberOfRankingItems);
+    for(size_t i=0; i<numberOfRankingItems; ++i){
+      arrayOfPlot2D[i].resize(1);
+    }
+
+    size_t indexMetric=0;
+
+    for( auto const &rankingItem : marketReportConfig["ranking"].items()){
+      
+
+      PlottingFunctions::SummaryStatistics marketSummary;   
+      marketSummary.percentiles.resize(
+          PlottingFunctions::PercentileIndices::NUM_PERCENTILES,0.);
+
+      double marketWeight = 0;
+
+
+
+      double lowerBoundPlot = 
+        JsonFunctions::getJsonFloat(rankingItem.value()["lowerBoundPlot"]);
+      double upperBoundPlot = 
+        JsonFunctions::getJsonFloat(rankingItem.value()["upperBoundPlot"]);
+
+
+      for( size_t i=0; i<metricDataSet.ticker.size(); ++i){
+
+        size_t indexSorted = metricDataSet.sortedIndex[i];
+
+        double xMid = static_cast<double>(i)+1.0;
+        double xWidth = 0.4;
+
+        PlottingFunctions::drawBoxAndWhisker(
+          arrayOfPlot2D[indexMetric][0],
+          xMid,
+          xWidth,
+          metricDataSet.summaryStatistics[indexSorted][indexMetric],
+          "gray",
+          "black",
+          settings,
+          verbose);
+
+        for(size_t j=0; j < marketSummary.percentiles.size();++j){
+          marketSummary.percentiles[j] += 
+            metricDataSet.summaryStatistics[indexSorted][indexMetric].percentiles[j]
+            *metricDataSet.weight[indexSorted];
+        }
+
+        marketSummary.current +=
+          metricDataSet.summaryStatistics[indexSorted][indexMetric].current
+          *metricDataSet.weight[indexSorted];
+
+        marketSummary.min +=  
+          metricDataSet.summaryStatistics[indexSorted][indexMetric].min
+          *metricDataSet.weight[indexSorted];
+
+        marketSummary.max +=  
+          metricDataSet.summaryStatistics[indexSorted][indexMetric].max
+          *metricDataSet.weight[indexSorted];
+
+        marketWeight += metricDataSet.weight[indexSorted];
+      }
+
+      //Plot the market summary
+      for(size_t j=0; j < marketSummary.percentiles.size();++j){
+        marketSummary.percentiles[j] = marketSummary.percentiles[j] / marketWeight;
+      }
+      marketSummary.min     = marketSummary.min / marketWeight; 
+      marketSummary.max     = marketSummary.max / marketWeight; 
+      marketSummary.current = marketSummary.current / marketWeight; 
+
+      double xMid = metricDataSet.ticker.size()+1.0;
+      double xWidth = 0.4;
+      PlottingFunctions::drawBoxAndWhisker(
+        arrayOfPlot2D[indexMetric][0],
+        xMid,
+        xWidth,
+        marketSummary,
+        "green",
+        "blue",
+        settings,
+        verbose);
+      
+      //Add the labels
+      std::string xAxisLabel("Ranking");
+      std::string yAxisLabel(rankingItem.key());
+
+      PlottingFunctions::configurePlot(
+        arrayOfPlot2D[indexMetric][0],
+        xAxisLabel,
+        yAxisLabel,
+        settings);
+
+      if(!std::isnan(lowerBoundPlot) && !std::isnan(upperBoundPlot) ){
+        arrayOfPlot2D[indexMetric][0].yrange(lowerBoundPlot,upperBoundPlot);
+      }
+
+      arrayOfPlot2D[indexMetric][0].legend().hide();
+      
+      std::vector< sciplot::PlotVariant > rowOfPlotVariant;      
+      rowOfPlotVariant.push_back(arrayOfPlot2D[indexMetric][0]);
+      arrayOfPlotVariant.push_back(rowOfPlotVariant);
+
+      ++indexMetric;
+    } 
+
+    sciplot::Figure figSummary(arrayOfPlotVariant);
+    figSummary.title("Summary");
+    sciplot::Canvas canvas = {{figSummary}};
+    unsigned int nrows = numberOfRankingItems;
+    unsigned int ncols=1;
+
+    size_t canvasWidth  = 
+      static_cast<size_t>(settings.plotWidth*static_cast<double>(ncols));
+    size_t canvasHeight = 
+      static_cast<size_t>(settings.plotHeight*static_cast<double>(nrows));
+
+    canvas.size(canvasWidth, canvasHeight) ;    
+
+    // Save the figure to a PDF file
+    std::string outputFileName = marketReportFolder;
+    std::string plotFileName = "summary.pdf";
+    outputFileName.append(plotFileName);
+    canvas.save(outputFileName);     
+  }
+
+};
 
 //==============================================================================
 int main (int argc, char* argv[]) {
@@ -749,8 +933,18 @@ int main (int argc, char* argv[]) {
       rankMetricData(marketReportConfig,metricDataSet,verbose);
 
     }
+    
+    PlottingFunctions::PlotSettings settings;
+    settings.plotHeight *= 0.75;
+    settings.plotWidth *= 2.0;
 
-    bool here=true;
+    plotReportData(marketReportConfig, 
+                   metricDataSet,
+                   settings,
+                   marketReportFolder,
+                   verbose);
+
+    bool here=true;                   
 
   }
 

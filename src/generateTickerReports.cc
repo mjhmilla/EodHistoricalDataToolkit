@@ -183,7 +183,7 @@ void createHistoricalDataPlot(
   if(dateCount > 0){
     bool validSummaryStats = 
       PlottingFunctions::extractSummaryStatistics(y0,summaryStatsUpd);
-    
+    summaryStatsUpd.current = y0[dateCount];
     summaryStatsUpd.name = "historicalData";
 
     plotHistoricalDataUpd.drawCurve(x0,y0)
@@ -412,7 +412,8 @@ bool plotTickerData(
             bool validSummaryStats = 
               PlottingFunctions::extractSummaryStatistics(y,
                                   metricSummaryStatistics);
-          
+            metricSummaryStatistics.current = yTmp[yTmp.size()-1];
+
             plotMetric.drawCurve(x,y)
               .label(tickerMetaData.companyName)
               .lineColor("black")

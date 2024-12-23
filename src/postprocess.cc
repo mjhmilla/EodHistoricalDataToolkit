@@ -787,7 +787,6 @@ void plotReportData(
 
   if(verbose){
     std::cout << std::endl << "Generating plots" << std::endl << std::endl;
-
   }
 
   //Continue only if we have a plot configuration loaded.
