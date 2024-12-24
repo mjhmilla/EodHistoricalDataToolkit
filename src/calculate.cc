@@ -1714,7 +1714,7 @@ int main (int argc, char* argv[]) {
         }
 
         //Residual cash flow to enterprise value
-        std::string rFcfToEvLabel = "enterpriseValueToResidualCashFlow_"; 
+        std::string rFcfToEvLabel = "residualCashFlowToEnterpriseValue_"; 
         double enterpriseValue = FinancialAnalysisToolkit::
             calcEnterpriseValue(fundamentalData, 
                                 marketCapitalization, 
@@ -1726,23 +1726,23 @@ int main (int argc, char* argv[]) {
                                 termNames,
                                 termValues);
 
-        double enterpriseValueToResidualCashFlow = 
-          enterpriseValue/residualCashFlow;
+        double residualCashFlowToEnterpriseValue = 
+          residualCashFlow/enterpriseValue;
 
         if(   !JsonFunctions::isJsonFloatValid(residualCashFlow) 
            || !JsonFunctions::isJsonFloatValid(enterpriseValue)){
           if(setNansToMissingValue){
-            enterpriseValueToResidualCashFlow = JsonFunctions::MISSING_VALUE;
+            residualCashFlowToEnterpriseValue = JsonFunctions::MISSING_VALUE;
           }else{
-            enterpriseValueToResidualCashFlow = std::nan("1");
+            residualCashFlowToEnterpriseValue = std::nan("1");
           }
         }
 
         if(appendTermRecord){
-          termNames.push_back("enterpriseValueToResidualCashFlow_residualCashFlow");
-          termNames.push_back("enterpriseValueToResidualCashFlow");
+          termNames.push_back("residualCashFlowToEnterpriseValue_residualCashFlow");
+          termNames.push_back("residualCashFlowToEnterpriseValue");
           termValues.push_back(residualCashFlow);
-          termValues.push_back(enterpriseValueToResidualCashFlow);
+          termValues.push_back(residualCashFlowToEnterpriseValue);
         }
 
 

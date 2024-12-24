@@ -534,11 +534,14 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
                     const MetricSummaryDataSet &metricDataSet,
                     const PlottingFunctions::PlotSettings &settings,
                     const std::string &marketReportFolder,
+                    const std::string &summaryPlotFileName,
                     bool verbose)
 {
 
   bool rankingFieldExists = marketReportConfig.contains("ranking");
 
+  double canvasWidth=0.;
+  double canvasHeight=0.;
 
 
   if(rankingFieldExists){
@@ -557,6 +560,7 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
 
     for( auto const &rankingItem : marketReportConfig["ranking"].items()){
       
+      PlottingFunctions::PlotSettings subplotSettings = settings;
 
       PlottingFunctions::SummaryStatistics marketSummary;   
       marketSummary.percentiles.resize(
@@ -564,13 +568,64 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
 
       double marketWeight = 0;
 
-
+      double weight = 
+        JsonFunctions::getJsonFloat(rankingItem.value()["weight"]);
 
       double lowerBoundPlot = 
-        JsonFunctions::getJsonFloat(rankingItem.value()["lowerBoundPlot"]);
-      double upperBoundPlot = 
-        JsonFunctions::getJsonFloat(rankingItem.value()["upperBoundPlot"]);
+        JsonFunctions::getJsonFloat(
+          rankingItem.value()["plotSettings"]["lowerBound"]);
 
+      double upperBoundPlot = 
+        JsonFunctions::getJsonFloat(
+          rankingItem.value()["plotSettings"]["upperBound"]);
+
+      bool useLogarithmicScaling=
+        JsonFunctions::getJsonBool(
+          rankingItem.value()["plotSettings"]["logarithmic"]);
+      subplotSettings.logScale=useLogarithmicScaling;
+
+      double width = 
+        JsonFunctions::getJsonFloat(
+          rankingItem.value()["plotSettings"]["width"]);
+
+      double height = 
+        JsonFunctions::getJsonFloat(
+          rankingItem.value()["plotSettings"]["height"]);
+
+      subplotSettings.plotWidthInPoints=
+        PlottingFunctions::convertCentimetersToPoints(width);
+      subplotSettings.plotHeightInPoints=
+        PlottingFunctions::convertCentimetersToPoints(height);
+
+      canvasWidth=subplotSettings.plotWidthInPoints;
+      canvasHeight+=subplotSettings.plotHeightInPoints;
+
+      std::string direction;
+      JsonFunctions::getJsonString(rankingItem.value()["direction"],direction);
+      bool smallestIsBest=false;
+      bool biggestIsBest=false;
+      if(direction.compare("smallestIsBest")==0){
+        smallestIsBest=true;
+      }
+      if(direction.compare("biggestIsBest")==0){
+        biggestIsBest=true;
+      }
+
+      double threshold = 
+        JsonFunctions::getJsonFloat(
+          rankingItem.value()["plotSettings"]["threshold"]);
+      
+      sciplot::Vec xThreshold(2);
+      sciplot::Vec yThreshold(2);
+      xThreshold[0] = 0.0;
+      xThreshold[1] = static_cast<double>(metricDataSet.ticker.size())+2.0;
+      yThreshold[0] = threshold;
+      yThreshold[1] = threshold;
+
+      arrayOfPlot2D[indexMetric][0].drawCurve(xThreshold,yThreshold)
+        .lineColor("gray")
+        .lineWidth(settings.lineWidth*0.5)
+        .labelNone();
 
       for( size_t i=0; i<metricDataSet.ticker.size(); ++i){
 
@@ -579,14 +634,30 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
         double xMid = static_cast<double>(i)+1.0;
         double xWidth = 0.4;
 
+        std::string currentColor("black");
+        std::string boxColor("light-gray");
+        int currentLineType = 0;
+
+        if(smallestIsBest && 
+           metricDataSet.summaryStatistics[indexSorted][indexMetric].current 
+           <= threshold){
+          currentLineType = 1;
+        }
+        if(biggestIsBest && 
+           metricDataSet.summaryStatistics[indexSorted][indexMetric].current 
+            >= threshold){    
+          currentLineType = 1;      
+        }
+
         PlottingFunctions::drawBoxAndWhisker(
           arrayOfPlot2D[indexMetric][0],
           xMid,
           xWidth,
           metricDataSet.summaryStatistics[indexSorted][indexMetric],
-          "gray",
-          "black",
-          settings,
+          boxColor.c_str(),
+          currentColor.c_str(),
+          currentLineType,
+          subplotSettings,
           verbose);
 
         for(size_t j=0; j < marketSummary.percentiles.size();++j){
@@ -618,6 +689,18 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
       marketSummary.max     = marketSummary.max / marketWeight; 
       marketSummary.current = marketSummary.current / marketWeight; 
 
+
+      std::string currentColor("black");
+      std::string boxColor("chartreuse");
+      int currentLineType = 0;
+
+      if(smallestIsBest && marketSummary.current <= threshold){
+          currentLineType=1;
+      }
+      if(biggestIsBest && marketSummary.current  >= threshold){
+          currentLineType=1;
+      }
+
       double xMid = metricDataSet.ticker.size()+1.0;
       double xWidth = 0.4;
       PlottingFunctions::drawBoxAndWhisker(
@@ -625,20 +708,28 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
         xMid,
         xWidth,
         marketSummary,
-        "green",
-        "blue",
-        settings,
+        boxColor.c_str(),
+        currentColor.c_str(),
+        currentLineType,
+        subplotSettings,
         verbose);
       
       //Add the labels
       std::string xAxisLabel("Ranking");
+
       std::string yAxisLabel(rankingItem.key());
+      yAxisLabel.append(" (");
+      std::stringstream stream;
+      stream << std::fixed << std::setprecision(2) << weight;
+      yAxisLabel.append( stream.str() );
+      yAxisLabel.append(")");
+
 
       PlottingFunctions::configurePlot(
         arrayOfPlot2D[indexMetric][0],
         xAxisLabel,
         yAxisLabel,
-        settings);
+        subplotSettings);
 
       if(!std::isnan(lowerBoundPlot) && !std::isnan(upperBoundPlot) ){
         arrayOfPlot2D[indexMetric][0].yrange(lowerBoundPlot,upperBoundPlot);
@@ -656,20 +747,12 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
     sciplot::Figure figSummary(arrayOfPlotVariant);
     figSummary.title("Summary");
     sciplot::Canvas canvas = {{figSummary}};
-    unsigned int nrows = numberOfRankingItems;
-    unsigned int ncols=1;
-
-    size_t canvasWidth  = 
-      static_cast<size_t>(settings.plotWidth*static_cast<double>(ncols));
-    size_t canvasHeight = 
-      static_cast<size_t>(settings.plotHeight*static_cast<double>(nrows));
 
     canvas.size(canvasWidth, canvasHeight) ;    
 
     // Save the figure to a PDF file
     std::string outputFileName = marketReportFolder;
-    std::string plotFileName = "summary.pdf";
-    outputFileName.append(plotFileName);
+    outputFileName.append(summaryPlotFileName);
     canvas.save(outputFileName);     
   }
 
@@ -933,15 +1016,24 @@ int main (int argc, char* argv[]) {
       rankMetricData(marketReportConfig,metricDataSet,verbose);
 
     }
+
+    std::string marketReportConfigurationFileName =
+      std::filesystem::path(marketReportConfigurationFilePath).filename();
+    size_t idx = marketReportConfigurationFileName.find(".json");
+    marketReportConfigurationFileName 
+      = marketReportConfigurationFileName.substr(0,idx);
+
+    std::string summaryPlotFileName("summary_");
+    summaryPlotFileName.append(marketReportConfigurationFileName);
+    summaryPlotFileName.append(".pdf");
     
     PlottingFunctions::PlotSettings settings;
-    settings.plotHeight *= 0.75;
-    settings.plotWidth *= 2.0;
 
     plotReportData(marketReportConfig, 
                    metricDataSet,
                    settings,
                    marketReportFolder,
+                   summaryPlotFileName,
                    verbose);
 
     bool here=true;                   

@@ -225,6 +225,7 @@ void createHistoricalDataPlot(
     ymax = ymax + 0.2*(ymax-ymin);
 
     plotHistoricalDataUpd.legend().atTopLeft();  
+    int currentLineType=1;
 
     if(validSummaryStats){
       PlottingFunctions::drawBoxAndWhisker(
@@ -234,6 +235,7 @@ void createHistoricalDataPlot(
           summaryStatsUpd,
           BoxAndWhiskerColorA,
           BoxAndWhiskerColorB,
+          currentLineType,
           settings,
           verbose);
         xmax += 2.0;        
@@ -431,7 +433,7 @@ bool plotTickerData(
             }
             //Add some blank space to the top of the plot
             yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
-
+            int currentLineType=1;
 
             plotMetric.legend().atTopLeft();   
 
@@ -443,6 +445,7 @@ bool plotTickerData(
                   metricSummaryStatistics,
                   BoxAndWhiskerColorA,
                   BoxAndWhiskerColorB,
+                  currentLineType,
                   plotSettings,
                   verbose);
             }
@@ -503,9 +506,11 @@ bool plotTickerData(
   }
 
   size_t canvasWidth  = 
-    static_cast<size_t>(plotSettings.plotWidth*static_cast<double>(ncols));
+    static_cast<size_t>(
+      plotSettings.plotWidthInPoints*static_cast<double>(ncols));
   size_t canvasHeight = 
-    static_cast<size_t>(plotSettings.plotHeight*static_cast<double>(nrows));
+    static_cast<size_t>(
+      plotSettings.plotHeightInPoints*static_cast<double>(nrows));
 
   canvas.size(canvasWidth, canvasHeight) ;
 

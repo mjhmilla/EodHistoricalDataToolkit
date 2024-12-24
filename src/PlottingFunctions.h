@@ -28,11 +28,12 @@ public:
         double titleFontSize;  
         double lineWidth;
         double axisLineWidth;
-        double plotWidth;
-        double plotHeight;
+        double plotWidthInPoints;
+        double plotHeightInPoints;
         double canvasWidth;
         double canvasHeight;
         double xticMinimumIncrement;
+        bool logScale;
         PlotSettings():
             fontName("Times"),
             axisLabelFontSize(12.0),
@@ -41,13 +42,24 @@ public:
             titleFontSize(14.0),
             lineWidth(1),
             axisLineWidth(1.0),
-            plotWidth(8.0*InchesPerCentimeter*PointsPerInch),
-            plotHeight(8.0*InchesPerCentimeter*PointsPerInch),
+            plotWidthInPoints(8.0*InchesPerCentimeter*PointsPerInch),
+            plotHeightInPoints(8.0*InchesPerCentimeter*PointsPerInch),
             canvasWidth(0.),
             canvasHeight(0.),
-            xticMinimumIncrement(1.0){}  
+            xticMinimumIncrement(1.0),
+            logScale(false){}  
     };  
-    
+
+    //==============================================================================
+    static double convertCentimetersToPoints(double centimeters){
+        return centimeters*InchesPerCentimeter*PointsPerInch;
+    };
+
+    //==============================================================================
+    static double convertInchesToPoints(double inches){
+        return inches*PointsPerInch;
+    };
+
     //==============================================================================
     static void configurePlot(sciplot::Plot2D &plotUpd,
                     const std::string &xAxisLabel,
@@ -70,13 +82,18 @@ public:
         plotUpd.ytics()
             .fontName(settings.fontName)
             .fontSize(settings.axisTickFontSize);
-
+            
         plotUpd.border().lineWidth(settings.axisLineWidth);
 
         plotUpd.fontName(settings.fontName);
         plotUpd.fontSize(settings.legendFontSize);                    
 
-        plotUpd.size(settings.plotWidth,settings.plotHeight);
+        if(settings.logScale){
+            plotUpd.ytics().logscale(10.0);
+        }
+
+        plotUpd.size(settings.plotWidthInPoints,
+                     settings.plotHeightInPoints);
 
         };    
     //==========================================================================
@@ -179,6 +196,7 @@ public:
                                     const SummaryStatistics &summary,
                                     const char* lineColor,
                                     const char* currentColor,
+                                    const int currentLineType,
                                     const PlotSettings &settings,
                                     bool verbose){
     sciplot::Vec xBox(5);
@@ -196,9 +214,9 @@ public:
     yBox[3]= summary.percentiles[P75];
     yBox[4]= summary.percentiles[P25];
 
-    plotUpd.drawCurve(xBox,yBox)
-            .lineColor(lineColor)
-            .lineWidth(settings.lineWidth*2)
+    plotUpd.drawCurveFilled(xBox,yBox)
+            .fillColor(lineColor)
+            .lineWidth(0.)
             .labelNone();
 
     sciplot::Vec xLine(2);
@@ -272,7 +290,7 @@ public:
     yLine[1] = summary.percentiles[P50];
 
     plotUpd.drawCurve(xLine,yLine)
-            .lineColor(lineColor)
+            .lineColor("white")
             .lineWidth(settings.lineWidth)
             .labelNone();
 
@@ -294,6 +312,7 @@ public:
     plotUpd.drawCurve(xLine,yLine)
             .lineColor(currentColor)
             .lineWidth(settings.lineWidth)
+            .lineType(currentLineType)            
             .labelNone();
 
     };
