@@ -294,6 +294,7 @@ public:
             .lineWidth(settings.lineWidth)
             .labelNone();
 
+    /*
     xLine[0] = x-xWidth*0.5;
     xLine[1] = x+xWidth*0.5;
     yLine[0] = summary.current;
@@ -303,7 +304,8 @@ public:
             .lineColor("gray100")
             .lineWidth(settings.lineWidth*3)
             .labelNone();
-
+    */
+   
     xLine[0] = x-xWidth*0.5;
     xLine[1] = x+xWidth*0.5;
     yLine[0] = summary.current;

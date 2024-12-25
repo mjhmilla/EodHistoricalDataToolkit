@@ -791,7 +791,6 @@ bool generateLaTeXReport(
     latexReport << "\\newpage"        << std::endl;
   }
 
-  latexReport << "\\end{document}" << std::endl;
   latexReport.close();
 
   if(verbose){

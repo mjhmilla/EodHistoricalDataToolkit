@@ -561,6 +561,7 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
     for( auto const &rankingItem : marketReportConfig["ranking"].items()){
       
       PlottingFunctions::PlotSettings subplotSettings = settings;
+      subplotSettings.lineWidth = 0.5;
 
       PlottingFunctions::SummaryStatistics marketSummary;   
       marketSummary.percentiles.resize(
@@ -755,6 +756,145 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
     outputFileName.append(summaryPlotFileName);
     canvas.save(outputFileName);     
   }
+
+};
+
+//==============================================================================
+void generateLaTeXReport(const nlohmann::ordered_json &marketReportConfig, 
+                    const MetricSummaryDataSet &metricDataSet,
+                    const std::vector< std::string > &marketSummaryPlots,
+                    const std::string &tickerReportFolder,
+                    const std::string &marketReportFolder,
+                    const std::string &marketReportFileName,
+                    bool verbose){
+
+  if(verbose){
+    std::cout << "Gerating LaTeX report for " 
+              << marketReportFileName  << std::endl; 
+  }  
+
+  std::string outputReportPath(marketReportFolder);
+  outputReportPath.append(marketReportFileName);
+
+  std::string latexReportPath(outputReportPath);
+  std::ofstream latexReport;
+
+  try{
+    latexReport.open(latexReportPath);
+  }catch(std::ofstream::failure &ofstreamErr){
+    std::cerr << std::endl << std::endl 
+              << "Error: an exception was thrown trying to open " 
+              << latexReportPath              
+              << " :"
+              << latexReportPath << std::endl << std::endl
+              << ofstreamErr.what()
+              << std::endl;    
+    std::abort();
+  }  
+
+  // Write the opening to the latex file
+  latexReport << "\\documentclass[11pt,onecolumn,a4paper]{article}" 
+              << std::endl;
+  latexReport << "\\usepackage[hmargin={1.35cm,1.35cm},vmargin={2.0cm,3.0cm},"
+                    "footskip=0.75cm,headsep=0.25cm]{geometry}"<<std::endl;
+  latexReport << "\\usepackage{graphicx,caption}"<<std::endl;
+  latexReport << "\\usepackage{times}"<<std::endl;
+  latexReport << "\\usepackage{graphicx}"<<std::endl;
+  latexReport << "\\usepackage{hyperref}"<<std::endl;
+  latexReport << "\\usepackage{multicol}"<<std::endl;
+  latexReport << "\\usepackage[usenames,dvipsnames,table]{xcolor}"<<std::endl;
+  latexReport << std::endl << std::endl;
+  latexReport << "\\begin{document}" << std::endl << std::endl;
+
+  // Add the opening figure
+  for(auto const &figName : marketSummaryPlots){
+    latexReport << "\\begin{figure}[h]" << std::endl;
+    latexReport << "  \\begin{center}" << std::endl;
+    latexReport << "    \\includegraphics{"
+                << marketReportFolder << figName
+                << "}" << std::endl;
+    latexReport << " \\end{center}" << std::endl;
+    latexReport << "\\end{figure}"<< std::endl;
+    latexReport << std::endl;    
+  }
+
+  // Add the list of companies
+  latexReport << "\\begin{multicols}{4}" << std::endl;
+  latexReport << "\\begin{enumerate}" << std::endl;
+  latexReport << "\\itemsep0pt" << std::endl;
+
+  double totalMarketWeight=0.;
+  for(size_t i = 0; i < metricDataSet.ticker.size(); ++i){
+    totalMarketWeight += metricDataSet.weight[i];
+  }  
+
+  for(size_t i = 0; i < metricDataSet.ticker.size(); ++i){
+    size_t j = metricDataSet.sortedIndex[i];
+
+    double weight  = metricDataSet.weight[j];
+    std::stringstream stream;
+    stream << std::fixed << std::setprecision(6) 
+           << weight/totalMarketWeight;
+
+    std::string ticker = metricDataSet.ticker[j];
+    size_t idx = ticker.find(".json");
+    ticker = ticker.substr(0,idx);
+
+    std::string tickerLabel(ticker);
+    idx = tickerLabel.find(".");
+    tickerLabel.at(idx)='-';
+
+    latexReport << "\\item " << "\\ref{" << tickerLabel << "} "
+                <<  ticker << "---" << metricDataSet.metricRankSum[j] 
+                << std::endl;
+  }
+  latexReport << "\\end{enumerate}" << std::endl;
+  latexReport << "\\end{multicols}" << std::endl;
+  latexReport << std::endl;
+  
+  // Append the ticker reports in oder
+  for(size_t i = 0; i < metricDataSet.ticker.size(); ++i){
+    size_t j = metricDataSet.sortedIndex[i];
+
+    std::string ticker = metricDataSet.ticker[j];
+    size_t idx = ticker.find(".json");
+    ticker = ticker.substr(0,idx);
+
+    std::string tickerLabel(ticker);
+    idx = tickerLabel.find(".");
+    tickerLabel.at(idx)='-';
+
+    std::string tickerFile(ticker);
+    idx = tickerFile.find(".");
+    tickerFile.at(idx)='_';
+
+    std::filesystem::path tickerReportPath=tickerReportFolder;
+    tickerReportPath /= tickerFile;
+    tickerReportPath /= tickerFile;
+    tickerReportPath += ".tex";
+
+    std::filesystem::path graphicsPath=tickerReportFolder;
+    graphicsPath /= tickerFile;
+
+
+
+    latexReport << "\\break" << std::endl;
+    latexReport << "\\newpage" << std::endl << std::endl;
+
+    latexReport << "\\section{ " << ticker << " }" <<std::endl; 
+    latexReport << "\\label{" << tickerLabel << "}" << std::endl;
+    latexReport << "\\graphicspath{{" << graphicsPath.string() << "}}" 
+                << std::endl;
+    latexReport << "\\input{"
+                << tickerReportPath.string()
+                << "}"
+                << std::endl
+                << std::endl;
+  }
+  //close the file
+
+  latexReport << "\\end{document}" << std::endl;
+  latexReport.close();
 
 };
 
@@ -1029,6 +1169,9 @@ int main (int argc, char* argv[]) {
     
     PlottingFunctions::PlotSettings settings;
 
+    std::vector< std::string > marketSummaryPlots;
+    marketSummaryPlots.push_back(summaryPlotFileName);
+
     plotReportData(marketReportConfig, 
                    metricDataSet,
                    settings,
@@ -1036,7 +1179,17 @@ int main (int argc, char* argv[]) {
                    summaryPlotFileName,
                    verbose);
 
-    bool here=true;                   
+    std::string marketReportFileName("report_");
+    marketReportFileName.append(marketReportConfigurationFileName);
+    marketReportFileName.append(".tex");
+
+    generateLaTeXReport(marketReportConfig, 
+                        metricDataSet,
+                        marketSummaryPlots,
+                        tickerReportFolder,
+                        marketReportFolder,
+                        marketReportFileName,
+                        verbose);
 
   }
 
