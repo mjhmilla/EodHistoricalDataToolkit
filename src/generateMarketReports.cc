@@ -1323,7 +1323,7 @@ int main (int argc, char* argv[]) {
 
     for(size_t indexReport=0; indexReport<maximumNumberOfReports;++indexReport){
 
-      size_t indexStart = (maximumNumberOfReports)*indexReport;
+      size_t indexStart = (numberOfTickersPerReport)*indexReport;
       size_t indexEnd   = std::min( indexStart+numberOfTickersPerReport,
                                     metricDataSet.ticker.size()       );  
 
