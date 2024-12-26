@@ -6,7 +6,8 @@
 #include <stdlib.h>
 #include <numeric>
 
-
+#include <chrono>
+#include "date.h"
 
 
 class JsonFunctions {
@@ -300,6 +301,36 @@ class JsonFunctions {
           }
         }
       }
+    };
+
+    static int findClosestDate(const nlohmann::ordered_json &jsonTable,
+                               const date::sys_days &targetDay,
+                               const char* dateFormat,
+                               std::string &dateClosestUpd,
+                               date::sys_days &dayClosestUpd,
+                               bool acceptDatesAfterTargetDay=false)
+    {
+
+        int smallestDayError=std::numeric_limits<int>::max();
+        for(auto &metricItem : jsonTable.items()){
+          std::string itemDate(metricItem.key());
+          std::istringstream itemDateStream(itemDate);
+          itemDateStream.exceptions(std::ios::failbit);
+          date::sys_days itemDays;
+          itemDateStream >> date::parse(dateFormat,itemDays);
+
+
+          int dayError = std::abs((targetDay-itemDays).count());
+          if(acceptDatesAfterTargetDay){
+            dayError = std::abs(dayError);
+          }
+          if(dayError < smallestDayError && dayError > 0){
+            smallestDayError  = dayError;
+            dateClosestUpd    = itemDate;
+            dayClosestUpd     = itemDays;
+          }            
+        }
+        return smallestDayError;
     };
 
 };

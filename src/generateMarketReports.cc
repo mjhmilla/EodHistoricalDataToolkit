@@ -17,7 +17,7 @@
 #include "JsonFunctions.h"
 #include <sciplot/sciplot.hpp>
 #include "PlottingFunctions.h"
-
+#include "ReportingFunctions.h"
 
 
 struct MetricSummaryDataSet{
@@ -76,7 +76,9 @@ void rankMetricData(const nlohmann::ordered_json &marketReportConfig,
 {
 
   if(verbose){
-    std::cout << std::endl << "Ranking metric data ..." << std::endl;
+    std::cout << "----------------------------------------" << std::endl;
+    std::cout <<  "Ranking metric data ..." <<std::endl;
+    std::cout << "----------------------------------------" << std::endl;
   }
 
   //Evaluate the ranking of the individual metrics
@@ -130,12 +132,12 @@ void rankMetricData(const nlohmann::ordered_json &marketReportConfig,
 
       if(!std::isnan(lowerBound)){
         if(value < lowerBound){
-          value = std::numeric_limits<double>::max();
+          value = std::nan("1");
         }
       }
       if(!std::isnan(upperBound)){
         if(value > upperBound){
-          value = std::numeric_limits<double>::max();
+          value = std::nan("1");
         }
       }
       if(std::isnan(value)){
@@ -197,6 +199,7 @@ bool appendMetricData(const std::string &tickerFileName,
                   MetricSummaryDataSet &metricDataSetUpd,             
                   bool verbose){
 
+
   bool inputsAreValid=true;
 
   bool rankingFieldExists = marketReportConfig.contains("ranking");
@@ -257,6 +260,8 @@ bool appendMetricData(const std::string &tickerFileName,
       if(loadedCalculateData){
 
 
+
+        /*
         int smallestDayError = std::numeric_limits< int >::max();
         date::sys_days targetDay = targetDate;
         date::sys_days closestDay = date::year{1900}/1/1;
@@ -286,11 +291,45 @@ bool appendMetricData(const std::string &tickerFileName,
             closestDay        = itemDays;
             targetMetricValue = metricValue;
             closestDate       = itemDate;
-          }
-            
+          }            
+        }
+        */
+
+        //Extract the metric data closest to the target date
+        std::string closestDate;
+        date::sys_days closestDay;
+        double targetMetricValue = 0.;
+
+        int smallestDayError = 
+          JsonFunctions::findClosestDate( targetJsonTable,
+                                          targetDate,
+                                          "%Y-%m-%d",
+                                          closestDate,
+                                          closestDay);
+
+        double metricValue = 
+          JsonFunctions::getJsonFloat(targetJsonTable[closestDate],fieldVector);
+        bool metricValueValid = JsonFunctions::isJsonFloatValid(metricValue);
+
+        if(metricValueValid){
+          targetMetricValue = metricValue;         
         }
 
-        if(weightFieldExists){
+        //Build the historical list
+        std::vector< double > metricData;
+        for(auto &metricItem : targetJsonTable.items()){
+          std::string itemDate(metricItem.key());
+
+          double metricValue = 
+            JsonFunctions::getJsonFloat(targetJsonTable[itemDate],fieldVector);
+          bool metricValueValid = JsonFunctions::isJsonFloatValid(metricValue);
+
+          if(metricValueValid){
+            metricData.push_back(metricValue);          
+          }
+        }
+
+        if(weightFieldExists && closestDate.length() > 0){
           std::string folderWeighting; 
           JsonFunctions::getJsonString( 
             marketReportConfig["market_weighting"]["folder"],folderWeighting);
@@ -353,7 +392,10 @@ bool applyFilter(const std::string &tickerFileName,
                  const std::string &fundamentalFolder,
                  const std::string &historicalFolder,
                  const std::string &calculateDataFolder,
+                 const std::string &tickerReportFolder,
                  const nlohmann::ordered_json &marketReportConfig,
+                 const date::year_month_day &targetDate,
+                 int maxTargetDateErrorInDays,                 
                  bool replaceNansWithMissingData,
                  bool verbose){
 
@@ -362,6 +404,7 @@ bool applyFilter(const std::string &tickerFileName,
   bool filterFieldExists = marketReportConfig.contains("filter");
 
   if(filterFieldExists){
+
     for( auto const &el : marketReportConfig["filter"].items() ){
       //
       // Retreive the filter data
@@ -409,13 +452,17 @@ bool applyFilter(const std::string &tickerFileName,
       //
       // Fetch the target data and apply the filter
       //
-      std::string fullPathFileName("");      
+      std::string fullPathFileName(""); 
+      bool jsonTableItemizedByDate=false;     
       if(folder == "fundamentalData"){
-        fullPathFileName = fundamentalFolder;                
+        fullPathFileName = fundamentalFolder;
+        jsonTableItemizedByDate=false;                
       }else if(folder == "historicalData"){
         fullPathFileName = historicalFolder;                        
+        jsonTableItemizedByDate=true;                
       }else if(folder == "calculateData"){
-        fullPathFileName = calculateDataFolder;                      
+        fullPathFileName = calculateDataFolder;       
+        jsonTableItemizedByDate=true;                
       }else{
         std::cerr << "Error: in filter " << filterName 
                   << " the folder field is " << folder 
@@ -432,6 +479,24 @@ bool applyFilter(const std::string &tickerFileName,
         JsonFunctions::loadJsonFile(fullPathFileName,
                                     targetJsonTable,
                                     verbose); 
+
+      if(!loadedConfiguration){
+        valueFilter = false;
+        break;
+      }
+
+      //Go fetch the most recent date and prepend it to the field vector
+      if(jsonTableItemizedByDate){
+        std::string closestDate;
+        date::sys_days closestDay;
+        int smallestDayError = 
+          JsonFunctions::findClosestDate( targetJsonTable,
+                                          targetDate,
+                                          "%Y-%m-%d",
+                                          closestDate,
+                                          closestDay);
+        fieldVector.insert(fieldVector.begin(),closestDate);
+      }
 
       std::string valueString;
       double valueFloat;
@@ -504,39 +569,65 @@ bool applyFilter(const std::string &tickerFileName,
       //Apply the operator between all of the values to yield the final 
       //filter value
       valueFilter = valueBoolVector[0];
-      for(size_t i = 1; i < valueBoolVector.size(); ++i){
-        if(operatorName == "||"){
-          valueFilter = (valueFilter || valueBoolVector[i]);
-        }else if( operatorName == "&&"){
-          valueFilter = (valueFilter && valueBoolVector[i]);
-        }else{
-          std::cerr << "Error: in filter " << filterName 
-                << " the operator field should be " 
-                << " || or && for a string"
-                << " but is instead " << operatorName  
-                << std::endl;
-          std::abort();             
+      if(valueBoolVector.size()>1){
+        for(size_t i = 1; i < valueBoolVector.size(); ++i){
+          if(operatorName == "||"){
+            valueFilter = (valueFilter || valueBoolVector[i]);
+          }else if( operatorName == "&&"){
+            valueFilter = (valueFilter && valueBoolVector[i]);
+          }else{
+            std::cerr << "Error: in filter " << filterName 
+                  << " the operator field should be " 
+                  << " || or && for a string"
+                  << " but is instead " << operatorName  
+                  << std::endl;
+            std::abort();             
+          }
         }
       }
-
-
-
     }
 
-
   }
+
+  //Check to see if the ticker report file exists
+  if(valueFilter){
+    std::string tickerReportPath    = tickerReportFolder;
+    std::string tickerFolder        = tickerFileName;
+    std::string tickerLaTeXFileName = tickerFileName;
+
+    ReportingFunctions::sanitizeFolderName(tickerFolder,true);
+    ReportingFunctions::sanitizeFolderName(tickerLaTeXFileName,true);
+    tickerLaTeXFileName.append(".tex");
+
+    std::filesystem::path tickerLaTeXReportPath=tickerReportFolder;
+    tickerLaTeXReportPath /= tickerFolder;
+    tickerLaTeXReportPath /= tickerLaTeXFileName;
+
+    if( !std::filesystem::exists(tickerLaTeXReportPath)  ){
+      valueFilter = false;
+    }
+  }  
 
   return valueFilter;
 };
 
 //==============================================================================
-void plotReportData(const nlohmann::ordered_json &marketReportConfig, 
+void plotReportData(size_t indexTickerStart,
+                    size_t indexTickerEnd,
+                    const nlohmann::ordered_json &marketReportConfig, 
                     const MetricSummaryDataSet &metricDataSet,
                     const PlottingFunctions::PlotSettings &settings,
                     const std::string &marketReportFolder,
                     const std::string &summaryPlotFileName,
                     bool verbose)
 {
+
+  if(verbose){
+
+    std::cout << "----------------------------------------" << std::endl;    
+    std::cout << "Generating summary plot: " << summaryPlotFileName<< std::endl;
+    std::cout << "----------------------------------------" << std::endl;              
+  }
 
   bool rankingFieldExists = marketReportConfig.contains("ranking");
 
@@ -618,8 +709,8 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
       
       sciplot::Vec xThreshold(2);
       sciplot::Vec yThreshold(2);
-      xThreshold[0] = 0.0;
-      xThreshold[1] = static_cast<double>(metricDataSet.ticker.size())+2.0;
+      xThreshold[0] = static_cast<double>(indexTickerStart)+1.0;
+      xThreshold[1] = static_cast<double>(indexTickerEnd)+1.0;
       yThreshold[0] = threshold;
       yThreshold[1] = threshold;
 
@@ -628,7 +719,8 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
         .lineWidth(settings.lineWidth*0.5)
         .labelNone();
 
-      for( size_t i=0; i<metricDataSet.ticker.size(); ++i){
+      size_t tickerCount=0;
+      for( size_t i=indexTickerStart; i< indexTickerEnd; ++i){
 
         size_t indexSorted = metricDataSet.sortedIndex[i];
 
@@ -639,52 +731,57 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
         std::string boxColor("light-gray");
         int currentLineType = 0;
 
-        if(smallestIsBest && 
-           metricDataSet.summaryStatistics[indexSorted][indexMetric].current 
-           <= threshold){
-          currentLineType = 1;
-        }
-        if(biggestIsBest && 
-           metricDataSet.summaryStatistics[indexSorted][indexMetric].current 
-            >= threshold){    
-          currentLineType = 1;      
-        }
+        if(metricDataSet.summaryStatistics[indexSorted][indexMetric].percentiles.size()>0){
+          if(smallestIsBest && 
+            metricDataSet.summaryStatistics[indexSorted][indexMetric].current 
+            <= threshold){
+            currentLineType = 1;
+          }
+          if(biggestIsBest && 
+            metricDataSet.summaryStatistics[indexSorted][indexMetric].current 
+              >= threshold){    
+            currentLineType = 1;      
+          }
 
-        PlottingFunctions::drawBoxAndWhisker(
-          arrayOfPlot2D[indexMetric][0],
-          xMid,
-          xWidth,
-          metricDataSet.summaryStatistics[indexSorted][indexMetric],
-          boxColor.c_str(),
-          currentColor.c_str(),
-          currentLineType,
-          subplotSettings,
-          verbose);
+          PlottingFunctions::drawBoxAndWhisker(
+            arrayOfPlot2D[indexMetric][0],
+            xMid,
+            xWidth,
+            metricDataSet.summaryStatistics[indexSorted][indexMetric],
+            boxColor.c_str(),
+            currentColor.c_str(),
+            currentLineType,
+            subplotSettings,
+            verbose);
 
-        for(size_t j=0; j < marketSummary.percentiles.size();++j){
-          marketSummary.percentiles[j] += 
-            metricDataSet.summaryStatistics[indexSorted][indexMetric].percentiles[j]
+          for(size_t j=0; j < marketSummary.percentiles.size();++j){
+            marketSummary.percentiles[j] += 
+              metricDataSet.summaryStatistics[indexSorted][indexMetric].percentiles[j]
+              *metricDataSet.weight[indexSorted];
+          }
+
+          marketSummary.current +=
+            metricDataSet.summaryStatistics[indexSorted][indexMetric].current
             *metricDataSet.weight[indexSorted];
+
+          marketSummary.min +=  
+            metricDataSet.summaryStatistics[indexSorted][indexMetric].min
+            *metricDataSet.weight[indexSorted];
+
+          marketSummary.max +=  
+            metricDataSet.summaryStatistics[indexSorted][indexMetric].max
+            *metricDataSet.weight[indexSorted];
+
+          marketWeight += metricDataSet.weight[indexSorted];
+
+          ++tickerCount;
         }
-
-        marketSummary.current +=
-          metricDataSet.summaryStatistics[indexSorted][indexMetric].current
-          *metricDataSet.weight[indexSorted];
-
-        marketSummary.min +=  
-          metricDataSet.summaryStatistics[indexSorted][indexMetric].min
-          *metricDataSet.weight[indexSorted];
-
-        marketSummary.max +=  
-          metricDataSet.summaryStatistics[indexSorted][indexMetric].max
-          *metricDataSet.weight[indexSorted];
-
-        marketWeight += metricDataSet.weight[indexSorted];
       }
 
       //Plot the market summary
       for(size_t j=0; j < marketSummary.percentiles.size();++j){
-        marketSummary.percentiles[j] = marketSummary.percentiles[j] / marketWeight;
+        marketSummary.percentiles[j] = 
+          marketSummary.percentiles[j] / marketWeight;
       }
       marketSummary.min     = marketSummary.min / marketWeight; 
       marketSummary.max     = marketSummary.max / marketWeight; 
@@ -702,7 +799,7 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
           currentLineType=1;
       }
 
-      double xMid = metricDataSet.ticker.size()+1.0;
+      double xMid = static_cast<double>(indexTickerEnd)+1.0;
       double xWidth = 0.4;
       PlottingFunctions::drawBoxAndWhisker(
         arrayOfPlot2D[indexMetric][0],
@@ -736,6 +833,10 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
         arrayOfPlot2D[indexMetric][0].yrange(lowerBoundPlot,upperBoundPlot);
       }
 
+      arrayOfPlot2D[indexMetric][0].xrange(
+          static_cast<double>(indexTickerStart)-xWidth+1.0,
+          static_cast<double>(indexTickerEnd)+xWidth+1.0);
+
       arrayOfPlot2D[indexMetric][0].legend().hide();
       
       std::vector< sciplot::PlotVariant > rowOfPlotVariant;      
@@ -760,7 +861,10 @@ void plotReportData(const nlohmann::ordered_json &marketReportConfig,
 };
 
 //==============================================================================
-void generateLaTeXReport(const nlohmann::ordered_json &marketReportConfig, 
+void generateLaTeXReport(
+                    size_t indexTickerStart,
+                    size_t indexTickerEnd,
+                    const nlohmann::ordered_json &marketReportConfig, 
                     const MetricSummaryDataSet &metricDataSet,
                     const std::vector< std::string > &marketSummaryPlots,
                     const std::string &tickerReportFolder,
@@ -769,9 +873,12 @@ void generateLaTeXReport(const nlohmann::ordered_json &marketReportConfig,
                     bool verbose){
 
   if(verbose){
-    std::cout << "Gerating LaTeX report for " 
-              << marketReportFileName  << std::endl; 
-  }  
+    std::cout << "----------------------------------------" << std::endl;    
+    std::cout << "Generating LaTeX report: " << marketReportFileName
+              << std::endl;
+    std::cout << "----------------------------------------" << std::endl;              
+  }
+
 
   std::string outputReportPath(marketReportFolder);
   outputReportPath.append(marketReportFileName);
@@ -819,8 +926,9 @@ void generateLaTeXReport(const nlohmann::ordered_json &marketReportConfig,
   }
 
   // Add the list of companies
-  latexReport << "\\begin{multicols}{4}" << std::endl;
+  latexReport << "\\begin{multicols}{3}" << std::endl;
   latexReport << "\\begin{enumerate}" << std::endl;
+  latexReport << "\\setcounter{enumi}{" << indexTickerStart <<"}" << std::endl;  
   latexReport << "\\itemsep0pt" << std::endl;
 
   double totalMarketWeight=0.;
@@ -828,24 +936,23 @@ void generateLaTeXReport(const nlohmann::ordered_json &marketReportConfig,
     totalMarketWeight += metricDataSet.weight[i];
   }  
 
-  for(size_t i = 0; i < metricDataSet.ticker.size(); ++i){
+  for(size_t i = indexTickerStart; i < indexTickerEnd; ++i){
     size_t j = metricDataSet.sortedIndex[i];
 
     double weight  = metricDataSet.weight[j];
     std::stringstream stream;
-    stream << std::fixed << std::setprecision(6) 
-           << weight/totalMarketWeight;
+    stream << std::fixed << std::setprecision(3) 
+           << (weight/totalMarketWeight)*100.0
+           << "\\%";
 
-    std::string ticker = metricDataSet.ticker[j];
-    size_t idx = ticker.find(".json");
-    ticker = ticker.substr(0,idx);
+    std::string tickerString(metricDataSet.ticker[j]);
+    ReportingFunctions::sanitizeStringForLaTeX(tickerString,true);
 
-    std::string tickerLabel(ticker);
-    idx = tickerLabel.find(".");
-    tickerLabel.at(idx)='-';
+    std::string tickerLabel(metricDataSet.ticker[j]);
+    ReportingFunctions::sanitizeLabelForLaTeX(tickerLabel,true);
 
     latexReport << "\\item " << "\\ref{" << tickerLabel << "} "
-                <<  ticker << "---" << metricDataSet.metricRankSum[j] 
+                <<  tickerString << "---" << metricDataSet.metricRankSum[j] 
                 << std::endl;
   }
   latexReport << "\\end{enumerate}" << std::endl;
@@ -853,20 +960,16 @@ void generateLaTeXReport(const nlohmann::ordered_json &marketReportConfig,
   latexReport << std::endl;
   
   // Append the ticker reports in oder
-  for(size_t i = 0; i < metricDataSet.ticker.size(); ++i){
+  for(size_t i = indexTickerStart; i < indexTickerEnd; ++i){
     size_t j = metricDataSet.sortedIndex[i];
 
-    std::string ticker = metricDataSet.ticker[j];
-    size_t idx = ticker.find(".json");
-    ticker = ticker.substr(0,idx);
+    std::string tickerString(metricDataSet.ticker[j]);
+    std::string tickerLabel(metricDataSet.ticker[j]);
+    std::string tickerFile(metricDataSet.ticker[j]);
 
-    std::string tickerLabel(ticker);
-    idx = tickerLabel.find(".");
-    tickerLabel.at(idx)='-';
-
-    std::string tickerFile(ticker);
-    idx = tickerFile.find(".");
-    tickerFile.at(idx)='_';
+    ReportingFunctions::sanitizeStringForLaTeX(tickerString,true);
+    ReportingFunctions::sanitizeLabelForLaTeX(tickerLabel,true);
+    ReportingFunctions::sanitizeFolderName(tickerFile,true);
 
     std::filesystem::path tickerReportPath=tickerReportFolder;
     tickerReportPath /= tickerFile;
@@ -881,7 +984,7 @@ void generateLaTeXReport(const nlohmann::ordered_json &marketReportConfig,
     latexReport << "\\break" << std::endl;
     latexReport << "\\newpage" << std::endl << std::endl;
 
-    latexReport << "\\section{ " << ticker << " }" <<std::endl; 
+    latexReport << "\\section{ " << tickerString << " }" <<std::endl; 
     latexReport << "\\label{" << tickerLabel << "}" << std::endl;
     latexReport << "\\graphicspath{{" << graphicsPath.string() << "}}" 
                 << std::endl;
@@ -1019,6 +1122,10 @@ int main (int argc, char* argv[]) {
 
   bool replaceNansWithMissingData = true;
 
+  auto today = date::floor<date::days>(std::chrono::system_clock::now());
+  date::year_month_day targetDate(today);
+  int maxTargetDateErrorInDays = 365;
+
   //Load the report configuration file
   nlohmann::ordered_json marketReportConfig;
   bool loadedConfiguration = 
@@ -1076,6 +1183,7 @@ int main (int argc, char* argv[]) {
         }
       }
 
+
       //Check to see if this ticker passes the filter
       bool tickerPassesFilter=false;
       if(validInput){
@@ -1083,7 +1191,10 @@ int main (int argc, char* argv[]) {
                                   fundamentalFolder,
                                   historicalFolder,
                                   calculateDataFolder,
+                                  tickerReportFolder,
                                   marketReportConfig,
+                                  targetDate,
+                                  maxTargetDateErrorInDays,                                  
                                   replaceNansWithMissingData,
                                   verbose);
       }    
@@ -1125,14 +1236,18 @@ int main (int argc, char* argv[]) {
     //
     // Collect all of the metrics used for ranking
     //
-    auto today = date::floor<date::days>(std::chrono::system_clock::now());
-    date::year_month_day targetDate(today);
-    int maxTargetDateErrorInDays = 365;
 
     MetricSummaryDataSet metricDataSet;    
     if(filteredTickers.size() > 0){
+      if(verbose){
+        std::cout << "Appending metric data ..."  << std::endl << std::endl;
+      }
+
       for (size_t i=0; i<filteredTickers.size(); ++i){
-        
+
+        if(verbose){
+          std::cout << i << "." << '\t' << filteredTickers[i] << std::endl;
+        }        
 
         bool appendedMetricData = 
             appendMetricData(filteredTickers[i],  
@@ -1159,37 +1274,94 @@ int main (int argc, char* argv[]) {
 
     std::string marketReportConfigurationFileName =
       std::filesystem::path(marketReportConfigurationFilePath).filename();
-    size_t idx = marketReportConfigurationFileName.find(".json");
-    marketReportConfigurationFileName 
-      = marketReportConfigurationFileName.substr(0,idx);
 
-    std::string summaryPlotFileName("summary_");
-    summaryPlotFileName.append(marketReportConfigurationFileName);
-    summaryPlotFileName.append(".pdf");
-    
-    PlottingFunctions::PlotSettings settings;
+    ReportingFunctions::sanitizeFolderName(marketReportConfigurationFileName);  
 
-    std::vector< std::string > marketSummaryPlots;
-    marketSummaryPlots.push_back(summaryPlotFileName);
+    int numberOfTickersPerReport = 50;
+    int maximumNumberOfReports=1;
+    int maximumNumberOfReportsDefault = 
+      static_cast< int >(
+        std::ceil(static_cast<double>(metricDataSet.ticker.size())
+                /static_cast<double>(numberOfTickersPerReport))
+      );
 
-    plotReportData(marketReportConfig, 
-                   metricDataSet,
-                   settings,
-                   marketReportFolder,
-                   summaryPlotFileName,
-                   verbose);
+    if(marketReportConfig.contains("report")){
+      if(marketReportConfig["report"].contains("number_of_tickers_per_report")){
+        double tmp = JsonFunctions::getJsonFloat(
+          marketReportConfig["report"]["number_of_tickers_per_report"],false);
+        if(!std::isnan(tmp)){
+          numberOfTickersPerReport = static_cast<int>(tmp);
+        }
+      }
+      if(marketReportConfig["report"].contains("number_of_reports")){
+        double tmp = JsonFunctions::getJsonFloat(
+          marketReportConfig["report"]["number_of_reports"],false);
+        if(!std::isnan(tmp)){
+          maximumNumberOfReports = static_cast<int>(tmp);
+        }        
+      }      
+    }
+
+    maximumNumberOfReports = std::min(maximumNumberOfReports,
+                                      maximumNumberOfReportsDefault);
+
+    for(size_t indexReport=0; indexReport<maximumNumberOfReports;++indexReport){
+
+      size_t indexStart = (maximumNumberOfReports)*indexReport;
+      size_t indexEnd   = std::min( indexStart+numberOfTickersPerReport,
+                                    metricDataSet.ticker.size()       );  
+
+      std::stringstream reportNumber;
+      reportNumber << indexReport;
+      std::string reportNumberStr(reportNumber.str());
+
+      while(reportNumberStr.length()<3){
+        std::string tmp("0");
+        reportNumberStr = tmp.append(reportNumberStr);
+      }
+
+      std::string summaryPlotFileName("summary_");
+      summaryPlotFileName.append(marketReportConfigurationFileName);
+      summaryPlotFileName.append("_");
+      summaryPlotFileName.append(reportNumberStr);
+      summaryPlotFileName.append(".pdf");
+      
+      PlottingFunctions::PlotSettings settings;
+
+      std::vector< std::string > marketSummaryPlots;
+      marketSummaryPlots.push_back(summaryPlotFileName);
+
+      plotReportData(indexStart,
+                    indexEnd,
+                    marketReportConfig, 
+                    metricDataSet,
+                    settings,
+                    marketReportFolder,
+                    summaryPlotFileName,
+                    verbose);      
 
     std::string marketReportFileName("report_");
     marketReportFileName.append(marketReportConfigurationFileName);
+    marketReportFileName.append("_");
+    marketReportFileName.append(reportNumberStr);    
     marketReportFileName.append(".tex");
 
-    generateLaTeXReport(marketReportConfig, 
+    generateLaTeXReport(indexStart,
+                        indexEnd,
+                        marketReportConfig, 
                         metricDataSet,
                         marketSummaryPlots,
                         tickerReportFolder,
                         marketReportFolder,
                         marketReportFileName,
                         verbose);
+
+    }
+
+
+
+
+
 
   }
 

@@ -15,6 +15,148 @@ class ReportingFunctions {
 
 public:
 
+
+//==============================================================================
+static void sanitizeFolderName(std::string &folderName, 
+                               bool stripExtension=false){
+
+  if(stripExtension){
+    size_t idx = folderName.find_last_of('.');
+    if(idx != folderName.npos){
+      folderName = folderName.substr(0,idx);
+    }
+  }
+
+  std::string charactersToDelete("");  
+  charactersToDelete.append("\'");
+  deleteCharacters(folderName,charactersToDelete);
+
+  std::string charactersToEscape("");
+  charactersToEscape.append("&");
+  charactersToEscape.append("$");
+  charactersToEscape.append("#");
+  charactersToEscape.append(".");
+
+  std::string replacementCharacter("_");
+  replaceSpecialCharacters(folderName,
+                           charactersToEscape,
+                           replacementCharacter);
+};
+//==============================================================================
+static void sanitizeLabelForLaTeX(std::string &stringForLatex,
+                                  bool stripExtension=false){
+
+  if(stripExtension){
+    size_t idx = stringForLatex.find_last_of('.');
+    if(idx != stringForLatex.npos){
+      stringForLatex = stringForLatex.substr(0,idx);
+    }
+  }
+
+  std::string charactersToDelete("");  
+  charactersToDelete.append("\'");
+  deleteCharacters(stringForLatex,charactersToDelete);
+
+  std::string charactersToEscape("");
+  charactersToEscape.append("&");
+  charactersToEscape.append("$");
+  charactersToEscape.append("#");
+  charactersToEscape.append(".");
+
+  std::string replacementCharacter("-");
+  replaceSpecialCharacters(stringForLatex,
+                           charactersToEscape,
+                           replacementCharacter);
+};
+//==============================================================================
+
+static void sanitizeStringForLaTeX(std::string &stringForLatex,
+                                   bool stripExtension=false){
+
+  if(stripExtension){
+    size_t idx = stringForLatex.find_last_of('.');
+    if(idx != stringForLatex.npos){
+      stringForLatex = stringForLatex.substr(0,idx);
+    }
+  }                                    
+
+  std::string charactersToDelete("");  
+  charactersToDelete.append("\'");
+  ReportingFunctions::deleteCharacters(stringForLatex,charactersToDelete);
+
+  std::string charactersToEscape("");
+  charactersToEscape.append("&");
+  charactersToEscape.append("$");
+  charactersToEscape.append("#");
+
+  ReportingFunctions::escapeSpecialCharacters(stringForLatex, charactersToEscape);
+
+};
+
+//==============================================================================
+static void convertCamelCaseToSpacedText(std::string &labelUpd){
+  //Convert a camel-case labelUpd to a spaced label                      
+  labelUpd[0] = std::toupper(labelUpd[0]);
+  
+  for(size_t i=1;i<labelUpd.length();++i){
+    if(std::islower(labelUpd[i-1]) && std::isupper(labelUpd[i])){
+      labelUpd.insert(i," ");
+    }            
+    if(!std::isalnum(labelUpd[i])){
+      labelUpd[i]=' ';
+    }
+  }
+
+};
+//==============================================================================
+static void replaceSpecialCharacters(std::string &textUpd, 
+                            const std::string &charactersToReplace,
+                            const std::string &replacementString){
+
+    for(size_t i=0; i<charactersToReplace.length();++i){
+      char charToReplace = charactersToReplace[i];
+      size_t idx = textUpd.find(charToReplace,0);
+      while(idx != std::string::npos){
+        if(idx != std::string::npos){
+          textUpd.replace(idx, replacementString.length(),
+                               replacementString);
+        }
+        idx = textUpd.find(charToReplace,idx+1);
+      }
+    }
+};
+//==============================================================================
+static void escapeSpecialCharacters(std::string &textUpd, 
+                            const std::string &charactersToEscape){
+
+    for(size_t i=0; i<charactersToEscape.length();++i){
+      char charToEscape = charactersToEscape[i];
+      size_t idx = textUpd.find(charToEscape,0);
+      while(idx != std::string::npos){
+        if(idx != std::string::npos){
+          textUpd.insert(idx,"\\");
+        }
+        idx = textUpd.find(charToEscape,idx+2);
+      }
+    }
+};
+//==============================================================================
+static void deleteCharacters(std::string &textUpd, 
+                             const std::string &charactersToDelete){
+
+    for(size_t i=0; i< charactersToDelete.length();++i){
+      char delChar = charactersToDelete[i];
+      size_t idx = textUpd.find(delChar,0);
+      while(idx != std::string::npos){
+        if(idx != std::string::npos){
+          textUpd.erase(idx,1);
+        }
+        idx = textUpd.find(delChar,idx);
+      }
+    }
+};
+
+
 //==============================================================================
 static std::string formatJsonEntry( double entry){
 

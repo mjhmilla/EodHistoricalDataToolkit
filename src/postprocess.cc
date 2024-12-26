@@ -286,7 +286,7 @@ void createHistoricalDataPlot(
 
   std::string companyName;
   JsonFunctions::getJsonString(reportEntry["Name"],companyName);
-  UtilityFunctions::deleteCharacters(companyName,charactersToDelete);
+  ReportingFunctions::deleteCharacters(companyName,charactersToDelete);
 
   std::string currencyCode;
   JsonFunctions::getJsonString(reportEntry["CurrencyCode"],currencyCode);
@@ -818,7 +818,7 @@ void plotReportData(
     if(!skip){
       std::string companyName;
       JsonFunctions::getJsonString(reportEntry["Name"],companyName);
-      UtilityFunctions::deleteCharacters(companyName,charactersToDelete);
+      ReportingFunctions::deleteCharacters(companyName,charactersToDelete);
 
       std::string country;
       JsonFunctions::getJsonString(reportEntry["Country"],country);
@@ -962,8 +962,8 @@ void plotReportData(
               size_t pos = tmpStringB.find("_value",0);
               tmpStringB = tmpStringB.substr(0,pos);
 
-              UtilityFunctions::convertCamelCaseToSpacedText(tmpStringA);
-              UtilityFunctions::convertCamelCaseToSpacedText(tmpStringB);
+              ReportingFunctions::convertCamelCaseToSpacedText(tmpStringA);
+              ReportingFunctions::convertCamelCaseToSpacedText(tmpStringB);
 
               configurePlot(plotMetric,tmpStringA,tmpStringB,settings);
               plotMetric.legend().atTopLeft();     
@@ -1231,7 +1231,7 @@ void plotReportData(
         size_t pos = tmpStringB.find("_value",0);
         tmpStringB = tmpStringB.substr(0,pos);
 
-        UtilityFunctions::convertCamelCaseToSpacedText(tmpStringB);        
+        ReportingFunctions::convertCamelCaseToSpacedText(tmpStringB);        
         configurePlot(arrayOfPlot2D[i][j],tmpStringA,tmpStringB,settings);
         arrayOfPlot2D[i][j].legend().hide();
         rowOfPlotVariant.push_back(arrayOfPlot2D[i][j]);
@@ -1376,7 +1376,7 @@ void generateLaTeXReport(
     if(!skip){
       std::string companyName;
       JsonFunctions::getJsonString(reportEntry["Name"],companyName);
-      UtilityFunctions::escapeSpecialCharacters(companyName,charactersToEscape);
+      ReportingFunctions::escapeSpecialCharacters(companyName,charactersToEscape);
 
       std::string country;
       JsonFunctions::getJsonString(reportEntry["Country"],country);
@@ -1386,7 +1386,7 @@ void generateLaTeXReport(
 
       std::string description;
       JsonFunctions::getJsonString(reportEntry["Description"],description);
-      UtilityFunctions::escapeSpecialCharacters(description,charactersToEscape);
+      ReportingFunctions::escapeSpecialCharacters(description,charactersToEscape);
 
 
 
@@ -1465,7 +1465,7 @@ void generateLaTeXReport(
         for(auto &entryMetric : tabularMetrics){
           double entryValue = JsonFunctions::getJsonFloat(reportEntry[entryMetric]);
           std::string labelMetric = entryMetric;
-          UtilityFunctions::convertCamelCaseToSpacedText(labelMetric);
+          ReportingFunctions::convertCamelCaseToSpacedText(labelMetric);
           latexReport << labelMetric << " & " << entryValue << "\\\\" << std::endl;
         }
         latexReport << "\\end{tabular}" << std::endl << std::endl;

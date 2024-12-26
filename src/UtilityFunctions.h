@@ -11,54 +11,7 @@ class UtilityFunctions {
 public:
 
 //==============================================================================
-static void convertCamelCaseToSpacedText(std::string &labelUpd){
-  //Convert a camel-case labelUpd to a spaced label                      
-  labelUpd[0] = std::toupper(labelUpd[0]);
-  
-  for(size_t i=1;i<labelUpd.length();++i){
-    if(std::islower(labelUpd[i-1]) && std::isupper(labelUpd[i])){
-      labelUpd.insert(i," ");
-    }            
-    if(!std::isalnum(labelUpd[i])){
-      labelUpd[i]=' ';
-    }
-  }
-
-};
-//==============================================================================
-static void escapeSpecialCharacters(std::string &textUpd, 
-                            std::string &charactersToEscape){
-
-    for(size_t i=0; i<charactersToEscape.length();++i){
-      char charToEscape = charactersToEscape[i];
-      size_t idx = textUpd.find(charToEscape,0);
-      while(idx != std::string::npos){
-        if(idx != std::string::npos){
-          textUpd.insert(idx,"\\");
-        }
-        idx = textUpd.find(charToEscape,idx+2);
-      }
-    }
-};
-//==============================================================================
-static void deleteCharacters(std::string &textUpd, 
-                             std::string &charactersToDelete){
-
-    for(size_t i=0; i< charactersToDelete.length();++i){
-      char delChar = charactersToDelete[i];
-      size_t idx = textUpd.find(delChar,0);
-      while(idx != std::string::npos){
-        if(idx != std::string::npos){
-          textUpd.erase(idx,1);
-        }
-        idx = textUpd.find(delChar,idx);
-      }
-    }
-};
-
-
-//==============================================================================
-static double convertToFractionalYear(std::string &dateStr){
+static double convertToFractionalYear(const std::string &dateStr){
   date::year_month_day dateYmd;
   date::sys_days dateDay, dateDayFirstOfYear;
 
@@ -90,9 +43,9 @@ static double convertToFractionalYear(std::string &dateStr){
 
 //==============================================================================
 static bool readListOfRankingMetrics(
-              std::string& rankingFilePath,
-              std::vector< std::vector< std::string > > &listOfRankingMetrics,
-              bool verbose)
+  const std::string& rankingFilePath,
+  std::vector< std::vector< std::string > > &listOfRankingMetricsUpd,
+  bool verbose)
 {
 
   bool rankingFileIsValid=true;
@@ -112,7 +65,7 @@ static bool readListOfRankingMetrics(
 
         if(   entryB.compare("smallestIsBest") == 0
            || entryB.compare("biggestIsBest" ) == 0){ 
-          listOfRankingMetrics.push_back(rankingMetric);        
+          listOfRankingMetricsUpd.push_back(rankingMetric);        
         }else{
           if(verbose){
             std::cout << "Error: the second entry of each line in " 
@@ -134,7 +87,7 @@ static bool readListOfRankingMetrics(
       }
     }while(entryA.length() > 0 && rankingFileIsValid);
     
-    if(listOfRankingMetrics.size()==0){
+    if(listOfRankingMetricsUpd.size()==0){
       rankingFileIsValid=false;
       if(verbose){
         std::cout << "Error: " << rankingFilePath 

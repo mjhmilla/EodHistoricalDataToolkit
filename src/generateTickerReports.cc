@@ -69,22 +69,7 @@ bool isNameInList(std::string &name, std::vector< std::string > &listOfNames){
   return nameIsInList;
 };
 
-//==============================================================================
-void sanitizeStringForLaTeX(std::string &stringForLatex){
 
-  std::string charactersToDelete("");  
-  charactersToDelete.append("\'");
-  UtilityFunctions::deleteCharacters(stringForLatex,charactersToDelete);
-
-  std::string charactersToEscape("");
-  charactersToEscape.append("&");
-  charactersToEscape.append("$");
-  charactersToEscape.append("#");
-
-  UtilityFunctions::escapeSpecialCharacters(stringForLatex, charactersToEscape);
-
-
-}
 //==============================================================================
 void getTickerMetaData(    
     const nlohmann::ordered_json &fundamentalData,
@@ -95,18 +80,18 @@ void getTickerMetaData(
 
   JsonFunctions::getJsonString( fundamentalData[GEN]["Name"],
                                 tickerMetaDataUpd.companyName);                                
-  sanitizeStringForLaTeX(tickerMetaDataUpd.companyName);                                
+  ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.companyName);                                
 
   JsonFunctions::getJsonString( fundamentalData[GEN]["ISIN"],
                                 tickerMetaDataUpd.isin);                                
 
   JsonFunctions::getJsonString( fundamentalData[GEN]["CurrencyCode"],
                                 tickerMetaDataUpd.currencyCode);
-  sanitizeStringForLaTeX(tickerMetaDataUpd.currencyCode);
+  ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.currencyCode);
 
   JsonFunctions::getJsonString(fundamentalData[GEN]["CountryName"],
                                tickerMetaDataUpd.country);  
-  sanitizeStringForLaTeX(tickerMetaDataUpd.country);      
+  ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.country);      
 
 };
 //==============================================================================
@@ -471,8 +456,8 @@ bool plotTickerData(
           size_t pos = tmpStringB.find("_value",0);
           tmpStringB = tmpStringB.substr(0,pos);
 
-          UtilityFunctions::convertCamelCaseToSpacedText(tmpStringA);
-          UtilityFunctions::convertCamelCaseToSpacedText(tmpStringB);
+          ReportingFunctions::convertCamelCaseToSpacedText(tmpStringA);
+          ReportingFunctions::convertCamelCaseToSpacedText(tmpStringB);
 
           PlottingFunctions::configurePlot(plotMetric,tmpStringA,tmpStringB,
                                            plotSettings);
@@ -697,7 +682,7 @@ bool generateLaTeXReport(
     std::string description;
     JsonFunctions::getJsonString(
         fundamentalData[GEN]["Description"],description);
-    sanitizeStringForLaTeX(description);
+    ReportingFunctions::sanitizeStringForLaTeX(description);
 
     latexReport << std::endl;
 
@@ -732,7 +717,7 @@ bool generateLaTeXReport(
     {
       JsonFieldAddress entryMetric = tabularMetrics[indexTabularMetrics];
       std::string labelMetric = entryMetric.fieldNames.back();
-      UtilityFunctions::convertCamelCaseToSpacedText(labelMetric);
+      ReportingFunctions::convertCamelCaseToSpacedText(labelMetric);
 
       bool fieldExists = JsonFunctions::doesFieldExist(fundamentalData, 
                                                 entryMetric.fieldNames);
