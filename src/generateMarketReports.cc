@@ -399,6 +399,10 @@ bool applyFilter(const std::string &tickerFileName,
                  bool replaceNansWithMissingData,
                  bool verbose){
 
+  if(tickerFileName.compare("MOZN.SW.json")==0){
+    bool here=true;
+  }
+
   bool valueFilter = true;
 
   bool filterFieldExists = marketReportConfig.contains("filter");
@@ -495,7 +499,14 @@ bool applyFilter(const std::string &tickerFileName,
                                           "%Y-%m-%d",
                                           closestDate,
                                           closestDay);
-        fieldVector.insert(fieldVector.begin(),closestDate);
+
+        if(closestDate.length()==0){
+          valueFilter=false;
+          break;
+        }else{
+          fieldVector.insert(fieldVector.begin(),closestDate);
+        }                                         
+        
       }
 
       std::string valueString;
@@ -568,13 +579,15 @@ bool applyFilter(const std::string &tickerFileName,
 
       //Apply the operator between all of the values to yield the final 
       //filter value
-      valueFilter = valueBoolVector[0];
+
+      bool valueFilterSingle = true;      
       if(valueBoolVector.size()>1){
+
         for(size_t i = 1; i < valueBoolVector.size(); ++i){
           if(operatorName == "||"){
-            valueFilter = (valueFilter || valueBoolVector[i]);
+            valueFilterSingle = (valueFilterSingle || valueBoolVector[i]);
           }else if( operatorName == "&&"){
-            valueFilter = (valueFilter && valueBoolVector[i]);
+            valueFilterSingle = (valueFilterSingle && valueBoolVector[i]);
           }else{
             std::cerr << "Error: in filter " << filterName 
                   << " the operator field should be " 
@@ -584,7 +597,10 @@ bool applyFilter(const std::string &tickerFileName,
             std::abort();             
           }
         }
+      }else{
+       valueFilterSingle = valueBoolVector[0];
       }
+      valueFilter = (valueFilter && valueFilterSingle); 
     }
 
   }
