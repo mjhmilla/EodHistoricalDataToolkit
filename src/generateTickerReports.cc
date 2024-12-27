@@ -448,22 +448,22 @@ bool plotTickerData(
             if((xRange[1]-xRange[0])<5){
               plotMetric.xtics().increment(plotSettings.xticMinimumIncrement);
             }
-          }
 
-          std::string tmpStringA("Year");
-          std::string tmpStringB(subplotMetricNames[indexRow][indexCol].c_str());
+            std::string tmpStringA("Year");
+            std::string tmpStringB(subplotMetricNames[indexRow][indexCol].c_str());
 
-          size_t pos = tmpStringB.find("_value",0);
-          tmpStringB = tmpStringB.substr(0,pos);
+            size_t pos = tmpStringB.find("_value",0);
+            tmpStringB = tmpStringB.substr(0,pos);
 
-          ReportingFunctions::convertCamelCaseToSpacedText(tmpStringA);
-          ReportingFunctions::convertCamelCaseToSpacedText(tmpStringB);
+            ReportingFunctions::convertCamelCaseToSpacedText(tmpStringA);
+            ReportingFunctions::convertCamelCaseToSpacedText(tmpStringB);
 
-          PlottingFunctions::configurePlot(plotMetric,tmpStringA,tmpStringB,
-                                           plotSettings);
-            
-          rowOfPlots.push_back(plotMetric);
-          subplotAdded=true;        
+            PlottingFunctions::configurePlot(plotMetric,tmpStringA,tmpStringB,
+                                            plotSettings);
+              
+            rowOfPlots.push_back(plotMetric);
+            subplotAdded=true;   
+          }     
       }      
     }
     if(rowOfPlots.size()>0){

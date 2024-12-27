@@ -109,6 +109,33 @@ void rankMetricData(const nlohmann::ordered_json &marketReportConfig,
     std::string direction;
     JsonFunctions::getJsonString(rankingItem.value()["direction"],direction);
 
+
+    int typeOfMeasure = -1;
+
+    if(!rankingItem.value()["measure"].is_null()){
+      std::string typeOfMeasureName;
+      JsonFunctions::getJsonString(rankingItem.value()["measure"],typeOfMeasureName);
+
+      if(typeOfMeasureName == "recent"){
+        typeOfMeasure = -1;
+      }else if(typeOfMeasureName == "p05"){
+        typeOfMeasure = 0;
+      }else if(typeOfMeasureName == "p25"){
+        typeOfMeasure = 1;
+      }else if(typeOfMeasureName == "p50"){
+        typeOfMeasure = 2;
+      }else if(typeOfMeasureName == "p75"){
+        typeOfMeasure = 3;
+      }else if(typeOfMeasureName == "p95"){
+        typeOfMeasure = 4;
+      }else{
+        std::cout << "Error: value field must be recent,p05,p25,p50,p75, or p95 "
+                  << "instead this was entered: " << typeOfMeasureName;
+        std::abort();                
+      }
+    }
+
+
     bool sortAscending=false;
     if(direction.compare("smallestIsBest")==0){
       sortAscending=true;
@@ -128,8 +155,53 @@ void rankMetricData(const nlohmann::ordered_json &marketReportConfig,
     for(size_t indexRow=0; 
       indexRow < metricDataSetUpd.metric.size(); ++indexRow ){
       
-      double value = metricDataSetUpd.metric[indexRow][indexMetric];
+      double value = 0;
+      
+      switch(typeOfMeasure){
+        case -1:
+        {
+          value=metricDataSetUpd.metric[indexRow][indexMetric];
+        }
+        break;
+        case 0:
+        {
+          value = metricDataSetUpd
+                  .summaryStatistics[indexRow][indexMetric].percentiles[0];
+        }
+        break;
+        case 1:
+        {
+          value = metricDataSetUpd
+                  .summaryStatistics[indexRow][indexMetric].percentiles[1];
+        }
+        break;
+        case 2:
+        {
+          value = metricDataSetUpd
+                  .summaryStatistics[indexRow][indexMetric].percentiles[2];
+        }
+        break;
+        case 3:
+        {
+          value = metricDataSetUpd
+                  .summaryStatistics[indexRow][indexMetric].percentiles[3];
+        }
+        break;
+        case 4:
+        {
+          value = metricDataSetUpd
+                  .summaryStatistics[indexRow][indexMetric].percentiles[4];
+        }
+        break;
+        default:{
+          std::cout << "Error: value field must be "
+                    << "recent,p05,p25,p50,p75, or p95."
+                    << std::endl;
+          std::abort();  
+        };
+      }
 
+      
       if(!std::isnan(lowerBound)){
         if(value < lowerBound){
           value = std::nan("1");
@@ -165,7 +237,6 @@ void rankMetricData(const nlohmann::ordered_json &marketReportConfig,
 
     double weight = 
       JsonFunctions::getJsonFloat(rankingItem.value()["weight"]);
-
 
     for(size_t indexRow=0; indexRow < column.size(); ++indexRow){
       metricDataSetUpd.metricRank[indexRow][indexMetric] = columnRank[indexRow];
@@ -259,41 +330,6 @@ bool appendMetricData(const std::string &tickerFileName,
 
       if(loadedCalculateData){
 
-
-
-        /*
-        int smallestDayError = std::numeric_limits< int >::max();
-        date::sys_days targetDay = targetDate;
-        date::sys_days closestDay = date::year{1900}/1/1;
-        std::string closestDate;
-        double targetMetricValue = 0.;
-
-        std::vector< double > metricData;
-
-        for(auto &metricItem : targetJsonTable.items()){
-          std::string itemDate(metricItem.key());
-          std::istringstream itemDateStream(itemDate);
-          itemDateStream.exceptions(std::ios::failbit);
-          date::sys_days itemDays;
-          itemDateStream >> date::parse("%Y-%m-%d",itemDays);
-
-          double metricValue = 
-            JsonFunctions::getJsonFloat(targetJsonTable[itemDate],fieldVector);
-          bool metricValueValid = JsonFunctions::isJsonFloatValid(metricValue);
-
-          if(metricValueValid){
-            metricData.push_back(metricValue);          
-          }
-
-          int dayError = (targetDay-itemDays).count();
-          if(dayError < smallestDayError && dayError >= 0 && metricValueValid){
-            smallestDayError  = dayError;
-            closestDay        = itemDays;
-            targetMetricValue = metricValue;
-            closestDate       = itemDate;
-          }            
-        }
-        */
 
         //Extract the metric data closest to the target date
         std::string closestDate;
@@ -580,7 +616,7 @@ bool applyFilter(const std::string &tickerFileName,
       //Apply the operator between all of the values to yield the final 
       //filter value
 
-      bool valueFilterSingle = true;      
+      bool valueFilterSingle = valueBoolVector[0];      
       if(valueBoolVector.size()>1){
 
         for(size_t i = 1; i < valueBoolVector.size(); ++i){
@@ -926,10 +962,17 @@ void generateLaTeXReport(
   latexReport << "\\usepackage{hyperref}"<<std::endl;
   latexReport << "\\usepackage{multicol}"<<std::endl;
   latexReport << "\\usepackage[usenames,dvipsnames,table]{xcolor}"<<std::endl;
-  latexReport << std::endl << std::endl;
-  latexReport << "\\begin{document}" << std::endl << std::endl;
 
   // Add the opening figure
+  std::string reportTitle;
+  JsonFunctions::getJsonString(marketReportConfig["report"]["title"],reportTitle);
+  latexReport << "\\title{" << reportTitle <<"}" << std::endl;
+
+  latexReport << std::endl << std::endl;
+  latexReport << "\\begin{document}" << std::endl << std::endl;
+  latexReport << "\\maketitle" << std::endl;
+  latexReport << "\\today" << std::endl;
+
   for(auto const &figName : marketSummaryPlots){
     latexReport << "\\begin{figure}[h]" << std::endl;
     latexReport << "  \\begin{center}" << std::endl;

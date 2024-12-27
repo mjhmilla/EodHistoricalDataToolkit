@@ -55,32 +55,42 @@ class FinancialAnalysisToolkit {
         const char* reportSection,
         const char* timeUnit,
         std::vector< std::string > &dates,
-        const char* fieldName,
+        const char* fieldName,        
         bool setNansToMissingValue){
 
       double value        = 0;
       double sumOfValues  = 0;
       bool valueMissing   = false;
+      int numberOfEntries = 0;
+
       for(auto &ele : dates){
 
         value = JsonFunctions::getJsonFloat( 
           fundamentalData[reportChapter][reportSection][timeUnit][ele.c_str()]
             [fieldName],setNansToMissingValue);
 
-        if(!JsonFunctions::isJsonFloatValid(value)){
-          valueMissing=true;
-          break;
+        if(JsonFunctions::isJsonFloatValid(value)){
+          sumOfValues += value;
+          ++numberOfEntries;
         }
 
-        sumOfValues += value;
+        
       }
 
-      if(valueMissing){
+      //If TTM data is being processed
+      if( numberOfEntries == 0 ){
         if(setNansToMissingValue){
           sumOfValues = JsonFunctions::MISSING_VALUE;
         }else{
           sumOfValues = std::nan("1");
         }
+      }
+
+      if( !(dates.size() == 1 || dates.size() == 4) ){
+        std::cout << "Error: this function can only be used with yearly or "
+                  << "quarterly data (dates must have 1 or 4 entries)."
+                  << std::endl;
+        std::abort();      
       }
 
       return sumOfValues;
