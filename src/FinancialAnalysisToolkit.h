@@ -817,9 +817,12 @@ class FinancialAnalysisToolkit {
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
 
+      //Sometimes this is not reported. I would rather have the computation
+      //go through as this field is often not large and will get highlighted
+      //in the output                                     
       double shortTermDebt = JsonFunctions::getJsonFloat(
         jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["shortTermDebt"],
-        setNansToMissingValue);
+        true);
 
       //double shortTermDebt = 
       //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
@@ -900,6 +903,7 @@ class FinancialAnalysisToolkit {
       //  JsonFunctions::getJsonFloat(jsonData[FIN][IS][timeUnit][date.c_str()]
       //                ["interestExpense"],setNansToMissingValue);
 
+
       double interestExpense = 
         sumFundamentalDataOverDates(jsonData,FIN,IS,timeUnit,dateSet,
                                   "interestExpense",setNansToMissingValue);
@@ -909,11 +913,8 @@ class FinancialAnalysisToolkit {
       if(   !JsonFunctions::isJsonFloatValid(operatingIncome)
          || !JsonFunctions::isJsonFloatValid(interestExpense)){
         
-        if(setNansToMissingValue){
-          interestCover = JsonFunctions::MISSING_VALUE;
-        }else{
-          interestCover = std::nan("1");
-        }
+          //This will give the company a modest interest cover
+          interestCover = 4.0 + JsonFunctions::MISSING_VALUE;        
       }      
 
       if(appendTermRecord){
@@ -1071,10 +1072,11 @@ class FinancialAnalysisToolkit {
       //  jsonData[FIN][IS][timeUnit][date.c_str()]["interestExpense"],
       //  setNansToMissingValue);
 
+      //Sometimes this is not reported. I would rather this get computed
       double interestExpense = 
         FinancialAnalysisToolkit::sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
-            "interestExpense", setNansToMissingValue);  
+            "interestExpense", true);  
 
       std::string resultName(parentCategoryName);
       resultName.append("freeCashFlow_");                    
@@ -1993,10 +1995,11 @@ class FinancialAnalysisToolkit {
       //  jsonData[FIN][IS][timeUnit][date.c_str()]["researchDevelopment"],
       //  setNansToMissingValue);  
 
+      //Not all firms actually have a research and development entry
       double researchDevelopment = 
         FinancialAnalysisToolkit::sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"researchDevelopment",
-          setNansToMissingValue);  
+          true);  
       
       //Extract the mean capital expenditure for the list of dates given
       double capitalExpenditureMean = 0;     
@@ -2121,9 +2124,10 @@ class FinancialAnalysisToolkit {
         longTermDebt = JsonFunctions::MISSING_VALUE;
       }
 
+      //Not all firms have an entry for cash and equivalents
       double cashAndEquivalents = JsonFunctions::getJsonFloat(
         fundamentalData[FIN][BAL][timeUnit][dateSet[0].c_str()]["cashAndEquivalents"],
-        setNansToMissingValue);
+        true);
 
       //double cashAndEquivalents = 
       //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(

@@ -155,52 +155,54 @@ void rankMetricData(const nlohmann::ordered_json &marketReportConfig,
     for(size_t indexRow=0; 
       indexRow < metricDataSetUpd.metric.size(); ++indexRow ){
       
-      double value = 0;
+      double value = std::nan("1");
       
-      switch(typeOfMeasure){
-        case -1:
-        {
-          value=metricDataSetUpd.metric[indexRow][indexMetric];
-        }
-        break;
-        case 0:
-        {
-          value = metricDataSetUpd
-                  .summaryStatistics[indexRow][indexMetric].percentiles[0];
-        }
-        break;
-        case 1:
-        {
-          value = metricDataSetUpd
-                  .summaryStatistics[indexRow][indexMetric].percentiles[1];
-        }
-        break;
-        case 2:
-        {
-          value = metricDataSetUpd
-                  .summaryStatistics[indexRow][indexMetric].percentiles[2];
-        }
-        break;
-        case 3:
-        {
-          value = metricDataSetUpd
-                  .summaryStatistics[indexRow][indexMetric].percentiles[3];
-        }
-        break;
-        case 4:
-        {
-          value = metricDataSetUpd
-                  .summaryStatistics[indexRow][indexMetric].percentiles[4];
-        }
-        break;
-        default:{
-          std::cout << "Error: value field must be "
-                    << "recent,p05,p25,p50,p75, or p95."
-                    << std::endl;
-          std::abort();  
-        };
-      }
+      if(metricDataSetUpd.summaryStatistics[indexRow][indexMetric].percentiles.size()>0){
 
+        switch(typeOfMeasure){
+          case -1:
+          {
+            value=metricDataSetUpd.metric[indexRow][indexMetric];
+          }
+          break;
+          case 0:
+          {
+            value = metricDataSetUpd
+                    .summaryStatistics[indexRow][indexMetric].percentiles[0];
+          }
+          break;
+          case 1:
+          {
+            value = metricDataSetUpd
+                    .summaryStatistics[indexRow][indexMetric].percentiles[1];
+          }
+          break;
+          case 2:
+          {
+            value = metricDataSetUpd
+                    .summaryStatistics[indexRow][indexMetric].percentiles[2];
+          }
+          break;
+          case 3:
+          {
+            value = metricDataSetUpd
+                    .summaryStatistics[indexRow][indexMetric].percentiles[3];
+          }
+          break;
+          case 4:
+          {
+            value = metricDataSetUpd
+                    .summaryStatistics[indexRow][indexMetric].percentiles[4];
+          }
+          break;
+          default:{
+            std::cout << "Error: value field must be "
+                      << "recent,p05,p25,p50,p75, or p95."
+                      << std::endl;
+            std::abort();  
+          };
+        }
+      }
       
       if(!std::isnan(lowerBound)){
         if(value < lowerBound){

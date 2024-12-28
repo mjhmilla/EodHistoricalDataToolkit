@@ -1140,10 +1140,12 @@ int main (int argc, char* argv[]) {
       //
       //To do: compute Beta for every year and company using the data 
       //       that you have.      
-      double beta = JsonFunctions::getJsonFloat(fundamentalData[TECH]["Beta"]);
-      if(std::isnan(beta)){
-        beta=defaultBeta;
+      double betaUnlevered = JsonFunctions::getJsonFloat(fundamentalData[TECH]["Beta"]);
+      if(std::isnan(betaUnlevered)){
+        betaUnlevered=defaultBeta;
       }
+
+
 
       //========================================================================
       // Evaluate the average tax rate and interest cover
@@ -1340,27 +1342,6 @@ int main (int argc, char* argv[]) {
         double riskFreeRate = bondYield;
 
         //======================================================================
-        //Evaluate the cost of equity
-        //======================================================================        
-        double annualcostOfEquityAsAPercentage = 
-          riskFreeRate + equityRiskPremium*beta;
-
-        double costOfEquityAsAPercentage=annualcostOfEquityAsAPercentage;
-        //if(quaterlyTTMAnalysis){
-        //  costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
-        //}        
-
-        termNames.push_back("costOfEquityAsAPercentage_riskFreeRate");
-        termNames.push_back("costOfEquityAsAPercentage_equityRiskPremium");
-        termNames.push_back("costOfEquityAsAPercentage_beta");
-        termNames.push_back("costOfEquityAsAPercentage");
-
-        termValues.push_back(riskFreeRate);
-        termValues.push_back(equityRiskPremium);
-        termValues.push_back(beta);
-        termValues.push_back(costOfEquityAsAPercentage);
-
-        //======================================================================
         //Evaluate the cost of debt
         //======================================================================        
         double defaultSpread = FinancialAnalysisToolkit::
@@ -1455,6 +1436,46 @@ int main (int argc, char* argv[]) {
 
         double marketCapitalization = 
           adjustedClosePrice*outstandingShares;
+
+
+        //======================================================================
+        //Evaluate the cost of equity
+        //======================================================================        
+        double beta = betaUnlevered*(1.0 + 
+          (1.0-taxRate)*(longTermDebt/marketCapitalization));
+
+
+        double annualcostOfEquityAsAPercentage = 
+          riskFreeRate + equityRiskPremium*beta;
+
+        double costOfEquityAsAPercentage=annualcostOfEquityAsAPercentage;
+        //if(quaterlyTTMAnalysis){
+        //  costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
+        //}        
+
+        termNames.push_back("costOfEquityAsAPercentage_riskFreeRate");
+        termNames.push_back("costOfEquityAsAPercentage_equityRiskPremium");
+        termNames.push_back("costOfEquityAsAPercentage_betaUnlevered");
+        termNames.push_back("costOfEquityAsAPercentage_taxRate");
+        termNames.push_back("costOfEquityAsAPercentage_longTermDebt");
+        termNames.push_back("costOfEquityAsAPercentage_adjusted_close");
+        termNames.push_back("costOfEquityAsAPercentage_outstandingShares");
+        termNames.push_back("costOfEquityAsAPercentage_marketCapitalization");
+        termNames.push_back("costOfEquityAsAPercentage_beta");
+        termNames.push_back("costOfEquityAsAPercentage");
+
+        termValues.push_back(riskFreeRate);
+        termValues.push_back(equityRiskPremium);
+        termValues.push_back(betaUnlevered);
+        termValues.push_back(taxRate);
+        termValues.push_back(longTermDebt);
+        termValues.push_back(adjustedClosePrice);
+        termValues.push_back(outstandingShares);
+        termValues.push_back(marketCapitalization);
+        termValues.push_back(beta);
+        termValues.push_back(costOfEquityAsAPercentage);
+
+
 
         //======================================================================        
         //Evaluate a weighted cost of capital
@@ -1665,6 +1686,12 @@ int main (int argc, char* argv[]) {
 
         double crossHoldings = JsonFunctions::MISSING_VALUE;
 
+        double shortTermDebt = JsonFunctions::getJsonFloat(
+          fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+                          ["shortTermDebt"],true);
+
+        double shortLongTermDebtTotal = longTermDebt+shortTermDebt; //here
+
         double potentialLiabilities = JsonFunctions::MISSING_VALUE;
 
         double optionValue  = JsonFunctions::MISSING_VALUE;
@@ -1672,6 +1699,7 @@ int main (int argc, char* argv[]) {
         double presentValue = presentValueOfFutureCashFlows
                             + cash
                             + crossHoldings
+                            - shortLongTermDebtTotal
                             - potentialLiabilities
                             - optionValue;
 
@@ -1694,6 +1722,7 @@ int main (int argc, char* argv[]) {
           //termNames.push_back("priceToValue_netDebt");
 
           termNames.push_back("priceToValue_crossHolding");
+          termNames.push_back("priceToValue_shortLongTermDebtTotal");
           termNames.push_back("priceToValue_potentialLiabilities");
           termNames.push_back("priceToValue_stockOptionValuation");
           termNames.push_back("priceToValue_presentValue_approximation");
@@ -1702,9 +1731,8 @@ int main (int argc, char* argv[]) {
 
           termValues.push_back(presentValueOfFutureCashFlows);
           termValues.push_back(cash);
-          //termValues.push_back(netDebt);
-
-          termValues.push_back(crossHoldings);
+          termValues.push_back(crossHoldings);          
+          termValues.push_back(shortLongTermDebtTotal);
           termValues.push_back(potentialLiabilities);
           termValues.push_back(optionValue);
           termValues.push_back(presentValue);

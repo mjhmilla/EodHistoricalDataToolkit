@@ -88,6 +88,7 @@ static void sanitizeStringForLaTeX(std::string &stringForLatex,
   charactersToEscape.append("&");
   charactersToEscape.append("$");
   charactersToEscape.append("#");
+  charactersToEscape.append("_");
 
   ReportingFunctions::escapeSpecialCharacters(stringForLatex, charactersToEscape);
 
@@ -661,22 +662,27 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << " \\\\" << std::endl; 
     latexReport << "(from majority stake) &  "
                 << " \\\\" << std::endl; 
-    latexReport << "$D_{13}$. Potential liabilities  & ? "
+    latexReport << "$D_{13}$. Short and long term debt  &  "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date]["priceToValue_shortLongTermDebtTotal"],true))
+                << " \\\\" << std::endl;                 
+    latexReport << "$E_{13}$. Potential liabilities  & ? "
                 << " \\\\" << std::endl; 
     latexReport << "(underfunded pension, lawsuits ...) &  "
                 << " \\\\" << std::endl; 
-    latexReport << "$E_{13}$. Value of managment options  & ? "
+    latexReport << "$F_{13}$. Value of managment options  & ? "
                 << " \\\\" << std::endl; 
-    latexReport << "$F_{13}$. Present value approx.  & "
+    latexReport << "$G_{13}$. Present value approx.  & "
                     << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["priceToValue_presentValue_approximation"],true))
                 << " \\\\" << std::endl; 
-
+    latexReport << "\\multicolumn{2}{c}{ $G_{13}= D_{12}+A_{13}-B_{13}-C_{13}-D_{13}-E_{13}-F_{13}$} \\\\" 
+                << std::endl; 
     latexReport << "$C_{2}$. Market cap. & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["priceToValue_marketCapitalization"],true))
                 << " \\\\" << std::endl; 
-    latexReport << "$G_{13}$. Price / value & "
+    latexReport << "$H_{13}$. Price / value & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["priceToValue"],true))
                 << " \\\\" << std::endl; 

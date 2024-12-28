@@ -684,6 +684,14 @@ bool generateLaTeXReport(
         fundamentalData[GEN]["Description"],description);
     ReportingFunctions::sanitizeStringForLaTeX(description);
 
+    std::string companyNameString(tickerMetaData.companyName);
+    std::string primaryTickerString(tickerMetaData.primaryTicker);
+
+    ReportingFunctions::sanitizeStringForLaTeX(companyNameString);
+    ReportingFunctions::sanitizeStringForLaTeX(primaryTickerString);
+
+
+
     latexReport << std::endl;
 
     latexReport << "\\begin{figure}[h]" << std::endl;
@@ -691,8 +699,8 @@ bool generateLaTeXReport(
     latexReport << "    \\includegraphics{" 
                 <<      plotFileName << "}" << std::endl;
     latexReport << "    \\caption{"
-                << tickerMetaData.companyName
-                << " (" << tickerMetaData.primaryTicker <<") "
+                << companyNameString
+                << " (" << primaryTickerString <<") "
                 << tickerMetaData.country << " ( \\url{" << webURL << "} )"
                 << "}" << std::endl;
     latexReport << " \\end{center}" << std::endl;
