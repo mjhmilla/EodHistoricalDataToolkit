@@ -1184,9 +1184,6 @@ class FinancialAnalysisToolkit {
         Damodaran, A.(2011). The Little Book of Valuation. Wiley.
       */
 
-      //double capitalExpenditures = JsonFunctions::getJsonFloat(
-      //  jsonData[FIN][CF][timeUnit][date.c_str()]
-      //    ["capitalExpenditures"], setNansToMissingValue);
 
       double capitalExpenditures = 
         FinancialAnalysisToolkit::sumFundamentalDataOverDates(
@@ -1196,122 +1193,93 @@ class FinancialAnalysisToolkit {
       double plantPropertyEquipment=0;
       double plantPropertyEquipmentPrevious=0;
 
-
       if(!JsonFunctions::isJsonFloatValid(capitalExpenditures)){
 
-        //Use an alternative method to calculate capital expenditures
-        plantPropertyEquipment = JsonFunctions::getJsonFloat(
-          jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
-            ["propertyPlantEquipment"], setNansToMissingValue);
-
-        //double plantPropertyEquipment = 
-        //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-        //    jsonData,FIN,BAL,timeUnit,dateSet,"plantPropertyEquipment",
-        //    setNansToMissingValue);
-
-        plantPropertyEquipmentPrevious = JsonFunctions::getJsonFloat(
-          jsonData[FIN][BAL][timeUnit][previousDateSet[0].c_str()]
-            ["propertyPlantEquipment"], setNansToMissingValue);
-
-        //double plantPropertyEquipmentPrevious = 
-        //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-        //    jsonData,FIN,BAL,timeUnit,previousDateSet,"plantPropertyEquipment",
-        //    setNansToMissingValue);
-
-        //If one of the PPE's is populated copy it over to the PPE that is
-        //nan: this is a better approximation of the PPE than 0.
-        if(   JsonFunctions::isJsonFloatValid(plantPropertyEquipment) 
-          && JsonFunctions::isJsonFloatValid(plantPropertyEquipmentPrevious)){
-          capitalExpenditures   = plantPropertyEquipment
-                                -plantPropertyEquipmentPrevious;
+        std::vector< std::string > dateSetAnalysis;
+        for(size_t i =0; i < dateSet.size(); ++i){
+          dateSetAnalysis.push_back(dateSet[i]);
         }
-              
+        dateSetAnalysis.push_back(previousDateSet[0]);
+
+        capitalExpenditures=0.;
+
+        for(int indexPrevious=1; 
+          indexPrevious < dateSetAnalysis.size();++indexPrevious){
+
+          int index = indexPrevious-1;
+
+          //Use an alternative method to calculate capital expenditures
+          plantPropertyEquipment = 
+            JsonFunctions::getJsonFloat(
+              jsonData[FIN][BAL][timeUnit][dateSetAnalysis[index].c_str()]
+              ["propertyPlantEquipment"], setNansToMissingValue);
+
+
+          plantPropertyEquipmentPrevious = 
+            JsonFunctions::getJsonFloat(
+              jsonData[FIN][BAL][timeUnit][dateSetAnalysis[indexPrevious].c_str()]
+              ["propertyPlantEquipment"], setNansToMissingValue);
+
+          //If one of the PPE's is populated copy it over to the PPE that is
+          //nan: this is a better approximation of the PPE than 0.
+          if(   JsonFunctions::isJsonFloatValid(plantPropertyEquipment) 
+            && JsonFunctions::isJsonFloatValid(plantPropertyEquipmentPrevious)){
+            capitalExpenditures  += plantPropertyEquipment
+                                  -plantPropertyEquipmentPrevious;
+          }
+
+          if(appendTermRecord){
+            termNames.push_back(parentCategoryName 
+              + "netCapitalExpenditures_plantPropertyEquipment_"
+              + std::to_string(index));
+            termNames.push_back(parentCategoryName 
+              + "netCapitalExpenditures_plantPropertyEquipmentPrevious_"
+              + std::to_string(index));
+            termValues.push_back(plantPropertyEquipment);
+            termValues.push_back(plantPropertyEquipmentPrevious);              
+          }
+        
+        }              
+      }else{
+        termNames.push_back(parentCategoryName 
+          + "netCapitalExpenditures_plantPropertyEquipment_"
+          + std::to_string(0));
+        termNames.push_back(parentCategoryName 
+          + "netCapitalExpenditures_plantPropertyEquipmentPrevious_"
+          + std::to_string(0));
+        termValues.push_back(0.);
+        termValues.push_back(0.);     
+
       }
 
-      if(dateSet[0].compare("2008-09-30")==0){
-        bool here=true;
-      }
-      //double depreciation = JsonFunctions::getJsonFloat(
-      //  jsonData[FIN][CF][timeUnit][date.c_str()]["depreciation"],
-      //  setNansToMissingValue);
 
       double depreciation = 
           FinancialAnalysisToolkit::sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,"depreciation",
             setNansToMissingValue);
 
-      //It's tempting to just make this estimation code a part of
-      //the function sumFundamentalDataOverDates
-      double depreciationEstimate=0.;
-      std::vector< double > depreciationSet;
-      for(size_t i=0; i<dateSet.size();++i){
-        depreciationSet.push_back(0.);
-      }
-
-      if(!JsonFunctions::isJsonFloatValid(depreciation)){
-        double n = 0.;
-        for(size_t i=0; i<dateSet.size();++i){
-
-          double depreciationTemp = JsonFunctions::getJsonFloat(
-            jsonData[FIN][CF][timeUnit][dateSet[i].c_str()]["depreciation"],
-            setNansToMissingValue);
-
-            depreciationSet[i]=depreciationTemp;
-
-          if(JsonFunctions::isJsonFloatValid(depreciationTemp)){            
-            n=n+1.0;
-            depreciationEstimate += depreciationTemp;
-          }                    
-        }
-        if(n > 0.){
-          double mDivn = static_cast<double>(dateSet.size())/n; 
-          depreciationEstimate = depreciationEstimate * mDivn;
-        }else{
-          depreciationEstimate=std::nan("1");
-          if(setNansToMissingValue){
-            depreciationEstimate = JsonFunctions::MISSING_VALUE;
-          }
-        }
-      }       
-
-
       double netCapitalExpenditures = capitalExpenditures - depreciation;  
-      if(!JsonFunctions::isJsonFloatValid(depreciation)){
-        netCapitalExpenditures = capitalExpenditures-depreciationEstimate;
-      }
 
-
-      if(!JsonFunctions::isJsonFloatValid(capitalExpenditures) 
-          || (     !JsonFunctions::isJsonFloatValid(depreciation        )
-               &&  !JsonFunctions::isJsonFloatValid(depreciationEstimate))){
+      if(     !JsonFunctions::isJsonFloatValid(capitalExpenditures) 
+          ||  !JsonFunctions::isJsonFloatValid(depreciation)       ){
         if(setNansToMissingValue){
           netCapitalExpenditures = JsonFunctions::MISSING_VALUE; 
         }else{
           netCapitalExpenditures = std::nan("1");
-        }
-        
+        }        
       }
 
       if(appendTermRecord){
         termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures_capitalExpenditures");
         termNames.push_back(parentCategoryName 
-          + "netCapitalExpenditures_plantPropertyEquipment");
-        termNames.push_back(parentCategoryName 
-          + "netCapitalExpenditures_plantPropertyEquipmentPrevious");
-        termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures_depreciation");
-        termNames.push_back(parentCategoryName
-          + "netCapitalExpenditures_depreciationEstimate");
         termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures");
 
 
         termValues.push_back(capitalExpenditures);
-        termValues.push_back(plantPropertyEquipment);
-        termValues.push_back(plantPropertyEquipmentPrevious);
-        termValues.push_back(depreciation);
-        termValues.push_back(depreciationEstimate);      
+        termValues.push_back(depreciation);     
         termValues.push_back(netCapitalExpenditures);
       }
 
@@ -1344,135 +1312,124 @@ class FinancialAnalysisToolkit {
 
       bool isInputValid=true;
 
-      double inventory = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["inventory"],
-        setNansToMissingValue);
+      std::vector< std::string > dateSetAnalysis;
+      for(size_t i =0; i < dateSet.size(); ++i){
+        dateSetAnalysis.push_back(dateSet[i]);
+      }
+      dateSetAnalysis.push_back(previousDateSet[0]);
       
-      //double inventory = 
-      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-      //    jsonData,FIN,BAL,timeUnit,dateSet,"inventory",
-      //    setNansToMissingValue);
 
-      double inventoryPrevious = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][previousDateSet[0].c_str()]["inventory"],
-        setNansToMissingValue);
+      double changeInNonCashWorkingCapital = 0.;
+      double changeInInventory          = 0.;
+      double changeInReceivables        = 0.;
+      double changeInAccountsPayable    = 0.;
+      bool changeInInventoryAdded       = false;
+      bool changeInReceivablesAdded     = false;
+      bool changeInAccountsPayableAdded = false;
 
-      //double inventoryPrevious = 
-      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-      //    jsonData,FIN,BAL,timeUnit,previousDateSet,"inventory",
-      //    setNansToMissingValue);
+      for(int indexPrevious=1; 
+          indexPrevious < dateSetAnalysis.size();++indexPrevious){
 
-      double netReceivables = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["netReceivables"],
-        setNansToMissingValue);
+        int index = indexPrevious-1;
 
-      //double netReceivables = 
-      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-      //    jsonData,FIN,BAL,timeUnit,dateSet,"netReceivables",
-      //    setNansToMissingValue);
+        double inventory =  
+          JsonFunctions::getJsonFloat(      
+            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[index].c_str()]["inventory"],
+            setNansToMissingValue);
 
-      double netReceivablesPrevious = JsonFunctions::getJsonFloat(
-         jsonData[FIN][BAL][timeUnit][previousDateSet[0].c_str()]["netReceivables"],
-         setNansToMissingValue);
+        double inventoryPrevious = 
+          JsonFunctions::getJsonFloat(  
+            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[indexPrevious].c_str()]["inventory"],
+            setNansToMissingValue);
 
-      //double netReceivablesPrevious = 
-      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-      //    jsonData,FIN,BAL,timeUnit,previousDateSet,"netReceivables",
-      //    setNansToMissingValue);
+        double netReceivables =
+          JsonFunctions::getJsonFloat(  
+            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[index].c_str()]["netReceivables"],
+            setNansToMissingValue);
 
-      double accountsPayable = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["accountsPayable"],
-        setNansToMissingValue);
+        double netReceivablesPrevious = 
+          JsonFunctions::getJsonFloat(  
+            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[indexPrevious].c_str()]["netReceivables"],
+            setNansToMissingValue);
 
-      //double accountsPayable = 
-      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-      //    jsonData,FIN,BAL,timeUnit,dateSet,"accountsPayable",
-      //    setNansToMissingValue);
+        double accountsPayable =
+          JsonFunctions::getJsonFloat(  
+            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[index].c_str()]["accountsPayable"],
+            setNansToMissingValue);
 
-      double accountsPayablePrevious = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][previousDateSet[0].c_str()]["accountsPayable"],
-        setNansToMissingValue);
+        double accountsPayablePrevious = 
+          JsonFunctions::getJsonFloat(  
+            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[indexPrevious].c_str()]["accountsPayable"],
+            setNansToMissingValue);
 
-      //double accountsPayablePrevious = 
-      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-      //    jsonData,FIN,BAL,timeUnit,previousDateSet,"accountsPayable",
-      //    setNansToMissingValue);
 
+        //There are a number of companies that produce software or a service
+        //and so never have any inventory to report.
+        if(    JsonFunctions::isJsonFloatValid(  inventory)
+            && JsonFunctions::isJsonFloatValid(  inventoryPrevious)){
+          changeInInventory += (inventory-inventoryPrevious);
+          changeInNonCashWorkingCapital += (inventory-inventoryPrevious);
+          changeInInventoryAdded       = true;
+        }
+
+        if(    JsonFunctions::isJsonFloatValid(  netReceivables         )
+            && JsonFunctions::isJsonFloatValid(  netReceivablesPrevious )){
+          changeInReceivables += (netReceivables-netReceivablesPrevious);
+          changeInNonCashWorkingCapital += (netReceivables-netReceivablesPrevious);
+          changeInReceivablesAdded     = true;
+        }
+
+        if(    JsonFunctions::isJsonFloatValid(  accountsPayable        )
+            && JsonFunctions::isJsonFloatValid(  accountsPayablePrevious)){
+          changeInAccountsPayable += -1.0*(accountsPayable-accountsPayablePrevious);       
+          changeInNonCashWorkingCapital += -1.0*(accountsPayable-accountsPayablePrevious);
+          changeInAccountsPayableAdded = true;
+        }
+
+        if(appendTermRecord){
+          termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_inventory_" 
+          + std::to_string(index));
+
+          termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_inventoryPrevious_" 
+          + std::to_string(index));          
+
+          termNames.push_back(parentCategoryName 
+            + "changeInNonCashWorkingCapital_netReceivables_" 
+            + std::to_string(index));
+
+          termNames.push_back(parentCategoryName 
+            + "changeInNonCashWorkingCapital_netReceivablesPrevious_" 
+            + std::to_string(index));          
+
+          termNames.push_back(parentCategoryName 
+            + "changeInNonCashWorkingCapital_accountsPayable_"
+            + std::to_string(index));
+
+          termNames.push_back(parentCategoryName 
+            + "changeInNonCashWorkingCapital_accountsPayablePrevious_"
+            + std::to_string(index));
+
+          termValues.push_back(inventory);
+          termValues.push_back(inventoryPrevious);
+          termValues.push_back(netReceivables);
+          termValues.push_back(netReceivablesPrevious);
+          termValues.push_back(accountsPayable);
+          termValues.push_back(accountsPayablePrevious);
+
+        }
+      }
 
       //double changeInNonCashWorkingCapital = 
       //    ( (inventory-inventoryPrevious)
       //      +(netReceivables-netReceivablesPrevious)
       //      -(accountsPayable-accountsPayablePrevious));
-
-      double changeInNonCashWorkingCapital = 0.;
-      bool valuesAdded=false;
-
-      //There are a number of companies that produce software or a service
-      //and so never have any inventory to report.
-      if(    JsonFunctions::isJsonFloatValid(  inventory)
-          && JsonFunctions::isJsonFloatValid(  inventoryPrevious)){
-        changeInNonCashWorkingCapital += (inventory-inventoryPrevious);
-        valuesAdded=true;
-      }else{
-        inventory         = JsonFunctions::MISSING_VALUE;
-        inventoryPrevious = JsonFunctions::MISSING_VALUE;
-      }
-
-      if(    JsonFunctions::isJsonFloatValid(  netReceivables         )
-          && JsonFunctions::isJsonFloatValid(  netReceivablesPrevious )){
-        changeInNonCashWorkingCapital += (netReceivables-netReceivablesPrevious);
-        valuesAdded=true;
-      }else{
-        netReceivables         =JsonFunctions::MISSING_VALUE;
-        netReceivablesPrevious =JsonFunctions::MISSING_VALUE;
-      }
-
-      if(    JsonFunctions::isJsonFloatValid(  accountsPayable        )
-          && JsonFunctions::isJsonFloatValid(  accountsPayablePrevious)){
-        changeInNonCashWorkingCapital += -1.0*(accountsPayable-accountsPayablePrevious);
-        valuesAdded=true;
-      }else{
-        accountsPayable        =JsonFunctions::MISSING_VALUE;
-        accountsPayablePrevious=JsonFunctions::MISSING_VALUE;
-      }
-
-      if( !valuesAdded ){
-        if(setNansToMissingValue){
-          changeInNonCashWorkingCapital=JsonFunctions::MISSING_VALUE;
-        }else{
-          changeInNonCashWorkingCapital=std::nan("1");
-        }
-
-      }
-
-
-
-            
+          
       if(appendTermRecord){
-        termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_inventory");
-        termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_inventoryPrevious");
-
-        termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_netReceivables");
-        termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_netReceivablesPrevious");
-
-        termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_accountsPayable");
-        termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_accountsPayablePrevious");
 
         termNames.push_back(parentCategoryName 
           + "changeInNonCashWorkingCapital");
-
-        termValues.push_back(inventory);
-        termValues.push_back(inventoryPrevious);
-        termValues.push_back(netReceivables);
-        termValues.push_back(netReceivablesPrevious);        
-        termValues.push_back(accountsPayable);
-        termValues.push_back(accountsPayablePrevious);
 
         termValues.push_back(changeInNonCashWorkingCapital);   
       }  
