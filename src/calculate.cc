@@ -234,7 +234,78 @@ bool loadTaxFoundationDataSet(std::string &fileName,
   return validFormat;
 };
 
+int extractTTM(int indexA,
+                const std::vector<std::string> &dateSet,
+                const char* dateFormat, 
+                std::vector<std::string> &dateSetTTMUpd,
+                std::vector<double> &weightingTTMUpd,
+                int maximumTTMDateSetErrorInDays){
 
+  dateSetTTMUpd.clear();
+  weightingTTMUpd.clear();
+
+  int indexB = indexA;
+
+  std::istringstream dateStream(dateSet[indexA]);
+  dateStream.exceptions(std::ios::failbit);
+  date::sys_days daysA;
+  dateStream >> date::parse(dateFormat,daysA);
+
+
+  int indexPrevious = indexA;
+  date::sys_days daysPrevious = daysA;
+  int count = 0;
+  bool flagDateSetFilled = false;
+
+  int daysInAYear = 365;
+
+  while(indexB < dateSet.size() && !flagDateSetFilled){
+    ++indexB;
+
+    dateStream.clear();
+    dateStream.str(dateSet[indexB]);
+    dateStream.exceptions(std::ios::failbit);
+    date::sys_days daysB;
+    dateStream >> date::parse(dateFormat,daysB);
+
+    int daysInterval = (daysPrevious-daysB).count();
+    int countError = daysInAYear - (count+daysInterval);
+
+    if(countError >= maximumTTMDateSetErrorInDays){
+      dateSetTTMUpd.push_back(dateSet[indexPrevious]);
+      weightingTTMUpd.push_back(1.0);
+      count += daysInterval;
+    }else{
+
+      if(std::abs(countError) <= maximumTTMDateSetErrorInDays){
+        dateSetTTMUpd.push_back(dateSet[indexPrevious]);
+        weightingTTMUpd.push_back(1.0);
+        count += daysInterval;   
+        flagDateSetFilled=true;
+        --indexB;     
+
+      }else{
+        //We have to assign a fractional weighting to a 
+        //reporting period that is larger than the gap
+        int gap = daysInAYear - count;
+        double weight =  static_cast<double>(gap)
+                        /static_cast<double>(daysInterval);
+        dateSetTTMUpd.push_back(dateSet[indexPrevious]);
+        weightingTTMUpd.push_back(weight);
+        count += static_cast<int>( static_cast<double>(daysInterval)*weight);
+        flagDateSetFilled = true;
+        --indexB;     
+      }
+    }
+      
+    daysPrevious = daysB;
+    indexPrevious=indexB;
+
+  }
+
+  return (daysInAYear-count);
+
+};
 
 bool extractDatesOfClosestMatch(
               std::vector< std::string > &datesSetA,
@@ -1167,7 +1238,25 @@ int main (int argc, char* argv[]) {
 
       }
         
-      
+      int indexStartDate=0;
+      int indexEndDate = 0;
+      int errorDaysTTM = 0;
+      std::vector<std::string> dateSetTTM;
+      std::vector<double> weightingTTM;
+      int maximumTTMDateSetErrorInDays = maxDayErrorTabularData;
+
+      errorDaysTTM = extractTTM(indexStartDate,
+                                datesCommon,
+                                "%Y-%m-%d",
+                                dateSetTTM,
+                                weightingTTM,
+                                maximumTTMDateSetErrorInDays);
+      if(std::abs(errorDaysTTM) <= maximumTTMDateSetErrorInDays){
+        indexEndDate = indexStartDate + dateSetTTM.size();
+      }                                
+
+      bool here=true;
+
       for( unsigned int indexDate=0;  
                         indexDate < indexOfLastDate; 
                       ++indexDate){
