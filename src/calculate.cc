@@ -17,6 +17,7 @@
 #include "JsonFunctions.h"
 
 
+
 struct TaxFoundationDataSet{
   std::vector< int > index;
   std::vector< int > year;
@@ -234,15 +235,14 @@ bool loadTaxFoundationDataSet(std::string &fileName,
   return validFormat;
 };
 
-int extractTTM(int indexA,
+bool extractTTM(int indexA,
                 const std::vector<std::string> &dateSet,
                 const char* dateFormat, 
                 std::vector<std::string> &dateSetTTMUpd,
-                std::vector<double> &weightingTTMUpd,
                 int maximumTTMDateSetErrorInDays){
 
   dateSetTTMUpd.clear();
-  weightingTTMUpd.clear();
+  //weightingTTMUpd.clear();
 
   int indexB = indexA;
 
@@ -258,8 +258,10 @@ int extractTTM(int indexA,
   bool flagDateSetFilled = false;
 
   int daysInAYear = 365;
+  int countError = maximumTTMDateSetErrorInDays*2.0;
 
-  while(indexB < dateSet.size() && !flagDateSetFilled){
+  while(indexB < dateSet.size() 
+          && std::abs(countError) > maximumTTMDateSetErrorInDays){
     ++indexB;
 
     dateStream.clear();
@@ -269,8 +271,14 @@ int extractTTM(int indexA,
     dateStream >> date::parse(dateFormat,daysB);
 
     int daysInterval = (daysPrevious-daysB).count();
-    int countError = daysInAYear - (count+daysInterval);
+    countError = daysInAYear - (count+daysInterval);
 
+    if(std::abs(countError) > maximumTTMDateSetErrorInDays){
+      dateSetTTMUpd.push_back(dateSet[indexPrevious]);
+      count += daysInterval;
+    }
+
+    /*
     if(countError >= maximumTTMDateSetErrorInDays){
       dateSetTTMUpd.push_back(dateSet[indexPrevious]);
       weightingTTMUpd.push_back(1.0);
@@ -290,20 +298,26 @@ int extractTTM(int indexA,
         int gap = daysInAYear - count;
         double weight =  static_cast<double>(gap)
                         /static_cast<double>(daysInterval);
-        dateSetTTMUpd.push_back(dateSet[indexPrevious]);
+        
         weightingTTMUpd.push_back(weight);
-        count += static_cast<int>( static_cast<double>(daysInterval)*weight);
+        dateSetTTMUpd.push_back(dateSet[indexPrevious]);        
+        count += daysInterval;
         flagDateSetFilled = true;
-        --indexB;     
+        --indexB;
       }
-    }
+      */
+    //}
       
     daysPrevious = daysB;
     indexPrevious=indexB;
 
   }
 
-  return (daysInAYear-count);
+  if( std::abs(daysInAYear-count) <= maximumTTMDateSetErrorInDays){
+    return true;
+  }else{
+    return false;
+  }
 
 };
 
@@ -1083,10 +1097,6 @@ int main (int argc, char* argv[]) {
                         indicesClosestOutstandingShareDates,
                         allowRepeatedDates);
 
-      //The outstandingShares records may only go back 10 years while the 
-      //datesCommon might go back over 40 years depending on the company                        
-      maxNumberDatesCommon = datesCommon.size();
-
       //Remove the missing dates from indiciesCommonFundamentalDates
       //and indiciesCommonHistoricalDates
       
@@ -1186,7 +1196,7 @@ int main (int argc, char* argv[]) {
     nlohmann::ordered_json analysis;
     if(validInput){
 
-      std::vector< std::string > trailingPastPeriods;
+      std::vector< std::vector< std::string >> trailingPastPeriods;
       std::string previousTimePeriod("");
       std::vector< std::string > previousDateSet;
       unsigned int entryCount = 0;
@@ -1209,8 +1219,6 @@ int main (int argc, char* argv[]) {
       //obviously wrong, but I only have one data point for beta from EOD's
       //data.      
       //
-      //To do: compute Beta for every year and company using the data 
-      //       that you have.      
       double betaUnlevered = JsonFunctions::getJsonFloat(fundamentalData[TECH]["Beta"]);
       if(std::isnan(betaUnlevered)){
         betaUnlevered=defaultBeta;
@@ -1221,55 +1229,40 @@ int main (int argc, char* argv[]) {
       //========================================================================
       // Evaluate the average tax rate and interest cover
       //========================================================================
-      unsigned int numberOfDatesPerIteration=1;
-      if(quaterlyTTMAnalysis){
-        numberOfDatesPerIteration=4;
-      }
-      unsigned int indexOfLastDate = 0;
-      if(maxNumberDatesCommon > numberOfDatesPerIteration*2){
-        indexOfLastDate = maxNumberDatesCommon - (numberOfDatesPerIteration-1);
-      }else{
-        if(verbose){
-            std::cout <<  "  Skipping: " << numberOfDatesPerIteration*2 
-                      <<  " common dates are needed to proceed but only " 
-                      <<  maxNumberDatesCommon 
-                      << " are available " << std::endl;
-        }
 
-      }
-        
-      int indexStartDate=0;
-      int indexEndDate = 0;
-      int errorDaysTTM = 0;
-      std::vector<std::string> dateSetTTM;
-      std::vector<double> weightingTTM;
-      int maximumTTMDateSetErrorInDays = maxDayErrorTabularData;
+      int indexDate       =-1;
+      int indexDateSetEnd = -1;
+      bool validDateSet   = true;
+      int numberOfDatesPerIteration=0;
+      int numberOfIterations=0;
 
-      errorDaysTTM = extractTTM(indexStartDate,
-                                datesCommon,
-                                "%Y-%m-%d",
-                                dateSetTTM,
-                                weightingTTM,
-                                maximumTTMDateSetErrorInDays);
-      if(std::abs(errorDaysTTM) <= maximumTTMDateSetErrorInDays){
-        indexEndDate = indexStartDate + dateSetTTM.size();
-      }                                
+      while( (indexDate+1) < datesCommon.size() && validDateSet){
 
-      bool here=true;
-
-      for( unsigned int indexDate=0;  
-                        indexDate < indexOfLastDate; 
-                      ++indexDate){
+        ++indexDate;
 
         std::string date = datesCommon[indexDate]; 
         
         //The set of dates used for the TTM analysis
         std::vector < std::string > dateSet;
-        for(unsigned int j=0; j < numberOfDatesPerIteration; ++j){
-          dateSet.push_back(datesCommon[indexDate+j]);
-        }
-        double dateSetOneYearFraction = 1.0/static_cast<double>(dateSet.size());
+      
+        if(quaterlyTTMAnalysis){
+          validDateSet = extractTTM(indexDate,
+                                    datesCommon,
+                                    "%Y-%m-%d",
+                                    dateSet,
+                                    maxDayErrorTabularData);                                     
+          if(!validDateSet){
+            break;
+          }     
+        }else{
+          dateSet.push_back(date);
+        }                             
+      
+        ++numberOfIterations;
+        numberOfDatesPerIteration += static_cast<int>(dateSet.size());
 
+        double dateSetOneYearFraction = 1.0/static_cast<double>(dateSet.size());
+        
         if(flag_usingTaxTable){
           taxRate=0.0;
           for(unsigned int j=0; j<dateSet.size();++j){
@@ -1295,6 +1288,7 @@ int main (int argc, char* argv[]) {
         double interestCover = FinancialAnalysisToolkit::
             calcInterestCover(fundamentalData,
                               dateSet,
+                              defaultInterestCover,
                               timePeriod.c_str(),
                               appendTermRecord,
                               setNansToMissingValue,
@@ -1306,6 +1300,7 @@ int main (int argc, char* argv[]) {
           ++meanInterestCoverEntryCount;
         }
       }        
+      //=======================================================================
       
       if(taxRateEntryCount > 0){
         meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
@@ -1320,66 +1315,72 @@ int main (int argc, char* argv[]) {
         meanInterestCover = defaultInterestCover;
       }
 
+      double tmp =  (static_cast<double>(numberOfDatesPerIteration) 
+                    /static_cast<double>(numberOfIterations));
 
-      //int indexDeltaCommonPrevious =  numberOfDatesPerIteration;
+      numberOfDatesPerIteration =  static_cast<int>( std::round(tmp) );
+      //=======================================================================
+      
 
-      //Here the -2*numberOfDatesPerIteration is added to ensure that the
-      //data from the previous time period is available.
-
-
-      int indexDateLast = maxNumberDatesCommon 
-                          - (2*numberOfDatesPerIteration)
-                          + 1;
-                       
       //=======================================================================
       //
       //  Calculate the metrics for every data entry in the file
       //
       //======================================================================= 
 
-      for(int indexDate = 0; 
-              indexDate < indexDateLast;
-            ++indexDate){
+      indexDate       = -1;
+      indexDateSetEnd = -1;
 
-        std::string date = datesCommon[indexDate];        
+      int indexLastStartingIndex = 
+        static_cast<int>(datesCommon.size())
+        - numberOfDatesPerIteration*numberOfPeriodsToAverageCapitalExpenditures;
+
+      validDateSet    = true;
+
+      while( (indexDate+1) < indexLastStartingIndex && validDateSet){
+
+        ++indexDate;
+        std::string date = datesCommon[indexDate]; 
         
         //The set of dates used for the TTM analysis
         std::vector < std::string > dateSet;
-        for(unsigned int j=0; j < numberOfDatesPerIteration; ++j){
-          dateSet.push_back(datesCommon[indexDate+j]);
-        }
-
-        //Get the previous date
-        bool here=false;  
-        if(fileName.compare("BMP.STU.json")==0){
-          here=true;
-        }
-        int indexPrevious = indexDate+numberOfDatesPerIteration;        
-        int indexFinal    = (maxNumberDatesCommon-numberOfDatesPerIteration);
-        previousDateSet.resize(0);
-        if(   indexPrevious >= 0 
-           && indexPrevious <= indexFinal){
-          previousTimePeriod = datesCommon[indexPrevious];
-          for(unsigned int j=0; j < numberOfDatesPerIteration; ++j){
-            previousDateSet.push_back(datesCommon[indexPrevious+j]);
-          }          
+      
+        if(quaterlyTTMAnalysis){
+          validDateSet = extractTTM(indexDate,
+                                    datesCommon,
+                                    "%Y-%m-%d",
+                                    dateSet,
+                                    maxDayErrorTabularData); 
+          if(!validDateSet){
+            break;
+          }     
         }else{
-          previousTimePeriod="";
-        }
+          dateSet.push_back(date);
+        }           
+             
+        //======================================================================
+        //Update the list of previous time periods
+        //======================================================================        
 
-        if(dateSet.size() != numberOfDatesPerIteration 
-        || previousDateSet.size() != numberOfDatesPerIteration){
-          if(verbose){
-            std::cout << "  Skipping: " << numberOfDatesPerIteration 
-                      << " are needed to proceed but current date set has "
-                      << " only " << dateSet.size() << " and the previous "
-                      << "date set has only " << previousDateSet.size() 
-                      << std::endl;
-          }
-          break;
-        }
+        //Check if we have enough data to get the previous time period
+        int indexPrevious = indexDate+static_cast<int>(dateSet.size());        
 
+        //Fetch the previous TTM
+        previousTimePeriod = datesCommon[indexPrevious];
+        previousDateSet.resize(0);
 
+        if(quaterlyTTMAnalysis){
+          validDateSet = extractTTM(indexPrevious,
+                                    datesCommon,
+                                    "%Y-%m-%d",
+                                    previousDateSet,
+                                    maxDayErrorTabularData); 
+          if(!validDateSet){
+            break;
+          }     
+        }else{
+          previousDateSet.push_back(previousTimePeriod);
+        } 
 
         termNames.clear();
         termValues.clear();
@@ -1387,20 +1388,42 @@ int main (int argc, char* argv[]) {
         //======================================================================
         //Update the list of past periods
         //======================================================================        
+        for(size_t i=0; i<trailingPastPeriods.size();++i){
+          trailingPastPeriods[i].clear();
+        }
         trailingPastPeriods.clear();
+
         bool sufficentPastPeriods=true;
-        int indexPastPeriods = indexDate;
-        trailingPastPeriods.push_back(datesCommon[indexPastPeriods]);
+        int indexPastPeriods = indexDate+static_cast<int>(dateSet.size());
+        bool validPreviousDateSet = true;
 
         for(unsigned int i=0; 
                          i<(numberOfPeriodsToAverageCapitalExpenditures-1); 
                        ++i)
         {
-          indexPastPeriods += 1;//indexDeltaCommonPrevious;
-          if(    indexPastPeriods >= 0 
-              && indexPastPeriods < maxNumberDatesCommon){
-            trailingPastPeriods.push_back(datesCommon[indexPastPeriods]);
+
+          std::vector< std::string > pastDateSet;
+
+          if(validPreviousDateSet){
+            if(quaterlyTTMAnalysis){
+              validPreviousDateSet = extractTTM(indexPastPeriods,
+                                        datesCommon,
+                                        "%Y-%m-%d",
+                                        pastDateSet,
+                                        maxDayErrorTabularData); 
+            }else{
+              if(indexPastPeriods < datesCommon.size()){
+                pastDateSet.push_back(datesCommon[indexPastPeriods]);
+              }else{
+                validPreviousDateSet=false;
+              }
+            }           
           }
+          if(validPreviousDateSet){
+            trailingPastPeriods.push_back(pastDateSet);
+            indexPastPeriods += pastDateSet.size();
+          }
+
         }
 
 

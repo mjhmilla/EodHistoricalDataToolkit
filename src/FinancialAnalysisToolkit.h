@@ -67,9 +67,9 @@ class FinancialAnalysisToolkit {
 
         value = JsonFunctions::getJsonFloat( 
           fundamentalData[reportChapter][reportSection][timeUnit][ele.c_str()]
-            [fieldName],setNansToMissingValue);
+            [fieldName],false);
 
-        if(JsonFunctions::isJsonFloatValid(value)){
+        if(!std::isnan(value)){
           sumOfValues += value;
           ++numberOfEntries;
         }
@@ -86,12 +86,14 @@ class FinancialAnalysisToolkit {
         }
       }
 
+      /*
       if( !(dates.size() == 1 || dates.size() == 4) ){
         std::cout << "Error: this function can only be used with yearly or "
                   << "quarterly data (dates must have 1 or 4 entries)."
                   << std::endl;
         std::abort();      
       }
+      */
 
       return sumOfValues;
 
@@ -883,8 +885,9 @@ class FinancialAnalysisToolkit {
     */
     static double calcInterestCover(nlohmann::ordered_json &jsonData, 
                                     std::vector< std::string > &dateSet,
-                                    const char *timeUnit,
-                                    bool appendTermRecord,
+                                    double defaultInterestCover,
+                                    const char *timeUnit,                                    
+                                    bool appendTermRecord,                                    
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
@@ -914,7 +917,7 @@ class FinancialAnalysisToolkit {
          || !JsonFunctions::isJsonFloatValid(interestExpense)){
         
           //This will give the company a modest interest cover
-          interestCover = 4.0 + JsonFunctions::MISSING_VALUE;        
+          interestCover = defaultInterestCover;        
       }      
 
       if(appendTermRecord){
@@ -945,6 +948,7 @@ class FinancialAnalysisToolkit {
         double interestCover = FinancialAnalysisToolkit::
           calcInterestCover(jsonData,
                             dateSet,
+                            meanInterestCover,
                             timeUnit,
                             appendTermRecord,
                             setNansToMissingValue,
@@ -1975,7 +1979,7 @@ class FinancialAnalysisToolkit {
         std::vector< std::string > &dateSet,
         const char *timeUnit,
         double costOfEquityAsAPercentage,
-        std::vector< std::string > datesToAverageCapitalExpenditures,
+        std::vector< std::vector< std::string >> &datesToAverageCapitalExpenditures,
         bool appendTermRecord,
         bool setNansToMissingValue,
         std::vector< std::string> &termNames,
@@ -2004,30 +2008,26 @@ class FinancialAnalysisToolkit {
       //Extract the mean capital expenditure for the list of dates given
       double capitalExpenditureMean = 0;     
       double capitalExpenditure     = 0; 
+      double capitalExpenditureCount = 0;
 
-      for(auto& iter : datesToAverageCapitalExpenditures){        
-        capitalExpenditure = JsonFunctions::getJsonFloat( 
-          jsonData[FIN][CF][timeUnit][iter]["capitalExpenditures"], 
-          setNansToMissingValue); 
-
-        capitalExpenditureMean += capitalExpenditure;
+      for(size_t i =0; i < datesToAverageCapitalExpenditures.size(); ++i){
+        capitalExpenditure = 
+          FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+            jsonData,FIN,CF,timeUnit,datesToAverageCapitalExpenditures[i],
+            "capitalExpenditures",setNansToMissingValue);
 
         if(!JsonFunctions::isJsonFloatValid(capitalExpenditure)){
-          capitalExpenditureMean=capitalExpenditure;
           break;
         }        
+        capitalExpenditureMean += capitalExpenditure;
+        capitalExpenditureCount+=1.0;
       }
 
-      if(JsonFunctions::isJsonFloatValid(capitalExpenditureMean)){
-        capitalExpenditureMean = 
-          capitalExpenditureMean/
-          static_cast<double>(datesToAverageCapitalExpenditures.size());
-
-        if(std::strcmp(timeUnit,"quarterly")==0){
-          capitalExpenditureMean *= 4.0;
-        }
+    
+      if(capitalExpenditureCount>0){
+        capitalExpenditureMean = capitalExpenditureMean
+                                /capitalExpenditureCount;
       }
-
       //Evaluate the cost of equity
       double totalStockholderEquity = JsonFunctions::getJsonFloat( 
         jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["totalStockholderEquity"],
