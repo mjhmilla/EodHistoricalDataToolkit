@@ -229,6 +229,40 @@ class JsonFunctions {
       };            
     };    
 
+    static bool getJsonElement(
+                    const nlohmann::ordered_json &jsonTable,
+                    const std::vector< std::string > &fields,
+                    nlohmann::ordered_json &jsonElement){
+    
+      bool success = false;
+      switch( fields.size() ){
+        case 1:{
+            jsonElement = jsonTable[fields[0]];
+            success=true;
+          }
+          break;
+        case 2:{
+            jsonElement = jsonTable[fields[0]][fields[1]];
+            success=true;
+          }
+          break;
+        case 3:{
+            jsonElement = jsonTable[fields[0]][fields[1]][fields[2]];
+            success=true;
+          }
+          break;
+        case 4:{
+            jsonElement = jsonTable[fields[0]][fields[1]][fields[2]][fields[3]];
+            success=true;
+          }
+          break;
+        default: {
+          success=false;          
+        }
+      };
+      return success;            
+    };
+
     static double getJsonFloat(const nlohmann::ordered_json &jsonEntry,
                                bool setNansToMissingValue=false){
       if(  jsonEntry.is_null()){

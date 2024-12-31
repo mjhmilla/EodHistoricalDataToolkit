@@ -26,7 +26,48 @@
 const char* BoxAndWhiskerColorA="web-blue";
 const char* BoxAndWhiskerColorB="gray0";
 
+//==============================================================================
+struct LineSettings{
+  std::string colour;
+  std::string name;
+  double lineWidth;
+};
 
+struct AxisSettings{
+  std::string xAxisName;
+  std::string yAxisName;
+  double xMin;
+  double xMax;  
+  double yMin;
+  double yMax;
+  AxisSettings():
+    xAxisName(""),
+    yAxisName(""),
+    xMin(std::nan("1")),
+    xMax(std::nan("1")),
+    yMin(std::nan("1")),
+    yMax(std::nan("1")){};
+
+};
+
+struct SubplotSettings{
+  size_t indexRow;
+  size_t indexColumn;
+};
+
+
+//==============================================================================
+struct JsonMetaData{
+  std::string ticker;
+  const nlohmann::ordered_json& jsonData;
+  std::vector<std::string> address;
+  std::string fieldName;
+  std::string dateName;
+  bool isArray;
+  JsonMetaData(const nlohmann::ordered_json &jsonTable)
+    :jsonData(jsonTable){};
+
+};
 
 //==============================================================================
 struct TickerMetaData{
@@ -111,147 +152,11 @@ std::vector< size_t > sort_indices(std::vector<T> &v){
 
 
 
-
-
 //==============================================================================
-void createHistoricalDataPlot(
-      const nlohmann::ordered_json &historicalData,
-      const std::string &companyName,
-      const std::string &currencyCode,
-      sciplot::Plot2D &plotHistoricalDataUpd,      
-      PlottingFunctions::SummaryStatistics &summaryStatsUpd,
-      const PlottingFunctions::PlotSettings &settings,
-      bool verbose){
-
-  //Go through the historical data and pull out the date information
-  //and adjusted_close information
-  date::sys_days dateDay, dateDayFirstOfYear;
-  date::year_month_day dateYmd;
-  bool firstEntry = true;
-
-  sciplot::Vec x0(historicalData.size());
-  sciplot::Vec y0(historicalData.size());
-
-  std::size_t dateCount=0;
-  double ymin = std::numeric_limits<double>::max();
-  double ymax =-std::numeric_limits<double>::max();
-  double xmin = std::numeric_limits<double>::max();
-  double xmax =-std::numeric_limits<double>::max();
-  
-  for( auto const &entry : historicalData){  
-    double y = JsonFunctions::getJsonFloat(entry["adjusted_close"]);
-    //double ylog10 = std::copysignf(std::log10(std::fabs(y)), y);
-    //y0[dateCount]= ylog10;
-    y0[dateCount]=y;
-    std::string dateStr;
-    JsonFunctions::getJsonString(entry["date"],dateStr);
-    x0[dateCount] = UtilityFunctions::convertToFractionalYear(dateStr);
-
-    if(static_cast<double>(y0[dateCount])<ymin){
-      ymin=static_cast<double>(y0[dateCount]);
-    }
-    if(static_cast<double>(y0[dateCount])>ymax){
-      ymax=static_cast<double>(y0[dateCount]);
-    }
-    if(static_cast<double>(x0[dateCount])<xmin){
-      xmin=static_cast<double>(x0[dateCount]);
-    }
-    if(static_cast<double>(x0[dateCount])>xmax){
-      xmax=static_cast<double>(x0[dateCount]);
-    }
-    ++dateCount;
-    firstEntry=false;
-  }
-  
-  --dateCount;
-
-  if(dateCount > 0){
-    bool validSummaryStats = 
-      PlottingFunctions::extractSummaryStatistics(y0,summaryStatsUpd);
-    summaryStatsUpd.current = y0[dateCount];
-    summaryStatsUpd.name = "historicalData";
-
-    plotHistoricalDataUpd.drawCurve(x0,y0)
-        .label(companyName)
-        .lineColor("black")
-        .lineWidth(settings.lineWidth);
-      
-    if((xmax-xmin)<1.0){
-      xmax = 0.5*(xmin+xmax)+0.5;
-      xmin = xmax-1.;
-    }
-    if((xmax-xmin)<5){
-      plotHistoricalDataUpd.xtics().increment(settings.xticMinimumIncrement);
-    }
-
-    /*
-    ymax = summaryStatsUpd.percentiles[summaryStatsUpd.percentiles.size()-2];
-    ymin = summaryStatsUpd.percentiles[1];
-    if(y0[dateCount] < ymin){
-      ymin = y0[dateCount];
-    }
-    if(y0[dateCount] > ymax){
-      ymax = y0[dateCount];
-    }
-    */
-
-    if((ymax-ymin)<0.1){
-      ymax = 0.5*(ymin+ymax)+0.05;
-      ymin = ymax-0.1;
-    }
-
-    if(ymin > 0){
-      ymin=0;
-    }
-    if(ymax < 0){
-      ymax=0;
-    }
-
-    ymax = ymax + 0.2*(ymax-ymin);
-
-    plotHistoricalDataUpd.legend().atTopLeft();  
-    int currentLineType=1;
-
-    if(validSummaryStats){
-      PlottingFunctions::drawBoxAndWhisker(
-          plotHistoricalDataUpd,
-          xmax+1,
-          0.5,
-          summaryStatsUpd,
-          BoxAndWhiskerColorA,
-          BoxAndWhiskerColorB,
-          currentLineType,
-          settings,
-          verbose);
-        xmax += 2.0;        
-    }
-
-    plotHistoricalDataUpd.xrange(
-        static_cast<sciplot::StringOrDouble>(xmin),
-        static_cast<sciplot::StringOrDouble>(xmax));              
-
-    plotHistoricalDataUpd.yrange(
-        static_cast<sciplot::StringOrDouble>(ymin),
-        static_cast<sciplot::StringOrDouble>(ymax));
-
-  }
-  std::string xAxisLabel("Year");
-
-  std::string yAxisLabel("Adjusted Closing Price (");
-  yAxisLabel.append(currencyCode);
-  yAxisLabel.append(")");
-
-  PlottingFunctions::configurePlot(plotHistoricalDataUpd,xAxisLabel,yAxisLabel,
-                                  settings);
-
-
-
-};
-
-//==============================================================================
-void extractValidTimeSeriesData(
-      const std::string &primaryTicker,
-      const nlohmann::ordered_json &calculateData,
+void extractDataSeries(
+      const nlohmann::ordered_json &jsonData,
+      const std::vector<std::string> &addressToTimeSeries,
+      const char* dateFieldName,
       const char* floatFieldName,
       std::vector<double> &dateSeries,
       std::vector<double> &floatSeries){
@@ -260,25 +165,44 @@ void extractValidTimeSeriesData(
   floatSeries.clear();
   std::vector< double > tmpFloatSeries;
 
-  for(auto const &el: calculateData.items()){
+  nlohmann::ordered_json jsonElement;
 
-    double floatData = 
-      JsonFunctions::getJsonFloat(calculateData[el.key()][floatFieldName]);
+  bool isElementValid = false;
 
-    if(JsonFunctions::isJsonFloatValid(floatData)){
-    
-      tmpFloatSeries.push_back(floatData);
-
-      std::string dateEntryStr(el.key());
-      double timeData = UtilityFunctions::convertToFractionalYear(dateEntryStr);
-      dateSeries.push_back(timeData);
+  if(addressToTimeSeries.size()>0){
+    isElementValid = JsonFunctions::getJsonElement(
+                        jsonData, addressToTimeSeries,jsonElement);
+  }else{
+    jsonElement = jsonData;
+    if(jsonElement.size()>0){
+      isElementValid=true;
     }
-    
   }
 
-  std::vector< size_t > indicesSorted = sort_indices(dateSeries);
-  for(size_t i=0; i<indicesSorted.size();++i){
-    floatSeries.push_back( tmpFloatSeries[ indicesSorted[i] ] );
+  if(isElementValid){
+    for(auto &el: jsonElement.items()){
+
+      double floatData = 
+        JsonFunctions::getJsonFloat(el.value()[floatFieldName]);
+
+      if(JsonFunctions::isJsonFloatValid(floatData)){
+    
+        tmpFloatSeries.push_back(floatData);
+
+        std::string dateEntryStr;
+        JsonFunctions::getJsonString(el.value()[dateFieldName],
+                        dateEntryStr); 
+
+        double timeData = UtilityFunctions::convertToFractionalYear(dateEntryStr);
+        dateSeries.push_back(timeData);
+      }
+    
+    }
+
+    std::vector< size_t > indicesSorted = sort_indices(dateSeries);
+    for(size_t i=0; i<indicesSorted.size();++i){
+      floatSeries.push_back( tmpFloatSeries[ indicesSorted[i] ] );
+    }
   }
 
 }
@@ -325,7 +249,346 @@ void readConfigurationFile(std::string &plotConfigurationFilePath,
       }while(!endOfFile);
   }
 };
+//==============================================================================
+void formatJsonFieldAsLabel(std::string &nameUpd){
 
+  size_t pos = nameUpd.find("_value",0);
+  nameUpd = nameUpd.substr(0,pos);
+
+  pos = nameUpd.find_last_of("_");
+  if(pos != std::string::npos){
+    nameUpd = nameUpd.substr(pos+1,nameUpd.size()-1);
+  }
+  ReportingFunctions::convertCamelCaseToSpacedText(nameUpd);
+}
+
+//==============================================================================
+bool plotMetric(
+        const JsonMetaData &jsonData,
+        const PlottingFunctions::PlotSettings &plotSettings,        
+        const LineSettings &lineSettings,
+        const AxisSettings &axisSettings,
+        sciplot::Plot2D &plotMetricUpd,
+        bool removeInvalidData,
+        bool verbose)
+{
+
+    bool success=false;
+
+    std::vector<double> xTmp;
+    std::vector<double> yTmp;
+
+    extractDataSeries(
+        jsonData.jsonData,
+        jsonData.address,
+        jsonData.dateName.c_str(),
+        jsonData.fieldName.c_str(),
+        xTmp,
+        yTmp);     
+    
+    bool timeSeriesValid = (xTmp.size()>0 && yTmp.size() > 0);
+
+    if(timeSeriesValid || !removeInvalidData){
+      
+      if(!timeSeriesValid){
+        xTmp.push_back(JsonFunctions::MISSING_VALUE);
+        yTmp.push_back(JsonFunctions::MISSING_VALUE);
+      }
+
+      sciplot::Vec x(xTmp.size());
+      sciplot::Vec y(yTmp.size());
+
+      for(size_t i=0; i<xTmp.size();++i){
+        x[i]= xTmp[i];
+        y[i]=yTmp[i];
+      }
+      PlottingFunctions::SummaryStatistics metricSummaryStatistics;
+      metricSummaryStatistics.name=jsonData.fieldName;
+      bool validSummaryStats = 
+        PlottingFunctions::extractSummaryStatistics(y,
+                            metricSummaryStatistics);
+      metricSummaryStatistics.current = yTmp[yTmp.size()-1];
+
+      plotMetricUpd.drawCurve(x,y)
+        .label(lineSettings.name)
+        .lineColor(lineSettings.colour)
+        .lineWidth(lineSettings.lineWidth);
+
+      std::vector< double > xRange,yRange;
+      PlottingFunctions::getDataRange(xTmp,xRange,1.0);
+      PlottingFunctions::getDataRange(yTmp,yRange,
+                          std::numeric_limits< double >::lowest());
+      if(yRange[0] > 0){
+        yRange[0] = 0;
+      }
+      if(yRange[1]-yRange[0] <= 0){
+        yRange[1] = 1.0;
+      }
+      //Add some blank space to the top of the plot
+      yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
+      int currentLineType=1;
+
+      if(!std::isnan(axisSettings.xMin)){
+        xRange[0]=axisSettings.xMin;
+      }
+
+      if(!std::isnan(axisSettings.xMax)){
+        xRange[1]=axisSettings.xMax;
+      }
+
+      if(!std::isnan(axisSettings.yMin)){
+        yRange[0]=axisSettings.yMin;
+      }
+
+      if(!std::isnan(axisSettings.yMax)){
+        yRange[1]=axisSettings.yMax;
+      }
+
+      plotMetricUpd.legend().atTopLeft();   
+
+      if(validSummaryStats){
+        PlottingFunctions::drawBoxAndWhisker(
+            plotMetricUpd,
+            xRange[1]+1,
+            0.5,
+            metricSummaryStatistics,
+            BoxAndWhiskerColorA,
+            BoxAndWhiskerColorB,
+            currentLineType,
+            plotSettings,
+            verbose);
+      }
+
+      xRange[1] += 2.0;
+
+      plotMetricUpd.xrange(
+          static_cast<sciplot::StringOrDouble>(xRange[0]),
+          static_cast<sciplot::StringOrDouble>(xRange[1]));              
+
+      plotMetricUpd.yrange(
+          static_cast<sciplot::StringOrDouble>(yRange[0]),
+          static_cast<sciplot::StringOrDouble>(yRange[1]));
+
+      if((xRange[1]-xRange[0])<5.0){
+        plotMetricUpd.xtics().increment(plotSettings.xticMinimumIncrement);
+      }
+
+      if((xRange[1]-xRange[0]) > 10){
+        double xSpan = (xRange[1]-xRange[0]);
+        double increment = 1;
+
+        while( xSpan/increment > 10 ){
+          if(std::abs(increment-1) < std::numeric_limits<double>::epsilon()){
+            increment = 5.0;
+          }else{
+            increment += 5.0;
+          }
+        }
+
+        plotMetricUpd.xtics().increment(increment);
+
+      }
+
+
+      PlottingFunctions::configurePlot( plotMetricUpd,
+                                        axisSettings.xAxisName,
+                                        axisSettings.yAxisName,
+                                        plotSettings);
+      success=true;  
+    }
+
+  return success;
+
+};
+
+//==============================================================================
+bool plotDebuggingData(
+    const TickerMetaData &tickerMetaData,
+    const nlohmann::ordered_json &fundamentalData,
+    const nlohmann::ordered_json &historicalData,
+    const nlohmann::ordered_json &calculateData,
+    const char* outputPlotPath,
+    const PlottingFunctions::PlotSettings &plotSettings,
+    bool verbose)
+{
+
+  bool success = true;               
+
+  size_t nrows = 2;
+  size_t ncols = 2;
+
+  PlottingFunctions::PlotSettings plotSettingsUpd(plotSettings);
+  plotSettingsUpd.plotHeightInPoints= 8.0*InchesPerCentimeter*PointsPerInch;
+  plotSettingsUpd.plotWidthInPoints= 8.0*InchesPerCentimeter*PointsPerInch;
+
+  //std::vector<std::string> metrics;
+  //metrics.push_back(std::string("presentValueDCF_afterTaxOperatingIncome"));
+  //metrics.push_back(std::string("presentValueDCF_reinvestmentRate"));
+  //metrics.push_back(std::string("presentValueDCF_netIncomeGrowth"));
+  //metrics.push_back(std::string("presentValueDCF_costOfCapital"));
+  //metrics.push_back(std::string("priceToValue_marketCapitalization"));
+  //metrics.push_back(std::string("returnOnInvestedCapital_totalStockholderEquity"));
+  //metrics.push_back(std::string("presentValueDCF_returnOnInvestedCapital_longTermDebt"));
+  //metrics.push_back(std::string("returnOnInvestedCapital_netIncome"));
+
+  std::vector< JsonMetaData > jsonMetricData;
+
+  std::vector< SubplotSettings > subplotSettings;
+  subplotSettings.resize(4);
+
+  
+  size_t i=0;
+
+  subplotSettings[0].indexRow     = 0;
+  subplotSettings[0].indexColumn  = 0;
+  subplotSettings[1]              = subplotSettings[0];
+  subplotSettings[1].indexColumn  = 1;
+
+  subplotSettings[2]              = subplotSettings[0];
+  subplotSettings[2].indexRow     = 1;
+
+  subplotSettings[3]              = subplotSettings[1];
+  subplotSettings[3].indexRow     = 1;
+
+  JsonMetaData eleSharesA(fundamentalData);
+  eleSharesA.address.push_back("outstandingShares");
+  eleSharesA.address.push_back("annual");
+  eleSharesA.fieldName="shares";
+  eleSharesA.dateName="dateFormatted";
+  eleSharesA.isArray=true;
+
+  JsonMetaData eleSharesQ(fundamentalData);
+  eleSharesQ.address.push_back("outstandingShares");
+  eleSharesQ.address.push_back("quarterly");
+  eleSharesQ.fieldName="shares";
+  eleSharesQ.dateName="dateFormatted";
+  eleSharesQ.isArray=true;
+
+  JsonMetaData longTermDebtA(fundamentalData);
+  longTermDebtA.address.push_back("Financials");
+  longTermDebtA.address.push_back("Balance_Sheet");
+  longTermDebtA.address.push_back("yearly");
+  longTermDebtA.fieldName="longTermDebt";
+  longTermDebtA.dateName="date";
+  longTermDebtA.isArray=true;
+
+  JsonMetaData longTermDebtQ(fundamentalData);
+  longTermDebtQ.address.push_back("Financials");
+  longTermDebtQ.address.push_back("Balance_Sheet");
+  longTermDebtQ.address.push_back("quarterly");
+  longTermDebtQ.fieldName="longTermDebt";
+  longTermDebtQ.dateName="date";
+  longTermDebtQ.isArray=true;  
+
+  jsonMetricData.push_back(eleSharesA);
+  jsonMetricData.push_back(eleSharesQ);  
+  jsonMetricData.push_back(longTermDebtA);
+  jsonMetricData.push_back(longTermDebtQ);
+
+  std::vector< LineSettings > lineSettings;
+  LineSettings lineA;
+  lineA.colour = "black";
+  lineA.lineWidth=1.0;
+  lineA.name ="annual";
+
+  LineSettings lineB;
+  lineB.colour = "blue";
+  lineB.lineWidth=1.0;
+  lineB.name = "quarterly";
+  
+  lineSettings.push_back(lineA);
+  lineSettings.push_back(lineB);
+  lineSettings.push_back(lineA);
+  lineSettings.push_back(lineB);
+
+  std::vector< AxisSettings > axisSettings;
+  
+  AxisSettings axisAB,axisCD;
+  axisAB.xAxisName="Years";
+  axisAB.yAxisName="Shares Outstanding";
+  if(tickerMetaData.primaryTicker.compare("LVMUY.US")==0){
+    axisAB.yMin = 4.0e8;
+    axisAB.yMax = 2.6e9;
+  }
+
+  axisCD.xAxisName="Years";
+  axisCD.yAxisName="Long Term Debt";
+  if(tickerMetaData.primaryTicker.compare("LVMUY.US")==0){
+    axisCD.yMin = 0.0;
+    axisCD.yMax = 2.5e10;
+  }
+
+  axisSettings.push_back(axisAB);
+  axisSettings.push_back(axisAB);
+
+  axisSettings.push_back(axisCD);
+  axisSettings.push_back(axisCD);
+  
+
+
+  //Populate the array with empty plots  
+  std::vector< std::vector< sciplot::Plot2D > > matrixOfPlots;
+  matrixOfPlots.resize(nrows);  
+  for(size_t indexRow=0; indexRow < nrows; ++indexRow){
+    matrixOfPlots[indexRow].resize(ncols);
+  }
+
+  for(size_t indexMetric=0; indexMetric < subplotSettings.size(); ++indexMetric){
+
+    size_t row = subplotSettings[indexMetric].indexRow;
+    size_t col = subplotSettings[indexMetric].indexColumn;
+    bool removeInvalidData=false;
+
+    bool plotAdded = plotMetric(
+                        jsonMetricData[indexMetric],
+                        plotSettings,
+                        lineSettings[indexMetric],
+                        axisSettings[indexMetric],
+                        matrixOfPlots[row][col],
+                        removeInvalidData,
+                        verbose);        
+  }
+  std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlotVariants;    
+
+
+  for(size_t indexRow=0; indexRow < nrows; ++indexRow){
+    std::vector< sciplot::PlotVariant > rowOfPlotVariants;    
+    for(size_t indexCol=0; indexCol < ncols; ++indexCol){
+      rowOfPlotVariants.push_back(matrixOfPlots[indexRow][indexCol]);
+    }
+    arrayOfPlotVariants.push_back(rowOfPlotVariants);
+  }
+
+
+
+  std::string titleStr = tickerMetaData.companyName;
+  titleStr.append(" (");
+  titleStr.append(tickerMetaData.primaryTicker);
+  titleStr.append(") - ");
+  titleStr.append(tickerMetaData.country);
+  titleStr.append(" debugging overview");
+  
+  sciplot::Figure figTicker(arrayOfPlotVariants);
+
+  figTicker.title(titleStr);
+
+  sciplot::Canvas canvas = {{figTicker}};
+
+  size_t canvasWidth  = 
+    static_cast<size_t>(
+      plotSettingsUpd.plotWidthInPoints*static_cast<double>(ncols));
+  size_t canvasHeight = 
+    static_cast<size_t>(
+      plotSettingsUpd.plotHeightInPoints*static_cast<double>(nrows));
+
+  canvas.size(canvasWidth, canvasHeight) ;
+
+  // Save the figure to a PDF file
+  canvas.save(outputPlotPath);
+
+  return success;  
+
+}
 //==============================================================================
 bool plotTickerData(
     const TickerMetaData &tickerMetaData,
@@ -350,17 +613,45 @@ bool plotTickerData(
         ++indexCol){
       bool subplotAdded = false; 
 
+      LineSettings lineA;
+      lineA.colour = "black";
+      lineA.lineWidth=1.0;
+      lineA.name = "";
+
+      AxisSettings axisA;
+      axisA.xAxisName="Years";
+      axisA.yAxisName=subplotMetricNames[indexRow][indexCol];
+      formatJsonFieldAsLabel(axisA.yAxisName);      
+      
+
       if(subplotMetricNames[indexRow][indexCol].compare("historicalData")==0){
         sciplot::Plot2D plotHistoricalData;
-        PlottingFunctions::SummaryStatistics priceSummaryStats;
-        createHistoricalDataPlot( historicalData,
-                                  tickerMetaData.companyName,
-                                  tickerMetaData.currencyCode,
-                                  plotHistoricalData,
-                                  priceSummaryStats,
-                                  plotSettings, 
-                                  verbose);    
-        //tickerSummary.summaryStatistics.push_back(priceSummaryStats);
+        JsonMetaData jsonHistData(historicalData);
+        jsonHistData.address.clear();
+        jsonHistData.dateName="date";
+        jsonHistData.fieldName="adjusted_close";
+        jsonHistData.isArray=true;
+        jsonHistData.ticker=tickerMetaData.primaryTicker;
+
+        LineSettings lineSettings;
+        lineSettings.colour ="black";
+        lineSettings.lineWidth=1.0;
+        lineSettings.name = tickerMetaData.primaryTicker;
+
+        AxisSettings axisSettings;
+        axisSettings.xAxisName="Years";
+        axisSettings.yAxisName=tickerMetaData.currencyCode;
+
+        bool removeInvalidData=true;
+
+        bool isHistDataPlotted = 
+          plotMetric( jsonHistData,
+                      plotSettings,
+                      lineSettings,
+                      axisSettings,
+                      plotHistoricalData,
+                      true,
+                      verbose);
 
         rowOfPlots.push_back(plotHistoricalData);
         subplotAdded=true;
@@ -368,104 +659,32 @@ bool plotTickerData(
 
       if(subplotMetricNames[indexRow][indexCol].compare("empty")!=0 
         && !subplotAdded){
-          std::vector<double> xTmp;
-          std::vector<double> yTmp;
+          sciplot::Plot2D subplot;  
           bool removeInvalidData=true;
-          extractValidTimeSeriesData(
-              tickerMetaData.primaryTicker,
-              calculateData,
-              subplotMetricNames[indexRow][indexCol].c_str(),
-              xTmp,
-              yTmp);     
-          
 
-          bool timeSeriesValid = (xTmp.size()>0 && yTmp.size() > 0);
-          sciplot::Plot2D plotMetric;
+          JsonMetaData jsonEle(calculateData);
+          jsonEle.ticker=tickerMetaData.primaryTicker;
+          jsonEle.address.clear();
+          jsonEle.fieldName=subplotMetricNames[indexRow][indexCol];
+          jsonEle.dateName="date";
 
-          if(timeSeriesValid){
-            sciplot::Vec x(xTmp.size());
-            sciplot::Vec y(yTmp.size());
 
-            for(size_t i=0; i<xTmp.size();++i){
-              x[i]= xTmp[i];
-              //double ylog10= std::copysignf(std::log10(std::fabs(yTmp[i])),
-              //                              yTmp[i]);
-              //y[i]= ylog10;
-              //yTmp[i]=ylog10;
-              y[i]=yTmp[i];
-            }
-            PlottingFunctions::SummaryStatistics metricSummaryStatistics;
-            metricSummaryStatistics.name=subplotMetricNames[indexRow][indexCol];
-            bool validSummaryStats = 
-              PlottingFunctions::extractSummaryStatistics(y,
-                                  metricSummaryStatistics);
-            metricSummaryStatistics.current = yTmp[yTmp.size()-1];
+          bool plotAdded = plotMetric(
+                              jsonEle,
+                              plotSettings,
+                              lineA,
+                              axisA,
+                              subplot,
+                              removeInvalidData,
+                              verbose);
 
-            plotMetric.drawCurve(x,y)
-              .label(tickerMetaData.companyName)
-              .lineColor("black")
-              .lineWidth(plotSettings.lineWidth);
-
-            std::vector< double > xRange,yRange;
-            PlottingFunctions::getDataRange(xTmp,xRange,1.0);
-            PlottingFunctions::getDataRange(yTmp,yRange,
-                                std::numeric_limits< double >::lowest());
-            if(yRange[0] > 0){
-              yRange[0] = 0;
-            }
-            if(yRange[1] < 0){
-              yRange[1] = 0;
-            }
-            //Add some blank space to the top of the plot
-            yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
-            int currentLineType=1;
-
-            plotMetric.legend().atTopLeft();   
-
-            if(validSummaryStats){
-              PlottingFunctions::drawBoxAndWhisker(
-                  plotMetric,
-                  xRange[1]+1,
-                  0.5,
-                  metricSummaryStatistics,
-                  BoxAndWhiskerColorA,
-                  BoxAndWhiskerColorB,
-                  currentLineType,
-                  plotSettings,
-                  verbose);
-            }
-
-            xRange[1] += 2.0;
-
-            plotMetric.xrange(
-                static_cast<sciplot::StringOrDouble>(xRange[0]),
-                static_cast<sciplot::StringOrDouble>(xRange[1]));              
-
-            plotMetric.yrange(
-                static_cast<sciplot::StringOrDouble>(yRange[0]),
-                static_cast<sciplot::StringOrDouble>(yRange[1]));
-
-            if((xRange[1]-xRange[0])<5){
-              plotMetric.xtics().increment(plotSettings.xticMinimumIncrement);
-            }
-
-            std::string tmpStringA("Year");
-            std::string tmpStringB(subplotMetricNames[indexRow][indexCol].c_str());
-
-            size_t pos = tmpStringB.find("_value",0);
-            tmpStringB = tmpStringB.substr(0,pos);
-
-            ReportingFunctions::convertCamelCaseToSpacedText(tmpStringA);
-            ReportingFunctions::convertCamelCaseToSpacedText(tmpStringB);
-
-            PlottingFunctions::configurePlot(plotMetric,tmpStringA,tmpStringB,
-                                            plotSettings);
-              
-            rowOfPlots.push_back(plotMetric);
-            subplotAdded=true;   
-          }     
+          if(plotAdded){
+            rowOfPlots.push_back(subplot);
+            subplotAdded=true;
+          }   
+        }     
       }      
-    }
+    
     if(rowOfPlots.size()>0){
       arrayOfPlots.push_back(rowOfPlots);
     }
@@ -559,6 +778,7 @@ bool generateLaTeXReport(
     const nlohmann::ordered_json &historicalData,
     const nlohmann::ordered_json &calculateData,
     const char* plotFileName,
+    const char* plotDebuggingFileName,
     const char* outputReportPath,
     const std::vector< std::vector< std::string >> &subplotMetricNames,
     bool replaceNansWithMissingData,
@@ -780,6 +1000,20 @@ bool generateLaTeXReport(
     }      
 
     latexReport << "\\end{multicols}" << std::endl;
+
+    latexReport << "\\begin{figure}[h]" << std::endl;
+    latexReport << "  \\begin{center}" << std::endl;
+    latexReport << "    \\includegraphics{" 
+                <<      plotDebuggingFileName << "}" << std::endl;
+    latexReport << "    \\caption{"
+                << companyNameString
+                << " (" << primaryTickerString <<") "
+                << tickerMetaData.country << " ( \\url{" << webURL << "} )"
+                << " debugging data }" << std::endl;
+    latexReport << " \\end{center}" << std::endl;
+    latexReport << "\\end{figure}"<< std::endl;
+    latexReport << std::endl;
+
     latexReport << "\\break"          << std::endl;
     latexReport << "\\newpage"        << std::endl;
   }
@@ -1046,6 +1280,22 @@ int main (int argc, char* argv[]) {
               plotSettings,
               false);
 
+          std::filesystem::path outputDebuggingPlotFilePath = outputFolderPath;
+          std::string plotDebuggingFileName("fig_");
+          plotDebuggingFileName.append(tickerFolderName);
+          plotDebuggingFileName.append("_Debugging.pdf");
+          outputDebuggingPlotFilePath.append(plotDebuggingFileName);
+
+          bool successPlotDebuggingData=
+            plotDebuggingData(
+              tickerMetaData,
+              fundamentalData,
+              historicalData,
+              calculateData,
+              outputDebuggingPlotFilePath.c_str(),
+              plotSettings,
+              false);
+
           std::filesystem::path outputReportFilePath = outputFolderPath;
           std::string reportFileName(tickerFolderName);
           reportFileName.append(".tex");
@@ -1064,7 +1314,8 @@ int main (int argc, char* argv[]) {
               historicalData,
               calculateData,
               plotFileName.c_str(),
-              outputReportFilePath.c_str(),              
+              plotDebuggingFileName.c_str(),
+              outputReportFilePath.c_str(),    
               subplotMetricNames,
               replaceNansWithMissingData,
               false); 

@@ -264,7 +264,7 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << " \\\\" << std::endl;                
     latexReport << "$B_2$. Adjusted close price & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["costOfCapital_adjusted_close"],true))
+                    calculateData[date]["costOfCapital_adjustedClose"],true))
                 << " \\\\" << std::endl;                
     latexReport << "$C_2$. Market capitalization & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
@@ -304,27 +304,23 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_capitalExpenditures"],true))
                 << " \\\\" << std::endl;                              
-    latexReport << "$B_3$. Property plant \\& equip. (PPE) &"
+    latexReport << "$B_3$. $\\Delta$ property plant \\& equip. (PPE) &"
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_plantPropertyEquipment_0"],true))
+                    calculateData[date]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_changeInPlantPropertyEquipment"],true))
                 << " \\\\" << std::endl;   
-    latexReport << "$C_3$. Previous PPE & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_plantPropertyEquipmentPrevious_0"],true))
-                << " \\\\" << std::endl;                
     latexReport << "\\multicolumn{2}{c}{If cap. exp. is 0 in EOD's records:} \\\\" 
                 << std::endl;                
-    latexReport << "\\multicolumn{2}{c}{ $A_3 = B_3 - C_3$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $A_3 = B_3$} \\\\" 
                 << std::endl;                
-    latexReport << "$D_3$. Depreciation & "
+    latexReport << "$C_3$. Depreciation & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["presentValueDCF_reinvestmentRate_netCapitalExpenditures_depreciation"],true))
                 << " \\\\" << std::endl;
-    latexReport << "$E_3$. Net Capital Expenditures & "
+    latexReport << "$D_3$. Net Capital Expenditures & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["presentValueDCF_reinvestmentRate_netCapitalExpenditures"],true))
                 << " \\\\" << std::endl;                
-    latexReport << "\\multicolumn{2}{c}{ $E_3 = A_3 - D_3$ } \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $D_3 = A_3 - C_3$ } \\\\" 
                 << std::endl;              
     latexReport << "\\end{tabular}" << std::endl 
                 << "\\bigskip" << std::endl<< std::endl;  
@@ -333,38 +329,23 @@ static void appendValuationTable(std::ofstream &latexReport,
     latexReport << "\\hline \\multicolumn{2}{c}{Part 4: Change in non-cash working capital} \\\\" 
                 << std::endl;
     latexReport << "\\hline " << std::endl;                
-    latexReport << "$A_4$. Inventory & "
+    latexReport << "$A_4$. $\\Delta$ Inventory & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_inventory_0"],true))
+                    calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_changeInInventory"],true))
                 << " \\\\" << std::endl;                 
-    latexReport << "$B_4$. Previous inventory & "
+    latexReport << "$B_4$. $\\Delta$ Net receivables & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_inventoryPrevious_0"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$C_4$. Net receivables & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_netReceivables_0"],true))
+                    calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_changeInNetReceivables"],true))
                 << " \\\\" << std::endl;                             
-    latexReport << "$D_4$. Previous net receivables & "
+    latexReport << "$C_4$. $\\Delta$ Accounts payable & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_netReceivablesPrevious_0"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$E_4$. Accounts payable & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_accountsPayable_0"],true))
+                    calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_changeInAccountsPayable"],true))
                 << " \\\\" << std::endl;                                         
-    latexReport << "$F_4$. Previous accounts payable & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital_accountsPayablePrevious_0"],true))
-                << " \\\\" << std::endl;        
-    latexReport << "$G_4$. Change in non-cash  & "
+    latexReport << "$D_4$. $\\Delta$ Non-cash working cap. & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["presentValueDCF_reinvestmentRate_changeInNonCashWorkingCapital"],true))
                 << " \\\\" << std::endl;                                                 
-
-    latexReport << " working capital & "
-                << " \\\\" << std::endl;                                                 
-    latexReport << "\\multicolumn{2}{c}{ $G_4 = (A_4-B_4)+(C_4-D_4)-(E_4-F_4)$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $D_4 = A_4+B_4-C_4$} \\\\" 
                 << std::endl;                  
     latexReport << "\\end{tabular}" << std::endl 
                 << "\\bigskip" << std::endl<< std::endl;   
@@ -388,7 +369,7 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["presentValueDCF_reinvestmentRate"],true))
                 << " \\\\" << std::endl;                  
-    latexReport << "\\multicolumn{2}{c}{ $C_5 = (F_3+G_4)/B_5$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $C_5 = (D_3+D_4)/B_5$} \\\\" 
                 << std::endl;                
     latexReport << "\\end{tabular}" << std::endl 
                 << "\\bigskip" << std::endl<< std::endl;

@@ -376,7 +376,7 @@ class FinancialAnalysisToolkit {
       double dividendsPaid = 
         FinancialAnalysisToolkit::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"dividendsPaid",
-          setNansToMissingValue);      
+          true);      
 
       double returnOnInvestedCapital =  
         (netIncome-dividendsPaid) / (longTermDebt+totalStockholderEquity);
@@ -496,7 +496,7 @@ class FinancialAnalysisToolkit {
       double dividendsPaid = 
         FinancialAnalysisToolkit::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"dividendsPaid",
-          setNansToMissingValue);
+          true);
 
       double retentionRatio =  
         (netIncome-dividendsPaid) / (netIncome);
@@ -1192,6 +1192,7 @@ class FinancialAnalysisToolkit {
 
       double plantPropertyEquipment=0;
       double plantPropertyEquipmentPrevious=0;
+      double changeInPlantPropertyEquipment = 0;
 
       if(!JsonFunctions::isJsonFloatValid(capitalExpenditures)){
 
@@ -1224,32 +1225,13 @@ class FinancialAnalysisToolkit {
           //nan: this is a better approximation of the PPE than 0.
           if(   JsonFunctions::isJsonFloatValid(plantPropertyEquipment) 
             && JsonFunctions::isJsonFloatValid(plantPropertyEquipmentPrevious)){
-            capitalExpenditures  += plantPropertyEquipment
-                                  -plantPropertyEquipmentPrevious;
-          }
+            changeInPlantPropertyEquipment +=
+                    ( plantPropertyEquipment
+                     -plantPropertyEquipmentPrevious);                                         
+          } 
+          capitalExpenditures  += (changeInPlantPropertyEquipment); 
 
-          if(appendTermRecord){
-            termNames.push_back(parentCategoryName 
-              + "netCapitalExpenditures_plantPropertyEquipment_"
-              + std::to_string(index));
-            termNames.push_back(parentCategoryName 
-              + "netCapitalExpenditures_plantPropertyEquipmentPrevious_"
-              + std::to_string(index));
-            termValues.push_back(plantPropertyEquipment);
-            termValues.push_back(plantPropertyEquipmentPrevious);              
-          }
-        
         }              
-      }else{
-        termNames.push_back(parentCategoryName 
-          + "netCapitalExpenditures_plantPropertyEquipment_"
-          + std::to_string(0));
-        termNames.push_back(parentCategoryName 
-          + "netCapitalExpenditures_plantPropertyEquipmentPrevious_"
-          + std::to_string(0));
-        termValues.push_back(0.);
-        termValues.push_back(0.);     
-
       }
 
 
@@ -1270,6 +1252,15 @@ class FinancialAnalysisToolkit {
       }
 
       if(appendTermRecord){
+        termNames.push_back(parentCategoryName 
+          + "netCapitalExpenditures_changeInPlantPropertyEquipment");
+        //termNames.push_back(parentCategoryName 
+        //  + "netCapitalExpenditures_plantPropertyEquipmentPrevious");
+        //termValues.push_back(plantPropertyEquipment);
+        //termValues.push_back(plantPropertyEquipmentPrevious);
+
+        termValues.push_back(changeInPlantPropertyEquipment);              
+
         termNames.push_back(parentCategoryName 
           + "netCapitalExpenditures_capitalExpenditures");
         termNames.push_back(parentCategoryName 
@@ -1386,39 +1377,6 @@ class FinancialAnalysisToolkit {
           changeInAccountsPayableAdded = true;
         }
 
-        if(appendTermRecord){
-          termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_inventory_" 
-          + std::to_string(index));
-
-          termNames.push_back(parentCategoryName 
-          + "changeInNonCashWorkingCapital_inventoryPrevious_" 
-          + std::to_string(index));          
-
-          termNames.push_back(parentCategoryName 
-            + "changeInNonCashWorkingCapital_netReceivables_" 
-            + std::to_string(index));
-
-          termNames.push_back(parentCategoryName 
-            + "changeInNonCashWorkingCapital_netReceivablesPrevious_" 
-            + std::to_string(index));          
-
-          termNames.push_back(parentCategoryName 
-            + "changeInNonCashWorkingCapital_accountsPayable_"
-            + std::to_string(index));
-
-          termNames.push_back(parentCategoryName 
-            + "changeInNonCashWorkingCapital_accountsPayablePrevious_"
-            + std::to_string(index));
-
-          termValues.push_back(inventory);
-          termValues.push_back(inventoryPrevious);
-          termValues.push_back(netReceivables);
-          termValues.push_back(netReceivablesPrevious);
-          termValues.push_back(accountsPayable);
-          termValues.push_back(accountsPayablePrevious);
-
-        }
       }
 
       //double changeInNonCashWorkingCapital = 
@@ -1427,6 +1385,19 @@ class FinancialAnalysisToolkit {
       //      -(accountsPayable-accountsPayablePrevious));
           
       if(appendTermRecord){
+
+        termNames.push_back(parentCategoryName 
+        + "changeInNonCashWorkingCapital_changeInInventory");
+
+        termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_changeInNetReceivables");
+
+        termNames.push_back(parentCategoryName 
+          + "changeInNonCashWorkingCapital_changeInAccountsPayable");
+
+        termValues.push_back(changeInInventory);
+        termValues.push_back(changeInReceivables);
+        termValues.push_back(changeInAccountsPayable);
 
         termNames.push_back(parentCategoryName 
           + "changeInNonCashWorkingCapital");

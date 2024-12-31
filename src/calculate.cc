@@ -1309,7 +1309,8 @@ int main (int argc, char* argv[]) {
 
         ++indexDate;
         std::string date = datesCommon[indexDate]; 
-        
+
+                
         //The set of dates used for the TTM analysis
         std::vector < std::string > dateSet;
         std::vector < double > dateSetWeight;
@@ -1544,7 +1545,7 @@ int main (int argc, char* argv[]) {
         termNames.push_back("costOfEquityAsAPercentage_betaUnlevered");
         termNames.push_back("costOfEquityAsAPercentage_taxRate");
         termNames.push_back("costOfEquityAsAPercentage_longTermDebt");
-        termNames.push_back("costOfEquityAsAPercentage_adjusted_close");
+        termNames.push_back("costOfEquityAsAPercentage_adjustedClose");
         termNames.push_back("costOfEquityAsAPercentage_outstandingShares");
         termNames.push_back("costOfEquityAsAPercentage_marketCapitalization");
         termNames.push_back("costOfEquityAsAPercentage_beta");
@@ -1575,7 +1576,7 @@ int main (int argc, char* argv[]) {
 
         termNames.push_back("costOfCapital_longTermDebt");
         termNames.push_back("costOfCapital_outstandingShares");
-        termNames.push_back("costOfCapital_adjusted_close");
+        termNames.push_back("costOfCapital_adjustedClose");
         termNames.push_back("costOfCapital_marketCapitalization");
         termNames.push_back("costOfCapital_costOfEquityAsAPercentage");
         termNames.push_back("costOfCapital_afterTaxCostOfDebt");
@@ -1861,7 +1862,8 @@ int main (int argc, char* argv[]) {
 
 
         //it.c_str(), 
-        nlohmann::ordered_json analysisEntry=nlohmann::ordered_json::object();        
+        nlohmann::ordered_json analysisEntry=nlohmann::ordered_json::object();
+        analysisEntry.push_back({"date", date});        
         for( unsigned int i=0; i < termNames.size();++i){
           analysisEntry.push_back({termNames[i],
                                    termValues[i]});

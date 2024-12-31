@@ -40,22 +40,6 @@ ADD_EXECUTABLE(
   src/fetch.cc)
   
 ADD_EXECUTABLE(
-  calculate
-  src/calculate.cc)
-
-ADD_EXECUTABLE(
-  rank
-  src/rank.cc)  
-
-ADD_EXECUTABLE(
-  preprocess
-  src/preprocess.cc)  
-
-ADD_EXECUTABLE(
-  postprocess
-  src/postprocess.cc)  
-
-ADD_EXECUTABLE(
   scan
   src/scan.cc)
   
@@ -66,6 +50,10 @@ ADD_EXECUTABLE(
 ADD_EXECUTABLE(
   applyPatch
   src/applyPatch.cc)  
+
+ADD_EXECUTABLE(
+  calculate
+  src/calculate.cc)
 
 ADD_EXECUTABLE(
   utilities
