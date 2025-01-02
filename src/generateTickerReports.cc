@@ -23,8 +23,8 @@
 #include "PlottingFunctions.h"
 
 
-const char* BoxAndWhiskerColorA="web-blue";
-const char* BoxAndWhiskerColorB="gray0";
+//const char* BoxAndWhiskerColorA="web-blue";
+//const char* BoxAndWhiskerColorB="gray0";
 
 //==============================================================================
 struct LineSettings{
@@ -32,6 +32,19 @@ struct LineSettings{
   std::string name;
   double lineWidth;
 };
+
+struct BoxAndWhiskerSettings{
+  double xOffsetFromStart;
+  double xOffsetFromEnd;
+  std::string boxWhiskerColour;
+  std::string currentValueColour;
+  BoxAndWhiskerSettings():
+    xOffsetFromStart(std::nan("1")),
+    xOffsetFromEnd(std::nan("1")),    
+    boxWhiskerColour("blue"),
+    currentValueColour("black"){};
+};
+
 
 struct AxisSettings{
   std::string xAxisName;
@@ -58,7 +71,7 @@ struct SubplotSettings{
 
 //==============================================================================
 struct JsonMetaData{
-  std::string ticker;
+  //std::string ticker;
   const nlohmann::ordered_json& jsonData;
   std::vector<std::string> address;
   std::string fieldName;
@@ -76,12 +89,14 @@ struct TickerMetaData{
   std::string currencyCode;
   std::string country;
   std::string isin;
+  std::string url;
   TickerMetaData():
     primaryTicker(""),
     companyName(""),
     currencyCode(""),
     country(""),
-    isin(""){}
+    isin(""),
+    url(""){}
 };
 //==============================================================================
 enum JSON_FIELD_TYPE{
@@ -110,7 +125,6 @@ bool isNameInList(std::string &name, std::vector< std::string > &listOfNames){
   return nameIsInList;
 };
 
-
 //==============================================================================
 void getTickerMetaData(    
     const nlohmann::ordered_json &fundamentalData,
@@ -120,19 +134,25 @@ void getTickerMetaData(
                                 tickerMetaDataUpd.primaryTicker);
 
   JsonFunctions::getJsonString( fundamentalData[GEN]["Name"],
-                                tickerMetaDataUpd.companyName);                                
-  ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.companyName);                                
+                                tickerMetaDataUpd.companyName); 
+
+  //ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.companyName);                                
 
   JsonFunctions::getJsonString( fundamentalData[GEN]["ISIN"],
                                 tickerMetaDataUpd.isin);                                
 
   JsonFunctions::getJsonString( fundamentalData[GEN]["CurrencyCode"],
                                 tickerMetaDataUpd.currencyCode);
-  ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.currencyCode);
+
+  //ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.currencyCode);
 
   JsonFunctions::getJsonString(fundamentalData[GEN]["CountryName"],
                                tickerMetaDataUpd.country);  
-  ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.country);      
+
+  //ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.country);   
+
+  JsonFunctions::getJsonString(fundamentalData[GEN]["WebURL"],
+                               tickerMetaDataUpd.url);  
 
 };
 //==============================================================================
@@ -150,7 +170,78 @@ std::vector< size_t > sort_indices(std::vector<T> &v){
   return idx;
 }
 
+//==============================================================================
+void findReplaceKeywords(std::string &stringToUpd,
+                         const std::vector< std::string > keywords,
+                         const std::vector< std::string > replacements)
+{
+  if(keywords.size() != replacements.size()){
+    std::cout << "Error: the keywords and replacement vectors must be the same"
+              << " size"
+              << std::endl;
+    std::abort();              
+  }
 
+  for(size_t i=0; i<keywords.size(); ++i){
+    size_t idx0 = stringToUpd.find(keywords[i]);
+    if(idx0 != std::string::npos){
+      stringToUpd.replace(idx0,keywords[i].length(),replacements[i]);
+    }
+  }
+
+};
+//==============================================================================
+void getFindAndReplacementVectors(const TickerMetaData &tickerMetaData,
+                                  std::vector< std::string > &keywordsUpd,
+                                  std::vector< std::string > &replacementUpd)
+{
+
+  keywordsUpd.clear();
+  replacementUpd.clear();
+
+  keywordsUpd.push_back("@URL");
+  keywordsUpd.push_back("@CompanyNameLaTeX");
+  keywordsUpd.push_back("@PrimaryTickerLaTeX");
+  keywordsUpd.push_back("@CurrencyCodeLaTeX");
+  keywordsUpd.push_back("@CountryNameLaTeX");
+  keywordsUpd.push_back("@CompanyName");
+  keywordsUpd.push_back("@PrimaryTicker");
+  keywordsUpd.push_back("@CurrencyCode");
+  keywordsUpd.push_back("@CountryName");
+
+  std::string companyNameLatex(tickerMetaData.companyName);
+  std::string primaryTickerLatex(tickerMetaData.primaryTicker);
+  std::string currencyCodeLatex(tickerMetaData.currencyCode);
+  std::string countryNameLatex(tickerMetaData.country);
+  std::string companyName(tickerMetaData.companyName);
+  std::string primaryTicker(tickerMetaData.primaryTicker);
+  std::string currencyCode(tickerMetaData.currencyCode);
+  std::string countryName(tickerMetaData.country);
+
+  ReportingFunctions::sanitizeStringForLaTeX(companyNameLatex);
+  ReportingFunctions::sanitizeStringForLaTeX(primaryTickerLatex);
+  ReportingFunctions::sanitizeStringForLaTeX(currencyCodeLatex);
+  ReportingFunctions::sanitizeStringForLaTeX(countryNameLatex);
+
+  ReportingFunctions::sanitizeFolderName(companyName);
+  ReportingFunctions::sanitizeFolderName(primaryTicker);
+  ReportingFunctions::sanitizeFolderName(currencyCode);
+  ReportingFunctions::sanitizeFolderName(countryName);
+
+  replacementUpd.push_back(tickerMetaData.url);      
+
+  replacementUpd.push_back(companyNameLatex);
+  replacementUpd.push_back(primaryTickerLatex);
+  replacementUpd.push_back(currencyCodeLatex);
+  replacementUpd.push_back(countryNameLatex);
+
+  replacementUpd.push_back(companyName);
+  replacementUpd.push_back(primaryTicker);
+  replacementUpd.push_back(currencyCode);
+  replacementUpd.push_back(countryName);
+
+
+};
 
 //==============================================================================
 void extractDataSeries(
@@ -208,48 +299,6 @@ void extractDataSeries(
 }
 
 //==============================================================================
-void readConfigurationFile(std::string &plotConfigurationFilePath,
-                std::vector< std::vector < std::string > > &subplotMetricNames)
-{
-
-  std::ifstream configFile(plotConfigurationFilePath);
-  if(configFile.is_open()){
-    bool endOfFile=false;
-
-      std::vector< std::string > metricRowVector; 
-      std::string line;
-      do{
-        line.clear();
-        metricRowVector.clear();
-
-        std::getline(configFile,line);
-        
-        if(line.length() > 0){
-          //Extract the individual fields
-          size_t i0=0;
-          size_t i1=line.find_first_of(',',i0);
-          while(i1 > i0){
-            std::string metricName = line.substr(i0,i1-i0);
-            if(metricName.length()>0){
-              metricRowVector.push_back(metricName);
-              metricName.clear();
-            }
-            i0=i1+1;
-            i1 = line.find_first_of(',',i0);
-            if(i1 == std::string::npos){
-              i1 = line.length();
-            }            
-          }
-          if(metricRowVector.size() > 0){
-            subplotMetricNames.push_back(metricRowVector);
-          }
-        }else{
-          endOfFile=true;
-        }
-      }while(!endOfFile);
-  }
-};
-//==============================================================================
 void formatJsonFieldAsLabel(std::string &nameUpd){
 
   size_t pos = nameUpd.find("_value",0);
@@ -263,17 +312,16 @@ void formatJsonFieldAsLabel(std::string &nameUpd){
 }
 
 //==============================================================================
-bool plotMetric(
+void plotMetric(
         const JsonMetaData &jsonData,
         const PlottingFunctions::PlotSettings &plotSettings,        
         const LineSettings &lineSettings,
         const AxisSettings &axisSettings,
+        const BoxAndWhiskerSettings &boxAndWhiskerSettings,
         sciplot::Plot2D &plotMetricUpd,
         bool removeInvalidData,
         bool verbose)
 {
-
-    bool success=false;
 
     std::vector<double> xTmp;
     std::vector<double> yTmp;
@@ -347,19 +395,32 @@ bool plotMetric(
       plotMetricUpd.legend().atTopLeft();   
 
       if(validSummaryStats){
+        double xPos = xRange[1]+1;
+        if(!std::isnan(boxAndWhiskerSettings.xOffsetFromStart)){
+          xPos = xRange[0]+boxAndWhiskerSettings.xOffsetFromStart;
+        }
+        if(!std::isnan(boxAndWhiskerSettings.xOffsetFromEnd)){
+          xPos = xRange[1]+boxAndWhiskerSettings.xOffsetFromEnd;          
+        }
+
         PlottingFunctions::drawBoxAndWhisker(
             plotMetricUpd,
-            xRange[1]+1,
+            xPos,
             0.5,
             metricSummaryStatistics,
-            BoxAndWhiskerColorA,
-            BoxAndWhiskerColorB,
+            boxAndWhiskerSettings.boxWhiskerColour.c_str(),
+            boxAndWhiskerSettings.currentValueColour.c_str(),
             currentLineType,
             plotSettings,
             verbose);
       }
 
-      xRange[1] += 2.0;
+      if(!std::isnan(boxAndWhiskerSettings.xOffsetFromStart)){
+        xRange[0] += (boxAndWhiskerSettings.xOffsetFromStart-1);
+      }
+      if(!std::isnan(boxAndWhiskerSettings.xOffsetFromEnd)){
+        xRange[1] += (boxAndWhiskerSettings.xOffsetFromEnd+1);          
+      }
 
       plotMetricUpd.xrange(
           static_cast<sciplot::StringOrDouble>(xRange[0]),
@@ -394,162 +455,24 @@ bool plotMetric(
                                         axisSettings.xAxisName,
                                         axisSettings.yAxisName,
                                         plotSettings);
-      success=true;  
+
     }
 
-  return success;
 
 };
 
 //==============================================================================
-bool plotDebuggingData(
-    const TickerMetaData &tickerMetaData,
-    const nlohmann::ordered_json &fundamentalData,
-    const nlohmann::ordered_json &historicalData,
-    const nlohmann::ordered_json &calculateData,
-    const char* outputPlotPath,
-    const PlottingFunctions::PlotSettings &plotSettings,
-    bool verbose)
+void writePlot(
+      const std::vector< std::vector < sciplot::Plot2D >> &matrixOfPlots,
+      const PlottingFunctions::PlotSettings &plotSettings,  
+      const std::string &titleStr,    
+      const std::string &outputPlotPath)
 {
 
-  bool success = true;               
+  size_t nrows = matrixOfPlots.size();
+  size_t ncols = matrixOfPlots[0].size();
 
-  size_t nrows = 2;
-  size_t ncols = 2;
-
-  PlottingFunctions::PlotSettings plotSettingsUpd(plotSettings);
-  plotSettingsUpd.plotHeightInPoints= 8.0*InchesPerCentimeter*PointsPerInch;
-  plotSettingsUpd.plotWidthInPoints= 8.0*InchesPerCentimeter*PointsPerInch;
-
-  //std::vector<std::string> metrics;
-  //metrics.push_back(std::string("presentValueDCF_afterTaxOperatingIncome"));
-  //metrics.push_back(std::string("presentValueDCF_reinvestmentRate"));
-  //metrics.push_back(std::string("presentValueDCF_netIncomeGrowth"));
-  //metrics.push_back(std::string("presentValueDCF_costOfCapital"));
-  //metrics.push_back(std::string("priceToValue_marketCapitalization"));
-  //metrics.push_back(std::string("returnOnInvestedCapital_totalStockholderEquity"));
-  //metrics.push_back(std::string("presentValueDCF_returnOnInvestedCapital_longTermDebt"));
-  //metrics.push_back(std::string("returnOnInvestedCapital_netIncome"));
-
-  std::vector< JsonMetaData > jsonMetricData;
-
-  std::vector< SubplotSettings > subplotSettings;
-  subplotSettings.resize(4);
-
-  
-  size_t i=0;
-
-  subplotSettings[0].indexRow     = 0;
-  subplotSettings[0].indexColumn  = 0;
-  subplotSettings[1]              = subplotSettings[0];
-  subplotSettings[1].indexColumn  = 1;
-
-  subplotSettings[2]              = subplotSettings[0];
-  subplotSettings[2].indexRow     = 1;
-
-  subplotSettings[3]              = subplotSettings[1];
-  subplotSettings[3].indexRow     = 1;
-
-  JsonMetaData eleSharesA(fundamentalData);
-  eleSharesA.address.push_back("outstandingShares");
-  eleSharesA.address.push_back("annual");
-  eleSharesA.fieldName="shares";
-  eleSharesA.dateName="dateFormatted";
-  eleSharesA.isArray=true;
-
-  JsonMetaData eleSharesQ(fundamentalData);
-  eleSharesQ.address.push_back("outstandingShares");
-  eleSharesQ.address.push_back("quarterly");
-  eleSharesQ.fieldName="shares";
-  eleSharesQ.dateName="dateFormatted";
-  eleSharesQ.isArray=true;
-
-  JsonMetaData longTermDebtA(fundamentalData);
-  longTermDebtA.address.push_back("Financials");
-  longTermDebtA.address.push_back("Balance_Sheet");
-  longTermDebtA.address.push_back("yearly");
-  longTermDebtA.fieldName="longTermDebt";
-  longTermDebtA.dateName="date";
-  longTermDebtA.isArray=true;
-
-  JsonMetaData longTermDebtQ(fundamentalData);
-  longTermDebtQ.address.push_back("Financials");
-  longTermDebtQ.address.push_back("Balance_Sheet");
-  longTermDebtQ.address.push_back("quarterly");
-  longTermDebtQ.fieldName="longTermDebt";
-  longTermDebtQ.dateName="date";
-  longTermDebtQ.isArray=true;  
-
-  jsonMetricData.push_back(eleSharesA);
-  jsonMetricData.push_back(eleSharesQ);  
-  jsonMetricData.push_back(longTermDebtA);
-  jsonMetricData.push_back(longTermDebtQ);
-
-  std::vector< LineSettings > lineSettings;
-  LineSettings lineA;
-  lineA.colour = "black";
-  lineA.lineWidth=1.0;
-  lineA.name ="annual";
-
-  LineSettings lineB;
-  lineB.colour = "blue";
-  lineB.lineWidth=1.0;
-  lineB.name = "quarterly";
-  
-  lineSettings.push_back(lineA);
-  lineSettings.push_back(lineB);
-  lineSettings.push_back(lineA);
-  lineSettings.push_back(lineB);
-
-  std::vector< AxisSettings > axisSettings;
-  
-  AxisSettings axisAB,axisCD;
-  axisAB.xAxisName="Years";
-  axisAB.yAxisName="Shares Outstanding";
-  if(tickerMetaData.primaryTicker.compare("LVMUY.US")==0){
-    axisAB.yMin = 4.0e8;
-    axisAB.yMax = 2.6e9;
-  }
-
-  axisCD.xAxisName="Years";
-  axisCD.yAxisName="Long Term Debt";
-  if(tickerMetaData.primaryTicker.compare("LVMUY.US")==0){
-    axisCD.yMin = 0.0;
-    axisCD.yMax = 2.5e10;
-  }
-
-  axisSettings.push_back(axisAB);
-  axisSettings.push_back(axisAB);
-
-  axisSettings.push_back(axisCD);
-  axisSettings.push_back(axisCD);
-  
-
-
-  //Populate the array with empty plots  
-  std::vector< std::vector< sciplot::Plot2D > > matrixOfPlots;
-  matrixOfPlots.resize(nrows);  
-  for(size_t indexRow=0; indexRow < nrows; ++indexRow){
-    matrixOfPlots[indexRow].resize(ncols);
-  }
-
-  for(size_t indexMetric=0; indexMetric < subplotSettings.size(); ++indexMetric){
-
-    size_t row = subplotSettings[indexMetric].indexRow;
-    size_t col = subplotSettings[indexMetric].indexColumn;
-    bool removeInvalidData=false;
-
-    bool plotAdded = plotMetric(
-                        jsonMetricData[indexMetric],
-                        plotSettings,
-                        lineSettings[indexMetric],
-                        axisSettings[indexMetric],
-                        matrixOfPlots[row][col],
-                        removeInvalidData,
-                        verbose);        
-  }
   std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlotVariants;    
-
 
   for(size_t indexRow=0; indexRow < nrows; ++indexRow){
     std::vector< sciplot::PlotVariant > rowOfPlotVariants;    
@@ -558,156 +481,12 @@ bool plotDebuggingData(
     }
     arrayOfPlotVariants.push_back(rowOfPlotVariants);
   }
-
-
-
-  std::string titleStr = tickerMetaData.companyName;
-  titleStr.append(" (");
-  titleStr.append(tickerMetaData.primaryTicker);
-  titleStr.append(") - ");
-  titleStr.append(tickerMetaData.country);
-  titleStr.append(" debugging overview");
   
   sciplot::Figure figTicker(arrayOfPlotVariants);
 
   figTicker.title(titleStr);
 
   sciplot::Canvas canvas = {{figTicker}};
-
-  size_t canvasWidth  = 
-    static_cast<size_t>(
-      plotSettingsUpd.plotWidthInPoints*static_cast<double>(ncols));
-  size_t canvasHeight = 
-    static_cast<size_t>(
-      plotSettingsUpd.plotHeightInPoints*static_cast<double>(nrows));
-
-  canvas.size(canvasWidth, canvasHeight) ;
-
-  // Save the figure to a PDF file
-  canvas.save(outputPlotPath);
-
-  return success;  
-
-}
-//==============================================================================
-bool plotTickerData(
-    const TickerMetaData &tickerMetaData,
-    const nlohmann::ordered_json &fundamentalData,
-    const nlohmann::ordered_json &historicalData,
-    const nlohmann::ordered_json &calculateData,
-    const char* outputPlotPath,
-    const std::vector< std::vector< std::string >> &subplotMetricNames,
-    const PlottingFunctions::PlotSettings &plotSettings,
-    bool verbose)
-{
-  bool success = true;               
-
-  std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlots;
-
-  for(size_t indexRow=0; indexRow < subplotMetricNames.size(); 
-      ++indexRow){
-
-    std::vector < sciplot::PlotVariant > rowOfPlots;
-
-    for(size_t indexCol=0; indexCol < subplotMetricNames[indexRow].size(); 
-        ++indexCol){
-      bool subplotAdded = false; 
-
-      LineSettings lineA;
-      lineA.colour = "black";
-      lineA.lineWidth=1.0;
-      lineA.name = "";
-
-      AxisSettings axisA;
-      axisA.xAxisName="Years";
-      axisA.yAxisName=subplotMetricNames[indexRow][indexCol];
-      formatJsonFieldAsLabel(axisA.yAxisName);      
-      
-
-      if(subplotMetricNames[indexRow][indexCol].compare("historicalData")==0){
-        sciplot::Plot2D plotHistoricalData;
-        JsonMetaData jsonHistData(historicalData);
-        jsonHistData.address.clear();
-        jsonHistData.dateName="date";
-        jsonHistData.fieldName="adjusted_close";
-        jsonHistData.isArray=true;
-        jsonHistData.ticker=tickerMetaData.primaryTicker;
-
-        LineSettings lineSettings;
-        lineSettings.colour ="black";
-        lineSettings.lineWidth=1.0;
-        lineSettings.name = tickerMetaData.primaryTicker;
-
-        AxisSettings axisSettings;
-        axisSettings.xAxisName="Years";
-        axisSettings.yAxisName=tickerMetaData.currencyCode;
-
-        bool removeInvalidData=true;
-
-        bool isHistDataPlotted = 
-          plotMetric( jsonHistData,
-                      plotSettings,
-                      lineSettings,
-                      axisSettings,
-                      plotHistoricalData,
-                      true,
-                      verbose);
-
-        rowOfPlots.push_back(plotHistoricalData);
-        subplotAdded=true;
-      }      
-
-      if(subplotMetricNames[indexRow][indexCol].compare("empty")!=0 
-        && !subplotAdded){
-          sciplot::Plot2D subplot;  
-          bool removeInvalidData=true;
-
-          JsonMetaData jsonEle(calculateData);
-          jsonEle.ticker=tickerMetaData.primaryTicker;
-          jsonEle.address.clear();
-          jsonEle.fieldName=subplotMetricNames[indexRow][indexCol];
-          jsonEle.dateName="date";
-
-
-          bool plotAdded = plotMetric(
-                              jsonEle,
-                              plotSettings,
-                              lineA,
-                              axisA,
-                              subplot,
-                              removeInvalidData,
-                              verbose);
-
-          if(plotAdded){
-            rowOfPlots.push_back(subplot);
-            subplotAdded=true;
-          }   
-        }     
-      }      
-    
-    if(rowOfPlots.size()>0){
-      arrayOfPlots.push_back(rowOfPlots);
-    }
-  }
-
-  std::string titleStr = tickerMetaData.companyName;
-  titleStr.append(" (");
-  titleStr.append(tickerMetaData.primaryTicker);
-  titleStr.append(") - ");
-  titleStr.append(tickerMetaData.country);
-  
-  sciplot::Figure figTicker(arrayOfPlots);
-
-  figTicker.title(titleStr);
-
-  sciplot::Canvas canvas = {{figTicker}};
-  unsigned int nrows = subplotMetricNames.size();
-  unsigned int ncols=0;
-  for(unsigned int i=0; i<subplotMetricNames.size();++i){
-    if(ncols < subplotMetricNames[i].size()){
-      ncols=subplotMetricNames[i].size();
-    }
-  }
 
   size_t canvasWidth  = 
     static_cast<size_t>(
@@ -721,17 +500,183 @@ bool plotTickerData(
   // Save the figure to a PDF file
   canvas.save(outputPlotPath);
 
-  return success;
+}
+
+//==============================================================================
+void updatePlotArray(
+        std::vector< std::vector < sciplot::Plot2D >> &matrixOfPlots,
+        PlottingFunctions::PlotSettings &plotSettingsUpd,        
+        const TickerMetaData &tickerMetaData,
+        const nlohmann::ordered_json &fundamentalData,
+        const nlohmann::ordered_json &historicalData,
+        const nlohmann::ordered_json &calculateData,
+        const nlohmann::ordered_json &plotConfiguration,     
+        const std::vector< std::string > &keywords,
+        const std::vector< std::string > &replacements,          
+        bool verbose)
+{
+  double tmp = 
+    JsonFunctions::getJsonFloat(plotConfiguration["settings"]["rows"],false);
+  size_t nrows = static_cast<size_t>(tmp);
+
+  tmp = 
+    JsonFunctions::getJsonFloat(plotConfiguration["settings"]["columns"],false);
+  size_t ncols = static_cast<size_t>(tmp);
+
+  if(matrixOfPlots.size() != nrows){
+    matrixOfPlots.resize(nrows);
+  }
+  for(size_t i=0; i < nrows; ++i){
+    if(matrixOfPlots[i].size() != ncols){
+      matrixOfPlots[i].resize(ncols);
+    }
+  }
+
+  double plotWidthCm = 
+    JsonFunctions::getJsonFloat(
+      plotConfiguration["settings"]["plotWidthCm"],false);
+
+  double plotHeightCm = 
+    JsonFunctions::getJsonFloat(
+      plotConfiguration["settings"]["plotHeightCm"],false);
+
+  plotSettingsUpd.plotWidthInPoints = 
+    PlottingFunctions::convertCentimetersToPoints(plotWidthCm);     
+
+  plotSettingsUpd.plotHeightInPoints = 
+    PlottingFunctions::convertCentimetersToPoints(plotHeightCm);     
+
+  
+
+
+  for(auto &plotConfig : plotConfiguration["plots"].items()){
+
+    //Get the JsonMetaData
+    std::string jsonData;
+    std::vector< JsonMetaData > jsonMetaDataVector;
+    JsonFunctions::getJsonString(plotConfig.value()["jsonData"], jsonData);  
+
+
+    if(jsonData.compare("fundamentalData")==0){
+      JsonMetaData jsonMetaData(fundamentalData);
+      jsonMetaDataVector.push_back(jsonMetaData);
+
+
+    }else if(jsonData.compare("historicalData")==0){
+      JsonMetaData jsonMetaData(historicalData);
+      jsonMetaDataVector.push_back(jsonMetaData);
+
+
+    }else if(jsonData.compare("calculateData")==0){
+      JsonMetaData jsonMetaData(calculateData);
+      jsonMetaDataVector.push_back(jsonMetaData);
+
+    }else{
+      std::cout << "Error: jsonData type not recognized. The field jsonData "
+                << "needs to be in the set [fundamentalData, historicalData, "
+                << "calculateData] but instead this was passed in: "
+                << jsonData
+                << std::endl;
+      std::abort();                
+    }
+
+    size_t indexEnd = jsonMetaDataVector.size()-1;
+    jsonMetaDataVector[indexEnd].address.clear();
+    for(auto &addressItem : plotConfig.value()["address"].items()){
+      std::string fieldName;
+      JsonFunctions::getJsonString(addressItem.value(),fieldName);
+      jsonMetaDataVector[indexEnd].address.push_back(fieldName);
+    }
+    std::string fieldName;
+    JsonFunctions::getJsonString(plotConfig.value()["fieldName"],fieldName);
+    jsonMetaDataVector[indexEnd].fieldName = fieldName;
+
+    std::string dateName;
+    JsonFunctions::getJsonString(plotConfig.value()["dateName"],dateName);
+    jsonMetaDataVector[indexEnd].dateName = dateName;
+    
+    jsonMetaDataVector[indexEnd].isArray = 
+      JsonFunctions::getJsonBool(plotConfig.value()["isArray"],false);
+
+
+    //Get the LineSettings
+    LineSettings lineSettings;
+    JsonFunctions::getJsonString(plotConfig.value()["lineColor"],
+                                    lineSettings.colour);
+
+    JsonFunctions::getJsonString(plotConfig.value()["legendEntry"],
+                                    lineSettings.name); 
+    findReplaceKeywords(lineSettings.name,keywords,replacements);
+
+    lineSettings.lineWidth = 
+      JsonFunctions::getJsonFloat(plotConfig.value()["lineWidth"],false);
+
+
+
+    //Get the AxixSettings
+    AxisSettings axisSettings;
+    std::string xAxisLabel, yAxisLabel;
+    JsonFunctions::getJsonString(plotConfig.value()["xAxisLabel"],
+                                 axisSettings.xAxisName);        
+    findReplaceKeywords(axisSettings.xAxisName,keywords,replacements);
+                                 
+    JsonFunctions::getJsonString(plotConfig.value()["yAxisLabel"],
+                                 axisSettings.yAxisName);        
+    findReplaceKeywords(axisSettings.yAxisName,keywords,replacements);
+
+    axisSettings.xMin = JsonFunctions::getJsonFloat(plotConfig.value()["xMin"],
+                        false);
+    axisSettings.xMax = JsonFunctions::getJsonFloat(plotConfig.value()["xMax"],
+                        false);
+    axisSettings.yMin = JsonFunctions::getJsonFloat(plotConfig.value()["yMin"],
+                        false);
+    axisSettings.yMax = JsonFunctions::getJsonFloat(plotConfig.value()["yMax"],
+                        false);
+
+    //Get SubplotSettings
+    SubplotSettings subplotSettings;
+
+    tmp = JsonFunctions::getJsonFloat(plotConfig.value()["row"],false);
+    subplotSettings.indexRow = static_cast<size_t>(tmp);
+
+    tmp = JsonFunctions::getJsonFloat(plotConfig.value()["column"],false);
+    subplotSettings.indexColumn = static_cast<size_t>(tmp);
+
+    //Get Box and Whisker Settings
+    BoxAndWhiskerSettings boxWhiskerSettings;
+    tmp = JsonFunctions::getJsonFloat(plotConfig.value()["boxWhiskerPosition"],false);
+    if(tmp >= 0){
+      boxWhiskerSettings.xOffsetFromStart=tmp;
+    }else{
+      boxWhiskerSettings.xOffsetFromEnd = std::abs(tmp);
+    }
+
+    JsonFunctions::getJsonString(plotConfig.value()["boxWhiskerColor"],
+                                 boxWhiskerSettings.boxWhiskerColour);
+
+    boxWhiskerSettings.currentValueColour = lineSettings.colour;
+
+    plotMetric(
+        jsonMetaDataVector[indexEnd],
+        plotSettingsUpd,
+        lineSettings,
+        axisSettings,
+        boxWhiskerSettings,
+        matrixOfPlots[subplotSettings.indexRow][subplotSettings.indexColumn],
+        true,
+        verbose);
+  
+  }
 
 };
+
 //==============================================================================
-bool generateLaTeXReportWrapper(
+void generateLaTeXReportWrapper(
     const char* wrapperFilePath,
     const std::string &reportFileName,
     const TickerMetaData &tickerMetaData,
     bool verbose)
 {
-  bool success = true;
   if(verbose){
     std::cout << "Gerating LaTeX report wrapper file for " 
               << tickerMetaData.primaryTicker  << std::endl << std::endl; 
@@ -748,7 +693,6 @@ bool generateLaTeXReportWrapper(
               << wrapperFilePath << std::endl << std::endl
               << ofstreamErr.what()
               << std::endl;    
-    success = false;
   }
 
   //Append the opening latex commands
@@ -767,7 +711,6 @@ bool generateLaTeXReportWrapper(
   latexReport << "\\end{document}" << std::endl;
   latexReport.close();
 
-  return success;
 };
 
 //==============================================================================
@@ -780,7 +723,6 @@ bool generateLaTeXReport(
     const char* plotFileName,
     const char* plotDebuggingFileName,
     const char* outputReportPath,
-    const std::vector< std::vector< std::string >> &subplotMetricNames,
     bool replaceNansWithMissingData,
     bool verbose)
 {
@@ -986,18 +928,13 @@ bool generateLaTeXReport(
 
     //std::string date = calculateData.begin().key();
 
-    for(size_t i=0; i<subplotMetricNames.size(); ++i){
-      for(size_t j=0; j<subplotMetricNames[i].size(); ++j){
-        if(subplotMetricNames[i][j].compare("priceToValue")==0){
-          ReportingFunctions::appendValuationTable(
-            latexReport,
-            tickerMetaData.primaryTicker,
-            calculateData,
-            date,
-            verbose);
-        }
-      }  
-    }      
+    ReportingFunctions::appendValuationTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData,
+      date,
+      verbose);
+   
 
     latexReport << "\\end{multicols}" << std::endl;
 
@@ -1029,6 +966,7 @@ bool generateLaTeXReport(
   }
 
   return !skip;
+
 };
 
 //==============================================================================
@@ -1038,7 +976,8 @@ int main (int argc, char* argv[]) {
   std::string calculateDataFolder;
   std::string fundamentalFolder;
   std::string historicalFolder;
-  std::string plotConfigurationFilePath;  
+  std::string plotSummaryConfigurationFilePath;  
+  std::string plotOverviewConfigurationFilePath;  
   std::string reportFolder;
   std::string dateOfTable;
 
@@ -1092,14 +1031,17 @@ int main (int argc, char* argv[]) {
       false,"","string");
     cmd.add(dateOfTableInput);
 
-    TCLAP::ValueArg<std::string> plotConfigurationFilePathInput("c",
-      "configuration_file", 
-      "The path to the csv file that contains the names of the metrics "
-      " to plot. Note that the keywords historicalData"
-      "and empty are special: historicalData will produce a plot of the "
-      "adjusted end-of-day stock price, and empty will result in an empty plot",
+    TCLAP::ValueArg<std::string> plotSummaryConfigurationFilePathInput("s",
+      "summary_plot_configuration", 
+      "The path to the json file that defines the summary plot.",
       true,"","string");
-    cmd.add(plotConfigurationFilePathInput);    
+    cmd.add(plotSummaryConfigurationFilePathInput);    
+
+    TCLAP::ValueArg<std::string> plotOverviewConfigurationFilePathInput("r",
+      "overview_plot_configuration", 
+      "The path to the json file that defines the overview plot.",
+      true,"","string");
+    cmd.add(plotOverviewConfigurationFilePathInput);        
 
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
@@ -1107,15 +1049,18 @@ int main (int argc, char* argv[]) {
 
     cmd.parse(argc,argv);
 
-    singleFileToEvaluate      = singleFileToEvaluateInput.getValue();
-    exchangeCode              = exchangeCodeInput.getValue();  
-    plotConfigurationFilePath = plotConfigurationFilePathInput.getValue();      
-    calculateDataFolder       = calculateDataFolderInput.getValue();
-    fundamentalFolder         = fundamentalFolderInput.getValue();
-    historicalFolder          = historicalFolderInput.getValue();    
-    reportFolder              = reportFolderOutput.getValue();
-    dateOfTable               = dateOfTableInput.getValue();
-    verbose                   = verboseInput.getValue();
+    singleFileToEvaluate     = singleFileToEvaluateInput.getValue();
+    exchangeCode             = exchangeCodeInput.getValue();  
+    plotSummaryConfigurationFilePath 
+                            = plotSummaryConfigurationFilePathInput.getValue();      
+    plotOverviewConfigurationFilePath 
+                            = plotOverviewConfigurationFilePathInput.getValue();      
+    calculateDataFolder      = calculateDataFolderInput.getValue();
+    fundamentalFolder        = fundamentalFolderInput.getValue();
+    historicalFolder         = historicalFolderInput.getValue();    
+    reportFolder             = reportFolderOutput.getValue();
+    dateOfTable              = dateOfTableInput.getValue();
+    verbose                  = verboseInput.getValue();
 
     if(verbose){
       std::cout << "  Exchange Code" << std::endl;
@@ -1141,8 +1086,11 @@ int main (int argc, char* argv[]) {
       std::cout << "  Report Folder" << std::endl;
       std::cout << "    " << reportFolder << std::endl;  
 
-      std::cout << "  Plot Configuration File" << std::endl;
-      std::cout << "    " << plotConfigurationFilePath << std::endl;          
+      std::cout << "  Summary Plot Configuration File" << std::endl;
+      std::cout << "    " << plotSummaryConfigurationFilePath << std::endl;   
+
+      std::cout << "  Overview Plot Configuration File" << std::endl;
+      std::cout << "    " << plotOverviewConfigurationFilePath << std::endl;                
     }
 
   } catch (TCLAP::ArgException &e){ 
@@ -1153,9 +1101,37 @@ int main (int argc, char* argv[]) {
 
   bool replaceNansWithMissingData = true;
 
-  PlottingFunctions::PlotSettings plotSettings;
-  std::vector< std::vector < std::string > > subplotMetricNames;
-  readConfigurationFile(plotConfigurationFilePath,subplotMetricNames);
+  //PlottingFunctions::PlotSettings plotSettings;
+  //std::vector< std::vector < std::string > > subplotMetricNames;
+  //readConfigurationFile(plotSummaryConfigurationFilePath,subplotMetricNames);
+
+  //Load the summary plot configuration
+  nlohmann::ordered_json summaryPlotConfig;
+  bool loadedSummaryPlotData = 
+    JsonFunctions::loadJsonFile(plotSummaryConfigurationFilePath,
+                                summaryPlotConfig, 
+                                verbose);
+
+  if(!loadedSummaryPlotData){
+    std::cout << "Error: could not load "  << std::endl; 
+    std::cout << plotSummaryConfigurationFilePath << std::endl;
+    std::abort();
+  }
+  
+  //Load the overview plot configuration
+  nlohmann::ordered_json overviewPlotConfig;
+  bool loadedOverviewPlotData = 
+    JsonFunctions::loadJsonFile(plotOverviewConfigurationFilePath,
+                                overviewPlotConfig, 
+                                verbose);
+
+  if(!loadedOverviewPlotData){
+    std::cout << "Error: could not load "  << std::endl; 
+    std::cout << plotOverviewConfigurationFilePath << std::endl;
+    std::abort();
+  }
+
+
 
   std::vector< std::string > processedTickers;
 
@@ -1171,6 +1147,8 @@ int main (int argc, char* argv[]) {
   //  a. The pdf of the ticker's plots
   //  b. The LaTeX file for the report (as an input)
   //  c. A wrapper LaTeX file to generate an individual report
+
+
 
   for (const auto & file 
         : std::filesystem::directory_iterator(calculateDataFolder)){  
@@ -1235,6 +1213,7 @@ int main (int argc, char* argv[]) {
       if(loadedFundData){
         loadedFundData = !fundamentalData.empty();
       }
+    
       nlohmann::ordered_json historicalData;
       bool loadedHistData =JsonFunctions::loadJsonFile(ticker, 
                                 historicalFolder, historicalData, verbose); 
@@ -1256,45 +1235,87 @@ int main (int argc, char* argv[]) {
         TickerMetaData tickerMetaData;
         getTickerMetaData(fundamentalData, tickerMetaData);
         bool isTickerProcessed = isNameInList(tickerMetaData.primaryTicker, 
-                                            processedTickers);  
+                                            processedTickers); 
+
+        std::vector< std::string > keywords;
+        std::vector< std::string > replacements;
+        getFindAndReplacementVectors( tickerMetaData,
+                                      keywords,
+                                      replacements);
 
         //
         // Generate and save the pdf
         //
         if(!isTickerProcessed && tickerMetaData.companyName.length() > 0){
 
-          std::filesystem::path outputPlotFilePath = outputFolderPath;
-          std::string plotFileName("fig_");
-          plotFileName.append(tickerFolderName);
-          plotFileName.append(".pdf");
-          outputPlotFilePath.append(plotFileName);
-        
-          bool successPlotTickerData = 
-            plotTickerData(
-              tickerMetaData,
-              fundamentalData,
-              historicalData,
-              calculateData,
-              outputPlotFilePath.c_str(),
-              subplotMetricNames,
-              plotSettings,
-              false);
+          std::filesystem::path outputPlotFilePath = outputFolderPath;                  
+          PlottingFunctions::PlotSettings plotSettingsSummary;
+          std::vector< std::vector< sciplot::Plot2D >> summaryPlots;
 
-          std::filesystem::path outputDebuggingPlotFilePath = outputFolderPath;
-          std::string plotDebuggingFileName("fig_");
-          plotDebuggingFileName.append(tickerFolderName);
-          plotDebuggingFileName.append("_Debugging.pdf");
-          outputDebuggingPlotFilePath.append(plotDebuggingFileName);
+          updatePlotArray(
+            summaryPlots,
+            plotSettingsSummary,
+            tickerMetaData,
+            fundamentalData,
+            historicalData,
+            calculateData,
+            summaryPlotConfig,
+            keywords,
+            replacements,
+            verbose);
 
-          bool successPlotDebuggingData=
-            plotDebuggingData(
-              tickerMetaData,
-              fundamentalData,
-              historicalData,
-              calculateData,
-              outputDebuggingPlotFilePath.c_str(),
-              plotSettings,
-              false);
+          std::string titleSummary;
+          JsonFunctions::getJsonString( summaryPlotConfig["settings"]["title"],
+                                        titleSummary);
+          findReplaceKeywords(titleSummary, keywords,replacements);                                        
+
+          std::string plotSummaryFileName;
+          JsonFunctions::getJsonString( summaryPlotConfig["settings"]["fileName"],
+                                        plotSummaryFileName);                                        
+          findReplaceKeywords(plotSummaryFileName, keywords,replacements); 
+
+          std::filesystem::path outputSummaryPlotFilePath = outputFolderPath;          
+          outputSummaryPlotFilePath.append(plotSummaryFileName);
+
+          writePlot(summaryPlots,
+                    plotSettingsSummary,
+                    titleSummary,
+                    outputSummaryPlotFilePath.c_str());
+
+
+          PlottingFunctions::PlotSettings plotSettingsOverview;
+          std::vector< std::vector< sciplot::Plot2D >> overviewPlots;
+
+          updatePlotArray(
+            overviewPlots,
+            plotSettingsOverview,
+            tickerMetaData,
+            fundamentalData,
+            historicalData,
+            calculateData,
+            overviewPlotConfig,
+            keywords,
+            replacements,
+            verbose);
+
+          std::string titleOverview;
+          JsonFunctions::getJsonString( overviewPlotConfig["settings"]["title"],
+                                        titleOverview);
+          findReplaceKeywords(titleOverview, keywords, replacements); 
+
+          std::string plotOverviewFileName;
+          JsonFunctions::getJsonString( overviewPlotConfig["settings"]["fileName"],
+                                        plotOverviewFileName);                                        
+          findReplaceKeywords(plotOverviewFileName, keywords, replacements); 
+
+          std::filesystem::path outputOverviewPlotFilePath = outputFolderPath;          
+          outputOverviewPlotFilePath.append(plotOverviewFileName);
+
+          writePlot(overviewPlots,
+                    plotSettingsOverview,
+                    titleOverview,
+                    outputOverviewPlotFilePath.c_str());
+
 
           std::filesystem::path outputReportFilePath = outputFolderPath;
           std::string reportFileName(tickerFolderName);
@@ -1313,10 +1334,9 @@ int main (int argc, char* argv[]) {
               fundamentalData,
               historicalData,
               calculateData,
-              plotFileName.c_str(),
-              plotDebuggingFileName.c_str(),
+              plotSummaryFileName.c_str(),
+              plotOverviewFileName.c_str(),
               outputReportFilePath.c_str(),    
-              subplotMetricNames,
               replaceNansWithMissingData,
               false); 
 
@@ -1326,25 +1346,23 @@ int main (int argc, char* argv[]) {
           outputReportFilePath = outputFolderPath;
           outputReportFilePath.append(wrapperFileName);
 
-          bool successGenerateLatexReportWrapper =
-            generateLaTeXReportWrapper(outputReportFilePath.c_str(), 
-                                       reportFileName, 
-                                       tickerMetaData,
-                                       false);
+
+          generateLaTeXReportWrapper(outputReportFilePath.c_str(), 
+                                      reportFileName, 
+                                      tickerMetaData,
+                                      false);
 
           processedTickers.push_back(tickerMetaData.primaryTicker);
 
           if(verbose){
-            if(  !successPlotTickerData 
-              || !successGenerateLaTeXReport  
-              || !successGenerateLatexReportWrapper){
+            if(  !successGenerateLaTeXReport){
               std::cout << '\t' << "skipping" << std::endl;
-              std::cout << '\t' << successPlotTickerData 
-                        << '\t' << "plotting" << std::endl;
+              //std::cout << '\t' << successPlotTickerData 
+              //          << '\t' << "plotting" << std::endl;
               std::cout << '\t' << successGenerateLaTeXReport 
                         << '\t' << "report generation" << std::endl;
-              std::cout << '\t' << successGenerateLatexReportWrapper 
-                        << '\t' << "report wrapper generation" << std::endl;
+              //std::cout << '\t' << successGenerateLatexReportWrapper 
+              //          << '\t' << "report wrapper generation" << std::endl;
 
             }
           }

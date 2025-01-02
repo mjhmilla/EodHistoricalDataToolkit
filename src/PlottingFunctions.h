@@ -194,7 +194,7 @@ public:
                                     double x,   
                                     double xWidth,   
                                     const SummaryStatistics &summary,
-                                    const char* lineColor,
+                                    const char* boxColor,
                                     const char* currentColor,
                                     const int currentLineType,
                                     const PlotSettings &settings,
@@ -215,7 +215,7 @@ public:
     yBox[4]= summary.percentiles[P25];
 
     plotUpd.drawCurveFilled(xBox,yBox)
-            .fillColor(lineColor)
+            .fillColor(boxColor)
             .lineWidth(0.)
             .labelNone();
 
@@ -228,7 +228,7 @@ public:
     yLine[1] = summary.max;
 
     plotUpd.drawCurve(xLine,yLine)
-            .lineColor(lineColor)
+            .lineColor(boxColor)
             .lineWidth(settings.lineWidth)
             .dashType(1)
             .labelNone();
@@ -239,7 +239,7 @@ public:
     yLine[1] = summary.percentiles[P95];
 
     plotUpd.drawCurve(xLine,yLine)
-            .lineColor(lineColor)
+            .lineColor(boxColor)
             .lineWidth(settings.lineWidth*2)
             .labelNone();
 
@@ -249,7 +249,7 @@ public:
     yLine[1] = summary.percentiles[P95];
 
     plotUpd.drawCurve(xLine,yLine)
-            .lineColor(lineColor)
+            .lineColor(boxColor)
             .lineWidth(settings.lineWidth*2)
             .labelNone();              
 
@@ -259,7 +259,7 @@ public:
     yLine[1] = summary.min;
 
     plotUpd.drawCurve(xLine,yLine)
-            .lineColor(lineColor)
+            .lineColor(boxColor)
             .lineWidth(settings.lineWidth)
             .dashType(1)
             .labelNone();
@@ -270,7 +270,7 @@ public:
     yLine[1] = summary.percentiles[P05];
 
     plotUpd.drawCurve(xLine,yLine)
-            .lineColor(lineColor)
+            .lineColor(boxColor)
             .lineWidth(settings.lineWidth*2)
             .labelNone();
 
@@ -280,12 +280,12 @@ public:
     yLine[1] = summary.percentiles[P05];
 
     plotUpd.drawCurve(xLine,yLine)
-            .lineColor(lineColor)
+            .lineColor(boxColor)
             .lineWidth(settings.lineWidth*2)
             .labelNone();            
 
-    xLine[0] = x-xWidth*0.5;
-    xLine[1] = x+xWidth*0.5;
+    xLine[0] = x-xWidth;
+    xLine[1] = x+xWidth;
     yLine[0] = summary.percentiles[P50];
     yLine[1] = summary.percentiles[P50];
 
@@ -294,20 +294,19 @@ public:
             .lineWidth(settings.lineWidth)
             .labelNone();
 
-    /*
-    xLine[0] = x-xWidth*0.5;
-    xLine[1] = x+xWidth*0.5;
+    xLine[0] = x-xWidth;
+    xLine[1] = x+xWidth;
     yLine[0] = summary.current;
     yLine[1] = summary.current;
 
     plotUpd.drawCurve(xLine,yLine)
             .lineColor("gray100")
-            .lineWidth(settings.lineWidth*3)
+            .lineWidth(settings.lineWidth*2)
             .labelNone();
-    */
+
    
-    xLine[0] = x-xWidth*0.5;
-    xLine[1] = x+xWidth*0.5;
+    xLine[0] = x-xWidth;
+    xLine[1] = x+xWidth;
     yLine[0] = summary.current;
     yLine[1] = summary.current;
 
