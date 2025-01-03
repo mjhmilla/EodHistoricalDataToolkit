@@ -5,7 +5,6 @@
 
 #include <iostream>
 #include <sstream>
-#include <nlohmann/json.hpp>
 
 #include "JsonFunctions.h"
 #include "UtilityFunctions.h"
