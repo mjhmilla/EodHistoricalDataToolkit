@@ -26,7 +26,51 @@ class JsonFunctions {
     //
     static constexpr double MISSING_VALUE = 0.000001;
 
+//==============================================================================
+//From:
+//https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
+    template <typename T>
+    static std::vector< size_t > sort_indices(std::vector<T> &v){
+      std::vector< size_t > idx(v.size());
+      std::iota(idx.begin(),idx.end(),0);
+      std::stable_sort(idx.begin(),idx.end(),
+                        [&v](size_t i1, size_t i2){return v[i1]<v[i2];});
+      std::stable_sort(v.begin(),v.end());
+      return idx;
+    }
 
+//==============================================================================
+    static double convertToFractionalYear(const std::string &dateStr){
+      date::year_month_day dateYmd;
+      date::sys_days dateDay, dateDayFirstOfYear;
+
+      std::istringstream dateStrStreamA(dateStr);
+      dateStrStreamA.exceptions(std::ios::failbit);
+      dateStrStreamA >> date::parse("%Y-%m-%d",dateDay);
+
+      std::istringstream dateStrStreamB(dateStr);
+      dateStrStreamB.exceptions(std::ios::failbit);
+      dateStrStreamB >> date::parse("%Y-%m-%d",dateYmd);
+
+      int year = int(dateYmd.year());
+      std::string dateStrFirstOfYear(dateStr.substr(0,4));
+      dateStrFirstOfYear.append("-01-01");
+
+      std::istringstream dateStrStreamC(dateStrFirstOfYear);
+      dateStrStreamC.exceptions(std::ios::failbit);      
+      dateStrStreamC >> date::parse("%Y-%m-%d",dateDayFirstOfYear);
+
+      double daysInYear = 365.0;
+      if(dateYmd.year().is_leap()){
+        daysInYear=364.0;
+      }
+      double date = double(year) 
+        + double( (dateDay-dateDayFirstOfYear).count() )/daysInYear;
+
+      return date;
+    };
+
+//==============================================================================
     static bool loadJsonFile(const std::string &fileName, 
                              const std::string &folder,
                              nlohmann::ordered_json &jsonData,
@@ -37,6 +81,7 @@ class JsonFunctions {
 
     }
 
+//==============================================================================
     static bool loadJsonFile(const std::string &fullFilePath,
                              nlohmann::ordered_json &jsonData,
                              bool verbose){
@@ -63,6 +108,7 @@ class JsonFunctions {
       return success;
     };
 
+//==============================================================================
     static bool isJsonFloatValid(double value){
       if(std::isnan(value) || std::isinf(value)){
         return false;
@@ -74,6 +120,8 @@ class JsonFunctions {
       }
     }
 
+
+//==============================================================================
     static bool doesFieldExist(const nlohmann::ordered_json &jsonTable,
                                std::vector< std::string > &fields){
       bool fieldExists = true;                                
@@ -111,6 +159,8 @@ class JsonFunctions {
       return fieldExists;
     };
 
+
+//==============================================================================
     static bool getJsonBool(const nlohmann::ordered_json &jsonTable,
                                std::vector< std::string > &fields,
                                bool setNansToMissingValue=false){
@@ -154,6 +204,8 @@ class JsonFunctions {
       return value;
     };
 
+
+//==============================================================================
     static double getJsonFloat(const nlohmann::ordered_json &jsonTable,
                                std::vector< std::string > &fields,
                                bool setNansToMissingValue=false){
@@ -198,6 +250,8 @@ class JsonFunctions {
       return value;
     };
 
+
+//==============================================================================
     static void getJsonString(const nlohmann::ordered_json &jsonTable,
                                std::vector< std::string > &fields,
                                std::string &stringUpd){
@@ -229,6 +283,7 @@ class JsonFunctions {
       };            
     };    
 
+//==============================================================================
     static bool getJsonElement(
                     const nlohmann::ordered_json &jsonTable,
                     const std::vector< std::string > &fields,
@@ -263,6 +318,8 @@ class JsonFunctions {
       return success;            
     };
 
+
+//==============================================================================
     static double getJsonFloat(const nlohmann::ordered_json &jsonEntry,
                                bool setNansToMissingValue=false){
       if(  jsonEntry.is_null()){
@@ -287,7 +344,7 @@ class JsonFunctions {
 
     };
 
-
+//==============================================================================
     static bool getJsonBool(const nlohmann::ordered_json &jsonEntry,
                             bool replaceNanWithFalse=false){
       if(  jsonEntry.is_null()){
@@ -305,6 +362,7 @@ class JsonFunctions {
       }
     };
 
+//==============================================================================
     static void getJsonString(const nlohmann::ordered_json &jsonEntry,
                               std::string &updString){
       if( jsonEntry.is_null()){
@@ -314,6 +372,7 @@ class JsonFunctions {
       }                            
     };
 
+//==============================================================================
     static void getPrimaryTickerName(const std::string &folder, 
                               const std::string &fileName, 
                               std::string &updPrimaryTickerName){
@@ -337,6 +396,7 @@ class JsonFunctions {
       }
     };
 
+//==============================================================================
     static int findClosestDate(const nlohmann::ordered_json &jsonTable,
                                const date::sys_days &targetDay,
                                const char* dateFormat,
@@ -366,6 +426,61 @@ class JsonFunctions {
         }
         return smallestDayError;
     };
+
+//==============================================================================
+    static void extractDataSeries(
+          const nlohmann::ordered_json &jsonData,
+          const std::vector<std::string> &addressToTimeSeries,
+          const char* dateFieldName,
+          const char* floatFieldName,
+          std::vector<double> &dateSeries,
+          std::vector<double> &floatSeries){
+
+      dateSeries.clear();
+      floatSeries.clear();
+      std::vector< double > tmpFloatSeries;
+
+      nlohmann::ordered_json jsonElement;
+
+      bool isElementValid = false;
+
+      if(addressToTimeSeries.size()>0){
+        isElementValid = JsonFunctions::getJsonElement(
+                            jsonData, addressToTimeSeries,jsonElement);
+      }else{
+        jsonElement = jsonData;
+        if(jsonElement.size()>0){
+          isElementValid=true;
+        }
+      }
+
+      if(isElementValid){
+        for(auto &el: jsonElement.items()){
+
+          double floatData = 
+            JsonFunctions::getJsonFloat(el.value()[floatFieldName]);
+
+          if(JsonFunctions::isJsonFloatValid(floatData)){
+        
+            tmpFloatSeries.push_back(floatData);
+
+            std::string dateEntryStr;
+            JsonFunctions::getJsonString(el.value()[dateFieldName],
+                            dateEntryStr); 
+
+            double timeData = convertToFractionalYear(dateEntryStr);
+            dateSeries.push_back(timeData);
+          }
+        
+        }
+
+        std::vector< size_t > indicesSorted = sort_indices(dateSeries);
+        for(size_t i=0; i<indicesSorted.size();++i){
+          floatSeries.push_back( tmpFloatSeries[ indicesSorted[i] ] );
+        }
+      }
+
+    };    
 
 };
 

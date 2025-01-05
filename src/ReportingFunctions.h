@@ -8,7 +8,6 @@
 #include <nlohmann/json.hpp>
 
 #include "JsonFunctions.h"
-#include "UtilityFunctions.h"
 
 
 class ReportingFunctions {

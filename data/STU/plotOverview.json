@@ -99,10 +99,32 @@
       "boxWhiskerColor": "grey40",
       "boxWhiskerPosition" : -1      
     },    
-    "outstandingSharesQ":
+    "value":
     {
       "row":2,
       "column":0,
+      "jsonData":"calculateData",
+      "address":[],
+      "fieldName":"priceToValue_presentValue_approximation",
+      "dateName":"date",
+      "isArray":true,
+      "legendEntry": "@PrimaryTickerLaTeX",
+      "lineColor":"black",
+      "lineWidth": 0.5,
+      "xAxisLabel":"Years",
+      "yAxisLabel":"Present Value (DCM)",
+      "xMin": null,
+      "xMax": null,      
+      "yMin": null,
+      "yMax": null, 
+      "useLogScale": false,
+      "boxWhiskerColor": "grey70",
+      "boxWhiskerPosition" : -1      
+    },    
+    "outstandingSharesQ":
+    {
+      "row":2,
+      "column":1,
       "jsonData":"fundamentalData",
       "address":["outstandingShares","quarterly"],
       "fieldName":"shares",
@@ -124,7 +146,7 @@
     "outstandingSharesA":
     {
       "row":2,
-      "column":0,
+      "column":1,
       "jsonData":"fundamentalData",
       "address":["outstandingShares","annual"],
       "fieldName":"shares",
@@ -142,28 +164,6 @@
       "useLogScale": false,
       "boxWhiskerColor": "grey40",
       "boxWhiskerPosition" : -2      
-    },
-    "marketCapitalization":
-    {
-      "row":2,
-      "column":1,
-      "jsonData":"calculateData",
-      "address":[],
-      "fieldName":"priceToValue_marketCapitalization",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX",
-      "lineColor":"black",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Market Capitalization (@CurrencyCodeLaTeX)",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null, 
-      "useLogScale": false,
-      "boxWhiskerColor": "grey40",
-      "boxWhiskerPosition" : -1      
     },
     "freeCashFlowQ":
     {

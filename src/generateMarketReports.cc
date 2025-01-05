@@ -388,14 +388,9 @@ bool appendMetricData(const std::string &tickerFileName,
                         targetJsonTable[closestDate],fieldAddress);
 
         }
-
-        sciplot::Vec metricDataVec(metricData.size());
-        for(size_t i=0; i< metricData.size(); ++i){
-          metricDataVec[i] = metricData[i];
-        }
                                 
         PlottingFunctions::SummaryStatistics percentileSummary;
-        PlottingFunctions::extractSummaryStatistics(metricDataVec,
+        PlottingFunctions::extractSummaryStatistics(metricData,
                                                     percentileSummary); 
         percentileSummary.current = targetMetricValue;                                                    
 

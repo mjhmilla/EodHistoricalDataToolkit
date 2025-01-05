@@ -18,55 +18,8 @@
 
 #include "FinancialAnalysisToolkit.h"
 #include "JsonFunctions.h"
-#include "UtilityFunctions.h"
 #include "ReportingFunctions.h"
 #include "PlottingFunctions.h"
-
-
-//const char* BoxAndWhiskerColorA="web-blue";
-//const char* BoxAndWhiskerColorB="gray0";
-
-//==============================================================================
-struct LineSettings{
-  std::string colour;
-  std::string name;
-  double lineWidth;
-};
-
-struct BoxAndWhiskerSettings{
-  double xOffsetFromStart;
-  double xOffsetFromEnd;
-  std::string boxWhiskerColour;
-  std::string currentValueColour;
-  BoxAndWhiskerSettings():
-    xOffsetFromStart(std::nan("1")),
-    xOffsetFromEnd(std::nan("1")),    
-    boxWhiskerColour("blue"),
-    currentValueColour("black"){};
-};
-
-
-struct AxisSettings{
-  std::string xAxisName;
-  std::string yAxisName;
-  double xMin;
-  double xMax;  
-  double yMin;
-  double yMax;
-  AxisSettings():
-    xAxisName(""),
-    yAxisName(""),
-    xMin(std::nan("1")),
-    xMax(std::nan("1")),
-    yMin(std::nan("1")),
-    yMax(std::nan("1")){};
-
-};
-
-struct SubplotSettings{
-  size_t indexRow;
-  size_t indexColumn;
-};
 
 
 //==============================================================================
@@ -155,20 +108,6 @@ void getTickerMetaData(
                                tickerMetaDataUpd.url);  
 
 };
-//==============================================================================
-//From:
-//https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
-template <typename T>
-std::vector< size_t > sort_indices(std::vector<T> &v){
-  std::vector< size_t > idx(v.size());
-  std::iota(idx.begin(),idx.end(),0);
-
-  std::stable_sort(idx.begin(),idx.end(),
-                    [&v](size_t i1, size_t i2){return v[i1]<v[i2];});
-  std::stable_sort(v.begin(),v.end());
-
-  return idx;
-}
 
 //==============================================================================
 void findReplaceKeywords(std::string &stringToUpd,
@@ -243,60 +182,6 @@ void getFindAndReplacementVectors(const TickerMetaData &tickerMetaData,
 
 };
 
-//==============================================================================
-void extractDataSeries(
-      const nlohmann::ordered_json &jsonData,
-      const std::vector<std::string> &addressToTimeSeries,
-      const char* dateFieldName,
-      const char* floatFieldName,
-      std::vector<double> &dateSeries,
-      std::vector<double> &floatSeries){
-
-  dateSeries.clear();
-  floatSeries.clear();
-  std::vector< double > tmpFloatSeries;
-
-  nlohmann::ordered_json jsonElement;
-
-  bool isElementValid = false;
-
-  if(addressToTimeSeries.size()>0){
-    isElementValid = JsonFunctions::getJsonElement(
-                        jsonData, addressToTimeSeries,jsonElement);
-  }else{
-    jsonElement = jsonData;
-    if(jsonElement.size()>0){
-      isElementValid=true;
-    }
-  }
-
-  if(isElementValid){
-    for(auto &el: jsonElement.items()){
-
-      double floatData = 
-        JsonFunctions::getJsonFloat(el.value()[floatFieldName]);
-
-      if(JsonFunctions::isJsonFloatValid(floatData)){
-    
-        tmpFloatSeries.push_back(floatData);
-
-        std::string dateEntryStr;
-        JsonFunctions::getJsonString(el.value()[dateFieldName],
-                        dateEntryStr); 
-
-        double timeData = UtilityFunctions::convertToFractionalYear(dateEntryStr);
-        dateSeries.push_back(timeData);
-      }
-    
-    }
-
-    std::vector< size_t > indicesSorted = sort_indices(dateSeries);
-    for(size_t i=0; i<indicesSorted.size();++i){
-      floatSeries.push_back( tmpFloatSeries[ indicesSorted[i] ] );
-    }
-  }
-
-}
 
 //==============================================================================
 void formatJsonFieldAsLabel(std::string &nameUpd){
@@ -311,196 +196,6 @@ void formatJsonFieldAsLabel(std::string &nameUpd){
   ReportingFunctions::convertCamelCaseToSpacedText(nameUpd);
 }
 
-//==============================================================================
-void plotMetric(
-        const JsonMetaData &jsonData,
-        const PlottingFunctions::PlotSettings &plotSettings,        
-        const LineSettings &lineSettings,
-        const AxisSettings &axisSettings,
-        const BoxAndWhiskerSettings &boxAndWhiskerSettings,
-        sciplot::Plot2D &plotMetricUpd,
-        bool removeInvalidData,
-        bool verbose)
-{
-
-    std::vector<double> xTmp;
-    std::vector<double> yTmp;
-
-    extractDataSeries(
-        jsonData.jsonData,
-        jsonData.address,
-        jsonData.dateName.c_str(),
-        jsonData.fieldName.c_str(),
-        xTmp,
-        yTmp);     
-    
-    bool timeSeriesValid = (xTmp.size()>0 && yTmp.size() > 0);
-
-    if(timeSeriesValid || !removeInvalidData){
-      
-      if(!timeSeriesValid){
-        xTmp.push_back(JsonFunctions::MISSING_VALUE);
-        yTmp.push_back(JsonFunctions::MISSING_VALUE);
-      }
-
-      sciplot::Vec x(xTmp.size());
-      sciplot::Vec y(yTmp.size());
-
-      for(size_t i=0; i<xTmp.size();++i){
-        x[i]= xTmp[i];
-        y[i]=yTmp[i];
-      }
-      PlottingFunctions::SummaryStatistics metricSummaryStatistics;
-      metricSummaryStatistics.name=jsonData.fieldName;
-      bool validSummaryStats = 
-        PlottingFunctions::extractSummaryStatistics(y,
-                            metricSummaryStatistics);
-      metricSummaryStatistics.current = yTmp[yTmp.size()-1];
-
-      plotMetricUpd.drawCurve(x,y)
-        .label(lineSettings.name)
-        .lineColor(lineSettings.colour)
-        .lineWidth(lineSettings.lineWidth);
-
-      std::vector< double > xRange,yRange;
-      PlottingFunctions::getDataRange(xTmp,xRange,1.0);
-      PlottingFunctions::getDataRange(yTmp,yRange,
-                          std::numeric_limits< double >::lowest());
-      if(yRange[0] > 0){
-        yRange[0] = 0;
-      }
-      if(yRange[1]-yRange[0] <= 0){
-        yRange[1] = 1.0;
-      }
-      //Add some blank space to the top of the plot
-      yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
-      int currentLineType=1;
-
-      if(!std::isnan(axisSettings.xMin)){
-        xRange[0]=axisSettings.xMin;
-      }
-
-      if(!std::isnan(axisSettings.xMax)){
-        xRange[1]=axisSettings.xMax;
-      }
-
-      if(!std::isnan(axisSettings.yMin)){
-        yRange[0]=axisSettings.yMin;
-      }
-
-      if(!std::isnan(axisSettings.yMax)){
-        yRange[1]=axisSettings.yMax;
-      }
-
-      plotMetricUpd.legend().atTopLeft();   
-
-      if(validSummaryStats){
-        double xPos = xRange[1]+1;
-        if(!std::isnan(boxAndWhiskerSettings.xOffsetFromStart)){
-          xPos = xRange[0]+boxAndWhiskerSettings.xOffsetFromStart;
-        }
-        if(!std::isnan(boxAndWhiskerSettings.xOffsetFromEnd)){
-          xPos = xRange[1]+boxAndWhiskerSettings.xOffsetFromEnd;          
-        }
-
-        PlottingFunctions::drawBoxAndWhisker(
-            plotMetricUpd,
-            xPos,
-            0.5,
-            metricSummaryStatistics,
-            boxAndWhiskerSettings.boxWhiskerColour.c_str(),
-            boxAndWhiskerSettings.currentValueColour.c_str(),
-            currentLineType,
-            plotSettings,
-            verbose);
-      }
-
-      if(!std::isnan(boxAndWhiskerSettings.xOffsetFromStart)){
-        xRange[0] += (boxAndWhiskerSettings.xOffsetFromStart-1);
-      }
-      if(!std::isnan(boxAndWhiskerSettings.xOffsetFromEnd)){
-        xRange[1] += (boxAndWhiskerSettings.xOffsetFromEnd+1);          
-      }
-
-      plotMetricUpd.xrange(
-          static_cast<sciplot::StringOrDouble>(xRange[0]),
-          static_cast<sciplot::StringOrDouble>(xRange[1]));              
-
-      plotMetricUpd.yrange(
-          static_cast<sciplot::StringOrDouble>(yRange[0]),
-          static_cast<sciplot::StringOrDouble>(yRange[1]));
-
-      if((xRange[1]-xRange[0])<5.0){
-        plotMetricUpd.xtics().increment(plotSettings.xticMinimumIncrement);
-      }
-
-      if((xRange[1]-xRange[0]) > 10){
-        double xSpan = (xRange[1]-xRange[0]);
-        double increment = 1;
-
-        while( xSpan/increment > 10 ){
-          if(std::abs(increment-1) < std::numeric_limits<double>::epsilon()){
-            increment = 5.0;
-          }else{
-            increment += 5.0;
-          }
-        }
-
-        plotMetricUpd.xtics().increment(increment);
-
-      }
-
-
-      PlottingFunctions::configurePlot( plotMetricUpd,
-                                        axisSettings.xAxisName,
-                                        axisSettings.yAxisName,
-                                        plotSettings);
-
-    }
-
-
-};
-
-//==============================================================================
-void writePlot(
-      const std::vector< std::vector < sciplot::Plot2D >> &matrixOfPlots,
-      const PlottingFunctions::PlotSettings &plotSettings,  
-      const std::string &titleStr,    
-      const std::string &outputPlotPath)
-{
-
-  size_t nrows = matrixOfPlots.size();
-  size_t ncols = matrixOfPlots[0].size();
-
-  std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlotVariants;    
-
-  for(size_t indexRow=0; indexRow < nrows; ++indexRow){
-    std::vector< sciplot::PlotVariant > rowOfPlotVariants;    
-    for(size_t indexCol=0; indexCol < ncols; ++indexCol){
-      rowOfPlotVariants.push_back(matrixOfPlots[indexRow][indexCol]);
-    }
-    arrayOfPlotVariants.push_back(rowOfPlotVariants);
-  }
-  
-  sciplot::Figure figTicker(arrayOfPlotVariants);
-
-  figTicker.title(titleStr);
-
-  sciplot::Canvas canvas = {{figTicker}};
-
-  size_t canvasWidth  = 
-    static_cast<size_t>(
-      plotSettings.plotWidthInPoints*static_cast<double>(ncols));
-  size_t canvasHeight = 
-    static_cast<size_t>(
-      plotSettings.plotHeightInPoints*static_cast<double>(nrows));
-
-  canvas.size(canvasWidth, canvasHeight) ;
-
-  // Save the figure to a PDF file
-  canvas.save(outputPlotPath);
-
-}
 
 //==============================================================================
 void updatePlotArray(
@@ -600,7 +295,7 @@ void updatePlotArray(
 
 
     //Get the LineSettings
-    LineSettings lineSettings;
+    PlottingFunctions::LineSettings lineSettings;
     JsonFunctions::getJsonString(plotConfig.value()["lineColor"],
                                     lineSettings.colour);
 
@@ -614,7 +309,7 @@ void updatePlotArray(
 
 
     //Get the AxixSettings
-    AxisSettings axisSettings;
+    PlottingFunctions::AxisSettings axisSettings;
     std::string xAxisLabel, yAxisLabel;
     JsonFunctions::getJsonString(plotConfig.value()["xAxisLabel"],
                                  axisSettings.xAxisName);        
@@ -634,7 +329,7 @@ void updatePlotArray(
                         false);
 
     //Get SubplotSettings
-    SubplotSettings subplotSettings;
+    PlottingFunctions::SubplotSettings subplotSettings;
 
     tmp = JsonFunctions::getJsonFloat(plotConfig.value()["row"],false);
     subplotSettings.indexRow = static_cast<size_t>(tmp);
@@ -643,7 +338,7 @@ void updatePlotArray(
     subplotSettings.indexColumn = static_cast<size_t>(tmp);
 
     //Get Box and Whisker Settings
-    BoxAndWhiskerSettings boxWhiskerSettings;
+    PlottingFunctions::BoxAndWhiskerSettings boxWhiskerSettings;
     tmp = JsonFunctions::getJsonFloat(plotConfig.value()["boxWhiskerPosition"],false);
     if(tmp >= 0){
       boxWhiskerSettings.xOffsetFromStart=tmp;
@@ -656,8 +351,21 @@ void updatePlotArray(
 
     boxWhiskerSettings.currentValueColour = lineSettings.colour;
 
-    plotMetric(
-        jsonMetaDataVector[indexEnd],
+    std::vector<double> xTmp;
+    std::vector<double> yTmp;
+
+    JsonFunctions::extractDataSeries(
+        jsonMetaDataVector[indexEnd].jsonData,
+        jsonMetaDataVector[indexEnd].address,
+        jsonMetaDataVector[indexEnd].dateName.c_str(),
+        jsonMetaDataVector[indexEnd].fieldName.c_str(),
+        xTmp,
+        yTmp); 
+
+    PlottingFunctions::updatePlot(
+        xTmp,
+        yTmp,
+        jsonMetaDataVector[indexEnd].fieldName,
         plotSettingsUpd,
         lineSettings,
         axisSettings,
@@ -1277,7 +985,8 @@ int main (int argc, char* argv[]) {
           std::filesystem::path outputSummaryPlotFilePath = outputFolderPath;          
           outputSummaryPlotFilePath.append(plotSummaryFileName);
 
-          writePlot(summaryPlots,
+          PlottingFunctions::writePlot(
+                    summaryPlots,
                     plotSettingsSummary,
                     titleSummary,
                     outputSummaryPlotFilePath.c_str());
@@ -1311,7 +1020,8 @@ int main (int argc, char* argv[]) {
           std::filesystem::path outputOverviewPlotFilePath = outputFolderPath;          
           outputOverviewPlotFilePath.append(plotOverviewFileName);
 
-          writePlot(overviewPlots,
+          PlottingFunctions::writePlot(
+                    overviewPlots,
                     plotSettingsOverview,
                     titleOverview,
                     outputOverviewPlotFilePath.c_str());

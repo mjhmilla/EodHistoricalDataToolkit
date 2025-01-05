@@ -7,7 +7,6 @@
 #include <sstream>
 
 #include "JsonFunctions.h"
-#include "UtilityFunctions.h"
 
 
 const double PointsPerInch        = 72;
@@ -18,7 +17,47 @@ class PlottingFunctions {
 
 public:
 
-    //==========================================================================
+    struct LineSettings{
+    std::string colour;
+    std::string name;
+    double lineWidth;
+    };
+
+    struct BoxAndWhiskerSettings{
+    double xOffsetFromStart;
+    double xOffsetFromEnd;
+    std::string boxWhiskerColour;
+    std::string currentValueColour;
+    BoxAndWhiskerSettings():
+        xOffsetFromStart(std::nan("1")),
+        xOffsetFromEnd(std::nan("1")),    
+        boxWhiskerColour("blue"),
+        currentValueColour("black"){};
+    };
+
+
+    struct AxisSettings{
+    std::string xAxisName;
+    std::string yAxisName;
+    double xMin;
+    double xMax;  
+    double yMin;
+    double yMax;
+    AxisSettings():
+        xAxisName(""),
+        yAxisName(""),
+        xMin(std::nan("1")),
+        xMax(std::nan("1")),
+        yMin(std::nan("1")),
+        yMax(std::nan("1")){};
+
+    };
+
+    struct SubplotSettings{
+    size_t indexRow;
+    size_t indexColumn;
+    };
+
     struct PlotSettings{
         std::string fontName;
         double axisLabelFontSize;
@@ -147,38 +186,41 @@ public:
     }
 
     //==========================================================================
-    static bool extractSummaryStatistics(sciplot::Vec &data, 
+    // Note: These summary statistics are interpolated so that this method
+    //       will give a sensible response with 1 data point or many.
+    static bool extractSummaryStatistics(const std::vector< double > &data, 
                                          SummaryStatistics &summary){
 
       bool validSummaryStatistics = true;                                          
 
       if(data.size() > 0){
-        std::vector<double> dataDbl;
-        for(size_t i=0; i<data.size(); ++i){
-            dataDbl.push_back(data[i]);
+        std::vector<double> dataCopy;
+        for(size_t i=0; i<data.size();++i){
+            dataCopy.push_back(data[i]);
         }
+
         summary.current = std::nan("-1");
 
-        std::sort(dataDbl.begin(),dataDbl.end());
+        std::sort(dataCopy.begin(),dataCopy.end());
 
-        summary.min = dataDbl[0];
-        summary.max = dataDbl[dataDbl.size()-1];
+        summary.min = dataCopy[0];
+        summary.max = dataCopy[dataCopy.size()-1];
 
-        if(dataDbl.size() > 1){
+        if(dataCopy.size() > 1){
             for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
-            double idxDbl = Percentiles[i]*(dataDbl.size()-1);
-            int indexA = std::floor(idxDbl);
-            int indexB = std::ceil(idxDbl);
-            double weightB = idxDbl - static_cast<double>(indexA);
+            double idx = Percentiles[i]*(dataCopy.size()-1);
+            int indexA = std::floor(idx);
+            int indexB = std::ceil(idx);
+            double weightB = idx - static_cast<double>(indexA);
             double weightA = 1.0-weightB;
-            double valueA = dataDbl[indexA];
-            double valueB = dataDbl[indexB];
+            double valueA = dataCopy[indexA];
+            double valueB = dataCopy[indexB];
             double value = valueA*weightA + valueB*weightB;
             summary.percentiles.push_back(value);
             }
         }else{
             for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
-                summary.percentiles.push_back(dataDbl[0]);
+                summary.percentiles.push_back(dataCopy[0]);
             }
             validSummaryStatistics=false;
         }
@@ -316,6 +358,196 @@ public:
             .labelNone();
 
     };
+
+//==============================================================================
+    static void updatePlot(
+            const std::vector< double > &xV,
+            const std::vector< double > &yV,
+            const std::string &dataName,
+            const PlottingFunctions::PlotSettings &plotSettings,        
+            const LineSettings &lineSettings,
+            const AxisSettings &axisSettings,
+            const BoxAndWhiskerSettings &boxAndWhiskerSettings,
+            sciplot::Plot2D &plotMetricUpd,
+            bool removeInvalidData,
+            bool verbose)
+    {
+
+    
+        
+        bool timeSeriesValid = (xV.size()>0 && yV.size() > 0);
+
+        if(timeSeriesValid || !removeInvalidData){
+        
+
+        sciplot::Vec xSci(xV.size());
+        sciplot::Vec ySci(yV.size());
+
+        if(!timeSeriesValid){
+            xSci.resize(1);
+            ySci.resize(1);
+            xSci[0] = JsonFunctions::MISSING_VALUE;
+            ySci[0] = JsonFunctions::MISSING_VALUE;
+        }else{
+            for(size_t i=0; i<xV.size();++i){
+            xSci[i]= xV[i];
+            ySci[i]= yV[i];
+            }
+        }
+
+
+        PlottingFunctions::SummaryStatistics metricSummaryStatistics;
+        metricSummaryStatistics.name=dataName;
+        bool validSummaryStats = 
+            PlottingFunctions::extractSummaryStatistics(yV,
+                                metricSummaryStatistics);
+        metricSummaryStatistics.current = yV[yV.size()-1];
+
+        plotMetricUpd.drawCurve(xSci,ySci)
+            .label(lineSettings.name)
+            .lineColor(lineSettings.colour)
+            .lineWidth(lineSettings.lineWidth);
+
+        std::vector< double > xRange,yRange;
+        PlottingFunctions::getDataRange(xV,xRange,1.0);
+        PlottingFunctions::getDataRange(yV,yRange,
+                            std::numeric_limits< double >::lowest());
+        if(yRange[0] > 0){
+            yRange[0] = 0;
+        }
+        if(yRange[1]-yRange[0] <= 0){
+            yRange[1] = 1.0;
+        }
+        //Add some blank space to the top of the plot
+        yRange[1] = yRange[1] + 0.2*(yRange[1]-yRange[0]);
+        int currentLineType=1;
+
+        if(!std::isnan(axisSettings.xMin)){
+            xRange[0]=axisSettings.xMin;
+        }
+
+        if(!std::isnan(axisSettings.xMax)){
+            xRange[1]=axisSettings.xMax;
+        }
+
+        if(!std::isnan(axisSettings.yMin)){
+            yRange[0]=axisSettings.yMin;
+        }
+
+        if(!std::isnan(axisSettings.yMax)){
+            yRange[1]=axisSettings.yMax;
+        }
+
+        plotMetricUpd.legend().atTopLeft();   
+
+        if(validSummaryStats){
+            double xPos = xRange[1]+1;
+            if(!std::isnan(boxAndWhiskerSettings.xOffsetFromStart)){
+            xPos = xRange[0]+boxAndWhiskerSettings.xOffsetFromStart;
+            }
+            if(!std::isnan(boxAndWhiskerSettings.xOffsetFromEnd)){
+            xPos = xRange[1]+boxAndWhiskerSettings.xOffsetFromEnd;          
+            }
+
+            PlottingFunctions::drawBoxAndWhisker(
+                plotMetricUpd,
+                xPos,
+                0.5,
+                metricSummaryStatistics,
+                boxAndWhiskerSettings.boxWhiskerColour.c_str(),
+                boxAndWhiskerSettings.currentValueColour.c_str(),
+                currentLineType,
+                plotSettings,
+                verbose);
+        }
+
+        if(!std::isnan(boxAndWhiskerSettings.xOffsetFromStart)){
+            xRange[0] += (boxAndWhiskerSettings.xOffsetFromStart-1);
+        }
+        if(!std::isnan(boxAndWhiskerSettings.xOffsetFromEnd)){
+            xRange[1] += (boxAndWhiskerSettings.xOffsetFromEnd+1);          
+        }
+
+        plotMetricUpd.xrange(
+            static_cast<sciplot::StringOrDouble>(xRange[0]),
+            static_cast<sciplot::StringOrDouble>(xRange[1]));              
+
+        plotMetricUpd.yrange(
+            static_cast<sciplot::StringOrDouble>(yRange[0]),
+            static_cast<sciplot::StringOrDouble>(yRange[1]));
+
+        if((xRange[1]-xRange[0])<5.0){
+            plotMetricUpd.xtics().increment(plotSettings.xticMinimumIncrement);
+        }
+
+        if((xRange[1]-xRange[0]) > 10){
+            double xSpan = (xRange[1]-xRange[0]);
+            double increment = 1;
+
+            while( xSpan/increment > 10 ){
+            if(std::abs(increment-1) < std::numeric_limits<double>::epsilon()){
+                increment = 5.0;
+            }else{
+                increment += 5.0;
+            }
+            }
+
+            plotMetricUpd.xtics().increment(increment);
+
+        }
+
+
+        PlottingFunctions::configurePlot( plotMetricUpd,
+                                            axisSettings.xAxisName,
+                                            axisSettings.yAxisName,
+                                            plotSettings);
+
+        }
+
+
+    };
+
+//==============================================================================
+    static void writePlot(
+        const std::vector< std::vector < sciplot::Plot2D >> &matrixOfPlots,
+        const PlottingFunctions::PlotSettings &plotSettings,  
+        const std::string &titleStr,    
+        const std::string &outputPlotPath)
+    {
+
+        size_t nrows = matrixOfPlots.size();
+        size_t ncols = matrixOfPlots[0].size();
+
+        std::vector< std::vector < sciplot::PlotVariant > > arrayOfPlotVariants;    
+
+        for(size_t indexRow=0; indexRow < nrows; ++indexRow){
+            std::vector< sciplot::PlotVariant > rowOfPlotVariants;    
+            for(size_t indexCol=0; indexCol < ncols; ++indexCol){
+            rowOfPlotVariants.push_back(matrixOfPlots[indexRow][indexCol]);
+            }
+            arrayOfPlotVariants.push_back(rowOfPlotVariants);
+        }
+        
+        sciplot::Figure figTicker(arrayOfPlotVariants);
+
+        figTicker.title(titleStr);
+
+        sciplot::Canvas canvas = {{figTicker}};
+
+        size_t canvasWidth  = 
+            static_cast<size_t>(
+            plotSettings.plotWidthInPoints*static_cast<double>(ncols));
+        size_t canvasHeight = 
+            static_cast<size_t>(
+            plotSettings.plotHeightInPoints*static_cast<double>(nrows));
+
+        canvas.size(canvasWidth, canvasHeight) ;
+
+        // Save the figure to a PDF file
+        canvas.save(outputPlotPath);
+
+    };
+
 };
 
 
