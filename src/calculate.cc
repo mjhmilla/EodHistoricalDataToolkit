@@ -247,12 +247,71 @@ bool extractAnalysisDates(
   analysisDates.indicesHistorical.clear();
   analysisDates.indicesBond.clear();
 
-  //Extract dates from all of the structures
-  for(auto& el : fundamentalData[FIN][BAL][timePeriod].items()){
-    std::string dateString; 
-    JsonFunctions::getJsonString(el.value()["date"],dateString);
-    analysisDates.financial.push_back(dateString);
-  }  
+  //Extract dates only the dates common to all financial reports
+  std::vector< std::string > datesBAL;
+  std::vector< std::string > datesCF;
+  std::vector< std::string > datesIS;
+  
+  std::vector< std::string > finStruct;
+  finStruct.push_back(BAL);
+  finStruct.push_back(CF);
+  finStruct.push_back(IS);
+
+  for(size_t i=0; i<finStruct.size(); ++i){
+    for(auto& el : fundamentalData[FIN][finStruct[i].c_str()][timePeriod.c_str()].items()){
+      std::string dateString; 
+      JsonFunctions::getJsonString(el.value()["date"],dateString);
+      switch(i){
+        case 0:
+          datesBAL.push_back(dateString);
+        break;        
+        case 1:
+          datesCF.push_back(dateString);
+        break;
+        case 2:
+          datesIS.push_back(dateString);
+        break;
+        default:
+          std::abort();          
+      };
+    }      
+  }
+
+  for(size_t i=0; i<datesBAL.size();++i){
+    bool common = true;
+  
+    size_t j=0;
+    bool found =false;
+    while(!found && j < datesCF.size()){
+      if(datesBAL[i].compare(datesCF[j]) == 0){
+        found=true;
+      }else{
+        ++j;
+      }
+    }
+    if(j == datesCF.size()){
+      common=false;
+    }
+
+    size_t k=0;
+    found=false;
+    while(!found && k < datesIS.size()){
+      if(datesBAL[i].compare(datesIS[k]) == 0 ){
+        found=true;
+      }else{
+        ++k;
+      }
+    }
+    if(k == datesIS.size()){
+      common=false;
+    }
+
+    if(common){
+      analysisDates.financial.push_back(datesBAL[i]);
+    }
+
+  }
+
   validDates = (validDates && analysisDates.financial.size() > 0);
 
   for(auto& el : fundamentalData[OS][timePeriodOutstandingShares.c_str()].items()){
@@ -1395,21 +1454,23 @@ int main (int argc, char* argv[]) {
     
     AnalysisDates analysisDates;
     bool allowRepeatedDates=false;
-    bool validDates= 
-      extractAnalysisDates(
-        analysisDates,
-        fundamentalData,
-        historicalData,
-        jsonBondYield["US"]["10y_bond_yield"],
-        timePeriod,
-        timePeriodOS,
-        maxDayErrorHistoricalData,
-        maxDayErrorOutstandingShareData,
-        maxDayErrorBondYieldData,
-        allowRepeatedDates);    
 
-    validInput = (validInput && validDates);
+    if(validInput){
+      bool validDates= 
+        extractAnalysisDates(
+          analysisDates,
+          fundamentalData,
+          historicalData,
+          jsonBondYield["US"]["10y_bond_yield"],
+          timePeriod,
+          timePeriodOS,
+          maxDayErrorHistoricalData,
+          maxDayErrorOutstandingShareData,
+          maxDayErrorBondYieldData,
+          allowRepeatedDates);    
 
+      validInput = (validInput && validDates);
+    }
     //==========================================================================
     //
     // Process these files, if all of the inputs are valid
