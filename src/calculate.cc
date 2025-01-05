@@ -17,7 +17,7 @@
 #include "JsonFunctions.h"
 
 
-
+//============================================================================
 struct TaxFoundationDataSet{
   std::vector< int > index;
   std::vector< int > year;
@@ -28,6 +28,7 @@ struct TaxFoundationDataSet{
   std::vector< std::vector < double > > taxTable; 
 };
 
+//============================================================================
 double getTaxRateFromTable(std::string& countryISO2, int year, int yearMin, 
                            TaxFoundationDataSet &taxDataSet){
 
@@ -101,6 +102,7 @@ double getTaxRateFromTable(std::string& countryISO2, int year, int yearMin,
 
 }
 
+//============================================================================
 bool loadTaxFoundationDataSet(std::string &fileName, 
                               TaxFoundationDataSet &dataSet){
 
@@ -235,6 +237,9 @@ bool loadTaxFoundationDataSet(std::string &fileName,
   return validFormat;
 };
 
+
+
+//============================================================================
 bool extractTTM(int indexA,
                 const std::vector<std::string> &dateSet,
                 const char* dateFormat, 
@@ -296,6 +301,7 @@ bool extractTTM(int indexA,
 
 };
 
+//============================================================================
 bool extractDatesOfClosestMatch(
               std::vector< std::string > &datesSetA,
               const char* dateAFormat,
@@ -409,9 +415,289 @@ bool extractDatesOfClosestMatch(
 
   return validInput;
 };
+//============================================================================
+
+struct AnalysisDates{
+  std::vector< std::string > common;
+  std::vector< std::string > financial;
+  std::vector< std::string > outstandingShares;
+  std::vector< std::string > historical;
+  std::vector< std::string > bond;
+
+  std::vector< unsigned int > indicesFinancial;
+  std::vector< unsigned int > indicesOutstandingShares;
+  std::vector< unsigned int > indicesHistorical;
+  std::vector< unsigned int > indicesBond;
+};
+
+bool extractAnalysisDates(
+      AnalysisDates &analysisDates,
+      const nlohmann::ordered_json &fundamentalData,
+      const nlohmann::ordered_json &historicalData,
+      const nlohmann::ordered_json &bondData,
+      const std::string &timePeriod,
+      const std::string &timePeriodOutstandingShares,
+      int maxDayErrorHistoricalData,
+      int maxDayErrorOutstandingShareData,
+      int maxDayErrorBondData,
+      bool allowRepeatedDates)
+{
+  bool validDates=true;
+
+  //Clear the analysis structure
+  analysisDates.common.clear();
+  analysisDates.financial.clear();
+  analysisDates.outstandingShares.clear();
+  analysisDates.historical.clear();
+  analysisDates.bond.clear();
+  analysisDates.indicesOutstandingShares.clear();
+  analysisDates.indicesHistorical.clear();
+  analysisDates.indicesBond.clear();
+
+  //Extract dates from all of the structures
+  for(auto& el : fundamentalData[FIN][BAL][timePeriod].items()){
+    std::string dateString; 
+    JsonFunctions::getJsonString(el.value()["date"],dateString);
+    analysisDates.financial.push_back(dateString);
+  }  
+  validDates = (validDates && analysisDates.financial.size() > 0);
+
+  for(auto& el : fundamentalData[OS][timePeriodOutstandingShares.c_str()].items()){
+    std::string dateFormatted; 
+    JsonFunctions::getJsonString(el.value()["dateFormatted"],dateFormatted);
+    analysisDates.outstandingShares.push_back(dateFormatted);
+  }   
+  validDates = (validDates && analysisDates.outstandingShares.size() > 0);
+
+  for(auto& el: historicalData.items()){
+    std::string dateString("");
+    JsonFunctions::getJsonString(el.value()["date"],dateString);
+    analysisDates.historical.push_back(dateString);
+  }  
+  validDates = (validDates && analysisDates.historical.size() > 0);
+
+  for(auto& el : bondData.items()){
+    analysisDates.bond.push_back(el.key());
+  }
+  validDates = (validDates && analysisDates.bond.size() > 0);
+
+  
+  if(validDates){
+
+    //
+    //Make sure the financial data proceed from most recent to oldest
+    //
+    int dateProgression=
+      FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+        analysisDates.financial[0],
+        "%Y-%m-%d",
+        analysisDates.financial[analysisDates.financial.size()-1],
+        "%Y-%m-%d");
+    if(dateProgression < 0){
+      std::reverse( analysisDates.financial.begin(), 
+                    analysisDates.financial.end());
+    }
+    /*
+    dateProgression=
+      FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+        analysisDates.historical[0],
+        "%Y-%m-%d",
+        analysisDates.historical[analysisDates.historical.size()-1],
+        "%Y-%m-%d");
+    if(dateProgression < 0){
+      std::reverse( analysisDates.historical.begin(), 
+                    analysisDates.historical.end());
+    }
+
+    dateProgression=
+      FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+        analysisDates.outstandingShares[0],
+        "%Y-%m-%d",
+        analysisDates.outstandingShares[analysisDates.outstandingShares.size()-1],
+        "%Y-%m-%d");
+    if(dateProgression < 0){
+      std::reverse( analysisDates.outstandingShares.begin(), 
+                    analysisDates.outstandingShares.end());
+    }
+
+    dateProgression=
+      FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+        analysisDates.bond[0],
+        "%Y-%m-%d",
+        analysisDates.bond[analysisDates.bond.size()-1],
+        "%Y-%m-%d");
+    if(dateProgression < 0){
+      std::reverse( analysisDates.bond.begin(), 
+                    analysisDates.bond.end());
+    }
+    */
+
+    //Extract common dates between
+    // financial
+    // historical
+    validDates =     
+      extractDatesOfClosestMatch(
+        analysisDates.financial,
+        "%Y-%m-%d",
+        analysisDates.historical,
+        "%Y-%m-%d",
+        maxDayErrorHistoricalData,
+        analysisDates.common,
+        analysisDates.indicesFinancial,
+        analysisDates.indicesHistorical,
+        allowRepeatedDates);
 
 
+    //Extract common dates between
+    // financial
+    // historical
+    // outstandingShares
+    //
+    // Do this by getting common dates between
+    // common
+    // outstandingShares
+    //
+    // And removing missing dates in 
+    // indicesFinancial 
+    // indicesHistorical
+    //
+    // That are not a part of the new common
+    if(validDates){
+      std::vector< std::string > commonAB;
+      std::vector< unsigned int> indicesA;
 
+      validDates =     
+        extractDatesOfClosestMatch(
+          analysisDates.common,
+          "%Y-%m-%d",
+          analysisDates.outstandingShares,
+          "%Y-%m-%d",
+          maxDayErrorHistoricalData,
+          commonAB,
+          indicesA,
+          analysisDates.indicesOutstandingShares,
+          allowRepeatedDates);
+
+      //Go through commonAB and common and erase any entries in common that
+      //don't exist in commonAB;
+      if(commonAB.size() < analysisDates.common.size() && validDates){
+        size_t indexA = 0;
+        while(indexA < analysisDates.common.size()){
+          std::string dateA = analysisDates.common[indexA];
+          bool found = false;
+          for(auto& dateB :commonAB){
+            if(dateA.compare(dateB) == 0){
+              found = true;
+              break;
+            }
+          }
+          if(found == false){
+            analysisDates.common.erase(
+                analysisDates.common.begin()+indexA);
+            analysisDates.indicesFinancial.erase(
+                analysisDates.indicesFinancial.begin()+indexA);
+            analysisDates.indicesHistorical.erase(
+                analysisDates.indicesHistorical.begin()+indexA);
+          }else{
+            ++indexA;
+          }        
+        }                                    
+      }
+    }
+
+    //Extract common dates between
+    // financial
+    // historical
+    // outstandingShares
+    // bond
+
+    // Do this by getting common dates between
+    // common
+    // bond
+    //
+    // And removing missing dates in 
+    // indicesFinancial 
+    // indicesHistorical
+    // indicesOutstandingShares
+
+    // That are not a part of the new common
+    if(validDates){
+      std::vector< std::string > commonAB;
+      std::vector< unsigned int> indicesA;
+
+      validDates =     
+        extractDatesOfClosestMatch(
+          analysisDates.common,
+          "%Y-%m-%d",
+          analysisDates.bond,
+          "%Y-%m-%d",
+          maxDayErrorHistoricalData,
+          commonAB,
+          indicesA,
+          analysisDates.indicesBond,
+          allowRepeatedDates);
+
+      //Go through commonAB and common and erase any entries in common that
+      //don't exist in commonAB;
+      if(commonAB.size() < analysisDates.common.size() && validDates){
+        size_t indexA = 0;
+        while(indexA < analysisDates.common.size()){
+          std::string dateA = analysisDates.common[indexA];
+          bool found = false;
+          for(auto& dateB :commonAB){
+            if(dateA.compare(dateB) == 0){
+              found = true;
+              break;
+            }
+          }
+          if(found == false){
+            analysisDates.common.erase(
+                analysisDates.common.begin()+indexA);
+            analysisDates.indicesFinancial.erase(
+                analysisDates.indicesFinancial.begin()+indexA);
+            analysisDates.indicesHistorical.erase(
+                analysisDates.indicesHistorical.begin()+indexA);
+            analysisDates.indicesOutstandingShares.erase(
+                analysisDates.indicesOutstandingShares.begin()+indexA);
+          }else{
+            ++indexA;
+          }        
+        }                                    
+      }
+    }
+
+    //Check to make sure that all date and index vectors are the same
+    //length. Note that they won't all necessarily have the same date
+    //because some error is allowed to accomodate for the fact that
+    //sometimes financial data is filed on a day when an exchange is closed
+    if(validDates){
+      
+      validDates = validDates 
+        && (analysisDates.common.size()
+            ==analysisDates.indicesFinancial.size());
+      
+      validDates = validDates 
+        && (analysisDates.common.size()
+            ==analysisDates.indicesHistorical.size());
+      
+      validDates = validDates 
+        && (analysisDates.common.size()
+            ==analysisDates.indicesOutstandingShares.size());
+      
+      validDates = validDates 
+        && (analysisDates.common.size()
+            ==analysisDates.indicesBond.size());
+    }
+
+  }
+
+
+  return validDates;
+
+};
+
+
+//============================================================================
 int main (int argc, char* argv[]) {
 
   std::string exchangeCode;
@@ -711,31 +997,17 @@ int main (int argc, char* argv[]) {
   if(quaterlyTTMAnalysis){
     maxDayErrorOutstandingShareData = 2*(90);
   }
-  // EODs reporting of outstandingShares sometimes misses a reporting period
-  // or two. This quantity should not change much, so allow more error here
-  // than with others.
-
-  //bool relaxedCalculation = true;
-  //Some of entries in EODs data base are frequently null because the values
-  //are not reported in the original financial statements. There are two
-  //ways to handle this case:
-  //
-  // relaxedCalculation = true: 
-  //  Set (some) of these null values to zero, and substitute some combined 
-  //  quantities that are null (short-long-term debt) with an approximate them 
-  //  with one term (long term debt).
-  //
-  // relaxedCalculation = false: 
-  //  Use the data as is directly from EOD without any modification.
 
 
-  //2024/8/4 MM: added this because the analysis of some securities is
-  //             getting trashed by nans in fields that should actually be
-  //             nan. For example, META is not a business that has inventory
-  //             and so this is not reported. Naturally when inventory doesn't
-  //             appear, or is set to nan, it then turns the results of all
-  //             analysis done using this term to nan. And this, unfortunately,
-  //             later means that these securities are ignored in later analysis.
+  //2024/8/4 
+  //  Note: some fields used in the functions in the FinanacialToolkit
+  //  will replace nan's with a coded MISSING_NUMBER. Why?
+  //  Some reports are getting trashed by nans in fields that should 
+  //  actually be nan. For example, META is not a business that has inventory
+  //  and so this is not reported. Naturally when inventory doesn't
+  //  appear, or is set to nan, it then turns the results of all
+  //  analysis done using this term to nan. And this, unfortunately,
+  //  later means that these securities are ignored in later analysis.
 
   bool setNansToMissingValue                  = relaxedCalculation;
 
@@ -828,11 +1100,16 @@ int main (int argc, char* argv[]) {
               << endKey
               << std::endl;
     std::cout << "  Warning**" << std::endl; 
-    std::cout << "    The 10 year bond yields from the US are being used to " << std::endl;          
-    std::cout << "    approximate the bond yields from all countries. The "   << std::endl; 
-    std::cout << "    bond yields, in turn, are being used to approximate"    << std::endl; 
-    std::cout << "    the risk free rate which is used in the calculation "   << std::endl; 
-    std::cout << "    of the cost of capital and the cost of debt."           << std::endl; 
+    std::cout << "    The 10 year bond yields from the US are being used to " 
+              << std::endl;          
+    std::cout << "    approximate the bond yields from all countries. The "   
+              << std::endl; 
+    std::cout << "    bond yields, in turn, are being used to approximate"    
+              << std::endl; 
+    std::cout << "    the risk free rate which is used in the calculation "   
+              << std::endl; 
+    std::cout << "    of the cost of capital and the cost of debt."           
+              << std::endl; 
     std::cout << std::endl;
   }
 
@@ -919,38 +1196,13 @@ int main (int argc, char* argv[]) {
     }
 
     //Extract the list of entry dates for the fundamental data
-    std::vector< std::string > datesFundamental;
-    std::vector< std::string > datesOutstandingShares;
+    //std::vector< std::string > datesFundamental;
+    //std::vector< std::string > datesOutstandingShares;
     std::string timePeriodOS(timePeriod);
     if(timePeriodOS.compare(Y)==0){
       timePeriodOS = A;
     }
 
-    if(validInput){
-      for(auto& el : fundamentalData[FIN][BAL][timePeriod].items()){
-        datesFundamental.push_back(el.key());
-      }
-      if(datesFundamental.size()==0){
-        validInput=false;
-        if(verbose){
-          std::cout << "  Skipping: fundamental data contains no date entries" 
-                    << std::endl; 
-        }
-      }
-
-      for(auto& el : fundamentalData[OS][timePeriodOS.c_str()]){
-        std::string dateFormatted; 
-        JsonFunctions::getJsonString(el["dateFormatted"],dateFormatted);
-        datesOutstandingShares.push_back(dateFormatted);
-      }   
-
-      if(datesOutstandingShares.size() == 0){
-        validInput = false;
-        std::cout << "  Skipping: outstandingShares data contains no date entries" 
-                  << std::endl;         
-      }
-
-    }
     //Extract the countryName and ISO
     std::string countryName;
     std::string countryISO2;
@@ -971,191 +1223,24 @@ int main (int argc, char* argv[]) {
                                             historicalData, verbose);
     }
 
-    std::vector< std::string > datesHistorical;
-    if(validInput){
-      for(unsigned int i=0; i<historicalData.size(); ++i){
-        std::string tempString("");
-        JsonFunctions::getJsonString(historicalData[i]["date"],tempString);
-        datesHistorical.push_back(tempString);
-      }
-      if(datesHistorical.size()==0){
-        validInput=false;
-        if(verbose){
-          std::cout << "  Skipping: historical data contains no date entries" 
-                    << std::endl; 
-        }
-      }
-    }    
-
-
-
-    std::vector< std::string > datesCommonFundHist;
-    size_t maxNumberDatesCommon=0;
-    std::vector< unsigned int > indicesCommonHistoricalDates;
-    std::vector< unsigned int > indicesCommonFundamentalDates;
-
-    if(validInput){
-      //Extract the set of matching dates (within tolerance) between
-      //the fundamental and historical data
-      bool allowRepeatedDates=false;
-      validInput = extractDatesOfClosestMatch(
-                        datesFundamental,
-                        "%Y-%m-%d",
-                        datesHistorical,
-                        "%Y-%m-%d",
-                        maxDayErrorHistoricalData,
-                        datesCommonFundHist,
-                        indicesCommonFundamentalDates,
-                        indicesCommonHistoricalDates,
-                        allowRepeatedDates);
-
-      if(!validInput){
-        std::cout << "  Skipping ticker: there is not one matching date between"
-                     " the fundamental and historical data sets."
-                     << std::endl;
-        if(verbose){
-          std::cout << "  Skipping: there is not one matching date between"
-                     " the fundamental and historical data sets within the"
-                     " maximum allowed day error." 
-                    << std::endl; 
-        }
-                     
-      }
-
-      int firstDateMinusLastDate = 
-        FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
-            datesCommonFundHist[0],
-            "%Y-%m-%d",        
-            datesCommonFundHist[datesCommonFundHist.size()-1],
-            "%Y-%m-%d");
-
-      //If the dates are ordered from oldest to most recent, flip it      
-      if(firstDateMinusLastDate < 0 ){
-        std::reverse(datesCommonFundHist.begin(), datesCommonFundHist.end());
-
-        std::reverse(indicesCommonHistoricalDates.begin(), 
-                     indicesCommonHistoricalDates.end());
-
-        std::reverse(indicesCommonFundamentalDates.begin(), 
-                     indicesCommonFundamentalDates.end());
-      }
-
-      maxNumberDatesCommon = datesCommonFundHist.size();
-
-    }
-
-    //==========================================================================
-    //Extract the common dates of reporting between the fundamental data
-    //historical data, and the reports on outstandingShares
-    //==========================================================================
-
-    std::vector< std::string> datesCommon;
-    std::vector< unsigned int > indicesClosestCommonDatesToOutstandingShares;
-    std::vector< unsigned int > indicesClosestOutstandingShareDates;
-
-    if(validInput){
-      bool allowRepeatedDates=true;
-      validInput = extractDatesOfClosestMatch(
-                        datesCommonFundHist,
-                        "%Y-%m-%d",
-                        datesOutstandingShares,
-                        "%Y-%m-%d",
-                        maxDayErrorOutstandingShareData,
-                        datesCommon,
-                        indicesClosestCommonDatesToOutstandingShares,
-                        indicesClosestOutstandingShareDates,
-                        allowRepeatedDates);
-
-      //Remove the missing dates from indiciesCommonFundamentalDates
-      //and indiciesCommonHistoricalDates
-      
-      if(datesCommon.size() < datesCommonFundHist.size()){
-        size_t indexA = 0;
-        while(indexA < datesCommonFundHist.size()){
-          std::string dateA = datesCommonFundHist[indexA];
-          bool found = false;
-          for(auto& dateB : datesCommon){
-            if(dateA.compare(dateB) == 0){
-              found = true;
-              break;
-            }
-          }
-          if(found == false){
-            datesCommonFundHist.erase(
-                datesCommonFundHist.begin()+indexA);
-            indicesCommonFundamentalDates.erase(
-                indicesCommonFundamentalDates.begin()+indexA);
-            indicesCommonHistoricalDates.erase(
-                indicesCommonHistoricalDates.begin()+indexA);
-          }else{
-            ++indexA;
-          }        
-        }                                    
-      }
-
-      if(   (datesCommon.size() != datesCommonFundHist.size()) 
-         || (datesCommon.size() != indicesCommonFundamentalDates.size()) 
-         || (datesCommon.size() != indicesCommonHistoricalDates.size()) 
-        ) 
-       {
-        validInput = false;
-        std::cout << " Skipping: failed to find common set of dates for the "
-                  << "fundamental, historical, and outstandingShares datasets" 
-                  << std::endl;                  
-      }
-    }
-    
-
-    //==========================================================================
-    //Extract the closest order of the bond yields
-    //==========================================================================
     std::vector< std::string > datesBondYields;
-    for(auto& el : jsonBondYield["US"]["10y_bond_yield"].items()){
-      datesBondYields.push_back(el.key());
-    }
     
-    
-    std::vector< std::string > datesCommonBond;
-    std::vector< unsigned int > indicesClosestCommonDatesToBondYieldDates;
-    std::vector< unsigned int > indicesClosestBondYieldDates;
+    AnalysisDates analysisDates;
+    bool allowRepeatedDates=false;
+    bool validDates= 
+      extractAnalysisDates(
+        analysisDates,
+        fundamentalData,
+        historicalData,
+        jsonBondYield["US"]["10y_bond_yield"],
+        timePeriod,
+        timePeriodOS,
+        maxDayErrorHistoricalData,
+        maxDayErrorOutstandingShareData,
+        maxDayErrorBondYieldData,
+        allowRepeatedDates);    
 
-    if(validInput){
-      //Extract the set of matching dates (within tolerance) between
-      //the fundamental, historical, and bond data. The bond data table is
-      //quite dense (for the U.S.) so this shouldn't change in size at all.
-      bool allowRepeatedDates=false;
-      validInput = extractDatesOfClosestMatch(
-                        datesCommon,
-                        "%Y-%m-%d",
-                        datesBondYields,
-                        "%Y-%m-%d",
-                        maxDayErrorBondYieldData,
-                        datesCommonBond,
-                        indicesClosestCommonDatesToBondYieldDates,
-                        indicesClosestBondYieldDates,
-                        allowRepeatedDates);
-
-      //Since we are asserting that the common dates and bond yields over lap
-      if(datesCommonFundHist.size() != datesCommonBond.size()){
-        validInput = false;
-        std::cout << " Skipping: the bond table is missing entries "
-                  << " that are in the set of common dates between "
-                  << " the fundamental and historical data" 
-                  << std::endl;
-        if(verbose){
-          std::cout << " Skipping: the bond table is missing entries "
-                    << " that are in the set of common dates between "
-                    << " the fundamental and historical data" 
-                    << std::endl;
-        }
-                  
-      }
-    }
-
-    
-
-    
-
+    validInput = (validInput && validDates);
 
     //==========================================================================
     //
@@ -1206,24 +1291,25 @@ int main (int argc, char* argv[]) {
       double meanInterestCover                  = 0.;
       unsigned int meanInterestCoverEntryCount  = 0;
 
+//      while( (indexDate+1) < datesCommon.size() && validDateSet){
 
-      while( (indexDate+1) < datesCommon.size() && validDateSet){
+      while( (indexDate+1) < analysisDates.common.size() && validDateSet){
 
         ++indexDate;
 
-        std::string date = datesCommon[indexDate]; 
+        std::string date = analysisDates.common[indexDate]; 
         
         //The set of dates used for the TTM analysis
         std::vector < std::string > dateSet;
         std::vector < double > dateSetWeight;
         if(quaterlyTTMAnalysis){
           validDateSet = extractTTM(indexDate,
-                                    datesCommon,
+                                    analysisDates.common,
                                     "%Y-%m-%d",
                                     dateSet,
                                     dateSetWeight,
                                     maxDayErrorTabularData);                                     
-          if(!validDateSet){
+        if(!validDateSet){
             break;
           }     
         }else{
@@ -1300,7 +1386,7 @@ int main (int argc, char* argv[]) {
       indexDate       = -1;
 
       int indexLastStartingIndex = 
-        static_cast<int>(datesCommon.size())
+        static_cast<int>(analysisDates.common.size())
         - numberOfDatesPerIteration*numberOfYearsToAverageCapitalExpenditures;
 
       validDateSet    = true;
@@ -1308,7 +1394,7 @@ int main (int argc, char* argv[]) {
       while( (indexDate+1) < indexLastStartingIndex && validDateSet){
 
         ++indexDate;
-        std::string date = datesCommon[indexDate]; 
+        std::string date = analysisDates.common[indexDate]; 
 
                 
         //The set of dates used for the TTM analysis
@@ -1318,7 +1404,7 @@ int main (int argc, char* argv[]) {
       
         if(quaterlyTTMAnalysis){
           validDateSet = extractTTM(indexDate,
-                                    datesCommon,
+                                    analysisDates.common,
                                     "%Y-%m-%d",
                                     dateSet,                                    
                                     dateSetWeight,
@@ -1338,12 +1424,12 @@ int main (int argc, char* argv[]) {
         int indexPrevious = indexDate+static_cast<int>(dateSet.size());        
 
         //Fetch the previous TTM
-        previousTimePeriod = datesCommon[indexPrevious];
+        previousTimePeriod = analysisDates.common[indexPrevious];
         previousDateSet.resize(0);
 
         if(quaterlyTTMAnalysis){
           validDateSet = extractTTM(indexPrevious,
-                                    datesCommon,
+                                    analysisDates.common,
                                     "%Y-%m-%d",
                                     previousDateSet,
                                     previousDateSetWeight,
@@ -1381,14 +1467,14 @@ int main (int argc, char* argv[]) {
           if(validPreviousDateSet){
             if(quaterlyTTMAnalysis){
               validPreviousDateSet = extractTTM(indexPastPeriods,
-                                        datesCommon,
+                                        analysisDates.common,
                                         "%Y-%m-%d",
                                         pastDateSet,
                                         pastDateSetWeight,
                                         maxDayErrorTabularData); 
             }else{
-              if(indexPastPeriods < datesCommon.size()){
-                pastDateSet.push_back(datesCommon[indexPastPeriods]);
+              if(indexPastPeriods < analysisDates.common.size()){
+                pastDateSet.push_back(analysisDates.common[indexPastPeriods]);
               }else{
                 validPreviousDateSet=false;
               }
@@ -1409,8 +1495,8 @@ int main (int argc, char* argv[]) {
         //  information. Since US bonds are internationally traded
         //  (in London and Tokyo) this is perhaps not a horrible approximation.
         //======================================================================
-        int indexBondYield = indicesClosestBondYieldDates[indexDate];
-        std::string closestBondYieldDate= datesBondYields[indexBondYield]; 
+        int indexBondYield = analysisDates.indicesBond[indexDate];
+        std::string closestBondYieldDate= analysisDates.bond[indexBondYield]; 
 
         double bondYield = std::nan("1");
         try{
@@ -1499,11 +1585,11 @@ int main (int argc, char* argv[]) {
           }
         }
 
-
         unsigned int indexHistoricalData = 
-          indicesCommonHistoricalDates[indexDate];   
+          analysisDates.indicesHistorical[indexDate];   
 
-        std::string closestHistoricalDate= datesHistorical[indexHistoricalData]; 
+        std::string closestHistoricalDate= 
+          analysisDates.historical[indexHistoricalData]; 
 
         double adjustedClosePrice = std::nan("1");
         double closePrice = std::nan("1");
@@ -1616,10 +1702,6 @@ int main (int argc, char* argv[]) {
         //  most of interest. The remaining metrics are useful, however, and so,
         //  have been included.
         //======================================================================        
-
-        //double totalStockHolderEquity = JsonFunctions::getJsonFloat(
-        //        fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-        //                       ["totalStockholderEquity"],setNansToMissingValue);
 
         double totalStockHolderEquity =  
           FinancialAnalysisToolkit::sumFundamentalDataOverDates(
@@ -1761,15 +1843,6 @@ int main (int argc, char* argv[]) {
         double cash = JsonFunctions::getJsonFloat(
           fundamentalData[FIN][BAL][timePeriod.c_str()][dateSet[0].c_str()]["cash"],
           true);
-
-        //double cash = 
-        //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-        //    fundamentalData,FIN,BAL,timePeriod.c_str(),dateSet[0],"cash",
-        //    setNansToMissingValue);
-
-        //double netDebt = JsonFunctions::getJsonFloat(
-        //      fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-        //                     ["netDebt"]);
 
         double crossHoldings = JsonFunctions::MISSING_VALUE;
 
