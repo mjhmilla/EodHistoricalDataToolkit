@@ -29,214 +29,19 @@ struct TaxFoundationDataSet{
 };
 
 //============================================================================
-double getTaxRateFromTable(std::string& countryISO2, int year, int yearMin, 
-                           TaxFoundationDataSet &taxDataSet){
 
-  double taxRate = std::numeric_limits<double>::quiet_NaN();                              
+struct AnalysisDates{
+  std::vector< std::string > common;
+  std::vector< std::string > financial;
+  std::vector< std::string > outstandingShares;
+  std::vector< std::string > historical;
+  std::vector< std::string > bond;
 
-  //Get the country index
-  bool foundCountry=false;
-  int indexCountry = 0;
-  while(indexCountry < taxDataSet.CountryISO3.size() && !foundCountry ){
-    if(countryISO2.compare(taxDataSet.CountryISO2[indexCountry])==0){
-      foundCountry=true;
-    }else{
-      ++indexCountry;
-    }
-  }  
-
-  int indexYearMin  = -1;
-  int indexYear     = -1;
-
-  if(foundCountry){
-    //Get the closest index to yearMin
-    int index         = 0;
-    int err           = 1;
-
-    int errYear       = std::numeric_limits<int>::max();
-
-    while(index < taxDataSet.year.size() && err > 0 ){
-      err = yearMin - taxDataSet.year[index];
-      if(err < errYear ){
-        errYear = err;
-        indexYearMin = index;
-      }else{
-        ++index;
-      }
-    }  
-    //Get the closest index to year
-    index     = indexYearMin;
-    err       = 1;
-    errYear   = std::numeric_limits<int>::max();
-
-    while(index < taxDataSet.year.size() && err > 0 ){
-      err = year - taxDataSet.year[index];
-      if(err < errYear ){
-        errYear = err;
-        indexYear = index;
-      }else{
-        ++index;
-      }
-    }  
-  }
-
-  //Scan backwards from the most recent acceptable year to year min
-  //and return the first valid tax rate
-  if(foundCountry && (indexYear > 0 && indexYearMin > 0)){
-    bool validIndex=true;
-
-    int index = indexYear;
-    taxRate = taxDataSet.taxTable[indexCountry][index];
-    while( std::isnan(taxRate) && index > indexYearMin && validIndex){
-      --index;
-      if(index < 0){
-        validIndex = false;
-      }else{
-        taxRate = taxDataSet.taxTable[indexCountry][index];   
-      }
-    }
-    
-  }
-
-  return taxRate;
-
-}
-
-//============================================================================
-bool loadTaxFoundationDataSet(std::string &fileName, 
-                              TaxFoundationDataSet &dataSet){
-
-  bool validFormat=false;                                  
-  std::ifstream file(fileName);
-
-  if(file.is_open()){
-    validFormat=true;
-    std::string line;
-    std::string entry;
-
-    //First line is the header: check entries + read in years    
-    std::getline(file,line); 
-
-    std::size_t idx0=0;
-    std::size_t idx1=0;
-    int column = 0;
-    std::vector< double > dataRow;
-    dataRow.clear();
-
-    idx1 = line.find_first_of(',',idx0);
-    entry = line.substr(idx0,idx1-idx0);
-
-    do{
-        if(column <= 4){
-          switch(column){
-            case 1:{
-                if(entry.compare("iso_2") != 0){
-                  validFormat=false;
-                }
-            }break;
-            case 2:{
-              if(entry.compare("iso_3") != 0){
-                  validFormat=false;
-              }
-            } break;
-            case 3:{
-              if(entry.compare("continent") != 0){
-                  validFormat=false;
-              }
-            }break;
-            case 4:{
-              if(entry.compare("country") != 0){
-                  validFormat=false;
-              }                
-            }break;
-          };
-        }else{
-          if(entry.compare("NA") == 0){
-            dataSet.year.push_back(-1);
-            validFormat=false;
-          }else{
-            dataSet.year.push_back(std::stoi(entry));
-          }
-        }
-
-        idx0 = idx1+1;
-        idx1 = line.find_first_of(',',idx0);
-        entry = line.substr(idx0,idx1-idx0);
-
-        ++column;
-    }while(    idx0 !=  std::string::npos 
-            && idx1 !=  std::string::npos 
-            && validFormat);
-
-
-    //Read in the data table
-    while(std::getline(file,line) && validFormat){
-
-        idx0=0;
-        idx1=0;
-        dataRow.clear();
-        column = 0;
-        idx1 = line.find_first_of(',',idx0);
-        entry = line.substr(idx0,idx1-idx0);
-
-        do{
-
-
-          if(column <= 4){
-            switch(column){
-              case 0:{
-                  dataSet.index.push_back(std::stoi(entry));
-              } break;
-              case 1:{
-                  dataSet.CountryISO2.push_back(entry);
-              }break;
-              case 2:{
-                dataSet.CountryISO3.push_back(entry);
-              } break;
-              case 3:{
-                dataSet.continent.push_back(entry);
-              }break;
-              case 4:{
-                dataSet.country.push_back(entry);                
-              }break;
-            };
-          }else{
-            if(entry.compare("NA") == 0){
-              dataRow.push_back(std::nan("1"));
-            }else{
-              dataRow.push_back(std::stod(entry));
-            }
-          }
-          idx0 = idx1+1;
-          idx1 = line.find_first_of(',',idx0);
-          entry = line.substr(idx0,idx1-idx0);
-
-          if(entry.find_first_of('"') != std::string::npos){
-            //Opening bracket
-            idx1 = line.find_first_of('"',idx0);
-            //Closing bracket
-            idx1 = line.find_first_of('"',idx1+1);
-            //Final comma
-            idx1 = line.find_first_of(',',idx1);
-            entry = line.substr(idx0,idx1-idx0);
-          }
-
-          ++column;
-        }while( idx0 !=  std::string::npos && idx1 !=  std::string::npos );
-
-        dataSet.taxTable.push_back(dataRow);
-
-
-    }
-    file.close();
-  }else{
-   std::cout << " Warning: Reverting to default tax rate. Failed to " 
-             << " read in " << fileName << std::endl; 
-  }
-
-  return validFormat;
+  std::vector< unsigned int > indicesFinancial;
+  std::vector< unsigned int > indicesOutstandingShares;
+  std::vector< unsigned int > indicesHistorical;
+  std::vector< unsigned int > indicesBond;
 };
-
 
 
 //============================================================================
@@ -300,6 +105,7 @@ bool extractTTM(int indexA,
   }
 
 };
+
 
 //============================================================================
 bool extractDatesOfClosestMatch(
@@ -417,19 +223,6 @@ bool extractDatesOfClosestMatch(
 };
 //============================================================================
 
-struct AnalysisDates{
-  std::vector< std::string > common;
-  std::vector< std::string > financial;
-  std::vector< std::string > outstandingShares;
-  std::vector< std::string > historical;
-  std::vector< std::string > bond;
-
-  std::vector< unsigned int > indicesFinancial;
-  std::vector< unsigned int > indicesOutstandingShares;
-  std::vector< unsigned int > indicesHistorical;
-  std::vector< unsigned int > indicesBond;
-};
-
 bool extractAnalysisDates(
       AnalysisDates &analysisDates,
       const nlohmann::ordered_json &fundamentalData,
@@ -497,40 +290,7 @@ bool extractAnalysisDates(
       std::reverse( analysisDates.financial.begin(), 
                     analysisDates.financial.end());
     }
-    /*
-    dateProgression=
-      FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
-        analysisDates.historical[0],
-        "%Y-%m-%d",
-        analysisDates.historical[analysisDates.historical.size()-1],
-        "%Y-%m-%d");
-    if(dateProgression < 0){
-      std::reverse( analysisDates.historical.begin(), 
-                    analysisDates.historical.end());
-    }
 
-    dateProgression=
-      FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
-        analysisDates.outstandingShares[0],
-        "%Y-%m-%d",
-        analysisDates.outstandingShares[analysisDates.outstandingShares.size()-1],
-        "%Y-%m-%d");
-    if(dateProgression < 0){
-      std::reverse( analysisDates.outstandingShares.begin(), 
-                    analysisDates.outstandingShares.end());
-    }
-
-    dateProgression=
-      FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
-        analysisDates.bond[0],
-        "%Y-%m-%d",
-        analysisDates.bond[analysisDates.bond.size()-1],
-        "%Y-%m-%d");
-    if(dateProgression < 0){
-      std::reverse( analysisDates.bond.begin(), 
-                    analysisDates.bond.end());
-    }
-    */
 
     //Extract common dates between
     // financial
@@ -696,6 +456,412 @@ bool extractAnalysisDates(
 
 };
 
+//============================================================================
+double getTaxRateFromTable(
+        const std::string& countryISO2, 
+        int year, 
+        int yearMin, 
+        const TaxFoundationDataSet &taxDataSet)
+{
+
+  double taxRate = std::numeric_limits<double>::quiet_NaN();                              
+
+  //Get the country index
+  bool foundCountry=false;
+  int indexCountry = 0;
+  while(indexCountry < taxDataSet.CountryISO3.size() && !foundCountry ){
+    if(countryISO2.compare(taxDataSet.CountryISO2[indexCountry])==0){
+      foundCountry=true;
+    }else{
+      ++indexCountry;
+    }
+  }  
+
+  int indexYearMin  = -1;
+  int indexYear     = -1;
+
+  if(foundCountry){
+    //Get the closest index to yearMin
+    int index         = 0;
+    int err           = 1;
+
+    int errYear       = std::numeric_limits<int>::max();
+
+    while(index < taxDataSet.year.size() && err > 0 ){
+      err = yearMin - taxDataSet.year[index];
+      if(err < errYear ){
+        errYear = err;
+        indexYearMin = index;
+      }else{
+        ++index;
+      }
+    }  
+    //Get the closest index to year
+    index     = indexYearMin;
+    err       = 1;
+    errYear   = std::numeric_limits<int>::max();
+
+    while(index < taxDataSet.year.size() && err > 0 ){
+      err = year - taxDataSet.year[index];
+      if(err < errYear ){
+        errYear = err;
+        indexYear = index;
+      }else{
+        ++index;
+      }
+    }  
+  }
+
+  //Scan backwards from the most recent acceptable year to year min
+  //and return the first valid tax rate
+  if(foundCountry && (indexYear > 0 && indexYearMin > 0)){
+    bool validIndex=true;
+
+    int index = indexYear;
+    taxRate = taxDataSet.taxTable[indexCountry][index];
+    while( std::isnan(taxRate) && index > indexYearMin && validIndex){
+      --index;
+      if(index < 0){
+        validIndex = false;
+      }else{
+        taxRate = taxDataSet.taxTable[indexCountry][index];   
+      }
+    }
+    
+  }
+
+  return taxRate;
+
+};
+//============================================================================
+double calcAverageTaxRate(  const AnalysisDates &analysisDates,
+                            const std::string& countryISO2, 
+                            const TaxFoundationDataSet &corpWorldTaxTable,
+                            double defaultTaxRate,                            
+                            int maxYearErrorTaxRateTable,
+                            bool quarterlyTTMAnalysis,
+                            int maxDayErrorTTM)
+{
+
+  int indexDate                 = 0;
+  int numberOfDatesPerIteration = 0;
+  int numberOfIterations        = 0;
+
+  double taxRate                            = 0.;
+  double meanTaxRate                        = 0.;
+  unsigned int taxRateEntryCount            = 0;
+
+      while( (indexDate+1) < analysisDates.common.size()){
+
+        ++indexDate;
+
+        std::string date = analysisDates.common[indexDate]; 
+        
+        //The set of dates used for the TTM analysis
+        std::vector < std::string > dateSet;
+        std::vector < double > dateSetWeight;
+        if(quarterlyTTMAnalysis){
+          bool validDateSet = extractTTM(indexDate,
+                                    analysisDates.common,
+                                    "%Y-%m-%d",
+                                    dateSet,
+                                    dateSetWeight,
+                                    maxDayErrorTTM);                                     
+          if(!validDateSet){
+            break;
+          }
+
+        }else{
+            dateSet.push_back(date);
+            dateSetWeight.push_back(1.0);
+        }                             
+        
+        ++numberOfIterations;
+        numberOfDatesPerIteration += static_cast<int>(dateSet.size());
+        
+        taxRate=0.0;
+        for(unsigned int j=0; j<dateSet.size();++j){
+          int year  = std::stoi(dateSet[j].substr(0,4));
+          int yearMin = year-maxYearErrorTaxRateTable;
+          double taxRateDate = getTaxRateFromTable(countryISO2, year, yearMin, 
+                                        corpWorldTaxTable);
+          taxRate += taxRateDate*dateSetWeight[j];
+        }
+        taxRate = taxRate*0.01;                                   
+        if(std::isnan(taxRate)){
+          taxRate=defaultTaxRate;
+        }                              
+
+        meanTaxRate += taxRate;        
+        ++taxRateEntryCount;    
+    }        
+      //=======================================================================
+      
+      if(taxRateEntryCount > 0){
+        meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
+      }else{
+        meanTaxRate = std::nan("1");
+      }
+      
+      return meanTaxRate;
+
+};
+
+//============================================================================
+bool loadTaxFoundationDataSet(std::string &fileName, 
+                              TaxFoundationDataSet &dataSet){
+
+  bool validFormat=false;                                  
+  std::ifstream file(fileName);
+
+  if(file.is_open()){
+    validFormat=true;
+    std::string line;
+    std::string entry;
+
+    //First line is the header: check entries + read in years    
+    std::getline(file,line); 
+
+    std::size_t idx0=0;
+    std::size_t idx1=0;
+    int column = 0;
+    std::vector< double > dataRow;
+    dataRow.clear();
+
+    idx1 = line.find_first_of(',',idx0);
+    entry = line.substr(idx0,idx1-idx0);
+
+    do{
+        if(column <= 4){
+          switch(column){
+            case 1:{
+                if(entry.compare("iso_2") != 0){
+                  validFormat=false;
+                }
+            }break;
+            case 2:{
+              if(entry.compare("iso_3") != 0){
+                  validFormat=false;
+              }
+            } break;
+            case 3:{
+              if(entry.compare("continent") != 0){
+                  validFormat=false;
+              }
+            }break;
+            case 4:{
+              if(entry.compare("country") != 0){
+                  validFormat=false;
+              }                
+            }break;
+          };
+        }else{
+          if(entry.compare("NA") == 0){
+            dataSet.year.push_back(-1);
+            validFormat=false;
+          }else{
+            dataSet.year.push_back(std::stoi(entry));
+          }
+        }
+
+        idx0 = idx1+1;
+        idx1 = line.find_first_of(',',idx0);
+        entry = line.substr(idx0,idx1-idx0);
+
+        ++column;
+    }while(    idx0 !=  std::string::npos 
+            && idx1 !=  std::string::npos 
+            && validFormat);
+
+
+    //Read in the data table
+    while(std::getline(file,line) && validFormat){
+
+        idx0=0;
+        idx1=0;
+        dataRow.clear();
+        column = 0;
+        idx1 = line.find_first_of(',',idx0);
+        entry = line.substr(idx0,idx1-idx0);
+
+        do{
+
+
+          if(column <= 4){
+            switch(column){
+              case 0:{
+                  dataSet.index.push_back(std::stoi(entry));
+              } break;
+              case 1:{
+                  dataSet.CountryISO2.push_back(entry);
+              }break;
+              case 2:{
+                dataSet.CountryISO3.push_back(entry);
+              } break;
+              case 3:{
+                dataSet.continent.push_back(entry);
+              }break;
+              case 4:{
+                dataSet.country.push_back(entry);                
+              }break;
+            };
+          }else{
+            if(entry.compare("NA") == 0){
+              dataRow.push_back(std::nan("1"));
+            }else{
+              dataRow.push_back(std::stod(entry));
+            }
+          }
+          idx0 = idx1+1;
+          idx1 = line.find_first_of(',',idx0);
+          entry = line.substr(idx0,idx1-idx0);
+
+          if(entry.find_first_of('"') != std::string::npos){
+            //Opening bracket
+            idx1 = line.find_first_of('"',idx0);
+            //Closing bracket
+            idx1 = line.find_first_of('"',idx1+1);
+            //Final comma
+            idx1 = line.find_first_of(',',idx1);
+            entry = line.substr(idx0,idx1-idx0);
+          }
+
+          ++column;
+        }while( idx0 !=  std::string::npos && idx1 !=  std::string::npos );
+
+        dataSet.taxTable.push_back(dataRow);
+
+
+    }
+    file.close();
+  }else{
+   std::cout << " Warning: Reverting to default tax rate. Failed to " 
+             << " read in " << fileName << std::endl; 
+  }
+
+  return validFormat;
+};
+
+
+//============================================================================
+double calcAverageInterestCover(  
+          const AnalysisDates &analysisDates,
+          const nlohmann::ordered_json &fundamentalData,
+          double defaultInterestCover,
+          const std::string &timePeriod,
+          bool quarterlyTTMAnalysis,
+          int maxDayErrorTTM,
+          bool setNansToMissingValue,
+          bool appendTermRecord)
+{
+
+  int indexDate                       = 0;
+  bool validDateSet                   = true;      
+
+  double meanInterestCover            = 0.;
+  double meanInterestCoverEntryCount  = 0;
+
+
+  bool appendTermRecordLocal=false;
+
+
+  while( (indexDate+1) < analysisDates.common.size() && validDateSet){
+
+    ++indexDate;
+
+    std::string date = analysisDates.common[indexDate]; 
+    
+    //The set of dates used for the TTM analysis
+    std::vector < std::string > dateSet;
+    std::vector < double > dateSetWeight;
+    if(quarterlyTTMAnalysis){
+      validDateSet = extractTTM(indexDate,
+                                analysisDates.common,
+                                "%Y-%m-%d",
+                                dateSet,
+                                dateSetWeight,
+                                maxDayErrorTTM);                                     
+      if(!validDateSet){
+        break;
+      }
+
+    }else{
+      dateSet.push_back(date);
+      dateSetWeight.push_back(1.0);
+    }
+
+    std::vector<std::string> localTermNames;
+    std::vector<double> localTermValues;
+
+    double interestCover = FinancialAnalysisToolkit::
+        calcInterestCover(fundamentalData,
+                          dateSet,
+                          defaultInterestCover,
+                          timePeriod.c_str(),
+                          appendTermRecord,
+                          setNansToMissingValue,
+                          localTermNames,
+                          localTermValues);
+    meanInterestCover += interestCover;                          
+
+    meanInterestCoverEntryCount += 1.0; 
+
+  }
+
+  meanInterestCover = meanInterestCover / meanInterestCoverEntryCount;
+
+  return meanInterestCover;
+
+};
+//============================================================================
+double calcLastValidDateIndex(
+          const AnalysisDates &analysisDates,
+          bool quarterlyTTMAnalysis,
+          int maxDayErrorTTM)
+{
+
+  int indexDate                    = 0;
+  bool validDateSet                = true;      
+  double numberOfDatesPerIteration = 0;
+  double numberOfIterations        = 0;
+
+  while( (indexDate+1) < analysisDates.common.size() && validDateSet){
+
+    ++indexDate;
+
+    std::string date = analysisDates.common[indexDate]; 
+    
+    //The set of dates used for the TTM analysis
+    std::vector < std::string > dateSet;
+    std::vector < double > dateSetWeight;
+    if(quarterlyTTMAnalysis){
+      validDateSet = extractTTM(indexDate,
+                                analysisDates.common,
+                                "%Y-%m-%d",
+                                dateSet,
+                                dateSetWeight,
+                                maxDayErrorTTM);                                     
+      if(!validDateSet){
+        break;
+      }
+
+    }                               
+    ++numberOfIterations;
+    numberOfDatesPerIteration += static_cast<int>(dateSet.size());    
+  }        
+  
+
+  double tmp =  (static_cast<double>(numberOfDatesPerIteration) 
+                /static_cast<double>(numberOfIterations));
+
+  numberOfDatesPerIteration =  static_cast<int>( std::round(tmp) );
+
+  --indexDate;
+  return indexDate;
+
+
+};
+
 
 //============================================================================
 int main (int argc, char* argv[]) {
@@ -705,7 +871,7 @@ int main (int argc, char* argv[]) {
   std::string historicalFolder;
   std::string eodFolder;
   std::string analyseFolder;
-  bool quaterlyTTMAnalysis;
+  bool quarterlyTTMAnalysis;
   std::string timePeriod;
   
   std::string defaultSpreadJsonFile;  
@@ -859,9 +1025,9 @@ int main (int argc, char* argv[]) {
       " null values (shortLongDebt replaced with longDebt)", false);
     cmd.add(relaxedCalculationInput); 
 
-    TCLAP::SwitchArg quaterlyTTMAnalysisInput("q","trailing_twelve_months",
+    TCLAP::SwitchArg quarterlyTTMAnalysisInput("q","trailing_twelve_months",
       "Analyze trailing twelve moneths using quarterly data.", false);
-    cmd.add(quaterlyTTMAnalysisInput); 
+    cmd.add(quarterlyTTMAnalysisInput); 
 
     TCLAP::ValueArg<std::string> analyseFolderOutput("o","output_folder_path", 
       "The path to the folder that will contain the output json files "
@@ -881,7 +1047,7 @@ int main (int argc, char* argv[]) {
     historicalFolder      = historicalFolderInput.getValue();
     exchangeCode          = exchangeCodeInput.getValue();    
     analyseFolder         = analyseFolderOutput.getValue();
-    quaterlyTTMAnalysis  = quaterlyTTMAnalysisInput.getValue();
+    quarterlyTTMAnalysis  = quarterlyTTMAnalysisInput.getValue();
 
     defaultTaxRate      = defaultTaxRateInput.getValue();
     corpTaxesWorldFile  = corpTaxesWorldFileInput.getValue();
@@ -910,7 +1076,7 @@ int main (int argc, char* argv[]) {
 
     verbose             = verboseInput.getValue();
 
-    if(quaterlyTTMAnalysis){
+    if(quarterlyTTMAnalysis){
       timePeriod                  = Q;
     }else{
       timePeriod                  = Y;
@@ -939,7 +1105,7 @@ int main (int argc, char* argv[]) {
       std::cout << "    " << defaultInterestCover << std::endl;
 
       std::cout << "  Analyze TTM using Quaterly Data" << std::endl;
-      std::cout << "    " << quaterlyTTMAnalysis << std::endl;
+      std::cout << "    " << quarterlyTTMAnalysis << std::endl;
 
       std::cout << "  Default tax rate" << std::endl;
       std::cout << "    " << defaultTaxRate << std::endl;
@@ -993,8 +1159,10 @@ int main (int argc, char* argv[]) {
   int maxDayErrorBondYieldData  = maxDayErrorTabularData; 
   // Bond yield data has a resolution of 1 month
 
+  int maxDayErrorTTM = maxDayErrorTabularData;
+
   int maxDayErrorOutstandingShareData = 365; 
-  if(quaterlyTTMAnalysis){
+  if(quarterlyTTMAnalysis){
     maxDayErrorOutstandingShareData = 2*(90);
   }
 
@@ -1269,113 +1437,51 @@ int main (int argc, char* argv[]) {
       //obviously wrong, but I only have one data point for beta from EOD's
       //data.      
       //
-      double betaUnlevered = JsonFunctions::getJsonFloat(fundamentalData[TECH]["Beta"]);
+      double betaUnlevered = 
+        JsonFunctions::getJsonFloat(fundamentalData[TECH]["Beta"]);
       if(std::isnan(betaUnlevered)){
         betaUnlevered=defaultBeta;
       }
-
-
 
       //========================================================================
       // Evaluate the average tax rate and interest cover
       //========================================================================
 
-      int indexDate                 = 0;
-      bool validDateSet             = true;      
-      int numberOfDatesPerIteration = 0;
-      int numberOfIterations        = 0;
+      double meanTaxRate = 0.;
+      if(flag_usingTaxTable){        
+        meanTaxRate=
+        calcAverageTaxRate( analysisDates,
+                            countryISO2, 
+                            corpWorldTaxTable,
+                            defaultTaxRate,                            
+                            acceptableBackwardsYearErrorForTaxRate,
+                            quarterlyTTMAnalysis,
+                            maxDayErrorTabularData);        
 
-      double taxRate                            = 0.;
-      double meanTaxRate                        = 0.;
-      unsigned int taxRateEntryCount            = 0;
-      double meanInterestCover                  = 0.;
-      unsigned int meanInterestCoverEntryCount  = 0;
-
-//      while( (indexDate+1) < datesCommon.size() && validDateSet){
-
-      while( (indexDate+1) < analysisDates.common.size() && validDateSet){
-
-        ++indexDate;
-
-        std::string date = analysisDates.common[indexDate]; 
-        
-        //The set of dates used for the TTM analysis
-        std::vector < std::string > dateSet;
-        std::vector < double > dateSetWeight;
-        if(quaterlyTTMAnalysis){
-          validDateSet = extractTTM(indexDate,
-                                    analysisDates.common,
-                                    "%Y-%m-%d",
-                                    dateSet,
-                                    dateSetWeight,
-                                    maxDayErrorTabularData);                                     
-        if(!validDateSet){
-            break;
-          }     
-        }else{
-          dateSet.push_back(date);
-          dateSetWeight.push_back(1.0);
-        }                             
-      
-        ++numberOfIterations;
-        numberOfDatesPerIteration += static_cast<int>(dateSet.size());
-        
-        if(flag_usingTaxTable){
-          taxRate=0.0;
-          for(unsigned int j=0; j<dateSet.size();++j){
-            int year  = std::stoi(dateSet[j].substr(0,4));
-            int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
-            double taxRateDate = getTaxRateFromTable(countryISO2, year, yearMin, 
-                                          corpWorldTaxTable);
-            taxRate += taxRateDate*dateSetWeight[j];
-          }
-          taxRate = taxRate*0.01;                                   
-          if(std::isnan(taxRate)){
-            taxRate=defaultTaxRate;
-          }                              
-        }else{
-          taxRate = defaultTaxRate;
-        }
-
-        meanTaxRate += taxRate;        
-        ++taxRateEntryCount;
-
-        double interestCover = FinancialAnalysisToolkit::
-            calcInterestCover(fundamentalData,
-                              dateSet,
-                              defaultInterestCover,
-                              timePeriod.c_str(),
-                              appendTermRecord,
-                              setNansToMissingValue,
-                              termNames,
-                              termValues);
-
-        if(JsonFunctions::isJsonFloatValid(interestCover)){
-          meanInterestCover += interestCover;
-          ++meanInterestCoverEntryCount;
-        }
-      }        
-      //=======================================================================
-      
-      if(taxRateEntryCount > 0){
-        meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
       }else{
-        meanTaxRate = defaultTaxRate;
-      }
-      
-      if(meanInterestCoverEntryCount > 0){
-        meanInterestCover = meanInterestCover 
-            / static_cast<double>(meanInterestCoverEntryCount);
-      }else{
-        meanInterestCover = defaultInterestCover;
+        meanTaxRate=defaultTaxRate;
       }
 
-      double tmp =  (static_cast<double>(numberOfDatesPerIteration) 
-                    /static_cast<double>(numberOfIterations));
+      double meanInterestCover = 
+        calcAverageInterestCover(  
+          analysisDates,
+          fundamentalData,
+          defaultInterestCover,
+          timePeriod,
+          quarterlyTTMAnalysis,
+          maxDayErrorTTM,
+          setNansToMissingValue,
+          appendTermRecord);
 
-      numberOfDatesPerIteration =  static_cast<int>( std::round(tmp) );
-      //=======================================================================
-      
+      //========================================================================
+      // Evaluate the last valid index
+      //========================================================================
+
+      int indexLastCommonDate = 
+        calcLastValidDateIndex(
+            analysisDates,
+            quarterlyTTMAnalysis,
+            maxDayErrorTTM);
 
       //=======================================================================
       //
@@ -1383,15 +1489,11 @@ int main (int argc, char* argv[]) {
       //
       //======================================================================= 
 
-      indexDate       = -1;
+      int indexDate       = -1;
 
-      int indexLastStartingIndex = 
-        static_cast<int>(analysisDates.common.size())
-        - numberOfDatesPerIteration*numberOfYearsToAverageCapitalExpenditures;
+      bool validDateSet    = true;
 
-      validDateSet    = true;
-
-      while( (indexDate+1) < indexLastStartingIndex && validDateSet){
+      while( (indexDate+1) < indexLastCommonDate && validDateSet){
 
         ++indexDate;
         std::string date = analysisDates.common[indexDate]; 
@@ -1402,13 +1504,13 @@ int main (int argc, char* argv[]) {
         std::vector < double > dateSetWeight;
 
       
-        if(quaterlyTTMAnalysis){
+        if(quarterlyTTMAnalysis){
           validDateSet = extractTTM(indexDate,
                                     analysisDates.common,
                                     "%Y-%m-%d",
                                     dateSet,                                    
                                     dateSetWeight,
-                                    maxDayErrorTabularData); 
+                                    maxDayErrorTTM); 
           if(!validDateSet){
             break;
           }     
@@ -1427,13 +1529,13 @@ int main (int argc, char* argv[]) {
         previousTimePeriod = analysisDates.common[indexPrevious];
         previousDateSet.resize(0);
 
-        if(quaterlyTTMAnalysis){
+        if(quarterlyTTMAnalysis){
           validDateSet = extractTTM(indexPrevious,
                                     analysisDates.common,
                                     "%Y-%m-%d",
                                     previousDateSet,
                                     previousDateSetWeight,
-                                    maxDayErrorTabularData); 
+                                    maxDayErrorTTM); 
           if(!validDateSet){
             break;
           }     
@@ -1465,13 +1567,13 @@ int main (int argc, char* argv[]) {
           std::vector< double > pastDateSetWeight;
 
           if(validPreviousDateSet){
-            if(quaterlyTTMAnalysis){
+            if(quarterlyTTMAnalysis){
               validPreviousDateSet = extractTTM(indexPastPeriods,
                                         analysisDates.common,
                                         "%Y-%m-%d",
                                         pastDateSet,
                                         pastDateSetWeight,
-                                        maxDayErrorTabularData); 
+                                        maxDayErrorTTM); 
             }else{
               if(indexPastPeriods < analysisDates.common.size()){
                 pastDateSet.push_back(analysisDates.common[indexPastPeriods]);
@@ -1516,12 +1618,23 @@ int main (int argc, char* argv[]) {
 
         //======================================================================
         //Evaluate the cost of debt
-        //======================================================================        
+        //======================================================================
+        double interestCover = 
+          FinancialAnalysisToolkit::calcInterestCover(
+                                        fundamentalData,
+                                        dateSet,
+                                        defaultInterestCover,
+                                        timePeriod.c_str(),
+                                        appendTermRecord,
+                                        setNansToMissingValue,
+                                        termNames,
+                                        termValues);
+
         double defaultSpread = FinancialAnalysisToolkit::
             calcDefaultSpread(fundamentalData,
                               dateSet,
                               timePeriod.c_str(),
-                              meanInterestCover,
+                              interestCover,
                               jsonDefaultSpread,
                               appendTermRecord,
                               setNansToMissingValue,
@@ -1530,7 +1643,10 @@ int main (int argc, char* argv[]) {
 
         std::string parentName = "afterTaxCostOfDebt_";
         
-
+        //======================================================================
+        //Get the tax rate
+        //======================================================================
+        double taxRate=0.;
         if(flag_usingTaxTable){
           int year  = std::stoi(date.substr(0,4));
           int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
@@ -1622,7 +1738,7 @@ int main (int argc, char* argv[]) {
           riskFreeRate + equityRiskPremium*beta;
 
         double costOfEquityAsAPercentage=annualcostOfEquityAsAPercentage;
-        //if(quaterlyTTMAnalysis){
+        //if(quarterlyTTMAnalysis){
         //  costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
         //}        
 

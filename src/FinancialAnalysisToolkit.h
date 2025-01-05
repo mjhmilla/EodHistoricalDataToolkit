@@ -50,11 +50,11 @@ class FinancialAnalysisToolkit {
 
     //==========================================================================
     static double sumFundamentalDataOverDates(
-        nlohmann::ordered_json &fundamentalData,
+        const nlohmann::ordered_json &fundamentalData,
         const char* reportChapter,
         const char* reportSection,
         const char* timeUnit,
-        std::vector< std::string > &dates,
+        const std::vector< std::string > &dates,
         const char* fieldName,        
         bool setNansToMissingValue){
 
@@ -85,15 +85,6 @@ class FinancialAnalysisToolkit {
           sumOfValues = std::nan("1");
         }
       }
-
-      /*
-      if( !(dates.size() == 1 || dates.size() == 4) ){
-        std::cout << "Error: this function can only be used with yearly or "
-                  << "quarterly data (dates must have 1 or 4 entries)."
-                  << std::endl;
-        std::abort();      
-      }
-      */
 
       return sumOfValues;
 
@@ -883,8 +874,8 @@ class FinancialAnalysisToolkit {
     /**
      https://www.investopedia.com/terms/i/interestcoverageratio.asp
     */
-    static double calcInterestCover(nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string > &dateSet,
+    static double calcInterestCover(const nlohmann::ordered_json &jsonData, 
+                                    const std::vector< std::string > &dateSet,
                                     double defaultInterestCover,
                                     const char *timeUnit,                                    
                                     bool appendTermRecord,                                    
