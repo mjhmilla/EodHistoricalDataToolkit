@@ -247,6 +247,7 @@ bool extractAnalysisDates(
   analysisDates.indicesHistorical.clear();
   analysisDates.indicesBond.clear();
 
+
   //Extract dates only the dates common to all financial reports
   std::vector< std::string > datesBAL;
   std::vector< std::string > datesCF;
@@ -257,81 +258,103 @@ bool extractAnalysisDates(
   finStruct.push_back(CF);
   finStruct.push_back(IS);
 
-  for(size_t i=0; i<finStruct.size(); ++i){
-    for(auto& el : fundamentalData[FIN][finStruct[i].c_str()][timePeriod.c_str()].items()){
-      std::string dateString; 
-      JsonFunctions::getJsonString(el.value()["date"],dateString);
-      switch(i){
-        case 0:
-          datesBAL.push_back(dateString);
-        break;        
-        case 1:
-          datesCF.push_back(dateString);
-        break;
-        case 2:
-          datesIS.push_back(dateString);
-        break;
-        default:
-          std::abort();          
-      };
-    }      
+  //Check that all needed fields exist and have data
+  
+  if(fundamentalData.contains(FIN)){
+    for(size_t i=0; i<finStruct.size(); ++i){
+      if(fundamentalData[FIN][finStruct[i].c_str()].contains(timePeriod.c_str())){
+        if(fundamentalData[FIN][finStruct[i].c_str()][timePeriod.c_str()].size()==0){
+          validDates=false;
+        }
+      }else{
+        validDates=false;
+      }
+    }  
+  }else{
+    validDates=false;
   }
 
-  for(size_t i=0; i<datesBAL.size();++i){
-    bool common = true;
-  
-    size_t j=0;
-    bool found =false;
-    while(!found && j < datesCF.size()){
-      if(datesBAL[i].compare(datesCF[j]) == 0){
-        found=true;
-      }else{
-        ++j;
+  if(validDates){
+    for(size_t i=0; i<finStruct.size(); ++i){
+      for(auto& el : fundamentalData[FIN][finStruct[i].c_str()][timePeriod.c_str()].items()){
+        std::string dateString; 
+        JsonFunctions::getJsonString(el.value()["date"],dateString);
+        switch(i){
+          case 0:
+            datesBAL.push_back(dateString);
+          break;        
+          case 1:
+            datesCF.push_back(dateString);
+          break;
+          case 2:
+            datesIS.push_back(dateString);
+          break;
+          default:
+            std::abort();          
+        };
+      }      
+    }
+
+    for(size_t i=0; i<datesBAL.size();++i){
+      bool common = true;
+    
+      size_t j=0;
+      bool found =false;
+      while(!found && j < datesCF.size()){
+        if(datesBAL[i].compare(datesCF[j]) == 0){
+          found=true;
+        }else{
+          ++j;
+        }
       }
-    }
-    if(j == datesCF.size()){
-      common=false;
-    }
-
-    size_t k=0;
-    found=false;
-    while(!found && k < datesIS.size()){
-      if(datesBAL[i].compare(datesIS[k]) == 0 ){
-        found=true;
-      }else{
-        ++k;
+      if(j == datesCF.size()){
+        common=false;
       }
-    }
-    if(k == datesIS.size()){
-      common=false;
-    }
 
-    if(common){
-      analysisDates.financial.push_back(datesBAL[i]);
-    }
+      size_t k=0;
+      found=false;
+      while(!found && k < datesIS.size()){
+        if(datesBAL[i].compare(datesIS[k]) == 0 ){
+          found=true;
+        }else{
+          ++k;
+        }
+      }
+      if(k == datesIS.size()){
+        common=false;
+      }
 
+      if(common){
+        analysisDates.financial.push_back(datesBAL[i]);
+      }
+
+    }
   }
 
   validDates = (validDates && analysisDates.financial.size() > 0);
 
-  for(auto& el : fundamentalData[OS][timePeriodOutstandingShares.c_str()].items()){
-    std::string dateFormatted; 
-    JsonFunctions::getJsonString(el.value()["dateFormatted"],dateFormatted);
-    analysisDates.outstandingShares.push_back(dateFormatted);
-  }   
-  validDates = (validDates && analysisDates.outstandingShares.size() > 0);
-
-  for(auto& el: historicalData.items()){
-    std::string dateString("");
-    JsonFunctions::getJsonString(el.value()["date"],dateString);
-    analysisDates.historical.push_back(dateString);
-  }  
-  validDates = (validDates && analysisDates.historical.size() > 0);
-
-  for(auto& el : bondData.items()){
-    analysisDates.bond.push_back(el.key());
+  if(validDates){
+    for(auto& el : fundamentalData[OS][timePeriodOutstandingShares.c_str()].items()){
+      std::string dateFormatted; 
+      JsonFunctions::getJsonString(el.value()["dateFormatted"],dateFormatted);
+      analysisDates.outstandingShares.push_back(dateFormatted);
+    }   
+    validDates = (validDates && analysisDates.outstandingShares.size() > 0);
   }
-  validDates = (validDates && analysisDates.bond.size() > 0);
+
+  if(validDates){
+    for(auto& el: historicalData.items()){
+      std::string dateString("");
+      JsonFunctions::getJsonString(el.value()["date"],dateString);
+      analysisDates.historical.push_back(dateString);
+    }  
+    validDates = (validDates && analysisDates.historical.size() > 0);
+
+    for(auto& el : bondData.items()){
+      analysisDates.bond.push_back(el.key());
+    }
+    validDates = (validDates && analysisDates.bond.size() > 0);
+  }
 
   
   if(validDates){
@@ -1455,7 +1478,8 @@ int main (int argc, char* argv[]) {
     AnalysisDates analysisDates;
     bool allowRepeatedDates=false;
 
-    if(validInput){
+    if(validInput){   
+
       bool validDates= 
         extractAnalysisDates(
           analysisDates,
