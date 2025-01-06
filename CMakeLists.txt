@@ -56,8 +56,12 @@ ADD_EXECUTABLE(
   src/calculate.cc)
 
 ADD_EXECUTABLE(
-  utilities
-  src/utilities.cc)
+  jsonTools
+  src/jsonTools.cc)
+
+ADD_EXECUTABLE(
+  csvTools
+  src/csvTools.cc)
 
 ADD_EXECUTABLE(
   generateTickerReports

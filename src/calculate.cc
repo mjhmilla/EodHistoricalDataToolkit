@@ -27,7 +27,6 @@ struct TaxFoundationDataSet{
   std::vector< std::string > country;
   std::vector< std::vector < double > > taxTable; 
 };
-
 //============================================================================
 
 struct AnalysisDates{
@@ -414,7 +413,7 @@ bool extractAnalysisDates(
           "%Y-%m-%d",
           analysisDates.outstandingShares,
           "%Y-%m-%d",
-          maxDayErrorHistoricalData,
+          maxDayErrorOutstandingShareData,
           commonAB,
           indicesA,
           analysisDates.indicesOutstandingShares,
@@ -823,8 +822,6 @@ bool loadTaxFoundationDataSet(std::string &fileName,
 
   return validFormat;
 };
-
-
 //============================================================================
 double calcAverageInterestCover(  
           const AnalysisDates &analysisDates,
@@ -1244,9 +1241,6 @@ int main (int argc, char* argv[]) {
   int maxDayErrorTTM = maxDayErrorTabularData;
 
   int maxDayErrorOutstandingShareData = 365; 
-  if(quarterlyTTMAnalysis){
-    maxDayErrorOutstandingShareData = 2*(90);
-  }
 
 
   //2024/8/4 
@@ -1494,6 +1488,9 @@ int main (int argc, char* argv[]) {
           allowRepeatedDates);    
 
       validInput = (validInput && validDates);
+      if(verbose && !validDates){
+        std::cout << "    Skipping: no valid dates" << std::endl;
+      }
     }
     //==========================================================================
     //
