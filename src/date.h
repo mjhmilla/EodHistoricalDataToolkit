@@ -1,3 +1,6 @@
+//SPDX-FileCopyrightText: 2015, 2016, 2017 Howard Hinnant, 2016 Adrian Colomitchi, 2017 Florian Dang, 2018, 2019 Tomasz Kamiński, 2019 Jiangang Zhuang
+//SPDX-License-Identifier: MIT
+
 #ifndef DATE_H
 #define DATE_H
 

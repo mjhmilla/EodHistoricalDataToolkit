@@ -1,3 +1,6 @@
+//SPDX-FileCopyrightText: 2023 Matthew Millard millard.matthew@gmail.com
+//SPDX-License-Identifier: MIT
+
 #ifndef FINANCIAL_ANALYSIS_TOOLKIT
 #define FINANCIAL_ANALYSIS_TOOLKIT
 

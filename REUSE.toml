@@ -1,0 +1,36 @@
+version = 1
+
+[[annotations]]
+path = "data/ISO-3166-Countries-with-Regional-Codes.json"
+SPDX-FileCopyrightText = "(c) 2011 Luke Duncalfe, from https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+[[annotations]]
+path = "data/STU/plotOverview.json"
+SPDX-FileCopyrightText = "(c) 2023 Matthew Millard <millard.matthew@gmail.com"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "data/STU/plotSummary.json"
+SPDX-FileCopyrightText = "(c) 2023 Matthew Millard <millard.matthew@gmail.com"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "data/STU/filterSTU_rank3F.json"
+SPDX-FileCopyrightText = "(c) 2023 Matthew Millard <millard.matthew@gmail.com"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "data/STU/filterM7_rank3F.json"
+SPDX-FileCopyrightText = "(c) 2023 Matthew Millard <millard.matthew@gmail.com"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "data/STU/plot_P_Vp_RcfEv_Roic.csv"
+SPDX-FileCopyrightText = "(c) 2023 Matthew Millard <millard.matthew@gmail.com"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "data/STU/plot_P_VP_EvRCF_ROIC.csv"
+SPDX-FileCopyrightText = "(c) 2023 Matthew Millard <millard.matthew@gmail.com"
+SPDX-License-Identifier = "MIT"

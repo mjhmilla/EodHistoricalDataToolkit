@@ -1,3 +1,6 @@
+//SPDX-FileCopyrightText: 2023 Matthew Millard millard.matthew@gmail.com
+//SPDX-License-Identifier: MIT
+
 #ifndef JSON_FUNCTIONS
 #define JSON_FUNCTIONS
 

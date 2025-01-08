@@ -1,3 +1,6 @@
+//SPDX-FileCopyrightText: 2023 Matthew Millard millard.matthew@gmail.com
+//SPDX-License-Identifier: MIT
+
 #include <sys/stat.h>
 #include <cstdio>
 #include <fstream>
