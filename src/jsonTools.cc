@@ -18,7 +18,7 @@ int main (int argc, char* argv[]) {
 
   std::string inputJsonFileName;
   std::string outputJsonFileName; 
-  std::string exchangeJsonFileName;
+  std::string iso3166FileName;
   bool splitPrimaryTicker;
   bool verbose;
 
@@ -49,11 +49,14 @@ int main (int argc, char* argv[]) {
       "option.", false);
     cmd.add(splitPrimaryTickerInput);    
 
-    TCLAP::ValueArg<std::string> exchangeJsonFileNameInput("x","exchange_json_file",
+    TCLAP::ValueArg<std::string> iso3166FileNameInput("x","iso_3166_file",
       "The full file path to the json file that contains a list of all"
-      "exhanges covered in the data set. This cannot be used with the -p"
+      "country and region names. Please use "
+      "data/ISO-3166-Countries-with-Regional-Codes or clone the list from "
+      "https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes/"
+      " Note: this option cannot be used with the -p"
       "option.",false,"","string");
-    cmd.add(exchangeJsonFileNameInput);   
+    cmd.add(iso3166FileNameInput);   
 
 
     TCLAP::SwitchArg verboseInput("v","verbose",
@@ -65,10 +68,10 @@ int main (int argc, char* argv[]) {
     inputJsonFileName         = inputJsonFileNameInput.getValue();
     outputJsonFileName        = outputJsonFileNameInput.getValue();
     splitPrimaryTicker        = splitPrimaryTickerInput.getValue();
-    exchangeJsonFileName      = exchangeJsonFileNameInput.getValue();
+    iso3166FileName      = iso3166FileNameInput.getValue();
     verbose                   = verboseInput.getValue();
 
-    if(splitPrimaryTicker && exchangeJsonFileName.length()>0){
+    if(splitPrimaryTicker && iso3166FileName.length()>0){
       std::cout << "Use either the -p option or the -x option but not both"
                 << std::endl;
       std::abort();                
@@ -87,7 +90,7 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Correct country names in list to be consistent with this file?" 
                 << std::endl;
-      std::cout << "    " << exchangeJsonFileName << std::endl;
+      std::cout << "    " << iso3166FileName << std::endl;
 
     }
 
@@ -130,9 +133,9 @@ int main (int argc, char* argv[]) {
     }
   }
 
-  if(exchangeJsonFileName.length()>0){
-    std::ifstream exchangeFileStream(exchangeJsonFileName);
-    json exchangeData = json::parse(exchangeFileStream);   
+  if(iso3166FileName.length()>0){
+    std::ifstream iso3166FileStream(iso3166FileName);
+    json iso3166Data = json::parse(iso3166FileStream);   
 
     for(auto& entry: jsonData){
       json jsonDataEntry = nlohmann::ordered_json::object();
@@ -143,13 +146,13 @@ int main (int argc, char* argv[]) {
           std::string country = el.value();
           bool found=false;
           std::string countryISO2, countryISO3;
-          for(auto& exEntry: exchangeData){
-            for(auto& exFields: exEntry.items()){
-              if(exFields.key().compare("Country")==0){
-                std::string exCountry = exFields.value();
-                if( country.compare(exCountry) == 0){
-                  JsonFunctions::getJsonString(exEntry["CountryISO2"],countryISO2);
-                  JsonFunctions::getJsonString(exEntry["CountryISO3"],countryISO3);
+          for(auto& iso3166Entry: iso3166Data){
+            for(auto& iso3166Fields: iso3166Entry.items()){
+              if(iso3166Fields.key().compare("name")==0){
+                std::string iso3166Country = iso3166Fields.value();
+                if( country.compare(iso3166Country) == 0){
+                  JsonFunctions::getJsonString(iso3166Entry["alpha-2"],countryISO2);
+                  JsonFunctions::getJsonString(iso3166Entry["alpha-3"],countryISO3);
                   found = true;
                   break;
                 }
