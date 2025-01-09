@@ -42,6 +42,16 @@ struct CountryRiskDataSet{
   double inflation_2019_2023;
   double inflation_2024_2028;
   double riskFreeRate;
+
+  CountryRiskDataSet():
+    PRS(std::nan("1")),
+    defaultSpread(std::nan("1")),
+    ERP(std::nan("1")),
+    taxRate(std::nan("1")),
+    CRP(std::nan("1")),
+    inflation_2019_2023(std::nan("1")),
+    inflation_2024_2028(std::nan("1")),
+    riskFreeRate(std::nan("1")){}
 };
 //============================================================================
 
@@ -1745,7 +1755,7 @@ int main (int argc, char* argv[]) {
 //======================================================================
         //Evaluate the equity risk premium for this country.
         //======================================================================
-        CountryRiskDataSet riskTable;
+        CountryRiskDataSet riskTable;        
         bool riskTableFound=false;
 
         double equityRiskPremium=erpUSADefault;
@@ -1803,16 +1813,15 @@ int main (int argc, char* argv[]) {
           }
 
           //Calculate the country-specific equity risk premium
-          if(riskTableFound){
+          if(riskTableFound && !std::isnan(riskTable.CRP)){
             equityRiskPremium = riskTable.CRP + erpUSADefault;
+          }
+          if(riskTableFound && !std::isnan(riskTable.inflation_2019_2023)
+                            && !std::isnan(riskTable.inflation_2024_2028)){
+
             inflation = (riskTable.inflation_2019_2023
                         +riskTable.inflation_2024_2028)*0.5;                        
-          }else{
-            std::cout << "  Using default equityRiskPremium " 
-                      << erpUSADefault 
-                      << std::endl;
-          }                            
-
+          }
         }
 
         //======================================================================
@@ -1843,7 +1852,7 @@ int main (int argc, char* argv[]) {
         
 
         //Calculate the country specific defaultSpread
-        if(riskTableFound){
+        if(riskTableFound && !std::isnan(riskTable.riskFreeRate)){
           riskFreeRate = riskTable.riskFreeRate;        
         }
 
@@ -1874,7 +1883,7 @@ int main (int argc, char* argv[]) {
 
 
         //Calculate the country specific defaultSpread
-        if(riskTableFound){
+        if(riskTableFound && !std::isnan(riskTable.defaultSpread)){
           defaultSpread += riskTable.defaultSpread;        
         }
 
@@ -1905,7 +1914,8 @@ int main (int argc, char* argv[]) {
         }        
         
         //Update (if necessary) the tax rate
-        if(!taxRateTableFound && riskTableFound){
+        if(!taxRateTableFound && riskTableFound 
+              && !std::isnan(riskTable.taxRate)){
           taxRate = riskTable.taxRate;
         }        
         //======================================================================
@@ -1914,12 +1924,15 @@ int main (int argc, char* argv[]) {
 
         double afterTaxCostOfDebt = (riskFreeRate+defaultSpread)*(1.0-taxRate);
 
-        if(riskTableFound){
-          afterTaxCostOfDebt = 
-            (1.0 + afterTaxCostOfDebt)*(
-                (1.0+inflation)/(1.0+defaultInflationRate))
-                -1.0;
-        }
+        //Adjust for inflation
+        //Using Table 31 from Damodaran, "Country risk: determinants, measures
+        //and implications - The 2024 Edition".
+
+        afterTaxCostOfDebt = 
+          (1.0 + afterTaxCostOfDebt)*(
+              (1.0+inflation)/(1.0+defaultInflationRate))
+              -1.0;
+
 
 
         termNames.push_back("afterTaxCostOfDebt_riskFreeRate");
@@ -2003,13 +2016,12 @@ int main (int argc, char* argv[]) {
         //Adjust for inflation
         //Using Table 31 from Damodaran, "Country risk: determinants, measures
         //and implications - The 2024 Edition".
-        if(riskTableFound){
-          annualCostOfEquityAsAPercentage = 
-            (1.0+annualCostOfEquityAsAPercentage)
-            *((1.0+inflation)/(1.0+defaultInflationRate)) - 1.0;
-        }
+        
+        annualCostOfEquityAsAPercentage = 
+          (1.0+annualCostOfEquityAsAPercentage)
+          *((1.0+inflation)/(1.0+defaultInflationRate)) - 1.0;
 
-        double costOfEquityAsAPercentage=annualCostOfEquityAsAPercentage;
+         double costOfEquityAsAPercentage=annualCostOfEquityAsAPercentage;
         //if(quarterlyTTMAnalysis){
         //  costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
         //}        
