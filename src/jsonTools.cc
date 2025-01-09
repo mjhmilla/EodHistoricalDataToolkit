@@ -19,6 +19,7 @@ int main (int argc, char* argv[]) {
   std::string inputJsonFileName;
   std::string outputJsonFileName; 
   std::string iso3166FileName;
+  std::string mergeByCountryFileName;
   bool splitPrimaryTicker;
   bool verbose;
 
@@ -56,7 +57,14 @@ int main (int argc, char* argv[]) {
       "https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes/"
       " Note: this option cannot be used with the -p"
       "option.",false,"","string");
-    cmd.add(iso3166FileNameInput);   
+    cmd.add(iso3166FileNameInput);  
+
+    TCLAP::ValueArg<std::string> mergeByCountryFileNameInput("m","merge_file_name",
+      "The full file path to the json file that contains extra fields to append "
+      "to the input file, where entries are matched by country name."
+      " Note: this option cannot be used with the -p"
+      "option.",false,"","string");
+    cmd.add(mergeByCountryFileNameInput);   
 
 
     TCLAP::SwitchArg verboseInput("v","verbose",
@@ -68,11 +76,24 @@ int main (int argc, char* argv[]) {
     inputJsonFileName         = inputJsonFileNameInput.getValue();
     outputJsonFileName        = outputJsonFileNameInput.getValue();
     splitPrimaryTicker        = splitPrimaryTickerInput.getValue();
-    iso3166FileName      = iso3166FileNameInput.getValue();
+    iso3166FileName           = iso3166FileNameInput.getValue();
+    mergeByCountryFileName    = mergeByCountryFileNameInput.getValue();
     verbose                   = verboseInput.getValue();
 
-    if(splitPrimaryTicker && iso3166FileName.length()>0){
-      std::cout << "Use either the -p option or the -x option but not both"
+    int optionCheck=0;
+    if(splitPrimaryTicker){
+      ++optionCheck;
+    }
+    if(iso3166FileName.length()>0){
+      ++optionCheck;
+    }
+    if(mergeByCountryFileName.length()>0){
+      ++optionCheck;
+    }
+
+
+    if(optionCheck>1 || optionCheck==0){
+      std::cout << "One of these options must be used: -p, -x, or -m"
                 << std::endl;
       std::abort();                
     }
@@ -92,6 +113,11 @@ int main (int argc, char* argv[]) {
                 << std::endl;
       std::cout << "    " << iso3166FileName << std::endl;
 
+      std::cout << "   Merge entries in this json file with the input (by country)" 
+                << std::endl;
+      std::cout << "    " << mergeByCountryFileName << std::endl;
+
+
     }
 
   } catch (TCLAP::ArgException &e)  // catch exceptions
@@ -108,6 +134,9 @@ int main (int argc, char* argv[]) {
   json jsonData = json::parse(inputFileStream);        
   json jsonDataUpd;
 
+  //============================================================================
+  // Split the primary ticker
+  //============================================================================  
   if(splitPrimaryTicker){
     for(auto& entry: jsonData){
       json jsonDataEntry;
@@ -133,6 +162,9 @@ int main (int argc, char* argv[]) {
     }
   }
 
+  //============================================================================
+  // Add the ISO2 and ISO3 country codes
+  //============================================================================  
   if(iso3166FileName.length()>0){
     std::ifstream iso3166FileStream(iso3166FileName);
     json iso3166Data = json::parse(iso3166FileStream);   
@@ -183,6 +215,73 @@ int main (int argc, char* argv[]) {
 
   }
 
+  //============================================================================
+  // Merge the extry fields with the input 
+  //============================================================================  
+  if(mergeByCountryFileName.length()>0){
+
+    std::ifstream mergeFileStream(mergeByCountryFileName);
+    json mergeData = json::parse(mergeFileStream);       
+
+    json jsonDataMergeDefault = nlohmann::ordered_json::object();
+
+    //Copy over an empty version of the extra merge fields, but ignore the 
+    //country entry
+    for(auto& elMerge : mergeData.at(0).items() ){
+      if(elMerge.key().compare("Country") != 0){
+        if(elMerge.value().is_string()){
+          jsonDataMergeDefault.push_back({elMerge.key(),""});
+        }else{
+          jsonDataMergeDefault.push_back({elMerge.key(),std::nan("1")});
+        }
+      }
+    }
+
+    for(auto& entry: jsonData.items()){
+
+      json jsonDataEntry = nlohmann::ordered_json::object();
+      std::string country;
+      JsonFunctions::getJsonString(entry.value()["Country"],country);
+
+      //Copy the existing fields over.
+      for(auto& elEntry : entry.value().items()){
+        jsonDataEntry.push_back({elEntry.key(), elEntry.value()});
+      }
+
+      bool matchFound = false;
+      //If a match exists, copy over the contents
+      for(auto& entryMerge : mergeData.items()){
+        std::string mergeCountry;
+        JsonFunctions::getJsonString(entryMerge.value()["Country"],mergeCountry);
+
+        if(country.compare(mergeCountry)==0){
+
+          //Copy over an empty set of fields to append.
+          matchFound=true;
+
+          for(auto& elMerge : entryMerge.value().items()){
+            if(elMerge.key().compare("Country") != 0){
+              jsonDataEntry.push_back({elMerge.key(), elMerge.value()});              
+            }
+          }
+        }
+
+      }
+
+      if(matchFound){
+        jsonDataUpd.push_back(jsonDataEntry);
+      }else{
+        for(auto &el : jsonDataMergeDefault.items()){
+          jsonDataEntry.push_back({el.key(),el.value()});
+        }
+        jsonDataUpd.push_back(jsonDataEntry);
+      }
+
+    
+    }
+    
+
+  }
 
 
   std::ofstream outputFileStream(outputJsonFileName,

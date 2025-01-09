@@ -184,12 +184,11 @@ static void appendValuationTable(std::ofstream &latexReport,
                            bool verbose){
 
     latexReport << std::endl << std::endl << "\\bigskip" << std::endl;
-    latexReport << "Inputs are indicated using (*). Note the constant equity"
-                << " risk premium should be replaced with " 
+    latexReport << "Inputs are indicated using (*). Note the country specific "
+                << "equity risk premium comes from Professor Aswath Damodaran s"
+                << "2024 calculations listed on his webpage and blog :" 
                 << "\\href{https://aswathdamodaran.blogspot.com/2024/07/country-risk-my-2024-data-update.html}{Prof. Damodaran's country risk} method."
-                << "  The values of 0.05 are appropriate for safe developed "
-                << " countries: not all countries in EOD's database are safe" 
-                << " and developed. ";
+                << std::endl;
     latexReport << std::endl << "\\bigskip" << std::endl<< std::endl;
 
     latexReport << "\\begin{tabular}{l l}" << std::endl;

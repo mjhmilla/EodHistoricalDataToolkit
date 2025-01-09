@@ -30,6 +30,20 @@ struct TaxFoundationDataSet{
   std::vector< std::vector < double > > taxTable; 
 };
 //============================================================================
+struct CountryRiskDataSet{
+  std::string Country;
+  std::string CountryISO2;
+  std::string CountryISO3;
+  double PRS;
+  double defaultSpread;
+  double ERP;
+  double taxRate;
+  double CRP;
+  double inflation_2019_2023;
+  double inflation_2024_2028;
+  double riskFreeRate;
+};
+//============================================================================
 
 struct AnalysisDates{
   std::vector< std::string > common;
@@ -958,16 +972,18 @@ int main (int argc, char* argv[]) {
   std::string defaultSpreadJsonFile;  
   std::string bondYieldJsonFile;  
   std::string corpTaxesWorldFile;
+  std::string riskByCountryFile;
 
   double defaultInterestCover;
 
   double defaultRiskFreeRate;
-  double equityRiskPremium;
+  double erpUSADefault;
   double defaultBeta;
 
   std::string singleFileToEvaluate;
 
   double defaultTaxRate;
+  double defaultInflationRate;
   int numberOfYearsToAverageCapitalExpenditures;
 
   int numberOfYearsForTerminalValuation;
@@ -1039,27 +1055,44 @@ int main (int argc, char* argv[]) {
       false,0.256,"double");
     cmd.add(defaultTaxRateInput);  
 
+    TCLAP::ValueArg<double> defaultInflationRateInput("g",
+      "default_inflation_rate", 
+      "The default inflation rate in the country that you are investing in."
+      " In my case this is 0.0248 (2.48 percent) in Germany.",
+      false,0.0248,"double");
+    cmd.add(defaultInflationRateInput);      
+
     TCLAP::ValueArg<std::string> corpTaxesWorldFileInput("w","global_corporate_tax_rate_file", 
       "Corporate taxes reported around the world from the tax foundation"
       " in csv format (https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/)",
       false,"","string");
     cmd.add(corpTaxesWorldFileInput);  
-    TCLAP::ValueArg<double> defaultRiskFreeRateInput("r",
 
+    TCLAP::ValueArg<double> defaultRiskFreeRateInput("r",
       "default_risk_free_rate", 
       "The risk free rate of return, which is often set to the return on "
       "a 10 year or 30 year bond as noted from Ch. 3 of Damodran.",
       false,0.025,"double");
     cmd.add(defaultRiskFreeRateInput);  
 
-    TCLAP::ValueArg<double> equityRiskPremiumInput("e",
+    TCLAP::ValueArg<double> equityRiskPremiumUSAInput("e",
       "equity_risk_premium", 
-      "The extra return that the stock should return given its risk. Often this"
-      " is set to the historical incremental rate of return provided by the "
-      " stock market relative to the bond market. In the U.S. this is somewhere"
-      " around 4 percent between 1928 and 2010 as noted in Ch. 3 Damodran.",
+      "The extra return that the stock should return given its risk in the USA."
+      " During 2024 this is somewhere around 4 percent between 1928 and 2010 as"
+      " noted in Ch. 3 Damodran.",
       false,0.05,"double");
-    cmd.add(equityRiskPremiumInput);  
+    cmd.add(equityRiskPremiumUSAInput);  
+
+    
+    TCLAP::ValueArg<std::string> riskByCountryFileInput("k",
+      "equity_risk_premium_by_country", 
+      "The extra return that the stock should return given its country "
+      "dependent risk. This json file is typically "
+      "data/equityRiskPremiumByCountry2024.json which has been extracted from"
+      "the webpage of Professor Aswath Damodaran (see ctryprem.xlsx):" 
+      "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html",
+      false,"","string");
+    cmd.add(riskByCountryFileInput);  
 
     TCLAP::ValueArg<double> defaultBetaInput("b",
       "default_beta", 
@@ -1131,10 +1164,14 @@ int main (int argc, char* argv[]) {
     quarterlyTTMAnalysis  = quarterlyTTMAnalysisInput.getValue();
 
     defaultTaxRate      = defaultTaxRateInput.getValue();
+    defaultInflationRate= defaultInflationRateInput.getValue();
     corpTaxesWorldFile  = corpTaxesWorldFileInput.getValue();
     defaultRiskFreeRate = defaultRiskFreeRateInput.getValue();
     defaultBeta         = defaultBetaInput.getValue();
-    equityRiskPremium   = equityRiskPremiumInput.getValue();
+    erpUSADefault       = equityRiskPremiumUSAInput.getValue();
+
+    riskByCountryFile=
+      riskByCountryFileInput.getValue();
 
 
     defaultSpreadJsonFile = defaultSpreadJsonFileInput.getValue();
@@ -1188,6 +1225,9 @@ int main (int argc, char* argv[]) {
       std::cout << "  Analyze TTM using Quaterly Data" << std::endl;
       std::cout << "    " << quarterlyTTMAnalysis << std::endl;
 
+      std::cout << "  Default inflation rate" << std::endl;
+      std::cout << "    " << defaultInflationRate << std::endl;
+
       std::cout << "  Default tax rate" << std::endl;
       std::cout << "    " << defaultTaxRate << std::endl;
 
@@ -1198,8 +1238,11 @@ int main (int argc, char* argv[]) {
       std::cout << "  Annual default risk free rate" << std::endl;
       std::cout << "    " << defaultRiskFreeRate << std::endl;
 
-      std::cout << "  Annual equity risk premium" << std::endl;
-      std::cout << "    " << equityRiskPremium << std::endl;
+      std::cout << "  Annual default equity risk premium" << std::endl;
+      std::cout << "    " << erpUSADefault << std::endl;
+
+      std::cout << "  Risk by country" << std::endl;
+      std::cout << "    " << riskByCountryFile << std::endl;
 
       std::cout << "  Default beta value" << std::endl;
       std::cout << "    " << defaultBeta << std::endl;
@@ -1243,7 +1286,6 @@ int main (int argc, char* argv[]) {
   int maxDayErrorTTM = maxDayErrorTabularData;
 
   int maxDayErrorOutstandingShareData = 365; 
-
 
   //2024/8/4 
   //  Note: some fields used in the functions in the FinanacialToolkit
@@ -1354,12 +1396,39 @@ int main (int argc, char* argv[]) {
               << std::endl; 
     std::cout << "    the risk free rate which is used in the calculation "   
               << std::endl; 
-    std::cout << "    of the cost of capital and the cost of debt."           
+    std::cout << "    of the cost of capital and the cost of debt."               
+              << std::endl; 
+    std::cout << "    This will not make sense for a business in a country"
+              << std::endl; 
+    std::cout << "    with a risk free rate that differs substantially from"    
+              << std::endl; 
+    std::cout << "    the US."    
               << std::endl; 
     std::cout << std::endl;
   }
 
+  //==========================================================================
+  //Load the equity risk premium by country table
+  //==========================================================================
+  nlohmann::ordered_json riskByCountryData;
 
+  bool validRiskTable = JsonFunctions::loadJsonFile( 
+                                riskByCountryFile, 
+                                riskByCountryData, 
+                                verbose);
+
+  if(validRiskTable && verbose){
+    std::cout << std::endl;
+    std::cout << "Loaded the equity-risk-premium by country table: "
+              << std::endl;
+  }                                
+  
+  if(!validRiskTable && verbose){
+    std::cout << std::endl;
+    std::cout << "Error: failed to load the equity-risk-premium by country table:"
+              << riskByCountryFile 
+              << std::endl;
+  }                                
 
   //============================================================================
   //
@@ -1673,6 +1742,78 @@ int main (int argc, char* argv[]) {
 
         }
 
+//======================================================================
+        //Evaluate the equity risk premium for this country.
+        //======================================================================
+        CountryRiskDataSet riskTable;
+        bool riskTableFound=false;
+
+        double equityRiskPremium=erpUSADefault;
+        double inflation = defaultInflationRate;
+
+        if(validRiskTable){
+          for(auto &riskEntry : riskByCountryData){
+            std::string erpCountryISO2;
+            JsonFunctions::getJsonString(riskEntry["CountryISO2"],erpCountryISO2);
+            if(countryISO2.compare(erpCountryISO2)==0){
+
+              riskTable.CountryISO2=erpCountryISO2;
+
+              JsonFunctions::getJsonString(riskEntry["CountryISO3"],
+                                          riskTable.CountryISO3);
+
+              JsonFunctions::getJsonString(riskEntry["Country"],
+                                          riskTable.Country);
+
+              riskTable.PRS  
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["PRS"]);
+
+              riskTable.defaultSpread 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["defaultSpread"])*0.01;
+
+              riskTable.ERP 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["ERP"])*0.01;
+
+              riskTable.taxRate 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["taxRate"])*0.01;
+
+              riskTable.CRP 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["CRP"])*0.01;
+
+              riskTable.inflation_2019_2023 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["inflation_2019_2023"])*0.01;                   
+              riskTable.inflation_2024_2028 
+              
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["inflation_2024_2028"])*0.01;
+
+              riskTable.riskFreeRate 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["riskFreeRate"])*0.01;                                                      
+              riskTableFound=true;
+
+              break;
+            }
+          }
+
+          //Calculate the country-specific equity risk premium
+          if(riskTableFound){
+            equityRiskPremium = riskTable.CRP + erpUSADefault;
+            inflation = (riskTable.inflation_2019_2023
+                        +riskTable.inflation_2024_2028)*0.5;                        
+          }else{
+            std::cout << "  Using default equityRiskPremium " 
+                      << erpUSADefault 
+                      << std::endl;
+          }                            
+
+        }
 
         //======================================================================
         //Evaluate the risk free rate as the yield on a 10 year US bond
@@ -1699,6 +1840,12 @@ int main (int argc, char* argv[]) {
         }        
 
         double riskFreeRate = bondYield;
+        
+
+        //Calculate the country specific defaultSpread
+        if(riskTableFound){
+          riskFreeRate = riskTable.riskFreeRate;        
+        }
 
         //======================================================================
         //Evaluate the cost of debt
@@ -1725,12 +1872,19 @@ int main (int argc, char* argv[]) {
                               termNames,
                               termValues);
 
+
+        //Calculate the country specific defaultSpread
+        if(riskTableFound){
+          defaultSpread += riskTable.defaultSpread;        
+        }
+
         std::string parentName = "afterTaxCostOfDebt_";
         
         //======================================================================
         //Get the tax rate
         //======================================================================
         double taxRate=0.;
+        bool taxRateTableFound=true;
         if(flag_usingTaxTable){
           int year  = std::stoi(date.substr(0,4));
           int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
@@ -1738,25 +1892,50 @@ int main (int argc, char* argv[]) {
                                         corpWorldTaxTable);
           taxRate = taxRate*0.01;  //convert from percent to decimal                                     
           if(std::isnan(taxRate)){
-            taxRate=meanTaxRate;
+            taxRate=meanTaxRate;    
+            taxRateTableFound=false;        
           }                    
           if(std::isnan(taxRate)){
             taxRate=defaultTaxRate;
+            taxRateTableFound=false;
           }          
         }else{
           taxRate = defaultTaxRate;
+          taxRateTableFound=false;
         }        
-                                
+        
+        //Update (if necessary) the tax rate
+        if(!taxRateTableFound && riskTableFound){
+          taxRate = riskTable.taxRate;
+        }        
+        //======================================================================
+        //Evaluate the cost of debt
+        //======================================================================
+
         double afterTaxCostOfDebt = (riskFreeRate+defaultSpread)*(1.0-taxRate);
+
+        if(riskTableFound){
+          afterTaxCostOfDebt = 
+            (1.0 + afterTaxCostOfDebt)*(
+                (1.0+inflation)/(1.0+defaultInflationRate))
+                -1.0;
+        }
+
+
         termNames.push_back("afterTaxCostOfDebt_riskFreeRate");
         termNames.push_back("afterTaxCostOfDebt_defaultSpread");
         termNames.push_back("afterTaxCostOfDebt_taxRate");
+        termNames.push_back("afterTaxCostOfDebt_inflationReference");
+        termNames.push_back("afterTaxCostOfDebt_inflation");        
         termNames.push_back("afterTaxCostOfDebt");
         
         termValues.push_back(riskFreeRate);
         termValues.push_back(defaultSpread);
         termValues.push_back(taxRate);
+        termValues.push_back(defaultInflationRate);
+        termValues.push_back(inflation);
         termValues.push_back(afterTaxCostOfDebt);
+
 
         //======================================================================
         //Evaluate the current total short and long term debt
@@ -1818,10 +1997,19 @@ int main (int argc, char* argv[]) {
           (1.0-taxRate)*(longTermDebt/marketCapitalization));
 
 
-        double annualcostOfEquityAsAPercentage = 
+        double annualCostOfEquityAsAPercentage = 
           riskFreeRate + equityRiskPremium*beta;
 
-        double costOfEquityAsAPercentage=annualcostOfEquityAsAPercentage;
+        //Adjust for inflation
+        //Using Table 31 from Damodaran, "Country risk: determinants, measures
+        //and implications - The 2024 Edition".
+        if(riskTableFound){
+          annualCostOfEquityAsAPercentage = 
+            (1.0+annualCostOfEquityAsAPercentage)
+            *((1.0+inflation)/(1.0+defaultInflationRate)) - 1.0;
+        }
+
+        double costOfEquityAsAPercentage=annualCostOfEquityAsAPercentage;
         //if(quarterlyTTMAnalysis){
         //  costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
         //}        
@@ -1830,6 +2018,8 @@ int main (int argc, char* argv[]) {
         termNames.push_back("costOfEquityAsAPercentage_equityRiskPremium");
         termNames.push_back("costOfEquityAsAPercentage_betaUnlevered");
         termNames.push_back("costOfEquityAsAPercentage_taxRate");
+        termNames.push_back("costOfEquityAsAPercentage_inflationReference");
+        termNames.push_back("costOfEquityAsAPercentage_inflation");          
         termNames.push_back("costOfEquityAsAPercentage_longTermDebt");
         termNames.push_back("costOfEquityAsAPercentage_adjustedClose");
         termNames.push_back("costOfEquityAsAPercentage_outstandingShares");
@@ -1841,6 +2031,8 @@ int main (int argc, char* argv[]) {
         termValues.push_back(equityRiskPremium);
         termValues.push_back(betaUnlevered);
         termValues.push_back(taxRate);
+        termValues.push_back(defaultInflationRate);
+        termValues.push_back(inflation);
         termValues.push_back(longTermDebt);
         termValues.push_back(adjustedClosePrice);
         termValues.push_back(outstandingShares);
