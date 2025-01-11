@@ -567,17 +567,21 @@ bool generateLaTeXReport(
 
     latexReport << std::endl;
 
-    latexReport << "\\begin{figure}[h]" << std::endl;
-    latexReport << "  \\begin{center}" << std::endl;
-    latexReport << "    \\includegraphics{" 
-                <<      plotFileName << "}" << std::endl;
-    latexReport << "    \\caption{"
-                << companyNameString
+    //latexReport << "\\begin{figure}[h]" << std::endl;
+    //latexReport << "  \\begin{center}" << std::endl;
+    latexReport << "\\includegraphics{" 
+                <<      plotFileName << "}\\\\" << std::endl;
+    latexReport << companyNameString
                 << " (" << primaryTickerString <<") "
-                << tickerMetaData.country << " ( \\url{" << webURL << "} )"
-                << "}" << std::endl;
-    latexReport << " \\end{center}" << std::endl;
-    latexReport << "\\end{figure}"<< std::endl;
+                << tickerMetaData.country << " ( \\url{" << webURL << "} )\\\\"
+                << std::endl;
+    //latexReport << "    \\caption{"
+    //            << companyNameString
+    //            << " (" << primaryTickerString <<") "
+    //            << tickerMetaData.country << " ( \\url{" << webURL << "} )"
+    //            << "}" << std::endl;
+    //latexReport << " \\end{center}" << std::endl;
+    //latexReport << "\\end{figure}"<< std::endl;
     latexReport << std::endl;
 
     latexReport << "\\begin{multicols}{2}" << std::endl;
@@ -649,17 +653,21 @@ bool generateLaTeXReport(
 
     latexReport << "\\end{multicols}" << std::endl;
 
-    latexReport << "\\begin{figure}[h]" << std::endl;
-    latexReport << "  \\begin{center}" << std::endl;
-    latexReport << "    \\includegraphics{" 
-                <<      plotDebuggingFileName << "}" << std::endl;
-    latexReport << "    \\caption{"
-                << companyNameString
+    //latexReport << "\\begin{figure}[h]" << std::endl;
+    //latexReport << "  \\begin{center}" << std::endl;
+    latexReport << "\\includegraphics{" 
+                <<      plotDebuggingFileName << "}\\\\" << std::endl;
+    latexReport << companyNameString
                 << " (" << primaryTickerString <<") "
                 << tickerMetaData.country << " ( \\url{" << webURL << "} )"
-                << " debugging data }" << std::endl;
-    latexReport << " \\end{center}" << std::endl;
-    latexReport << "\\end{figure}"<< std::endl;
+                << " debugging data\\\\" << std::endl;                
+    //latexReport << "    \\caption{"
+    //            << companyNameString
+    //            << " (" << primaryTickerString <<") "
+    //            << tickerMetaData.country << " ( \\url{" << webURL << "} )"
+    //            << " debugging data }" << std::endl;
+    //latexReport << " \\end{center}" << std::endl;
+    //latexReport << "\\end{figure}"<< std::endl;
     latexReport << std::endl;
 
     latexReport << "\\break"          << std::endl;

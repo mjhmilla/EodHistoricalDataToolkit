@@ -1044,7 +1044,7 @@ void generateLaTeXReport(
 
     latexReport << "\\section{ " << tickerString << " }" <<std::endl; 
     latexReport << "\\label{" << tickerLabel << "}" << std::endl;
-    latexReport << "\\graphicspath{{" << graphicsPath.string() << "}}" 
+    latexReport << "\\graphicspath{" << graphicsPath.string() << "}" 
                 << std::endl;
     latexReport << "\\input{"
                 << tickerReportPath.string()

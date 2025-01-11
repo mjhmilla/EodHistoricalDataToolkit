@@ -1928,25 +1928,25 @@ int main (int argc, char* argv[]) {
         //Using Table 31 from Damodaran, "Country risk: determinants, measures
         //and implications - The 2024 Edition".
 
-        afterTaxCostOfDebt = 
-          (1.0 + afterTaxCostOfDebt)*(
-              (1.0+inflation)/(1.0+defaultInflationRate))
-              -1.0;
+        //afterTaxCostOfDebt = 
+        //(1.0 + afterTaxCostOfDebt)*(
+        //    (1.0+inflation)/(1.0+defaultInflationRate))
+        //    -1.0;
 
 
 
         termNames.push_back("afterTaxCostOfDebt_riskFreeRate");
         termNames.push_back("afterTaxCostOfDebt_defaultSpread");
         termNames.push_back("afterTaxCostOfDebt_taxRate");
-        termNames.push_back("afterTaxCostOfDebt_inflationReference");
-        termNames.push_back("afterTaxCostOfDebt_inflation");        
+        //termNames.push_back("afterTaxCostOfDebt_inflationReference");
+        //termNames.push_back("afterTaxCostOfDebt_inflation");        
         termNames.push_back("afterTaxCostOfDebt");
         
         termValues.push_back(riskFreeRate);
         termValues.push_back(defaultSpread);
         termValues.push_back(taxRate);
-        termValues.push_back(defaultInflationRate);
-        termValues.push_back(inflation);
+        //termValues.push_back(defaultInflationRate);
+        //termValues.push_back(inflation);
         termValues.push_back(afterTaxCostOfDebt);
 
 

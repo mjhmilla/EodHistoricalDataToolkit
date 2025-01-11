@@ -183,11 +183,21 @@ static void appendValuationTable(std::ofstream &latexReport,
                            const std::string &date,
                            bool verbose){
 
+
     latexReport << std::endl << std::endl << "\\bigskip" << std::endl;
-    latexReport << "Inputs are indicated using (*). Note the country specific "
-                << "equity risk premium comes from Professor Aswath Damodaran s"
-                << "2024 calculations listed on his webpage and blog :" 
-                << "\\href{https://aswathdamodaran.blogspot.com/2024/07/country-risk-my-2024-data-update.html}{Prof. Damodaran's country risk} method."
+    latexReport << "Note the country specific "
+                << "equity risk premium comes from Professor Aswath Damodaran's "
+                << "2024 calculations listed on his webpage and blog:" 
+                << "\\href{https://aswathdamodaran.blogspot.com/2024/07/country-risk-my-2024-data-update.html}{Prof. Damodaran's country risk} method. "
+                << "These 2024 data are applied to all past valuations presented "
+                << "here, and as such, the past valuations calculated here may be "
+                << "inaccurate. To be more accurate, historical records for "
+                << "government bond yields, inflation, tax, and country-specific "
+                << "equity risk premimums would need to be available for the past "
+                << "10 years in the approximately 200 countries covered. Tax rates,"
+                << "however, are updated (when available) as historical "
+                << "country-specific tax data are available through The Tax Foundation's "
+                << "\\href{https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/}{Corporate Tax Rates By Country}" 
                 << std::endl;
     latexReport << std::endl << "\\bigskip" << std::endl<< std::endl;
 
@@ -673,21 +683,21 @@ static void appendValuationTable(std::ofstream &latexReport,
 
 
 
-    latexReport << "\\underline{References}" << std::endl;
-    latexReport << "\\begin{enumerate}" << std::endl;
-    latexReport << "\\item The U.S. 10 year bond rate is used to estimate "
-                << "the risk-free-rate in all countries across time. This is"
-                << " obviously only appropriate if you can actually purchase "
-                << " US 10 year treasury bonds. \\\\" 
-                << "\\href{https://fred.stlouisfed.org/series/DGS10}{Federal Reserve Bank of St. Louis}" 
-                << std::endl;
-    latexReport << "\\item " 
-                << "\\href{https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html}{Prof. Damodaran's Ratings File}" 
-                << std::endl;           
-    latexReport << "\\item " 
-                << "\\href{https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/}{Corporate Tax Rates By Country}" 
-                << std::endl;                            
-    latexReport << "\\end{enumerate}" << std::endl;
+    //latexReport << "\\underline{References}" << std::endl;
+    //latexReport << "\\begin{enumerate}" << std::endl;
+    //latexReport << "\\item The U.S. 10 year bond rate is used to estimate "
+    //            << "the risk-free-rate in all countries across time. This is"
+    //            << " obviously only appropriate if you can actually purchase "
+    //            << " US 10 year treasury bonds. \\\\" 
+    //            << "\\href{https://fred.stlouisfed.org/series/DGS10}{Federal Reserve Bank of St. Louis}" 
+    //            << std::endl;
+    //latexReport << "\\item " 
+    //            << "\\href{https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html}{Prof. Damodaran's Ratings File}" 
+    //            << std::endl;           
+    //latexReport << "\\item " 
+    //            << "\\href{https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/}{Corporate Tax Rates By Country}" 
+    //            << std::endl;                            
+    //latexReport << "\\end{enumerate}" << std::endl;
 
                                 
 };
