@@ -86,7 +86,7 @@ bool extractTTM(int indexA,
   dateStream.exceptions(std::ios::failbit);
   date::sys_days daysA;
   dateStream >> date::parse(dateFormat,daysA);
-
+  
 
   int indexPrevious = indexA;
   date::sys_days daysPrevious = daysA;
@@ -1400,14 +1400,10 @@ int main (int argc, char* argv[]) {
     std::cout << "  Warning**" << std::endl; 
     std::cout << "    The 10 year bond yields from the US are being used to " 
               << std::endl;          
-    std::cout << "    approximate the bond yields from all countries. The "   
+    std::cout << "    approximate the bond yields for countries that do not"
               << std::endl; 
-    std::cout << "    bond yields, in turn, are being used to approximate"    
-              << std::endl; 
-    std::cout << "    the risk free rate which is used in the calculation "   
-              << std::endl; 
-    std::cout << "    of the cost of capital and the cost of debt."               
-              << std::endl; 
+    std::cout << "    appear in Prof. Damodaran's country risk tables."
+              << std::endl;               
     std::cout << "    This will not make sense for a business in a country"
               << std::endl; 
     std::cout << "    with a risk free rate that differs substantially from"    
@@ -1660,6 +1656,7 @@ int main (int argc, char* argv[]) {
 
         ++indexDate;
         std::string date = analysisDates.common[indexDate]; 
+        int dateYear = std::stoi(date.substr(0,4));
 
                 
         //The set of dates used for the TTM analysis
@@ -1816,11 +1813,17 @@ int main (int argc, char* argv[]) {
           if(riskTableFound && !std::isnan(riskTable.CRP)){
             equityRiskPremium = riskTable.CRP + erpUSADefault;
           }
+
+          //It would be nice to replace this with a historical table of
+          //inflationd data by country.
           if(riskTableFound && !std::isnan(riskTable.inflation_2019_2023)
                             && !std::isnan(riskTable.inflation_2024_2028)){
 
-            inflation = (riskTable.inflation_2019_2023
-                        +riskTable.inflation_2024_2028)*0.5;                        
+            if(dateYear >= 2024){
+              inflation = riskTable.inflation_2024_2028;
+            }else{
+              inflation = riskTable.inflation_2019_2023;
+            }
           }
         }
 
