@@ -71,6 +71,10 @@ ADD_EXECUTABLE(
   generateScreenerReport
   src/generateScreenerReport.cc)  
 
+ADD_EXECUTABLE(
+  generateComparisonReport
+  src/generateComparisonReport.cc)  
+
 TARGET_LINK_LIBRARIES(sandbox
   ${CURL_LIBRARIES}
 )

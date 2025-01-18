@@ -91,7 +91,7 @@
             }
         }        
    },
-   "market_weighting":
+   "weighting":
    {
         "folder": "calculateData",
         "field": ["costOfCapital_marketCapitalization"]
