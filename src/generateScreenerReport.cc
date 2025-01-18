@@ -705,11 +705,17 @@ void plotReportData(size_t indexTickerStart,
       PlottingFunctions::PlotSettings subplotSettings = settings;
       subplotSettings.lineWidth = 0.5;
 
+      PlottingFunctions::SummaryStatistics groupSummary;   
+      groupSummary.percentiles.resize(
+          PlottingFunctions::PercentileIndices::NUM_PERCENTILES,0.);
+
+      double groupWeight = 0; //Tickers between indexTickerStart-indexTickerEnd
+
       PlottingFunctions::SummaryStatistics marketSummary;   
       marketSummary.percentiles.resize(
           PlottingFunctions::PercentileIndices::NUM_PERCENTILES,0.);
 
-      double marketWeight = 0;
+      double marketWeight= 0; //All tickers in marketDataSet
 
       double weight = 
         JsonFunctions::getJsonFloat(rankingItem.value()["weight"]);
@@ -770,6 +776,74 @@ void plotReportData(size_t indexTickerStart,
         .lineWidth(settings.lineWidth*0.5)
         .labelNone();
 
+      //
+      //Evaluate the box-and whisker plots for the entire set of data
+      //
+      for(size_t i=0; i<metricDataSet.ticker.size();++i){
+
+        if(metricDataSet.summaryStatistics[i][indexMetric].percentiles.size()>0){
+
+          for(size_t j=0; j < marketSummary.percentiles.size();++j){
+            marketSummary.percentiles[j] += 
+              metricDataSet.summaryStatistics[i][indexMetric].percentiles[j]
+              *metricDataSet.weight[i];
+          }
+
+          marketSummary.current +=
+            metricDataSet.summaryStatistics[i][indexMetric].current
+            *metricDataSet.weight[i];
+
+          marketSummary.min +=  
+            metricDataSet.summaryStatistics[i][indexMetric].min
+            *metricDataSet.weight[i];
+
+          marketSummary.max +=  
+            metricDataSet.summaryStatistics[i][indexMetric].max
+            *metricDataSet.weight[i];
+
+          marketWeight += metricDataSet.weight[i];
+        }
+
+      }
+
+      //Plot the market summary
+      for(size_t j=0; j < marketSummary.percentiles.size();++j){
+        marketSummary.percentiles[j] = 
+          marketSummary.percentiles[j] / marketWeight;
+      }
+      marketSummary.min     = marketSummary.min / marketWeight; 
+      marketSummary.max     = marketSummary.max / marketWeight; 
+      marketSummary.current = marketSummary.current / marketWeight; 
+
+
+      std::string currentColor("black");
+      std::string boxColor("skyblue");
+      int currentLineType = 0;
+
+      if(smallestIsBest && marketSummary.current <= threshold){
+          currentLineType=1;
+      }
+      if(biggestIsBest && marketSummary.current  >= threshold){
+          currentLineType=1;
+      }
+
+      double xMid = static_cast<double>(indexTickerEnd)+2.0;
+      double xWidth = 0.4;
+      PlottingFunctions::drawBoxAndWhisker(
+        arrayOfPlot2D[indexMetric][0],
+        xMid,
+        xWidth,
+        marketSummary,
+        boxColor.c_str(),
+        currentColor.c_str(),
+        currentLineType,
+        subplotSettings,
+        verbose);      
+
+
+      //
+      //Evaluate the box-and-whisker plots for this group of tickers
+      //
       size_t tickerCount=0;
       for( size_t i=indexTickerStart; i< indexTickerEnd; ++i){
 
@@ -805,58 +879,59 @@ void plotReportData(size_t indexTickerStart,
             subplotSettings,
             verbose);
 
-          for(size_t j=0; j < marketSummary.percentiles.size();++j){
-            marketSummary.percentiles[j] += 
+          for(size_t j=0; j < groupSummary.percentiles.size();++j){
+            groupSummary.percentiles[j] += 
               metricDataSet.summaryStatistics[indexSorted][indexMetric].percentiles[j]
               *metricDataSet.weight[indexSorted];
           }
 
-          marketSummary.current +=
+          groupSummary.current +=
             metricDataSet.summaryStatistics[indexSorted][indexMetric].current
             *metricDataSet.weight[indexSorted];
 
-          marketSummary.min +=  
+          groupSummary.min +=  
             metricDataSet.summaryStatistics[indexSorted][indexMetric].min
             *metricDataSet.weight[indexSorted];
 
-          marketSummary.max +=  
+          groupSummary.max +=  
             metricDataSet.summaryStatistics[indexSorted][indexMetric].max
             *metricDataSet.weight[indexSorted];
 
-          marketWeight += metricDataSet.weight[indexSorted];
+          groupWeight += metricDataSet.weight[indexSorted];
 
           ++tickerCount;
         }
       }
 
-      //Plot the market summary
-      for(size_t j=0; j < marketSummary.percentiles.size();++j){
-        marketSummary.percentiles[j] = 
-          marketSummary.percentiles[j] / marketWeight;
+      //
+      //Plot the group summary
+      //
+      for(size_t j=0; j < groupSummary.percentiles.size();++j){
+        groupSummary.percentiles[j] = 
+          groupSummary.percentiles[j] / groupWeight;
       }
-      marketSummary.min     = marketSummary.min / marketWeight; 
-      marketSummary.max     = marketSummary.max / marketWeight; 
-      marketSummary.current = marketSummary.current / marketWeight; 
+      groupSummary.min     = groupSummary.min / groupWeight; 
+      groupSummary.max     = groupSummary.max / groupWeight; 
+      groupSummary.current = groupSummary.current / groupWeight; 
 
 
-      std::string currentColor("black");
-      std::string boxColor("chartreuse");
-      int currentLineType = 0;
+      currentColor="black";
+      boxColor="chartreuse";
+      currentLineType = 0;
 
-      if(smallestIsBest && marketSummary.current <= threshold){
+      if(smallestIsBest && groupSummary.current <= threshold){
           currentLineType=1;
       }
-      if(biggestIsBest && marketSummary.current  >= threshold){
+      if(biggestIsBest && groupSummary.current  >= threshold){
           currentLineType=1;
       }
 
-      double xMid = static_cast<double>(indexTickerEnd)+1.0;
-      double xWidth = 0.4;
+      xMid = static_cast<double>(indexTickerEnd)+1.0;
       PlottingFunctions::drawBoxAndWhisker(
         arrayOfPlot2D[indexMetric][0],
         xMid,
         xWidth,
-        marketSummary,
+        groupSummary,
         boxColor.c_str(),
         currentColor.c_str(),
         currentLineType,
@@ -886,7 +961,7 @@ void plotReportData(size_t indexTickerStart,
 
       arrayOfPlot2D[indexMetric][0].xrange(
           static_cast<double>(indexTickerStart)-xWidth+1.0,
-          static_cast<double>(indexTickerEnd)+xWidth+1.0);
+          static_cast<double>(indexTickerEnd)+xWidth+2.0);
 
       arrayOfPlot2D[indexMetric][0].legend().hide();
       
@@ -1009,8 +1084,11 @@ void generateLaTeXReport(
     std::string tickerLabel(metricDataSet.ticker[j]);
     ReportingFunctions::sanitizeLabelForLaTeX(tickerLabel,true);
 
+    //          << "---" << stream.str() 
+
     latexReport << "\\item " << "\\ref{" << tickerLabel << "} "
-                <<  tickerString << "---" << metricDataSet.metricRankSum[j] 
+                <<  tickerString 
+                << "---" << metricDataSet.metricRankSum[j] 
                 << std::endl;
   }
   latexReport << "\\end{enumerate}" << std::endl;

@@ -68,8 +68,8 @@ ADD_EXECUTABLE(
   src/generateTickerReports.cc)  
   
 ADD_EXECUTABLE(
-  generateMarketReports
-  src/generateMarketReports.cc)  
+  generateScreenerReport
+  src/generateScreenerReport.cc)  
 
 TARGET_LINK_LIBRARIES(sandbox
   ${CURL_LIBRARIES}
