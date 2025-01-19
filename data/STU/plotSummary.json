@@ -6,7 +6,7 @@
     "plotWidthCm": 8.0,
     "plotHeightCm": 8.0,
     "fileName": "fig_@PrimaryTicker_summary.pdf",
-    "title": "@CompanyName Summary Plot",
+    "title": "@CompanyNameLaTeX Summary Plot",
     "caption": "@PrimaryTickerLaTeX (@URL) summary"
   },   
   "plots":
