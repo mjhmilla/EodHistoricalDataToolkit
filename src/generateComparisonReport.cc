@@ -20,6 +20,12 @@
 #include <sciplot/sciplot.hpp>
 #include "PlottingFunctions.h"
 #include "ReportingFunctions.h"
+#include "ScreenerToolkit.h"
+
+struct TickerSet{
+  std::vector< std::string > filtered;
+  std::vector< std::string > processed;
+};
 
 //==============================================================================
 int main (int argc, char* argv[]) {
@@ -28,7 +34,7 @@ int main (int argc, char* argv[]) {
   std::string calculateDataFolder;
   std::string fundamentalFolder;
   std::string historicalFolder;
-  std::string comparisionReportConfigurationFilePath;  
+  std::string comparisonReportConfigurationFilePath;  
   std::string tickerReportFolder;
   std::string comparisonReportFolder;  
   std::string dateOfTable;
@@ -53,7 +59,7 @@ int main (int argc, char* argv[]) {
 
     TCLAP::ValueArg<std::string> comparisonReportFolderOutput("o",
       "comparison_report_folder_path", 
-      "The path to the folder will contains the comparision report.",
+      "The path to the folder will contains the comparison report.",
       true,"","string");
     cmd.add(comparisonReportFolderOutput);    
 
@@ -98,7 +104,7 @@ int main (int argc, char* argv[]) {
     cmd.parse(argc,argv);
 
     exchangeCode              = exchangeCodeInput.getValue();  
-    comparisionReportConfigurationFilePath 
+    comparisonReportConfigurationFilePath 
                         = comparisonReportConfigurationFilePathInput.getValue();      
     calculateDataFolder       = calculateDataFolderInput.getValue();
     fundamentalFolder         = fundamentalFolderInput.getValue();
@@ -131,7 +137,7 @@ int main (int argc, char* argv[]) {
       std::cout << "    " << tickerReportFolder << std::endl;  
 
       std::cout << "  Comparison Report Configuration File" << std::endl;
-      std::cout << "    " <<comparisionReportConfigurationFilePath << std::endl;          
+      std::cout << "    " <<comparisonReportConfigurationFilePath << std::endl;          
 
       std::cout << "  Comparison Report Folder" << std::endl;
       std::cout << "    " << comparisonReportFolder << std::endl;  
@@ -141,6 +147,99 @@ int main (int argc, char* argv[]) {
   } catch (TCLAP::ArgException &e){ 
     std::cerr << "error: "    << e.error() 
               << " for arg "  << e.argId() << std::endl; 
+  }
+
+  bool replaceNansWithMissingData = true;
+
+  auto today = date::floor<date::days>(std::chrono::system_clock::now());
+  date::year_month_day targetDate(today);
+  int maxTargetDateErrorInDays = 365;
+
+  //Load the report configuration file
+  nlohmann::ordered_json comparisonReportConfig;
+  bool loadedConfiguration = 
+    JsonFunctions::loadJsonFile(comparisonReportConfigurationFilePath,
+                                comparisonReportConfig,
+                                verbose);
+                                  
+
+  if(!loadedConfiguration){
+    std::cerr << "Error: cannot open " << comparisonReportConfigurationFilePath 
+              << std::endl;
+    std::abort();    
+  }
+
+  //
+  //Screen loop
+  //
+  // 1. Get the tickers that meet the filter
+  // 2. Rank them
+  // 3. Update the box-and-whisker plots
+  // 4. Append text information (?) on the set of tickers
+  int screenCount = 0;
+
+  std::vector< TickerSet > filteredTickers;
+  filteredTickers.resize(comparisonReportConfig["screens"].size());
+  std::string analysisExt = ".json";  
+
+  //
+  // Ticker loop
+  //
+  for (const auto & file 
+        : std::filesystem::directory_iterator(calculateDataFolder)){    
+
+    bool validInput = true;
+    std::string fileName   = file.path().filename();
+    std::size_t fileExtPos = fileName.find(analysisExt);
+
+    if( fileExtPos == std::string::npos ){
+      validInput=false;
+      if(verbose){
+        std::cout << std::endl;
+        std::cout << fileName << std::endl;
+        std::cout << "Skipping " << fileName 
+                  << " should end in .json but this does not:" 
+                  << std::endl
+                  << std::endl;
+      }
+    }     
+
+    //Check to see if this ticker passes the filter
+    bool tickerPassesFilter=false;
+
+    if(validInput){   
+      int screenCount = 0;
+      for(auto &screenItem : comparisonReportConfig["screens"].items()){  
+
+        tickerPassesFilter = 
+          ScreenerToolkit::applyFilter(
+            fileName,  
+            fundamentalFolder,
+            historicalFolder,
+            calculateDataFolder,
+            tickerReportFolder,
+            screenItem.value(),
+            targetDate,
+            maxTargetDateErrorInDays,                                  
+            replaceNansWithMissingData,
+            verbose);
+
+        if(tickerPassesFilter){
+          filteredTickers[screenCount].filtered.push_back(fileName);
+
+          if(verbose){
+            std::cout << fileName << '\t' 
+                      << filteredTickers[screenCount].filtered.size() << '\t'
+                      << " in screen "
+                      << (1+screenCount) << "/" 
+                      << comparisonReportConfig["screens"].size()
+                      << std::endl; 
+          }
+          break;
+        }
+        ++screenCount;
+      }
+    }
   }
 
 

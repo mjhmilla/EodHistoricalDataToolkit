@@ -553,7 +553,9 @@ class ScreenerToolkit {
           std::vector < bool > valueBoolVector;
 
           if(valueType == "string"){
-            JsonFunctions::getJsonString(targetJsonTable, fieldVector, valueString);
+            JsonFunctions::getJsonString( targetJsonTable, 
+                                          fieldVector, 
+                                          valueString);
 
             //Evaluate all of the individual values against the target
             for(size_t i = 0; i <  valueStringVector.size(); ++i){

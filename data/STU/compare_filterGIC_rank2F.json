@@ -1,0 +1,248 @@
+{
+    "plot":
+    {
+        "metric":
+        {
+            "P/DCM-V":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "priceToValue"
+                ],
+                "measure": "recent",
+                "plotSettings":
+                {
+                    "threshold": 0.75,
+                    "lowerBound": -0.01,
+                    "upperBound": 10.01,
+                    "logarithmic": false,
+                    "width": 18.0,
+                    "height": 4.5
+                }
+            },
+            "rCF/EV":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "residualCashFlowToEnterpriseValue"
+                ],
+                "measure": "p25",
+                "plotSettings":
+                {
+                    "threshold": 0.05,
+                    "lowerBound": -0.01,
+                    "upperBound": 0.25,
+                    "logarithmic": false,
+                    "width": 18.0,
+                    "height": 4.5
+                }
+            },
+            "ROIC-CC":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "returnOnInvestedCapitalLessCostOfCapital"
+                ],
+                "measure": "p25",
+                "plotSettings":
+                {
+                    "threshold": 0.15,
+                    "lowerBound": -0.01,
+                    "upperBound": 1.0,
+                    "logarithmic": false,
+                    "width": 18.0,
+                    "height": 4.5
+                }
+            },
+            "Mkt-Cap":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "costOfCapital_marketCapitalization"
+                ],
+                "measure": "recent",
+                "plotSettings":
+                {
+                    "threshold": 50000000,
+                    "lowerBound": -0.01,
+                    "upperBound": 5.0E+12,
+                    "logarithmic": true,
+                    "width": 18.0,
+                    "height": 4.5
+                }
+            }
+        },
+        "weighting":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "costOfCapital_marketCapitalization"
+            ]
+        },
+        "settings":
+        {
+            "number_of_tickers_to_include": null
+        }
+    },
+    "screens":
+    {
+        "EnergyEquipmentServices":
+        {
+            "filter":
+            {
+                "GicIndustry":
+                {
+                    "folder": "fundamentalData",
+                    "field":
+                    [
+                        "General",
+                        "GicIndustry"
+                    ],
+                    "condition": "==",
+                    "operator": "||",
+                    "valueType": "string",
+                    "values":
+                    [
+                        "Energy Equipment & Services"
+                    ]
+                }
+            },
+            "ranking":
+            {
+                "rCF/EV":
+                {
+                    "folder": "calculateData",
+                    "field":
+                    [
+                        "residualCashFlowToEnterpriseValue"
+                    ],
+                    "measure": "recent",
+                    "direction": "biggestIsBest",
+                    "lowerBound": 0,
+                    "upperBound": null,
+                    "weight": 1.0
+                },
+                "ROIC-CC":
+                {
+                    "folder": "calculateData",
+                    "field":
+                    [
+                        "returnOnInvestedCapitalLessCostOfCapital"
+                    ],
+                    "measure": "recent",
+                    "direction": "biggestIsBest",
+                    "lowerBound": 0,
+                    "upperBound": null,
+                    "weight": 1.0
+                }
+            }
+        },
+        "OilGasConsumableFuels":
+        {
+            "filter":
+            {
+                "GicIndustry":
+                {
+                    "folder": "fundamentalData",
+                    "field":
+                    [
+                        "General",
+                        "GicIndustry"
+                    ],
+                    "condition": "==",
+                    "operator": "||",
+                    "valueType": "string",
+                    "values":
+                    [
+                        "Oil, Gas & Consumable Fuels"
+                    ]
+                }
+            },
+            "ranking":
+            {
+                "rCF/EV":
+                {
+                    "folder": "calculateData",
+                    "field":
+                    [
+                        "residualCashFlowToEnterpriseValue"
+                    ],
+                    "measure": "recent",
+                    "direction": "biggestIsBest",
+                    "lowerBound": 0,
+                    "upperBound": null,
+                    "weight": 1.0
+                },
+                "ROIC-CC":
+                {
+                    "folder": "calculateData",
+                    "field":
+                    [
+                        "returnOnInvestedCapitalLessCostOfCapital"
+                    ],
+                    "measure": "recent",
+                    "direction": "biggestIsBest",
+                    "lowerBound": 0,
+                    "upperBound": null,
+                    "weight": 1.0
+                }
+            }
+        },
+        "Chemicals":
+        {
+            "filter":
+            {
+                "GicIndustry":
+                {
+                    "folder": "fundamentalData",
+                    "field":
+                    [
+                        "General",
+                        "GicIndustry"
+                    ],
+                    "condition": "==",
+                    "operator": "||",
+                    "valueType": "string",
+                    "values":
+                    [
+                        "Chemicals"
+                    ]
+                }
+            },
+            "ranking":
+            {
+                "rCF/EV":
+                {
+                    "folder": "calculateData",
+                    "field":
+                    [
+                        "residualCashFlowToEnterpriseValue"
+                    ],
+                    "measure": "recent",
+                    "direction": "biggestIsBest",
+                    "lowerBound": 0,
+                    "upperBound": null,
+                    "weight": 1.0
+                },
+                "ROIC-CC":
+                {
+                    "folder": "calculateData",
+                    "field":
+                    [
+                        "returnOnInvestedCapitalLessCostOfCapital"
+                    ],
+                    "measure": "recent",
+                    "direction": "biggestIsBest",
+                    "lowerBound": 0,
+                    "upperBound": null,
+                    "weight": 1.0
+                }
+            }
+        }
+    }
+}

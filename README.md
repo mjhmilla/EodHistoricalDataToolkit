@@ -50,7 +50,8 @@ Make sure that the EOD urls contain {YOUR_API_TOKEN} and {EXCHANGE_CODE} in the 
  - historicalData
  - calculateData
  - generateTickerReports
- - generateMarketReports
+ - generateScreenerReport
+ - generateComparisonReport
 
 2. Fetch the list of exchanges
 
@@ -113,9 +114,9 @@ Note that plotSummary.json and plotOverview.json contain the information needed 
 
 13. Generate a report of a specific market. This report will filter out companies and then rank them according to the configuration file, which in this example is filterM7_rank3F.json:
 
-    ./generateMarketReports.sh STU filterM7_rank3F.json
+    ./generateScreenerReport.sh STU filterM7_rank3F.json
 
-This command will generate files in the generateMarketReports folder that can be compiled into a pdf. For example, the above command will generate the following files in EodHistoricalDataToolkit/data/STU/generateMarketReports:
+This command will generate files in the generateScreenerReport folder that can be compiled into a pdf. For example, the above command will generate the following files in EodHistoricalDataToolkit/data/STU/generateScreenerReport:
 
  - summary_filterM7_rank3F_json.pdf
  - report_filterM7_rank3F_json.tex
@@ -124,7 +125,7 @@ Calling
  
     pdflatex report_filterM7_rank3F_json.tex
 
-from a terminal within EodHistoricalDataToolkit/data/STU/generateMarketReports will generate a market report report_filterM7_rank3F_json.pdf.
+from a terminal within EodHistoricalDataToolkit/data/STU/generateScreenerReport will generate a market report report_filterM7_rank3F_json.pdf.
 
 The file defines the market and some aspects of the market report. For example, filterM7_rank3F.json filters out the Magnificient 7 companies and then ranks them based on their price-to-value, residual cash-flow to enterprise value, the excess return-on-investment. If you examine the file you will also see an entry for market-capitalization but it is not included in the ranking because its weight is set to 0. Each company is ranked based on the sum of its individual metric rankings, each being scaled by the weight field specified in the configuration file.
 
