@@ -77,12 +77,6 @@ class ScreenerToolkit {
           bool verbose)
     {
 
-      if(verbose){
-        std::cout << "----------------------------------------" << std::endl;
-        std::cout <<  "Ranking metric data ..." <<std::endl;
-        std::cout << "----------------------------------------" << std::endl;
-      }
-
       //Evaluate the ranking of the individual metrics
       size_t indexMetric=0;
 

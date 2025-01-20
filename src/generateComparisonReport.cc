@@ -153,7 +153,7 @@ int main (int argc, char* argv[]) {
 
   auto today = date::floor<date::days>(std::chrono::system_clock::now());
   date::year_month_day targetDate(today);
-  int maxTargetDateErrorInDays = 365;
+  int maxTargetDateErrorInDays = 365*2;
 
   //Load the report configuration file
   nlohmann::ordered_json comparisonReportConfig;
@@ -170,28 +170,29 @@ int main (int argc, char* argv[]) {
   }
 
   //
-  //Screen loop
+  // Filter loop
+  //    - Loop over all tickers
+  //    - For each ticker, loop over all filters. 
+  //    - Store the tickers that pass each specific filter
   //
-  // 1. Get the tickers that meet the filter
-  // 2. Rank them
-  // 3. Update the box-and-whisker plots
-  // 4. Append text information (?) on the set of tickers
-  int screenCount = 0;
 
-  std::vector< TickerSet > filteredTickers;
-  filteredTickers.resize(comparisonReportConfig["screens"].size());
+  if(verbose){
+    std::cout << std::endl << "Filtering" << std::endl << std::endl;
+  }
+
+  std::vector< TickerSet > tickerSet;
+  tickerSet.resize(comparisonReportConfig["screens"].size());
   std::string analysisExt = ".json";  
 
-  //
-  // Ticker loop
-  //
   for (const auto & file 
         : std::filesystem::directory_iterator(calculateDataFolder)){    
 
     bool validInput = true;
     std::string fileName   = file.path().filename();
     std::size_t fileExtPos = fileName.find(analysisExt);
-
+    //if(verbose){
+    //  std::cout << fileName << std::endl;
+    //}
     if( fileExtPos == std::string::npos ){
       validInput=false;
       if(verbose){
@@ -225,11 +226,11 @@ int main (int argc, char* argv[]) {
             verbose);
 
         if(tickerPassesFilter){
-          filteredTickers[screenCount].filtered.push_back(fileName);
+          tickerSet[screenCount].filtered.push_back(fileName);
 
           if(verbose){
             std::cout << fileName << '\t' 
-                      << filteredTickers[screenCount].filtered.size() << '\t'
+                      << tickerSet[screenCount].filtered.size() << '\t'
                       << " in screen "
                       << (1+screenCount) << "/" 
                       << comparisonReportConfig["screens"].size()
@@ -242,7 +243,119 @@ int main (int argc, char* argv[]) {
     }
   }
 
+  //
+  // Ranking loop
+  //  -For each screen, rank the tickers that pass the filter
+  //
+  if(verbose){
+    std::cout << std::endl << "Ranking" << std::endl << std::endl;
+  }
 
+
+  std::vector< ScreenerToolkit::MetricSummaryDataSet > metricSummaryDataSet;
+  metricSummaryDataSet.resize(tickerSet.size());
+
+  int screenCount = 0;
+  for(auto &screenItem : comparisonReportConfig["screens"].items()){
+
+    if(tickerSet[screenCount].filtered.size()>0){
+      for(size_t i=0; i< tickerSet[screenCount].filtered.size();++i){
+        bool appendedMetricData = 
+          ScreenerToolkit::appendMetricData(
+                          tickerSet[screenCount].filtered[i],  
+                          fundamentalFolder,                 
+                          historicalFolder,
+                          calculateDataFolder,
+                          screenItem.value(),
+                          targetDate,
+                          maxTargetDateErrorInDays,
+                          metricSummaryDataSet[screenCount],                        
+                          verbose);
+      }
+
+      ScreenerToolkit::rankMetricData(screenItem.value(),
+                                      metricSummaryDataSet[screenCount],
+                                      verbose);
+
+    }
+    ++screenCount;
+  }
+
+
+  //
+  // Reporting loop
+  //  
+
+  if(verbose){
+    std::cout << std::endl << "Generating reports"  << std::endl << std::endl;
+  }
+
+  std::string comparisonReportConfigurationFileName =
+    std::filesystem::path(comparisonReportConfigurationFilePath).filename();
+
+  ReportingFunctions::sanitizeFolderName(comparisonReportConfigurationFileName);  
+
+  int numberOfScreensPerReport = 50;
+  int maximumNumberOfReports=1;
+
+  if(comparisonReportConfig.contains("report")){
+    if(comparisonReportConfig["report"].contains("number_of_screens_per_report")){
+      double tmp = JsonFunctions::getJsonFloat(
+        comparisonReportConfig["report"]["number_of_screens_per_report"],false);
+      if(!std::isnan(tmp)){
+        numberOfScreensPerReport = static_cast<int>(tmp);
+      }
+    }
+    if(comparisonReportConfig["report"].contains("number_of_reports")){
+      double tmp = JsonFunctions::getJsonFloat(
+        comparisonReportConfig["report"]["number_of_reports"],false);
+      if(!std::isnan(tmp)){
+        maximumNumberOfReports = static_cast<int>(tmp);
+      }        
+    }      
+  }
+
+  int maximumNumberOfReportsDefault = 
+      static_cast<int>(
+          std::ceil(
+            static_cast<double>(metricSummaryDataSet.size())
+          / static_cast<double>(numberOfScreensPerReport  ))
+        );
+
+
+  maximumNumberOfReports = std::min(maximumNumberOfReports,
+                                    maximumNumberOfReportsDefault);
+
+  for(size_t indexReport=0; indexReport < maximumNumberOfReports;++indexReport){
+
+
+
+    size_t indexStart = (numberOfScreensPerReport)*indexReport;
+    size_t indexEnd   = std::min( indexStart+numberOfScreensPerReport,
+                                  metricSummaryDataSet.size()       );  
+
+    std::stringstream reportNumber;
+    reportNumber << indexReport;
+    std::string reportNumberStr(reportNumber.str());
+
+    while(reportNumberStr.length()<3){
+      std::string tmp("0");
+      reportNumberStr = tmp.append(reportNumberStr);
+    } 
+
+    std::string summaryPlotFileName("summary_");
+    summaryPlotFileName.append(comparisonReportConfigurationFileName);
+    summaryPlotFileName.append("_");
+    summaryPlotFileName.append(reportNumberStr);
+    summaryPlotFileName.append(".pdf");
+    
+    PlottingFunctions::PlotSettings settings;
+
+    std::vector< std::string > screenSummaryPlots;
+    screenSummaryPlots.push_back(summaryPlotFileName);
+
+
+  }
 
   return 0;
 }
