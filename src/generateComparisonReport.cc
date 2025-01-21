@@ -27,6 +27,315 @@ struct TickerSet{
   std::vector< std::string > processed;
 };
 
+
+void plotComparisonReportData(
+    size_t indexStart,
+    size_t indexEnd,
+    const nlohmann::ordered_json &comparisonReportConfig, 
+    const std::vector< ScreenerToolkit::MetricSummaryDataSet > &metricSummaryDataSet,
+    const PlottingFunctions::PlotSettings &settings,
+    const std::string &comparisonReportFolder,
+    const std::string &comparisonPlotFileName,
+    bool verbose)
+{
+
+  bool screenFieldExists  = comparisonReportConfig.contains("screens");
+  bool rankingFieldExists = true;
+  bool rankingSizeConsistent=true;
+  int numberOfScreens = 0;  
+  int numberOfRankingItems=0;
+  
+
+  if(screenFieldExists){
+    numberOfScreens = comparisonReportConfig["screens"].size();
+
+    for(auto &screenItem : comparisonReportConfig["screens"].items()){
+      if(!screenItem.value().contains("ranking")){
+        rankingFieldExists=false;
+      }
+      if(numberOfRankingItems==0){
+        numberOfRankingItems = screenItem.value()["ranking"].size();
+      }else{
+        if(numberOfRankingItems != screenItem.value()["ranking"].size()){
+          rankingSizeConsistent=false;
+        }
+      }
+    } 
+  }
+
+  if(screenFieldExists && rankingFieldExists && rankingSizeConsistent){
+
+    
+    std::vector< std::vector< sciplot::PlotVariant > > arrayOfPlotVariant;
+
+    std::vector< std::vector< sciplot::Plot2D >> arrayOfPlot2D;
+    arrayOfPlot2D.resize(numberOfRankingItems);
+    for(size_t i=0; i<numberOfRankingItems; ++i){
+      arrayOfPlot2D[i].resize(1);
+    }
+
+;  
+    std::vector< bool > axisLabelsAdded;
+    axisLabelsAdded.resize(numberOfRankingItems);
+    for(size_t i=0;i<numberOfRankingItems;++i){
+      axisLabelsAdded[i]=false;
+    }
+
+    size_t indexScreen=0;
+
+    for(auto const &screenItem : comparisonReportConfig["screens"].items()){
+
+      bool isValid = true;
+      if(metricSummaryDataSet[indexScreen].ticker.size() == 0){
+        isValid = false;
+      }
+
+      if(isValid && indexScreen >= indexStart && indexScreen < indexEnd){
+
+
+        int numberOfTickersPerScreen = -1;
+
+        double tmp = 
+          JsonFunctions::getJsonFloat(
+            comparisonReportConfig["report"]["number_of_tickers_per_screen"],false);
+
+        if(JsonFunctions::isJsonFloatValid(tmp)){
+          numberOfTickersPerScreen = static_cast<int>(tmp);
+        }
+
+        if(numberOfTickersPerScreen==-1 
+            || numberOfTickersPerScreen > metricSummaryDataSet[indexScreen].ticker.size()){
+          numberOfTickersPerScreen = 
+            metricSummaryDataSet[indexScreen].ticker.size();
+        }
+
+        int indexRanking=0;
+        for(auto const &rankingItem : screenItem.value()["ranking"].items())
+        {
+          PlottingFunctions::PlotSettings subplotSettings = settings;
+          subplotSettings.lineWidth = 0.5;
+
+          double weight = 
+            JsonFunctions::getJsonFloat(rankingItem.value()["weight"]);
+
+          double lowerBoundPlot = 
+            JsonFunctions::getJsonFloat(
+              rankingItem.value()["plotSettings"]["lowerBound"]);
+
+          double upperBoundPlot = 
+            JsonFunctions::getJsonFloat(
+              rankingItem.value()["plotSettings"]["upperBound"]);
+
+          bool useLogarithmicScaling=
+            JsonFunctions::getJsonBool(
+              rankingItem.value()["plotSettings"]["logarithmic"]);
+          subplotSettings.logScale=useLogarithmicScaling;
+
+          double width = 
+            JsonFunctions::getJsonFloat(
+              rankingItem.value()["plotSettings"]["width"]);
+
+          double height = 
+            JsonFunctions::getJsonFloat(
+              rankingItem.value()["plotSettings"]["height"]);
+
+          subplotSettings.plotWidthInPoints=
+            PlottingFunctions::convertCentimetersToPoints(width);
+          subplotSettings.plotHeightInPoints=
+            PlottingFunctions::convertCentimetersToPoints(height);
+
+          std::string direction;
+          JsonFunctions::getJsonString(rankingItem.value()["direction"],direction);
+          bool smallestIsBest=false;
+          bool biggestIsBest=false;
+          if(direction.compare("smallestIsBest")==0){
+            smallestIsBest=true;
+          }
+          if(direction.compare("biggestIsBest")==0){
+            biggestIsBest=true;
+          }
+
+          double threshold = 
+            JsonFunctions::getJsonFloat(
+              rankingItem.value()["plotSettings"]["threshold"]);
+
+
+
+          if(indexScreen == indexStart){
+
+            sciplot::Vec xThreshold(2);
+            sciplot::Vec yThreshold(2);
+            xThreshold[0] = static_cast<double>(indexStart)+1.0;
+            xThreshold[1] = static_cast<double>(indexEnd)+1.0;
+            yThreshold[0] = threshold;
+            yThreshold[1] = threshold;
+
+            arrayOfPlot2D[indexRanking][0].drawCurve(xThreshold,yThreshold)
+              .lineColor("gray")
+              .lineWidth(settings.lineWidth*0.5)
+              .labelNone();
+          }
+
+
+          //Evaluate the weighted average across all tickers in
+          PlottingFunctions::SummaryStatistics boxWhisker;
+          boxWhisker.min=0.;
+          boxWhisker.max=0.;
+          boxWhisker.current=0.;
+          boxWhisker.name = "";
+          boxWhisker.percentiles.resize(PlottingFunctions::NUM_PERCENTILES);
+          for(size_t i=0; i<PlottingFunctions::NUM_PERCENTILES;++i){
+            boxWhisker.percentiles[i]=0.;
+          }
+
+          double totalWeight=0;
+          for(size_t indexTicker=0; 
+              indexTicker < numberOfTickersPerScreen;
+              ++indexTicker)
+          {
+            int indexSorted = 
+              metricSummaryDataSet[indexScreen].sortedIndex[indexTicker]; 
+
+            if(metricSummaryDataSet[indexScreen]
+                .summaryStatistics[indexSorted][indexRanking].percentiles.size()>0){
+
+              double weight = metricSummaryDataSet[indexScreen].weight[indexSorted]; 
+              boxWhisker.min += weight 
+                              * metricSummaryDataSet[indexScreen]
+                                .summaryStatistics[indexSorted][indexRanking].min;
+              boxWhisker.max += weight 
+                              * metricSummaryDataSet[indexScreen]
+                                .summaryStatistics[indexSorted][indexRanking].max;
+              boxWhisker.current += weight 
+                              * metricSummaryDataSet[indexScreen]
+                                .summaryStatistics[indexSorted][indexRanking].current;
+
+              for(size_t i= 0; i < PlottingFunctions::NUM_PERCENTILES;++i){
+                boxWhisker.percentiles[i] += weight 
+                  * metricSummaryDataSet[indexScreen]
+                    .summaryStatistics[indexSorted][indexRanking].percentiles[i];
+              }
+              totalWeight += weight;                                                
+            }
+          }
+          
+          boxWhisker.min     = boxWhisker.min     / totalWeight;
+          boxWhisker.max     = boxWhisker.max     / totalWeight;
+          boxWhisker.current = boxWhisker.current / totalWeight;
+
+          for(size_t i=0; i<PlottingFunctions::NUM_PERCENTILES;++i){
+            boxWhisker.percentiles[i] = boxWhisker.percentiles[i] / totalWeight;
+          }
+
+      
+
+          //Plot the box and whisker
+          std::string currentColor("black");
+          std::string boxColor("light-gray");
+          int currentLineType = 0;
+
+          if(smallestIsBest && boxWhisker.current <= threshold){
+              currentLineType=1;
+          }
+          if(biggestIsBest && boxWhisker.current  >= threshold){
+              currentLineType=1;
+          }          
+
+          double xMid = static_cast<double>(indexScreen)+1.0;
+          double xWidth=0.4;
+          PlottingFunctions::drawBoxAndWhisker(
+            arrayOfPlot2D[indexRanking][0],
+            xMid,
+            xWidth,
+            boxWhisker,
+            boxColor.c_str(),
+            currentColor.c_str(),
+            currentLineType,
+            subplotSettings,
+            verbose);          
+
+          //if(!axisLabelsAdded[indexRanking]){
+
+          std::string xAxisLabel("Screen");
+          std::string yAxisLabel(rankingItem.key());
+          yAxisLabel.append(" (");
+          std::stringstream stream;
+          stream << std::fixed << std::setprecision(2) << weight;
+          yAxisLabel.append( stream.str());
+          yAxisLabel.append(")");
+
+          PlottingFunctions::configurePlot(
+            arrayOfPlot2D[indexRanking][0],
+            xAxisLabel,
+            yAxisLabel,
+            subplotSettings); 
+          axisLabelsAdded[indexRanking]=true;
+
+          //}
+
+          if(!std::isnan(lowerBoundPlot) && !std::isnan(upperBoundPlot) ){
+            arrayOfPlot2D[indexRanking][0].yrange(lowerBoundPlot,upperBoundPlot);
+          }
+
+          arrayOfPlot2D[indexRanking][0].xrange(
+              static_cast<double>(indexStart)-xWidth+1.0,
+              static_cast<double>(indexEnd)+xWidth+1.0);
+
+          arrayOfPlot2D[indexRanking][0].legend().hide();
+
+          ++indexRanking;
+        }
+      }
+      ++indexScreen;
+    }
+
+    double canvasWidth  = 0.;
+    double canvasHeight = 0.;
+    bool isCanvasSizeSet=false;
+
+    for(const auto &screenItem : comparisonReportConfig["screens"].items()){
+      for(const auto &rankingItem : screenItem.value()["ranking"].items()){
+        if(!isCanvasSizeSet){
+          double width = 
+            JsonFunctions::getJsonFloat(
+              rankingItem.value()["plotSettings"]["width"]);
+
+          double height = 
+            JsonFunctions::getJsonFloat(
+              rankingItem.value()["plotSettings"]["height"]);
+
+          canvasWidth  =PlottingFunctions::convertCentimetersToPoints(width);
+          canvasHeight+=PlottingFunctions::convertCentimetersToPoints(height);      
+        }
+      }
+      if(canvasWidth > 0){
+        isCanvasSizeSet=true;
+      }
+    }
+
+    for(size_t indexRanking=0; indexRanking < numberOfRankingItems; ++indexRanking){
+      std::vector< sciplot::PlotVariant > rowOfPlotVariant;      
+      rowOfPlotVariant.push_back(arrayOfPlot2D[indexRanking][0]);
+      arrayOfPlotVariant.push_back(rowOfPlotVariant);  
+    }
+
+    sciplot::Figure figComparison(arrayOfPlotVariant);
+    figComparison.title("Comparison");
+    sciplot::Canvas canvas = {{figComparison}};
+
+    canvas.size(canvasWidth, canvasHeight) ;    
+
+    // Save the figure to a PDF file
+    std::string outputFileName = comparisonReportFolder;
+    outputFileName.append(comparisonPlotFileName);
+    canvas.save(outputFileName);  
+
+  }
+
+
+
+};
+
 //==============================================================================
 int main (int argc, char* argv[]) {
 
@@ -334,6 +643,7 @@ int main (int argc, char* argv[]) {
     size_t indexEnd   = std::min( indexStart+numberOfScreensPerReport,
                                   metricSummaryDataSet.size()       );  
 
+    //Create the plot name
     std::stringstream reportNumber;
     reportNumber << indexReport;
     std::string reportNumberStr(reportNumber.str());
@@ -354,7 +664,15 @@ int main (int argc, char* argv[]) {
     std::vector< std::string > screenSummaryPlots;
     screenSummaryPlots.push_back(summaryPlotFileName);
 
-
+    plotComparisonReportData(
+      indexStart,
+      indexEnd,
+      comparisonReportConfig, 
+      metricSummaryDataSet,
+      settings,
+      comparisonReportFolder,
+      summaryPlotFileName,
+      verbose);  
   }
 
   return 0;
