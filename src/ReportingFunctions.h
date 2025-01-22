@@ -31,6 +31,8 @@ static void sanitizeFolderName(std::string &folderName,
 
   std::string charactersToDelete("");  
   charactersToDelete.append("\'");
+  charactersToDelete.append(" ");
+
   deleteCharacters(folderName,charactersToDelete);
 
   std::string charactersToEscape("");
@@ -57,12 +59,14 @@ static void sanitizeLabelForLaTeX(std::string &stringForLatex,
 
   std::string charactersToDelete("");  
   charactersToDelete.append("\'");
+  charactersToDelete.append(" ");
+  charactersToDelete.append("&");
+  charactersToDelete.append("$");
+  charactersToDelete.append("#");
+
   deleteCharacters(stringForLatex,charactersToDelete);
 
   std::string charactersToEscape("");
-  charactersToEscape.append("&");
-  charactersToEscape.append("$");
-  charactersToEscape.append("#");
   charactersToEscape.append(".");
 
   std::string replacementCharacter("-");
@@ -84,6 +88,7 @@ static void sanitizeStringForLaTeX(std::string &stringForLatex,
 
   std::string charactersToDelete("");  
   charactersToDelete.append("\'");
+
   ReportingFunctions::deleteCharacters(stringForLatex,charactersToDelete);
 
   std::string charactersToEscape("");

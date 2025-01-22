@@ -69,7 +69,7 @@ void createComparisonConfig(nlohmann::ordered_json &configTemplate,
   int numberOfDigits = 
     static_cast<int>(std::ceil(static_cast<double>(numberOfVariations)/10.0));
 
-  for(size_t i=0; i < numberOfVariations; ++i){
+  for(size_t itemVar=0; itemVar < numberOfVariations; ++itemVar){
 
     nlohmann::ordered_json screenEntry = nlohmann::ordered_json::object();
 
@@ -91,160 +91,40 @@ void createComparisonConfig(nlohmann::ordered_json &configTemplate,
         field.push_back(fieldItem.value().get<std::string>());
       }
 
-      //Get the type
-      std::string dataType = updItem.value()["value_type"];
-      bool isString=false;
-      if(dataType.compare("string")==0){
-        isString=true;
-      }else if(dataType.compare("float")==0){
-        isString=false;
-      }else{
-        std::cerr << "Error: screen_variation " << updItem.key() 
-                  << " has a value_type of " << dataType 
-                  << " which is not one of the two accepted values: "
-                  << "string or float"
-                  << std::endl;
-      }
-
-      std::string dataStruct = updItem.value()["value_structure"];
-      bool isArray=false;
-      if(dataStruct.compare("array")==0){
-        isArray=true;
-      }else if(dataStruct.compare("scalar")==0){
-        isArray=false;
-      }else{
-        std::cerr << "Error: screen_variation " << updItem.key() 
-                  << " has a value_structure of " << dataStruct 
-                  << " which is not one of the two accepted values: "
-                  << "array or scalar"
-                  << std::endl;
-      }
-
-
       //Get the new value
-      auto &valueItem = updItem.value()["values"].at(i);
-      bool updateSuccessful = true;
-      std::string strValue;
-      double floatValue;
+      auto &valueItem = updItem.value()["values"].at(itemVar);
 
-      if(isString){
-        strValue = valueItem.get<std::string>();
+      //Flatten the structure so we that we can update it independent of its 
+      //structure
+      std::string keyFlattened;
+      for(size_t i=0; i<field.size();++i){
+        keyFlattened.append("/");
+        keyFlattened.append(field[i]);
+      }      
+      auto screenEntryFlat = screenEntry.flatten();
 
-        switch( field.size() ){
-          case 1:{
-            if(isArray){
-              screenEntry[field[0]]={(strValue)};
-            }else{
-              screenEntry[field[0]] = strValue;
-            }
-          };
-          break;
-          case 2:{
-            if(isArray){
-              screenEntry[field[0]][field[1]]={(strValue)};
-            }else{
-              screenEntry[field[0]][field[1]] = strValue;
-            }
-          };
-          break;
-          case 3:{
-            if(isArray){
-              screenEntry[field[0]][field[1]][field[2]]={(strValue)};
-            }else{
-              screenEntry[field[0]][field[1]][field[2]] = strValue;
-            }
-          };
-          break;
-          case 4:{
-            if(isArray){
-              screenEntry[field[0]][field[1]][field[2]][field[3]]
-                ={(strValue)};
-            }else{
-              screenEntry[field[0]][field[1]][field[2]][field[3]] 
-                = strValue;
-            }
-          };
-          break;
-          default: {
-            updateSuccessful=false;
-          }
-        };
+      //Retrieve the element to update from the template to determine whether
+      //its an array or not.
+      nlohmann::ordered_json eleTemplate;
+      JsonFunctions::getJsonElement(
+          configTemplate["screen_template"],field,eleTemplate);
 
+      if(eleTemplate.is_array()){
+        keyFlattened.append("/0");
+        screenEntryFlat[keyFlattened] = valueItem;
       }else{
-        floatValue = valueItem.get<double>();
-
-        switch( field.size() ){
-          case 1:{
-            if(isArray){
-              screenEntry[field[0]]={(floatValue)};
-            }else{
-              screenEntry[field[0]] = floatValue;
-            }
-          };
-          break;
-          case 2:{
-            if(isArray){
-              screenEntry[field[0]][field[1]]={(floatValue)};
-            }else{
-              screenEntry[field[0]][field[1]] = floatValue;
-            }
-          };
-          break;
-          case 3:{
-            if(isArray){
-              screenEntry[field[0]][field[1]][field[2]]={(floatValue)};            
-            }else{
-              screenEntry[field[0]][field[1]][field[2]] = floatValue;
-            }
-          };
-          break;
-          case 4:{
-            if(isArray){
-              screenEntry[field[0]][field[1]][field[2]][field[3]]={( 
-                floatValue)};
-            }else{
-              screenEntry[field[0]][field[1]][field[2]][field[3]] 
-                = floatValue;
-            }
-          };
-          break;
-          default: {
-            updateSuccessful=false;
-          }
-        };
+        screenEntryFlat[keyFlattened] = valueItem;
       }
 
-      if(!updateSuccessful){
-        std::cerr << "Error: Unable to update: ";
-        for(size_t j=0; j<field.size();++j){
-          std::cerr << field[j] << " ";
-        }
-        if(isString){
-          std::cerr << "to a new string value of " << strValue << std::endl;
-        }else{
-          std::cerr << "to a new float value of " << floatValue << std::endl;
-        }
-      }
+      screenEntry=screenEntryFlat.unflatten();
 
-      std::stringstream ss;
-      ss << i;
-      std::string stringNumber = ss.str();
-
-      while(stringNumber.size()<numberOfDigits){
-        stringNumber.push_back('0');
-      }
-
-      std::string screenName = "screen_";
-      screenName.append(stringNumber);
+      std::string screenName = configTemplate["screen_names"].at(itemVar);
 
       comparisonReportScreens[screenName]=screenEntry;
     }
   }
 
   configUpd["screens"] = comparisonReportScreens;
-
-
-
 
 };
 
@@ -554,6 +434,181 @@ void plotComparisonReportData(
   }
 
 
+
+};
+
+//==============================================================================
+
+void generateComparisonLaTeXReport(
+      size_t indexStart,
+      size_t indexEnd,
+      const nlohmann::ordered_json &comparisonConfig, 
+      const std::vector< ScreenerToolkit::MetricSummaryDataSet> &metricDataSet,
+      const std::vector< std::string > &comparisonSummaryPlots,
+      const std::string &tickerReportFolder,
+      const std::string &comparisonReportFolder,
+      const std::string &comparisonReportFileName,
+      bool verbose){
+
+  if(verbose){
+    std::cout << "----------------------------------------" << std::endl;    
+    std::cout << "Generating LaTeX report: " << comparisonReportFileName
+              << std::endl;
+    std::cout << "----------------------------------------" << std::endl;              
+  }
+
+
+  std::string outputReportPath(comparisonReportFolder);
+  outputReportPath.append(comparisonReportFileName);
+
+  std::string latexReportPath(outputReportPath);
+  std::ofstream latexReport;
+
+  try{
+    latexReport.open(latexReportPath);
+  }catch(std::ofstream::failure &ofstreamErr){
+    std::cerr << std::endl << std::endl 
+              << "Error: an exception was thrown trying to open " 
+              << latexReportPath              
+              << " :"
+              << latexReportPath << std::endl << std::endl
+              << ofstreamErr.what()
+              << std::endl;    
+    std::abort();
+  }  
+
+  // Write the opening to the latex file
+  latexReport << "\\documentclass[11pt,onecolumn,a4paper]{article}" 
+              << std::endl;
+  latexReport << "\\usepackage[hmargin={1.35cm,1.35cm},vmargin={2.0cm,3.0cm},"
+                    "footskip=0.75cm,headsep=0.25cm]{geometry}"<<std::endl;
+  latexReport << "\\usepackage{graphicx,caption}"<<std::endl;
+  latexReport << "\\usepackage{times}"<<std::endl;
+  latexReport << "\\usepackage{graphicx}"<<std::endl;
+  latexReport << "\\usepackage{hyperref}"<<std::endl;
+  latexReport << "\\usepackage{multicol}"<<std::endl;
+  latexReport << "\\usepackage[usenames,dvipsnames,table]{xcolor}"<<std::endl;
+
+  // Add the opening figure
+  std::string reportTitle;
+  JsonFunctions::getJsonString(comparisonConfig["report"]["title"],reportTitle);
+  latexReport << "\\title{" << reportTitle <<"}" << std::endl;
+
+  latexReport << std::endl << std::endl;
+  latexReport << "\\begin{document}" << std::endl << std::endl;
+  latexReport << "\\maketitle" << std::endl;
+  latexReport << "\\today" << std::endl;
+
+  for(auto const &figName : comparisonSummaryPlots){
+    latexReport << "\\begin{figure}[h]" << std::endl;
+    latexReport << "  \\begin{center}" << std::endl;
+    latexReport << "    \\includegraphics{"
+                << comparisonReportFolder << figName
+                << "}" << std::endl;
+    latexReport << " \\end{center}" << std::endl;
+    latexReport << "\\end{figure}"<< std::endl;
+    latexReport << std::endl;    
+  }
+
+  // Add the list of screens
+  latexReport << "\\begin{multicols}{2}" << std::endl;
+  latexReport << "\\begin{enumerate}" << std::endl;
+  latexReport << "\\setcounter{enumi}{" << indexStart <<"}" << std::endl;  
+  latexReport << "\\itemsep0pt" << std::endl;
+
+  size_t i=0;
+
+
+  for(auto &itemScreen: comparisonConfig["screens"].items()){
+
+    //Since it's not possible directly access an element and then
+    //get its name, here we iterate until we get to the right spot
+    //
+    //https://github.com/nlohmann/json/issues/1936
+
+    if(i >= indexStart && i < indexEnd){
+
+      std::string screenName=itemScreen.key();
+      std::string screenLabel(screenName);
+
+      ReportingFunctions::sanitizeStringForLaTeX(screenName,true);
+      ReportingFunctions::sanitizeLabelForLaTeX(screenLabel,true);
+
+      int numberOfTickers = metricDataSet[i].ticker.size();
+      double tmp = JsonFunctions::getJsonFloat(
+          comparisonConfig["report"]["number_of_tickers_per_screen"]);    
+      
+      if(static_cast<int>(tmp) < numberOfTickers){
+        numberOfTickers = static_cast<int>(tmp);
+      }
+
+
+      latexReport << "\\item " << "\\ref{" << screenLabel << "} "
+                  <<  screenName 
+                  << "---" << numberOfTickers  
+                  << std::endl;
+    }
+    ++i;                
+  }
+  latexReport << "\\end{enumerate}" << std::endl;
+  latexReport << "\\end{multicols}" << std::endl;
+  latexReport << std::endl;
+  
+  // Append the lists of tickers in each screen
+  i=0;
+  for(auto &itemScreen : comparisonConfig["screens"].items()){
+
+    if(i >= indexStart && i < indexEnd){
+
+      int numberOfTickers = metricDataSet[i].ticker.size();
+      double tmp = JsonFunctions::getJsonFloat(
+          comparisonConfig["report"]["number_of_tickers_per_screen"]);    
+      
+      if(static_cast<int>(tmp) < numberOfTickers){
+        numberOfTickers = static_cast<int>(tmp);
+      }
+  
+      std::string screenName=itemScreen.key();
+      std::string screenLabel(screenName);
+
+      ReportingFunctions::sanitizeStringForLaTeX(screenName,true);
+      ReportingFunctions::sanitizeLabelForLaTeX(screenLabel,true);
+
+      latexReport << "\\section{" << screenName << "}" << std::endl;
+      latexReport << "\\label{" << screenLabel << "}" << std::endl;
+
+      latexReport << "\\begin{multicols}{3}" << std::endl;
+      latexReport << "\\begin{enumerate}" << std::endl;
+      latexReport << "\\setcounter{enumi}{" << indexStart <<"}" << std::endl;  
+      latexReport << "\\itemsep0pt" << std::endl;
+
+      for(size_t j=0; j < numberOfTickers; ++j){
+        size_t k = metricDataSet[i].sortedIndex[j];
+
+        std::string tickerString(metricDataSet[i].ticker[k]);
+        std::string tickerLabel(metricDataSet[i].ticker[k]);
+        std::string tickerFile(metricDataSet[i].ticker[k]);
+
+        ReportingFunctions::sanitizeStringForLaTeX(tickerString,true);
+        ReportingFunctions::sanitizeLabelForLaTeX(tickerLabel,true);
+        ReportingFunctions::sanitizeFolderName(tickerFile,true);
+
+        latexReport << "\\item " 
+                    <<  tickerString
+                    << "--- " << metricDataSet[i].metricRankSum[k] 
+                    << std::endl;
+      }
+
+      latexReport << "\\end{enumerate}" << std::endl;
+      latexReport << "\\end{multicols}" << std::endl;
+      latexReport << std::endl;
+    }
+    ++i;
+  }
+  //close the file
+
+  latexReport << "\\end{document}" << std::endl;
+  latexReport.close();
 
 };
 
@@ -874,6 +929,13 @@ int main (int argc, char* argv[]) {
   maximumNumberOfReports = std::min(maximumNumberOfReports,
                                     maximumNumberOfReportsDefault);
 
+  int numberOfReportDigits =   
+    static_cast<int>(
+      std::ceil(
+        static_cast<double>(maximumNumberOfReports)/10.0
+      )
+    );                                  
+
   for(size_t indexReport=0; indexReport < maximumNumberOfReports;++indexReport){
 
 
@@ -887,7 +949,7 @@ int main (int argc, char* argv[]) {
     reportNumber << indexReport;
     std::string reportNumberStr(reportNumber.str());
 
-    while(reportNumberStr.length()<3){
+    while(reportNumberStr.length()<numberOfReportDigits){
       std::string tmp("0");
       reportNumberStr = tmp.append(reportNumberStr);
     } 
@@ -911,7 +973,26 @@ int main (int argc, char* argv[]) {
       settings,
       comparisonReportFolder,
       summaryPlotFileName,
-      verbose);  
+      verbose); 
+
+
+    std::string comparisonReportFileName("report_");
+    comparisonReportFileName.append(comparisonReportConfigurationFileName);
+    comparisonReportFileName.append("_");
+    comparisonReportFileName.append(reportNumberStr);    
+    comparisonReportFileName.append(".tex");
+
+    generateComparisonLaTeXReport(
+      indexStart,
+      indexEnd,
+      comparisonConfig, 
+      metricSummaryDataSet,
+      screenSummaryPlots,
+      tickerReportFolder,
+      comparisonReportFolder,
+      comparisonReportFileName,
+      verbose);
+
   }
 
   return 0;
