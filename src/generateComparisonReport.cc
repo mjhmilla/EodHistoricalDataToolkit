@@ -27,11 +27,232 @@ struct TickerSet{
   std::vector< std::string > processed;
 };
 
+//==============================================================================
+void createComparisonConfig(nlohmann::ordered_json &configTemplate,
+                            nlohmann::ordered_json &configUpd)
+{
 
+  //Expand the template into a full set of screens
+  std::vector < std::string > manditoryFields;
+  manditoryFields.push_back("report");
+  manditoryFields.push_back("screen_variations");
+  manditoryFields.push_back("screen_template");
+
+  for(size_t i=0; i<manditoryFields.size();++i){
+    if(!configTemplate.contains(manditoryFields[i].c_str())){
+      std::cerr << "Error: comparision template file does not contain a "
+                << manditoryFields[i].c_str()
+                << "field"
+                << std::endl;
+      std::abort();
+    }
+  }
+
+  //Check that each series item has the same number of values
+  int numberOfVariations=0;
+  for(auto &seriesItem : configTemplate["screen_variations"].items()){
+    if(numberOfVariations==0){
+      numberOfVariations = seriesItem.value()["values"].size();
+    }else{
+      if(seriesItem.value()["values"].size() != numberOfVariations){
+        std::cerr << "Error: each series item must have the same number of "
+                  << "items in the values field"
+                  << std::endl;
+        std::abort();                  
+      }
+    }
+  }
+
+  //Create the set of screens from the template
+  configUpd["report"] = configTemplate["report"];  
+  nlohmann::ordered_json comparisonReportScreens;
+  int numberOfDigits = 
+    static_cast<int>(std::ceil(static_cast<double>(numberOfVariations)/10.0));
+
+  for(size_t i=0; i < numberOfVariations; ++i){
+
+    nlohmann::ordered_json screenEntry = nlohmann::ordered_json::object();
+
+    //Deep copy of the template
+    screenEntry["filter"].update(
+        configTemplate["screen_template"]["filter"]);
+    screenEntry["ranking"].update(
+        configTemplate["screen_template"]["ranking"]);
+    screenEntry["weighting"].update(
+        configTemplate["screen_template"]["weighting"]);
+
+
+    //Update the template    
+    for(auto &updItem : configTemplate["screen_variations"].items()){
+
+      //Get the address to update
+      std::vector< std::string > field;
+      for(auto &fieldItem : updItem.value()["field"].items()){
+        field.push_back(fieldItem.value().get<std::string>());
+      }
+
+      //Get the type
+      std::string dataType = updItem.value()["value_type"];
+      bool isString=false;
+      if(dataType.compare("string")==0){
+        isString=true;
+      }else if(dataType.compare("float")==0){
+        isString=false;
+      }else{
+        std::cerr << "Error: screen_variation " << updItem.key() 
+                  << " has a value_type of " << dataType 
+                  << " which is not one of the two accepted values: "
+                  << "string or float"
+                  << std::endl;
+      }
+
+      std::string dataStruct = updItem.value()["value_structure"];
+      bool isArray=false;
+      if(dataStruct.compare("array")==0){
+        isArray=true;
+      }else if(dataStruct.compare("scalar")==0){
+        isArray=false;
+      }else{
+        std::cerr << "Error: screen_variation " << updItem.key() 
+                  << " has a value_structure of " << dataStruct 
+                  << " which is not one of the two accepted values: "
+                  << "array or scalar"
+                  << std::endl;
+      }
+
+
+      //Get the new value
+      auto &valueItem = updItem.value()["values"].at(i);
+      bool updateSuccessful = true;
+      std::string strValue;
+      double floatValue;
+
+      if(isString){
+        strValue = valueItem.get<std::string>();
+
+        switch( field.size() ){
+          case 1:{
+            if(isArray){
+              screenEntry[field[0]]={(strValue)};
+            }else{
+              screenEntry[field[0]] = strValue;
+            }
+          };
+          break;
+          case 2:{
+            if(isArray){
+              screenEntry[field[0]][field[1]]={(strValue)};
+            }else{
+              screenEntry[field[0]][field[1]] = strValue;
+            }
+          };
+          break;
+          case 3:{
+            if(isArray){
+              screenEntry[field[0]][field[1]][field[2]]={(strValue)};
+            }else{
+              screenEntry[field[0]][field[1]][field[2]] = strValue;
+            }
+          };
+          break;
+          case 4:{
+            if(isArray){
+              screenEntry[field[0]][field[1]][field[2]][field[3]]
+                ={(strValue)};
+            }else{
+              screenEntry[field[0]][field[1]][field[2]][field[3]] 
+                = strValue;
+            }
+          };
+          break;
+          default: {
+            updateSuccessful=false;
+          }
+        };
+
+      }else{
+        floatValue = valueItem.get<double>();
+
+        switch( field.size() ){
+          case 1:{
+            if(isArray){
+              screenEntry[field[0]]={(floatValue)};
+            }else{
+              screenEntry[field[0]] = floatValue;
+            }
+          };
+          break;
+          case 2:{
+            if(isArray){
+              screenEntry[field[0]][field[1]]={(floatValue)};
+            }else{
+              screenEntry[field[0]][field[1]] = floatValue;
+            }
+          };
+          break;
+          case 3:{
+            if(isArray){
+              screenEntry[field[0]][field[1]][field[2]]={(floatValue)};            
+            }else{
+              screenEntry[field[0]][field[1]][field[2]] = floatValue;
+            }
+          };
+          break;
+          case 4:{
+            if(isArray){
+              screenEntry[field[0]][field[1]][field[2]][field[3]]={( 
+                floatValue)};
+            }else{
+              screenEntry[field[0]][field[1]][field[2]][field[3]] 
+                = floatValue;
+            }
+          };
+          break;
+          default: {
+            updateSuccessful=false;
+          }
+        };
+      }
+
+      if(!updateSuccessful){
+        std::cerr << "Error: Unable to update: ";
+        for(size_t j=0; j<field.size();++j){
+          std::cerr << field[j] << " ";
+        }
+        if(isString){
+          std::cerr << "to a new string value of " << strValue << std::endl;
+        }else{
+          std::cerr << "to a new float value of " << floatValue << std::endl;
+        }
+      }
+
+      std::stringstream ss;
+      ss << i;
+      std::string stringNumber = ss.str();
+
+      while(stringNumber.size()<numberOfDigits){
+        stringNumber.push_back('0');
+      }
+
+      std::string screenName = "screen_";
+      screenName.append(stringNumber);
+
+      comparisonReportScreens[screenName]=screenEntry;
+    }
+  }
+
+  configUpd["screens"] = comparisonReportScreens;
+
+
+
+
+};
+
+//==============================================================================
 void plotComparisonReportData(
     size_t indexStart,
     size_t indexEnd,
-    const nlohmann::ordered_json &comparisonReportConfig, 
+    const nlohmann::ordered_json &comparisonConfig, 
     const std::vector< ScreenerToolkit::MetricSummaryDataSet > &metricSummaryDataSet,
     const PlottingFunctions::PlotSettings &settings,
     const std::string &comparisonReportFolder,
@@ -39,7 +260,7 @@ void plotComparisonReportData(
     bool verbose)
 {
 
-  bool screenFieldExists  = comparisonReportConfig.contains("screens");
+  bool screenFieldExists  = comparisonConfig.contains("screens");
   bool rankingFieldExists = true;
   bool rankingSizeConsistent=true;
   int numberOfScreens = 0;  
@@ -47,9 +268,9 @@ void plotComparisonReportData(
   
 
   if(screenFieldExists){
-    numberOfScreens = comparisonReportConfig["screens"].size();
+    numberOfScreens = comparisonConfig["screens"].size();
 
-    for(auto &screenItem : comparisonReportConfig["screens"].items()){
+    for(auto &screenItem : comparisonConfig["screens"].items()){
       if(!screenItem.value().contains("ranking")){
         rankingFieldExists=false;
       }
@@ -83,7 +304,7 @@ void plotComparisonReportData(
 
     size_t indexScreen=0;
 
-    for(auto const &screenItem : comparisonReportConfig["screens"].items()){
+    for(auto const &screenItem : comparisonConfig["screens"].items()){
 
       bool isValid = true;
       if(metricSummaryDataSet[indexScreen].ticker.size() == 0){
@@ -97,7 +318,7 @@ void plotComparisonReportData(
 
         double tmp = 
           JsonFunctions::getJsonFloat(
-            comparisonReportConfig["report"]["number_of_tickers_per_screen"],false);
+            comparisonConfig["report"]["number_of_tickers_per_screen"],false);
 
         if(JsonFunctions::isJsonFloatValid(tmp)){
           numberOfTickersPerScreen = static_cast<int>(tmp);
@@ -293,7 +514,7 @@ void plotComparisonReportData(
     double canvasHeight = 0.;
     bool isCanvasSizeSet=false;
 
-    for(const auto &screenItem : comparisonReportConfig["screens"].items()){
+    for(const auto &screenItem : comparisonConfig["screens"].items()){
       for(const auto &rankingItem : screenItem.value()["ranking"].items()){
         if(!isCanvasSizeSet){
           double width = 
@@ -465,10 +686,10 @@ int main (int argc, char* argv[]) {
   int maxTargetDateErrorInDays = 365*2;
 
   //Load the report configuration file
-  nlohmann::ordered_json comparisonReportConfig;
+  nlohmann::ordered_json comparisonInput;
   bool loadedConfiguration = 
     JsonFunctions::loadJsonFile(comparisonReportConfigurationFilePath,
-                                comparisonReportConfig,
+                                comparisonInput,
                                 verbose);
                                   
 
@@ -477,6 +698,24 @@ int main (int argc, char* argv[]) {
               << std::endl;
     std::abort();    
   }
+
+  nlohmann::ordered_json comparisonConfig;
+  if(comparisonInput.contains("screen_variations")){
+    createComparisonConfig(comparisonInput, comparisonConfig);
+
+    std::string outputFilePath(comparisonReportFolder);
+    std::string outputFileName("comparison_config_from_template.json");    
+    outputFilePath.append(outputFileName);
+
+    std::ofstream outputFileStream(outputFilePath,
+        std::ios_base::trunc | std::ios_base::out);
+    outputFileStream << comparisonConfig;
+    outputFileStream.close();
+
+  }else{
+    comparisonConfig.update(comparisonInput);
+  }
+
 
   //
   // Filter loop
@@ -490,7 +729,7 @@ int main (int argc, char* argv[]) {
   }
 
   std::vector< TickerSet > tickerSet;
-  tickerSet.resize(comparisonReportConfig["screens"].size());
+  tickerSet.resize(comparisonConfig["screens"].size());
   std::string analysisExt = ".json";  
 
   for (const auto & file 
@@ -519,7 +758,7 @@ int main (int argc, char* argv[]) {
 
     if(validInput){   
       int screenCount = 0;
-      for(auto &screenItem : comparisonReportConfig["screens"].items()){  
+      for(auto &screenItem : comparisonConfig["screens"].items()){  
 
         tickerPassesFilter = 
           ScreenerToolkit::applyFilter(
@@ -542,7 +781,7 @@ int main (int argc, char* argv[]) {
                       << tickerSet[screenCount].filtered.size() << '\t'
                       << " in screen "
                       << (1+screenCount) << "/" 
-                      << comparisonReportConfig["screens"].size()
+                      << comparisonConfig["screens"].size()
                       << std::endl; 
           }
           break;
@@ -565,7 +804,7 @@ int main (int argc, char* argv[]) {
   metricSummaryDataSet.resize(tickerSet.size());
 
   int screenCount = 0;
-  for(auto &screenItem : comparisonReportConfig["screens"].items()){
+  for(auto &screenItem : comparisonConfig["screens"].items()){
 
     if(tickerSet[screenCount].filtered.size()>0){
       for(size_t i=0; i< tickerSet[screenCount].filtered.size();++i){
@@ -607,17 +846,17 @@ int main (int argc, char* argv[]) {
   int numberOfScreensPerReport = 50;
   int maximumNumberOfReports=1;
 
-  if(comparisonReportConfig.contains("report")){
-    if(comparisonReportConfig["report"].contains("number_of_screens_per_report")){
+  if(comparisonConfig.contains("report")){
+    if(comparisonConfig["report"].contains("number_of_screens_per_report")){
       double tmp = JsonFunctions::getJsonFloat(
-        comparisonReportConfig["report"]["number_of_screens_per_report"],false);
+        comparisonConfig["report"]["number_of_screens_per_report"],false);
       if(!std::isnan(tmp)){
         numberOfScreensPerReport = static_cast<int>(tmp);
       }
     }
-    if(comparisonReportConfig["report"].contains("number_of_reports")){
+    if(comparisonConfig["report"].contains("number_of_reports")){
       double tmp = JsonFunctions::getJsonFloat(
-        comparisonReportConfig["report"]["number_of_reports"],false);
+        comparisonConfig["report"]["number_of_reports"],false);
       if(!std::isnan(tmp)){
         maximumNumberOfReports = static_cast<int>(tmp);
       }        
@@ -667,7 +906,7 @@ int main (int argc, char* argv[]) {
     plotComparisonReportData(
       indexStart,
       indexEnd,
-      comparisonReportConfig, 
+      comparisonConfig, 
       metricSummaryDataSet,
       settings,
       comparisonReportFolder,
