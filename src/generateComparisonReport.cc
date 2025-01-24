@@ -628,7 +628,7 @@ void generateComparisonLaTeXReport(
       if(numberOfTickers > 0){
         latexReport << "\\begin{multicols}{3}" << std::endl;
         latexReport << "\\begin{enumerate}" << std::endl;
-        latexReport << "\\setcounter{enumi}{" << indexStart <<"}" << std::endl;  
+        latexReport << "\\setcounter{enumi}{" << 0 <<"}" << std::endl;  
         latexReport << "\\itemsep0pt" << std::endl;
 
         for(size_t j=0; j < numberOfTickers; ++j){

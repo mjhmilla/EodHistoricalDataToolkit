@@ -367,7 +367,22 @@
                 [
                     "MISSING_VALUE"
                 ]
-            }
+            },
+            "P/DCM-V":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "priceToValue"
+                ],
+                "condition": ">",
+                "operator": "",
+                "valueType": "float",
+                "values":
+                [
+                    0.001
+                ]
+            }            
         },
         "ranking":
         {
