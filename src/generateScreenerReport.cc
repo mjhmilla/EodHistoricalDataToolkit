@@ -684,16 +684,46 @@ int main (int argc, char* argv[]) {
       }
 
 
+      //Load the fundamental, historical, and calculate data
+      std::string fundamentalDataPath = fundamentalFolder;
+      fundamentalDataPath.append(fileName);
+      nlohmann::ordered_json fundamentalData;
+      bool loadedFundamentalData = 
+        JsonFunctions::loadJsonFile(fundamentalDataPath,
+                                    fundamentalData,
+                                    verbose);     
+
+      std::string historicalDataPath = historicalFolder;
+      historicalDataPath.append(fileName);
+      nlohmann::ordered_json historicalData;
+      bool loadedHistoricalData = 
+        JsonFunctions::loadJsonFile(historicalDataPath,
+                                    historicalData,
+                                    verbose);     
+
+      std::string calculateDataPath = calculateDataFolder;
+      calculateDataPath.append(fileName);
+      nlohmann::ordered_json calculateData;
+      bool loadedCalculateData = 
+        JsonFunctions::loadJsonFile(calculateDataPath,
+                                    calculateData,
+                                    verbose); 
+
+      validInput  = validInput && 
+        (loadedFundamentalData && loadedCalculateData && loadedHistoricalData);
+
       //Check to see if this ticker passes the filter
       bool tickerPassesFilter=false;
+
+
 
       if(validInput){        
         tickerPassesFilter = 
           ScreenerToolkit::applyFilter(
             fileName,  
-            fundamentalFolder,
-            historicalFolder,
-            calculateDataFolder,
+            fundamentalData,
+            historicalData,
+            calculateData,
             tickerReportFolder,
             screenReportConfig,
             targetDate,

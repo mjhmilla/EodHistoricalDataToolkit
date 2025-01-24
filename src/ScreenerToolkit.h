@@ -421,10 +421,10 @@ class ScreenerToolkit {
     };
 
     //==========================================================================
-    static bool applyFilter(  const std::string &tickerFileName,  
-                              const std::string &fundamentalFolder,
-                              const std::string &historicalFolder,
-                              const std::string &calculateDataFolder,
+    static bool applyFilter(  const std::string &tickerFileName,
+                              const nlohmann::ordered_json &fundamentalData,
+                              const nlohmann::ordered_json &historicalData,
+                              const nlohmann::ordered_json &calculateData,    
                               const std::string &tickerReportFolder,
                               const nlohmann::ordered_json &screenReportConfig,
                               const date::year_month_day &targetDate,
@@ -432,13 +432,10 @@ class ScreenerToolkit {
                               bool replaceNansWithMissingData,
                               bool verbose){
 
-      if(tickerFileName.compare("MOZN.SW.json")==0){
-        bool here=true;
-      }
-
       bool valueFilter = true;
 
       bool filterFieldExists = screenReportConfig.contains("filter");
+      
 
       if(filterFieldExists){
 
@@ -489,16 +486,21 @@ class ScreenerToolkit {
           //
           // Fetch the target data and apply the filter
           //
+          nlohmann::ordered_json *targetJsonTable;
+
           std::string fullPathFileName(""); 
           bool jsonTableItemizedByDate=false;     
           if(folder == "fundamentalData"){
-            fullPathFileName = fundamentalFolder;
+            targetJsonTable =
+              const_cast<nlohmann::ordered_json*>(&fundamentalData);
             jsonTableItemizedByDate=false;                
           }else if(folder == "historicalData"){
-            fullPathFileName = historicalFolder;                        
+            targetJsonTable = 
+              const_cast<nlohmann::ordered_json*>(&historicalData);
             jsonTableItemizedByDate=true;                
           }else if(folder == "calculateData"){
-            fullPathFileName = calculateDataFolder;       
+            targetJsonTable = 
+              const_cast<nlohmann::ordered_json*>(&calculateData);
             jsonTableItemizedByDate=true;                
           }else{
             std::cerr << "Error: in filter " << filterName 
@@ -509,25 +511,18 @@ class ScreenerToolkit {
             std::abort();                  
           }
 
-          fullPathFileName.append(tickerFileName);
 
-          nlohmann::ordered_json targetJsonTable;
-          bool loadedConfiguration = 
-            JsonFunctions::loadJsonFile(fullPathFileName,
-                                        targetJsonTable,
-                                        verbose); 
 
-          if(!loadedConfiguration){
-            valueFilter = false;
-            break;
-          }
+
+
+
 
           //Go fetch the most recent date and prepend it to the field vector
           if(jsonTableItemizedByDate){
             std::string closestDate;
             date::sys_days closestDay;
             int smallestDayError = 
-              JsonFunctions::findClosestDate( targetJsonTable,
+              JsonFunctions::findClosestDate( *targetJsonTable,
                                               targetDate,
                                               "%Y-%m-%d",
                                               closestDate,
@@ -547,7 +542,7 @@ class ScreenerToolkit {
           std::vector < bool > valueBoolVector;
 
           if(valueType == "string"){
-            JsonFunctions::getJsonString( targetJsonTable, 
+            JsonFunctions::getJsonString( *targetJsonTable, 
                                           fieldVector, 
                                           valueString);
 
@@ -570,8 +565,9 @@ class ScreenerToolkit {
             }
 
           }else if(valueType == "float"){
-            valueFloat = JsonFunctions::getJsonFloat(targetJsonTable, fieldVector,
-                                                     replaceNansWithMissingData);
+            valueFloat = JsonFunctions::getJsonFloat(*targetJsonTable, 
+                                                  fieldVector,
+                                                  replaceNansWithMissingData);
 
             //Evaluate all of the individual values against the target
             for(size_t i = 0; i <  valueFloatVector.size(); ++i){
