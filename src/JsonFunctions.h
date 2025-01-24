@@ -100,6 +100,11 @@ class JsonFunctions {
         }
         std::ifstream inputJsonFileStream(filePath.c_str());
         jsonData = nlohmann::ordered_json::parse(inputJsonFileStream);
+
+        if(jsonData.empty()){
+          success=false;
+        }
+
       }catch(const nlohmann::json::parse_error& e){
         std::cout << e.what() << std::endl;
         if(verbose){

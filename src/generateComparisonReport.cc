@@ -8,6 +8,8 @@
 #include <limits>
 #include <filesystem>
 
+#include <cassert>
+
 #include <chrono>
 #include "date.h"
 #include <iostream>
@@ -217,21 +219,19 @@ void plotComparisonReportData(
       if(isValid && indexScreen >= indexStart && indexScreen < indexEnd){
 
 
-        int numberOfTickersPerScreen = -1;
+        int numberOfTickersPerScreen = 
+          metricSummaryDataSet[indexScreen].ticker.size();
 
         double tmp = 
           JsonFunctions::getJsonFloat(
             comparisonConfig["report"]["number_of_tickers_per_screen"],false);
 
-        if(JsonFunctions::isJsonFloatValid(tmp)){
+        if(JsonFunctions::isJsonFloatValid(tmp) 
+          && static_cast<int>(tmp) < numberOfTickersPerScreen
+          && static_cast<int>(tmp) > 0){
           numberOfTickersPerScreen = static_cast<int>(tmp);
         }
 
-        if(numberOfTickersPerScreen==-1 
-            || numberOfTickersPerScreen > metricSummaryDataSet[indexScreen].ticker.size()){
-          numberOfTickersPerScreen = 
-            metricSummaryDataSet[indexScreen].ticker.size();
-        }
 
         int indexRanking=0;
         int indexPlotting=0;
@@ -516,7 +516,8 @@ void generateComparisonLaTeXReport(
               << " :"
               << latexReportPath << std::endl << std::endl
               << ofstreamErr.what()
-              << std::endl;    
+              << std::endl;  
+    assert(false);  
     std::abort();
   }  
 
@@ -581,7 +582,9 @@ void generateComparisonLaTeXReport(
       double tmp = JsonFunctions::getJsonFloat(
           comparisonConfig["report"]["number_of_tickers_per_screen"]);    
       
-      if(static_cast<int>(tmp) < numberOfTickers){
+      if(JsonFunctions::isJsonFloatValid(tmp) 
+          && static_cast<int>(tmp) > 0
+          && static_cast<int>(tmp) < numberOfTickers){
         numberOfTickers = static_cast<int>(tmp);
       }
 
@@ -607,7 +610,9 @@ void generateComparisonLaTeXReport(
       double tmp = JsonFunctions::getJsonFloat(
           comparisonConfig["report"]["number_of_tickers_per_screen"]);    
       
-      if(static_cast<int>(tmp) < numberOfTickers){
+      if(JsonFunctions::isJsonFloatValid(tmp) 
+        && static_cast<int>(tmp) > 0
+        && static_cast<int>(tmp) < numberOfTickers){
         numberOfTickers = static_cast<int>(tmp);
       }
   
@@ -620,31 +625,34 @@ void generateComparisonLaTeXReport(
       latexReport << "\\section{" << screenName << "}" << std::endl;
       latexReport << "\\label{" << screenLabel << "}" << std::endl;
 
-      latexReport << "\\begin{multicols}{3}" << std::endl;
-      latexReport << "\\begin{enumerate}" << std::endl;
-      latexReport << "\\setcounter{enumi}{" << indexStart <<"}" << std::endl;  
-      latexReport << "\\itemsep0pt" << std::endl;
+      if(numberOfTickers > 0){
+        latexReport << "\\begin{multicols}{3}" << std::endl;
+        latexReport << "\\begin{enumerate}" << std::endl;
+        latexReport << "\\setcounter{enumi}{" << indexStart <<"}" << std::endl;  
+        latexReport << "\\itemsep0pt" << std::endl;
 
-      for(size_t j=0; j < numberOfTickers; ++j){
-        size_t k = metricDataSet[i].sortedIndex[j];
+        for(size_t j=0; j < numberOfTickers; ++j){
+          size_t k = metricDataSet[i].sortedIndex[j];
 
-        std::string tickerString(metricDataSet[i].ticker[k]);
-        std::string tickerLabel(metricDataSet[i].ticker[k]);
-        std::string tickerFile(metricDataSet[i].ticker[k]);
+          std::string tickerString(metricDataSet[i].ticker[k]);
+          std::string tickerLabel(metricDataSet[i].ticker[k]);
+          std::string tickerFile(metricDataSet[i].ticker[k]);
 
-        ReportingFunctions::sanitizeStringForLaTeX(tickerString,true);
-        ReportingFunctions::sanitizeLabelForLaTeX(tickerLabel,true);
-        ReportingFunctions::sanitizeFolderName(tickerFile,true);
+          ReportingFunctions::sanitizeStringForLaTeX(tickerString,true);
+          ReportingFunctions::sanitizeLabelForLaTeX(tickerLabel,true);
+          ReportingFunctions::sanitizeFolderName(tickerFile,true);
 
-        latexReport << "\\item " 
-                    <<  tickerString
-                    << "--- " << metricDataSet[i].metricRankSum[k] 
-                    << std::endl;
+          latexReport << "\\item " 
+                      <<  tickerString
+                      << "--- " << metricDataSet[i].metricRankSum[k] 
+                      << std::endl;
+        }
+
+
+        latexReport << "\\end{enumerate}" << std::endl;
+        latexReport << "\\end{multicols}" << std::endl;
+        latexReport << std::endl;
       }
-
-      latexReport << "\\end{enumerate}" << std::endl;
-      latexReport << "\\end{multicols}" << std::endl;
-      latexReport << std::endl;
     }
     ++i;
   }
@@ -970,20 +978,21 @@ int main (int argc, char* argv[]) {
   ReportingFunctions::sanitizeFolderName(comparisonReportConfigurationFileName);  
 
   int numberOfScreensPerReport = 50;
-  int maximumNumberOfReports=1;
+  int maximumNumberOfReports   = -1;
 
   if(comparisonConfig.contains("report")){
     if(comparisonConfig["report"].contains("number_of_screens_per_report")){
       double tmp = JsonFunctions::getJsonFloat(
         comparisonConfig["report"]["number_of_screens_per_report"],false);
-      if(!std::isnan(tmp)){
+      if(JsonFunctions::isJsonFloatValid(tmp) 
+        && static_cast<int>(tmp) > 0){
         numberOfScreensPerReport = static_cast<int>(tmp);
       }
     }
     if(comparisonConfig["report"].contains("number_of_reports")){
       double tmp = JsonFunctions::getJsonFloat(
         comparisonConfig["report"]["number_of_reports"],false);
-      if(!std::isnan(tmp)){
+      if(JsonFunctions::isJsonFloatValid(tmp)){
         maximumNumberOfReports = static_cast<int>(tmp);
       }        
     }      
@@ -996,6 +1005,9 @@ int main (int argc, char* argv[]) {
           / static_cast<double>(numberOfScreensPerReport  ))
         );
 
+  if(maximumNumberOfReports < 0){
+    maximumNumberOfReports = maximumNumberOfReportsDefault;
+  }
 
   maximumNumberOfReports = std::min(maximumNumberOfReports,
                                     maximumNumberOfReportsDefault);
