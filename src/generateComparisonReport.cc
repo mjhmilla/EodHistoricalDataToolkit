@@ -29,6 +29,88 @@ struct TickerSet{
   std::vector< std::string > processed;
 };
 
+
+void appendComparisonData(
+  const nlohmann::ordered_json &comparisonConfig, 
+  const std::vector< ScreenerToolkit::MetricSummaryDataSet > &metricSummaryDataSet,
+  ScreenerToolkit::MetricSummaryDataSet &metricComparisonDataSetUpd)
+{
+    
+
+  size_t i=0;
+
+  for(auto &screen: comparisonConfig.items()){
+    metricComparisonDataSetUpd.ticker.push_back(screen.key());
+
+    //
+    // Evaluate the weighted average of each metric value and summary statistics
+    // Ignore the date field
+    //
+    double weightTotal = 0.;
+    std::vector< double > metricAvg;
+    std::vector< PlottingFunctions::SummaryStatistics > summaryStatsAvg;
+
+    for(size_t k=0; k<metricSummaryDataSet[i].metricRank[0].size(); ++k){
+      metricAvg.push_back(0.);
+      PlottingFunctions::SummaryStatistics summaryStats;
+      summaryStats.min = 0;
+      summaryStats.max = 0;
+      summaryStats.current = 0;
+      for(size_t k=0; k<PlottingFunctions::NUM_PERCENTILES;++k){
+        summaryStats.percentiles[k]=0.;
+      }
+      summaryStatsAvg.push_back(summaryStats);
+    }
+
+    for(size_t j=0; j< metricSummaryDataSet[i].ticker.size(); ++j){
+      double weight = metricSummaryDataSet[i].weight[j];
+      weightTotal += weight;
+      
+      for(size_t k=0; k<metricSummaryDataSet[i].metricRank[j].size(); ++k){
+        metricAvg[k] += (metricSummaryDataSet[i].metricRank[j][k])*weight;
+
+        summaryStatsAvg[k].min += 
+          metricSummaryDataSet[i].summaryStatistics[j][k].min * weight;
+        summaryStatsAvg[k].max += 
+          metricSummaryDataSet[i].summaryStatistics[j][k].max * weight;
+        summaryStatsAvg[k].current += 
+          metricSummaryDataSet[i].summaryStatistics[j][k].current * weight;
+        for(size_t x=0; x<PlottingFunctions::NUM_PERCENTILES;++x){
+          summaryStatsAvg[k].percentiles[x] += 
+            metricSummaryDataSet[i].summaryStatistics[j][k].percentiles[x];
+        }
+
+
+      }
+    }
+
+    for(size_t k=0; k<metricSummaryDataSet[i].metricRank[0].size(); ++k){
+      metricAvg[k] = metricAvg[k] / weightTotal;
+      summaryStatsAvg[k].min = summaryStatsAvg[k].min / weightTotal; 
+      summaryStatsAvg[k].max = summaryStatsAvg[k].max / weightTotal;
+      summaryStatsAvg[k].current = summaryStatsAvg[k].current / weightTotal; 
+
+      for(size_t x=0; x<PlottingFunctions::NUM_PERCENTILES;++x){
+        summaryStatsAvg[k].percentiles[x] = 
+          summaryStatsAvg[k].percentiles[x] / weightTotal;
+      }
+
+    }
+
+    double weightAvg = weightTotal 
+      / static_cast<double>(metricSummaryDataSet[i].ticker.size());
+
+    metricComparisonDataSetUpd.metric.push_back(metricAvg);
+    metricComparisonDataSetUpd.weight.push_back(weightAvg);
+    metricComparisonDataSetUpd.summaryStatistics.push_back(summaryStatsAvg);
+
+
+    ++i;
+  }  
+
+};
+
+
 //==============================================================================
 void createComparisonConfig(nlohmann::ordered_json &configTemplate,
                             nlohmann::ordered_json &configUpd)
@@ -602,6 +684,9 @@ void generateComparisonLaTeXReport(
   
   // Append the lists of tickers in each screen
   i=0;
+  
+
+  latexReport << "\\setcounter{section}{" << indexStart << "}" << std::endl;
   for(auto &itemScreen : comparisonConfig["screens"].items()){
 
     if(i >= indexStart && i < indexEnd){
@@ -838,6 +923,27 @@ int main (int argc, char* argv[]) {
   tickerSet.resize(comparisonConfig["screens"].size());
   std::string analysisExt = ".json";  
 
+  //Scan to see whether the filter opens fundamental data, historical data
+  //and/or calculate data.
+
+  bool useFundamentalData=false;
+  bool useHistoricalData=false;
+  bool useCalculateData=false;
+
+  for(auto &screenItem : comparisonConfig["screens"].items()){ 
+    for(auto &filterItem : screenItem.value()["filter"].items()){
+      std::string folder; 
+      JsonFunctions::getJsonString(filterItem.value()["folder"],folder);  
+      if(folder =="fundamentalData"){
+        useFundamentalData=true;
+      }else if(folder == "historicalData"){
+        useHistoricalData=true;
+      }else if(folder == "calculateData"){
+        useCalculateData=true;
+      }
+    }
+  }
+
   for (const auto & file 
         : std::filesystem::directory_iterator(calculateDataFolder)){    
 
@@ -863,29 +969,43 @@ int main (int argc, char* argv[]) {
     std::string fundamentalDataPath = fundamentalFolder;
     fundamentalDataPath.append(fileName);
     nlohmann::ordered_json fundamentalData;
-    bool loadedFundamentalData = 
-      JsonFunctions::loadJsonFile(fundamentalDataPath,
-                                  fundamentalData,
-                                  verbose);     
+    bool loadedFundamentalData=false;
+
+    if(useFundamentalData){
+      loadedFundamentalData = 
+        JsonFunctions::loadJsonFile(fundamentalDataPath,
+                                    fundamentalData,
+                                    verbose);     
+    }
 
     std::string historicalDataPath = historicalFolder;
     historicalDataPath.append(fileName);
     nlohmann::ordered_json historicalData;
-    bool loadedHistoricalData = 
-      JsonFunctions::loadJsonFile(historicalDataPath,
-                                  historicalData,
-                                  verbose);     
+    bool loadedHistoricalData=false;
+
+    if(useHistoricalData){
+      loadedHistoricalData = 
+        JsonFunctions::loadJsonFile(historicalDataPath,
+                                    historicalData,
+                                    verbose);     
+    }
 
     std::string calculateDataPath = calculateDataFolder;
     calculateDataPath.append(fileName);
     nlohmann::ordered_json calculateData;
-    bool loadedCalculateData = 
-      JsonFunctions::loadJsonFile(calculateDataPath,
-                                  calculateData,
-                                  verbose); 
+    bool loadedCalculateData=false;
 
-    validInput  = validInput && 
-      (loadedFundamentalData && loadedCalculateData && loadedHistoricalData);
+    if(useCalculateData){
+      loadedCalculateData = 
+        JsonFunctions::loadJsonFile(calculateDataPath,
+                                    calculateData,
+                                    verbose); 
+    }
+
+    validInput  = validInput && (
+            (useFundamentalData && loadedFundamentalData) 
+         || (useCalculateData   && loadedCalculateData) 
+         || (useHistoricalData  && loadedHistoricalData));
 
     //Check to see if this ticker passes the filter
     bool tickerPassesFilter=false;
@@ -933,6 +1053,28 @@ int main (int argc, char* argv[]) {
     std::cout << std::endl << "Ranking" << std::endl << std::endl;
   }
 
+  //Scan to see whether the ranking opens fundamental data, historical data
+  //and/or calculate data.
+
+  useFundamentalData=false;
+  useHistoricalData=false;
+  useCalculateData=false;
+
+  for(auto &screenItem : comparisonConfig["screens"].items()){ 
+    for(auto &filterItem : screenItem.value()["ranking"].items()){
+      std::string folder; 
+      JsonFunctions::getJsonString(filterItem.value()["folder"],folder);  
+      if(folder =="fundamentalData"){
+        useFundamentalData=true;
+      }else if(folder == "historicalData"){
+        useHistoricalData=true;
+      }else if(folder == "calculateData"){
+        useCalculateData=true;
+      }
+    }
+  }
+
+
 
   std::vector< ScreenerToolkit::MetricSummaryDataSet > metricSummaryDataSet;
   metricSummaryDataSet.resize(tickerSet.size());
@@ -942,17 +1084,63 @@ int main (int argc, char* argv[]) {
 
     if(tickerSet[screenCount].filtered.size()>0){
       for(size_t i=0; i< tickerSet[screenCount].filtered.size();++i){
-        bool appendedMetricData = 
-          ScreenerToolkit::appendMetricData(
-                          tickerSet[screenCount].filtered[i],  
-                          fundamentalFolder,                 
-                          historicalFolder,
-                          calculateDataFolder,
-                          screenItem.value(),
-                          targetDate,
-                          maxTargetDateErrorInDays,
-                          metricSummaryDataSet[screenCount],                        
-                          verbose);
+        //
+        //Load the fundamental, historical, and calculate data
+        //once so that the necessary ranking information can be retreived
+        //without having to load the files again.
+        //
+        std::string fundamentalDataPath = fundamentalFolder;
+        fundamentalDataPath.append(tickerSet[screenCount].filtered[i]);
+        nlohmann::ordered_json fundamentalData;
+        bool loadedFundamentalData=false;
+        if(useFundamentalData){
+          loadedFundamentalData = 
+            JsonFunctions::loadJsonFile(fundamentalDataPath,
+                                        fundamentalData,
+                                        verbose);     
+        }
+
+        std::string historicalDataPath = historicalFolder;
+        historicalDataPath.append(tickerSet[screenCount].filtered[i]);
+        nlohmann::ordered_json historicalData;
+        bool loadedHistoricalData=false;
+        if(useHistoricalData){
+          loadedHistoricalData = 
+            JsonFunctions::loadJsonFile(historicalDataPath,
+                                        historicalData,
+                                        verbose);     
+        }
+
+        std::string calculateDataPath = calculateDataFolder;
+        calculateDataPath.append(tickerSet[screenCount].filtered[i]);
+        nlohmann::ordered_json calculateData;
+        bool loadedCalculateData = false;
+        if(useCalculateData){
+          loadedCalculateData = 
+            JsonFunctions::loadJsonFile(calculateDataPath,
+                                        calculateData,
+                                        verbose); 
+        }
+
+        bool validInput  = (
+            (useFundamentalData && loadedFundamentalData) 
+         || (useCalculateData   && loadedCalculateData) 
+         || (useHistoricalData  && loadedHistoricalData));
+
+
+        if(validInput){
+          bool appendedMetricData = 
+            ScreenerToolkit::appendMetricData(
+                            tickerSet[screenCount].filtered[i],  
+                            fundamentalData,                 
+                            historicalData,
+                            calculateData,
+                            screenItem.value(),
+                            targetDate,
+                            maxTargetDateErrorInDays,
+                            metricSummaryDataSet[screenCount],                        
+                            verbose);
+        }
       }
 
       ScreenerToolkit::rankMetricData(screenItem.value(),
@@ -1019,9 +1207,7 @@ int main (int argc, char* argv[]) {
       )
     );                                  
 
-  for(size_t indexReport=0; indexReport < maximumNumberOfReports;++indexReport){
-
-
+  for(size_t indexReport=0; indexReport <maximumNumberOfReports; ++indexReport){
 
     size_t indexStart = (numberOfScreensPerReport)*indexReport;
     size_t indexEnd   = std::min( indexStart+numberOfScreensPerReport,
