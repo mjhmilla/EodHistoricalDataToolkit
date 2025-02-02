@@ -37,9 +37,9 @@ void appendComparisonData(
 {
     
 
-  size_t i=0;
+  size_t indexScreen=0;
 
-  for(auto &screen: comparisonConfig.items()){
+  for(auto &screen: comparisonConfig["screens"].items()){
     metricComparisonDataSetUpd.ticker.push_back(screen.key());
 
     //
@@ -50,62 +50,93 @@ void appendComparisonData(
     std::vector< double > metricAvg;
     std::vector< PlottingFunctions::SummaryStatistics > summaryStatsAvg;
 
-    for(size_t k=0; k<metricSummaryDataSet[i].metricRank[0].size(); ++k){
+    for(size_t indexMetric=0; 
+        indexMetric<metricSummaryDataSet[indexScreen].metricRank[0].size(); 
+        ++indexMetric){
+
       metricAvg.push_back(0.);
       PlottingFunctions::SummaryStatistics summaryStats;
       summaryStats.min = 0;
       summaryStats.max = 0;
       summaryStats.current = 0;
-      for(size_t k=0; k<PlottingFunctions::NUM_PERCENTILES;++k){
-        summaryStats.percentiles[k]=0.;
+
+      for(size_t indexPercentile=0; 
+          indexPercentile<PlottingFunctions::NUM_PERCENTILES;
+          ++indexPercentile){
+        summaryStats.percentiles.push_back(0.);
       }
+
       summaryStatsAvg.push_back(summaryStats);
     }
 
-    for(size_t j=0; j< metricSummaryDataSet[i].ticker.size(); ++j){
-      double weight = metricSummaryDataSet[i].weight[j];
+    for(size_t indexTicker=0; 
+        indexTicker< metricSummaryDataSet[indexScreen].ticker.size(); 
+        ++indexTicker){
+
+      double weight = metricSummaryDataSet[indexScreen].weight[indexTicker];
       weightTotal += weight;
       
-      for(size_t k=0; k<metricSummaryDataSet[i].metricRank[j].size(); ++k){
-        metricAvg[k] += (metricSummaryDataSet[i].metricRank[j][k])*weight;
+      for(size_t indexMetric=0; 
+          indexMetric<metricSummaryDataSet[indexScreen].metricRank[indexTicker].size(); 
+          ++indexMetric){
 
-        summaryStatsAvg[k].min += 
-          metricSummaryDataSet[i].summaryStatistics[j][k].min * weight;
-        summaryStatsAvg[k].max += 
-          metricSummaryDataSet[i].summaryStatistics[j][k].max * weight;
-        summaryStatsAvg[k].current += 
-          metricSummaryDataSet[i].summaryStatistics[j][k].current * weight;
-        for(size_t x=0; x<PlottingFunctions::NUM_PERCENTILES;++x){
-          summaryStatsAvg[k].percentiles[x] += 
-            metricSummaryDataSet[i].summaryStatistics[j][k].percentiles[x];
+        if(metricSummaryDataSet[indexScreen].summaryStatistics[indexTicker][indexMetric].percentiles.size()>0){
+
+          metricAvg[indexMetric] += 
+            (metricSummaryDataSet[indexScreen].metricRank[indexTicker][indexMetric])
+            *weight;
+
+          summaryStatsAvg[indexMetric].min += 
+            metricSummaryDataSet[indexScreen].summaryStatistics[indexTicker][indexMetric].min 
+            * weight;
+
+          summaryStatsAvg[indexMetric].max += 
+            metricSummaryDataSet[indexScreen].summaryStatistics[indexTicker][indexMetric].max 
+            * weight;
+
+          summaryStatsAvg[indexMetric].current += 
+            metricSummaryDataSet[indexScreen].summaryStatistics[indexTicker][indexMetric].current 
+            * weight;
+
+          for(size_t indexPercentile=0; 
+              indexPercentile<PlottingFunctions::NUM_PERCENTILES;
+              ++indexPercentile){
+
+            summaryStatsAvg[indexMetric].percentiles[indexPercentile] += 
+              metricSummaryDataSet[indexScreen].summaryStatistics[indexTicker][indexMetric].percentiles[indexPercentile]
+              * weight;
+          }
         }
-
-
       }
     }
 
-    for(size_t k=0; k<metricSummaryDataSet[i].metricRank[0].size(); ++k){
-      metricAvg[k] = metricAvg[k] / weightTotal;
-      summaryStatsAvg[k].min = summaryStatsAvg[k].min / weightTotal; 
-      summaryStatsAvg[k].max = summaryStatsAvg[k].max / weightTotal;
-      summaryStatsAvg[k].current = summaryStatsAvg[k].current / weightTotal; 
+    for(size_t indexMetric=0; 
+        indexMetric<metricSummaryDataSet[indexScreen].metricRank[0].size(); 
+        ++indexMetric){
 
-      for(size_t x=0; x<PlottingFunctions::NUM_PERCENTILES;++x){
-        summaryStatsAvg[k].percentiles[x] = 
-          summaryStatsAvg[k].percentiles[x] / weightTotal;
+      metricAvg[indexMetric] = metricAvg[indexMetric] / weightTotal;
+      summaryStatsAvg[indexMetric].min = summaryStatsAvg[indexMetric].min / weightTotal; 
+      summaryStatsAvg[indexMetric].max = summaryStatsAvg[indexMetric].max / weightTotal;
+      summaryStatsAvg[indexMetric].current = summaryStatsAvg[indexMetric].current / weightTotal; 
+
+      for(size_t indexPercentile=0; 
+          indexPercentile<PlottingFunctions::NUM_PERCENTILES;
+          ++indexPercentile){                        
+        summaryStatsAvg[indexMetric].percentiles[indexPercentile] = 
+          summaryStatsAvg[indexMetric].percentiles[indexPercentile] / weightTotal;
       }
 
     }
 
     double weightAvg = weightTotal 
-      / static_cast<double>(metricSummaryDataSet[i].ticker.size());
+      / static_cast<double>(metricSummaryDataSet[indexScreen].ticker.size());
 
     metricComparisonDataSetUpd.metric.push_back(metricAvg);
     metricComparisonDataSetUpd.weight.push_back(weightAvg);
     metricComparisonDataSetUpd.summaryStatistics.push_back(summaryStatsAvg);
 
 
-    ++i;
+    ++indexScreen;
   }  
 
 };
@@ -121,6 +152,7 @@ void createComparisonConfig(nlohmann::ordered_json &configTemplate,
   manditoryFields.push_back("report");
   manditoryFields.push_back("screen_variations");
   manditoryFields.push_back("screen_template");
+  manditoryFields.push_back("comparison_screener");
 
   for(size_t i=0; i<manditoryFields.size();++i){
     if(!configTemplate.contains(manditoryFields[i].c_str())){
@@ -147,8 +179,11 @@ void createComparisonConfig(nlohmann::ordered_json &configTemplate,
     }
   }
 
-  //Create the set of screens from the template
   configUpd["report"] = configTemplate["report"];  
+  configUpd["comparison_screener"] = configTemplate["comparison_screener"];  
+
+
+  //Create the set of screens from the template
   nlohmann::ordered_json comparisonReportScreens;
   int numberOfDigits = 
     static_cast<int>(std::ceil(static_cast<double>(numberOfVariations)/10.0));
@@ -1151,6 +1186,17 @@ int main (int argc, char* argv[]) {
     ++screenCount;
   }
 
+  //
+  // Evaluate the average metric data of each screen
+  //
+  ScreenerToolkit::MetricSummaryDataSet screenerSummarySet;
+  appendComparisonData( comparisonConfig, 
+                        metricSummaryDataSet,
+                        screenerSummarySet);
+
+  ScreenerToolkit::rankMetricData(comparisonConfig["comparison_screener"],
+                                  screenerSummarySet,
+                                  verbose);                        
 
   //
   // Reporting loop
