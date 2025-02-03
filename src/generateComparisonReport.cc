@@ -31,7 +31,6 @@ struct TickerSet{
 
 
 void appendComparisonData(
-  const nlohmann::ordered_json &comparisonConfig, 
   const std::vector< ScreenerToolkit::MetricSummaryDataSet > &metricSummaryDataSet,
   ScreenerToolkit::MetricSummaryDataSet &metricComparisonDataSetUpd)
 {
@@ -39,8 +38,8 @@ void appendComparisonData(
 
   size_t indexScreen=0;
 
-  for(auto &screen: comparisonConfig["screens"].items()){
-    metricComparisonDataSetUpd.ticker.push_back(screen.key());
+  for(size_t index=0; index<metricSummaryDataSet.size();++index){
+    metricComparisonDataSetUpd.ticker.push_back(metricSummaryDataSet[index].name);
 
     //
     // Evaluate the weighted average of each metric value and summary statistics
@@ -324,9 +323,11 @@ void plotComparisonReportData(
       axisLabelsAdded[i]=false;
     }
 
-    size_t indexScreen=0;
+    //size_t indexScreen=0;
 
-    for(auto const &screenItem : comparisonConfig["screens"].items()){
+    //for(auto const &screenItem : comparisonConfig["screens"].items()){
+    for(size_t indexScreen=0; 
+          indexScreen < metricSummaryDataSet.size();++indexScreen){
 
       bool isValid = true;
       if(metricSummaryDataSet[indexScreen].ticker.size() == 0){
@@ -352,7 +353,8 @@ void plotComparisonReportData(
 
         int indexRanking=0;
         int indexPlotting=0;
-        for(auto const &rankingItem : screenItem.value()["ranking"].items())
+        std::string name(metricSummaryDataSet[indexScreen].name);
+        for(auto const &rankingItem : comparisonConfig["screens"][name]["ranking"].items())
         {
 
           bool addPlot = 
@@ -539,7 +541,6 @@ void plotComparisonReportData(
 
         }
       }
-      ++indexScreen;
     }
 
     double canvasWidth  = 0.;
@@ -680,7 +681,8 @@ void generateComparisonLaTeXReport(
   size_t i=0;
 
 
-  for(auto &itemScreen: comparisonConfig["screens"].items()){
+  //for(auto &itemScreen: comparisonConfig["screens"].items()){
+  for(size_t indexScreen = 0; indexScreen < metricDataSet.size();++indexScreen){
 
     //Since it's not possible directly access an element and then
     //get its name, here we iterate until we get to the right spot
@@ -689,7 +691,7 @@ void generateComparisonLaTeXReport(
 
     if(i >= indexStart && i < indexEnd){
 
-      std::string screenName=itemScreen.key();
+      std::string screenName=metricDataSet[i].name;
       std::string screenLabel(screenName);
 
       ReportingFunctions::sanitizeStringForLaTeX(screenName,true);
@@ -722,7 +724,8 @@ void generateComparisonLaTeXReport(
   
 
   latexReport << "\\setcounter{section}{" << indexStart << "}" << std::endl;
-  for(auto &itemScreen : comparisonConfig["screens"].items()){
+  //for(auto &itemScreen : comparisonConfig["screens"].items()){
+  for(size_t iterScreen = 0; iterScreen < metricDataSet.size();++iterScreen){
 
     if(i >= indexStart && i < indexEnd){
 
@@ -736,7 +739,7 @@ void generateComparisonLaTeXReport(
         numberOfTickers = static_cast<int>(tmp);
       }
   
-      std::string screenName=itemScreen.key();
+      std::string screenName=metricDataSet[iterScreen].name;//itemScreen.key();
       std::string screenLabel(screenName);
 
       ReportingFunctions::sanitizeStringForLaTeX(screenName,true);
@@ -1085,7 +1088,7 @@ int main (int argc, char* argv[]) {
   //  -For each screen, rank the tickers that pass the filter
   //
   if(verbose){
-    std::cout << std::endl << "Ranking" << std::endl << std::endl;
+    std::cout << std::endl << "Ranking the tickers in each screen" << std::endl << std::endl;
   }
 
   //Scan to see whether the ranking opens fundamental data, historical data
@@ -1112,12 +1115,19 @@ int main (int argc, char* argv[]) {
 
 
   std::vector< ScreenerToolkit::MetricSummaryDataSet > metricSummaryDataSet;
-  metricSummaryDataSet.resize(tickerSet.size());
+
 
   int screenCount = 0;
   for(auto &screenItem : comparisonConfig["screens"].items()){
 
+    if(verbose){
+      std::cout << screenCount << "." << '\t' << screenItem.key() << std::endl;
+    }
+
     if(tickerSet[screenCount].filtered.size()>0){
+      
+      ScreenerToolkit::MetricSummaryDataSet metricSummaryData;
+
       for(size_t i=0; i< tickerSet[screenCount].filtered.size();++i){
         //
         //Load the fundamental, historical, and calculate data
@@ -1173,30 +1183,62 @@ int main (int argc, char* argv[]) {
                             screenItem.value(),
                             targetDate,
                             maxTargetDateErrorInDays,
-                            metricSummaryDataSet[screenCount],                        
+                            metricSummaryData,                        
                             verbose);
         }
       }
 
       ScreenerToolkit::rankMetricData(screenItem.value(),
-                                      metricSummaryDataSet[screenCount],
+                                      metricSummaryData,
                                       verbose);
+
+      if(metricSummaryData.ticker.size()>0){
+        metricSummaryData.name=screenItem.key();
+        metricSummaryDataSet.push_back(metricSummaryData);
+      }                                      
+
+      if(verbose){
+        std::cout <<  '\t' 
+                  << metricSummaryData.ticker.size()
+                  << " tickers"
+                  << std::endl;
+      }
+
+    }else{
+      if(verbose){
+        std::cout <<  '\t' << "empty" << std::endl;
+      }
 
     }
     ++screenCount;
+  }
+
+
+  if(verbose){
+    std::cout << std::endl << "Ranking each screen" << std::endl << std::endl;
   }
 
   //
   // Evaluate the average metric data of each screen
   //
   ScreenerToolkit::MetricSummaryDataSet screenerSummarySet;
-  appendComparisonData( comparisonConfig, 
-                        metricSummaryDataSet,
+  appendComparisonData( metricSummaryDataSet,
                         screenerSummarySet);
 
   ScreenerToolkit::rankMetricData(comparisonConfig["comparison_screener"],
                                   screenerSummarySet,
                                   verbose);                        
+
+  //
+  // Re-order the metric summary data set
+  //
+  std::vector< ScreenerToolkit::MetricSummaryDataSet > metricSummaryDataSetSorted;
+  for(size_t indexScreen = 0; 
+      indexScreen < metricSummaryDataSet.size(); ++indexScreen){
+    size_t indexSorted = screenerSummarySet.sortedIndex[indexScreen];
+    metricSummaryDataSetSorted.push_back(metricSummaryDataSet[indexSorted]);
+  }
+
 
   //
   // Reporting loop
@@ -1235,7 +1277,7 @@ int main (int argc, char* argv[]) {
   int maximumNumberOfReportsDefault = 
       static_cast<int>(
           std::ceil(
-            static_cast<double>(metricSummaryDataSet.size())
+            static_cast<double>(metricSummaryDataSetSorted.size())
           / static_cast<double>(numberOfScreensPerReport  ))
         );
 
@@ -1257,7 +1299,7 @@ int main (int argc, char* argv[]) {
 
     size_t indexStart = (numberOfScreensPerReport)*indexReport;
     size_t indexEnd   = std::min( indexStart+numberOfScreensPerReport,
-                                  metricSummaryDataSet.size()       );  
+                                  metricSummaryDataSetSorted.size()       );  
 
     //Create the plot name
     std::stringstream reportNumber;
@@ -1284,7 +1326,7 @@ int main (int argc, char* argv[]) {
       indexStart,
       indexEnd,
       comparisonConfig, 
-      metricSummaryDataSet,
+      metricSummaryDataSetSorted,
       settings,
       comparisonReportFolder,
       summaryPlotFileName,
@@ -1301,7 +1343,7 @@ int main (int argc, char* argv[]) {
       indexStart,
       indexEnd,
       comparisonConfig, 
-      metricSummaryDataSet,
+      metricSummaryDataSetSorted,
       screenSummaryPlots,
       tickerReportFolder,
       comparisonReportFolder,

@@ -20,6 +20,7 @@ class ScreenerToolkit {
   public:
 
     struct MetricSummaryDataSet{
+      std::string name;
       std::vector< std::string > ticker;
       std::vector< std::vector < date::sys_days > > date;  
       std::vector< std::vector< double > > metric;
@@ -300,11 +301,12 @@ class ScreenerToolkit {
           std::string folder; 
           JsonFunctions::getJsonString(rankingItem.value()["folder"],folder);
 
-          std::vector< std::string > fieldVector;
+          std::vector< std::string > fieldVector, dateFieldVector;
           std::string fieldName("");
           for( auto const &fieldEntry : rankingItem.value()["field"]){
             JsonFunctions::getJsonString(fieldEntry,fieldName);
             fieldVector.push_back(fieldName);
+            dateFieldVector.push_back(fieldName);
           }      
 
           //
@@ -356,14 +358,14 @@ class ScreenerToolkit {
             break;
           } 
           if(jsonTableItemizedByDate){
-            fieldVector.insert(fieldVector.begin(),closestDate);
+            dateFieldVector.insert(dateFieldVector.begin(),closestDate);
           }                                         
           
           
 
           double metricValue = 
             JsonFunctions::getJsonFloat(
-                *targetJsonTable,fieldVector);
+                *targetJsonTable,dateFieldVector);
 
           bool metricValueValid = JsonFunctions::isJsonFloatValid(metricValue);
 
@@ -374,13 +376,25 @@ class ScreenerToolkit {
 
           //Build the historical list
           std::vector< double > metricData;
+          std::vector< std::string > metricAddress;
+          for(size_t i=0; i<fieldVector.size();++i){
+            metricAddress.push_back(fieldVector[i]);
+          }
+          if(jsonTableItemizedByDate){
+            metricAddress.insert(metricAddress.begin(),"");
+          }
+
           for(auto &metricItem : targetJsonTable->items()){
 
             std::string itemDate(metricItem.key());
 
+            if(jsonTableItemizedByDate){
+              metricAddress[0]=itemDate;
+            }
+
             double metricValue = 
               JsonFunctions::getJsonFloat(
-                  *targetJsonTable,fieldVector);
+                  *targetJsonTable,metricAddress);
 
             bool metricValueValid = JsonFunctions::isJsonFloatValid(metricValue);
 

@@ -676,6 +676,24 @@ int main (int argc, char* argv[]) {
 
     std::vector< std::string > filteredTickers;
 
+    bool useFundamentalData=false;
+    bool useHistoricalData=false;
+    bool useCalculateData=false;
+
+    for(auto &screenItem : screenReportConfig.items()){ 
+      for(auto &filterItem : screenItem.value()["filter"].items()){
+        std::string folder; 
+        JsonFunctions::getJsonString(filterItem.value()["folder"],folder);  
+        if(folder =="fundamentalData"){
+          useFundamentalData=true;
+        }else if(folder == "historicalData"){
+          useHistoricalData=true;
+        }else if(folder == "calculateData"){
+          useCalculateData=true;
+        }
+      }
+    }
+
     for (const auto & file 
           : std::filesystem::directory_iterator(calculateDataFolder)){  
 
@@ -704,29 +722,43 @@ int main (int argc, char* argv[]) {
       std::string fundamentalDataPath = fundamentalFolder;
       fundamentalDataPath.append(fileName);
       nlohmann::ordered_json fundamentalData;
-      bool loadedFundamentalData = 
-        JsonFunctions::loadJsonFile(fundamentalDataPath,
-                                    fundamentalData,
-                                    verbose);     
+      bool loadedFundamentalData=false;
+
+      if(useFundamentalData){
+        loadedFundamentalData = 
+          JsonFunctions::loadJsonFile(fundamentalDataPath,
+                                      fundamentalData,
+                                      verbose);     
+      }
 
       std::string historicalDataPath = historicalFolder;
       historicalDataPath.append(fileName);
       nlohmann::ordered_json historicalData;
-      bool loadedHistoricalData = 
-        JsonFunctions::loadJsonFile(historicalDataPath,
-                                    historicalData,
-                                    verbose);     
+      bool loadedHistoricalData=false;
+
+      if(useHistoricalData){
+        loadedHistoricalData = 
+          JsonFunctions::loadJsonFile(historicalDataPath,
+                                      historicalData,
+                                      verbose);     
+      }
 
       std::string calculateDataPath = calculateDataFolder;
       calculateDataPath.append(fileName);
       nlohmann::ordered_json calculateData;
-      bool loadedCalculateData = 
-        JsonFunctions::loadJsonFile(calculateDataPath,
-                                    calculateData,
-                                    verbose); 
+      bool loadedCalculateData=false;
 
-      validInput  = validInput && 
-        (loadedFundamentalData && loadedCalculateData && loadedHistoricalData);
+      if(useCalculateData){
+        loadedCalculateData = 
+          JsonFunctions::loadJsonFile(calculateDataPath,
+                                      calculateData,
+                                      verbose); 
+      }
+
+      validInput  = validInput && (
+              (useFundamentalData && loadedFundamentalData) 
+          || (useCalculateData   && loadedCalculateData) 
+          || (useHistoricalData  && loadedHistoricalData));
 
       //Check to see if this ticker passes the filter
       bool tickerPassesFilter=false;
@@ -792,18 +824,82 @@ int main (int argc, char* argv[]) {
         std::cout << "Appending metric data ..."  << std::endl << std::endl;
       }
 
+      //Scan to see whether the ranking opens fundamental data, historical data
+      //and/or calculate data.
+
+      bool useFundamentalData=false;
+      bool useHistoricalData=false;
+      bool useCalculateData=false;
+
+      for(auto &screenItem : screenReportConfig.items()){ 
+        for(auto &filterItem : screenItem.value()["ranking"].items()){
+          std::string folder; 
+          JsonFunctions::getJsonString(filterItem.value()["folder"],folder);  
+          if(folder =="fundamentalData"){
+            useFundamentalData=true;
+          }else if(folder == "historicalData"){
+            useHistoricalData=true;
+          }else if(folder == "calculateData"){
+            useCalculateData=true;
+          }
+        }
+      }      
+
       for (size_t i=0; i<filteredTickers.size(); ++i){
 
         if(verbose){
           std::cout << i << "." << '\t' << filteredTickers[i] << std::endl;
         }        
 
+        //
+        //Load the fundamental, historical, and calculate data
+        //once so that the necessary ranking information can be retreived
+        //without having to load the files again.
+        //
+        std::string fundamentalDataPath = fundamentalFolder;
+        fundamentalDataPath.append(filteredTickers[i]);
+        nlohmann::ordered_json fundamentalData;
+        bool loadedFundamentalData=false;
+        if(useFundamentalData){
+          loadedFundamentalData = 
+            JsonFunctions::loadJsonFile(fundamentalDataPath,
+                                        fundamentalData,
+                                        verbose);     
+        }
+
+        std::string historicalDataPath = historicalFolder;
+        historicalDataPath.append(filteredTickers[i]);
+        nlohmann::ordered_json historicalData;
+        bool loadedHistoricalData=false;
+        if(useHistoricalData){
+          loadedHistoricalData = 
+            JsonFunctions::loadJsonFile(historicalDataPath,
+                                        historicalData,
+                                        verbose);     
+        }
+
+        std::string calculateDataPath = calculateDataFolder;
+        calculateDataPath.append(filteredTickers[i]);
+        nlohmann::ordered_json calculateData;
+        bool loadedCalculateData = false;
+        if(useCalculateData){
+          loadedCalculateData = 
+            JsonFunctions::loadJsonFile(calculateDataPath,
+                                        calculateData,
+                                        verbose); 
+        }
+
+        bool validInput  = (
+            (useFundamentalData && loadedFundamentalData) 
+         || (useCalculateData   && loadedCalculateData) 
+         || (useHistoricalData  && loadedHistoricalData));
+
         bool appendedMetricData = 
             ScreenerToolkit::appendMetricData(
                         filteredTickers[i],  
-                        fundamentalFolder,                 
-                        historicalFolder,
-                        calculateDataFolder,
+                        fundamentalData,                 
+                        historicalData,
+                        calculateData,
                         screenReportConfig,
                         targetDate,
                         maxTargetDateErrorInDays,
