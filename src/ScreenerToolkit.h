@@ -125,6 +125,8 @@ class ScreenerToolkit {
             typeOfMeasure = 3;
           }else if(typeOfMeasureName == "p95"){
             typeOfMeasure = 4;
+          }else if(typeOfMeasureName == "recent_norm_p50"){
+            typeOfMeasure = 5;
           }else{
             std::cout << "Error: value field must be recent,p05,p25,p50,p75, or p95 "
                       << "instead this was entered: " << typeOfMeasureName;
@@ -191,10 +193,19 @@ class ScreenerToolkit {
                 value = metricDataSetUpd
                         .summaryStatistics[indexRow][indexMetric].percentiles[4];
               }
+              case 5:
+              {
+                double recent = metricDataSetUpd.metric[indexRow][indexMetric];
+                double normP50= 
+                  metricDataSetUpd
+                    .summaryStatistics[indexRow][indexMetric].percentiles[2];
+
+                value = recent/normP50;
+              }
               break;
               default:{
                 std::cout << "Error: value field must be "
-                          << "recent,p05,p25,p50,p75, or p95."
+                          << "recent,p05,p25,p50,p75,p95, or recent_norm_p50."
                           << std::endl;
                 std::abort();  
               };

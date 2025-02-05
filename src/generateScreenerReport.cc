@@ -680,17 +680,15 @@ int main (int argc, char* argv[]) {
     bool useHistoricalData=false;
     bool useCalculateData=false;
 
-    for(auto &screenItem : screenReportConfig.items()){ 
-      for(auto &filterItem : screenItem.value()["filter"].items()){
-        std::string folder; 
-        JsonFunctions::getJsonString(filterItem.value()["folder"],folder);  
-        if(folder =="fundamentalData"){
-          useFundamentalData=true;
-        }else if(folder == "historicalData"){
-          useHistoricalData=true;
-        }else if(folder == "calculateData"){
-          useCalculateData=true;
-        }
+    for(auto &filterItem : screenReportConfig["filter"].items()){
+      std::string folder; 
+      JsonFunctions::getJsonString(filterItem.value()["folder"],folder);  
+      if(folder =="fundamentalData"){
+        useFundamentalData=true;
+      }else if(folder == "historicalData"){
+        useHistoricalData=true;
+      }else if(folder == "calculateData"){
+        useCalculateData=true;
       }
     }
 
@@ -831,19 +829,17 @@ int main (int argc, char* argv[]) {
       bool useHistoricalData=false;
       bool useCalculateData=false;
 
-      for(auto &screenItem : screenReportConfig.items()){ 
-        for(auto &filterItem : screenItem.value()["ranking"].items()){
-          std::string folder; 
-          JsonFunctions::getJsonString(filterItem.value()["folder"],folder);  
-          if(folder =="fundamentalData"){
-            useFundamentalData=true;
-          }else if(folder == "historicalData"){
-            useHistoricalData=true;
-          }else if(folder == "calculateData"){
-            useCalculateData=true;
-          }
+      for(auto &filterItem : screenReportConfig["ranking"].items()){
+        std::string folder; 
+        JsonFunctions::getJsonString(filterItem.value()["folder"],folder);  
+        if(folder =="fundamentalData"){
+          useFundamentalData=true;
+        }else if(folder == "historicalData"){
+          useHistoricalData=true;
+        }else if(folder == "calculateData"){
+          useCalculateData=true;
         }
-      }      
+      }
 
       for (size_t i=0; i<filteredTickers.size(); ++i){
 
