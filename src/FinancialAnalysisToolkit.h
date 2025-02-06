@@ -321,47 +321,96 @@ class FinancialAnalysisToolkit {
     };
 
     //==========================================================================
-    static double calcReturnOnInvestedCapital(nlohmann::ordered_json &jsonData, 
+    /*
+      The operating ROIC defines the invested capital using operations data:
+
+      Invested Capital =
+        net-working-capital
+        + net-property-plant-equipment
+        + acquired-intangibles*
+        + goodwill
+        + other
+
+      There are no equivalents for the * tems in EODHD data. Ignoring those terms
+      we have
+
+      Invested-Capital =
+        +netWorkingCapital
+        +propertyPlantAndEquipmentNet
+        +intangibleAssets
+        +goodwill
+        +otherAssets
+
+      Note, the definitions for intangibleAssets and goodwill from EODHD make
+      it seem like these two values might overlap. It's not clear how these
+      terms are calculated.
+
+      The return given by Damodaran is:
+
+      return: operatingIncome * (1-taxRate)
+
+      See the comments for calcReturnOnInvestedFinancialCapital for some 
+      discussion on this value for return.
+
+      Where
+        net-working-capital = 
+        current assets 
+          - non-interest-bearing-current-liabilities
+
+
+      https://www.morganstanley.com/im/publication/insights/articles/article_returnoninvestedcapital.pdf
+    */
+    static double calcReturnOnInvestedOperatingCapital(
+                                    nlohmann::ordered_json &jsonData, 
                                     std::vector< std::string> &dateSet,
                                     const char *timeUnit,
+                                    double taxRate,
                                     bool appendTermRecord,
                                     std::string &parentCategoryName,
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
-      // Return On Invested Capital
-      //  Source: 
-      // https://www.investopedia.com/terms/r/returnoninvestmentcapital.asp
-      double longTermDebt = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
-                      ["longTermDebt"], setNansToMissingValue);       
 
-      double totalStockholderEquity = 
+      double netWorkingCapital= 
         JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
-                      ["totalStockholderEquity"], setNansToMissingValue);
+                      ["netWorkingCapital"], setNansToMissingValue);       
 
-      double netIncome = 
+      double propertyPlantEquipmentNet = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                      ["propertyPlantAndEquipmentNet"], setNansToMissingValue);
+
+      double intangibleAssets = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                      ["intangibleAssets"], true);
+
+      double goodWill = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                      ["goodWill"], true);
+
+      double otherAssets = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                      ["otherAssets"], true);                      
+
+      double operatingIncome = 
         FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-          jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
+          jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
+        
+      double afterTaxOperatingIncome = operatingIncome*(1.0-taxRate);    
 
-      //Interesting fact: dividends paid can be negative. This would have
-      //the effect of increasing the ROIC for a misleading reason.
-
-      double dividendsPaid = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-          jsonData,FIN,CF,timeUnit,dateSet,"dividendsPaid",
-          true);      
-
-      double returnOnInvestedCapital =  
-        (netIncome-dividendsPaid) / (longTermDebt+totalStockholderEquity);
+      double returnOnInvestedCapital = 
+        afterTaxOperatingIncome
+        /(netWorkingCapital
+          +propertyPlantEquipmentNet
+          +intangibleAssets
+          +goodWill
+          +otherAssets);
 
       //The ROIC is meaningless unless the denominator is defined.
-      //I'm willing to accept dividends paid being missing from the EOD 
-      //records because many companys do not issue dividends.
-      if(    !JsonFunctions::isJsonFloatValid(longTermDebt) 
-          || !JsonFunctions::isJsonFloatValid(totalStockholderEquity)
-          || !JsonFunctions::isJsonFloatValid(netIncome)){
+      //I'm willing to accept intangibleAssets and goodwill to be missing but
+      //netWorkingCapital and propertyPlantEquipmentNet must be present
+      if(    !JsonFunctions::isJsonFloatValid(netWorkingCapital) 
+          || !JsonFunctions::isJsonFloatValid(propertyPlantEquipmentNet)){
         if(setNansToMissingValue){
           returnOnInvestedCapital = JsonFunctions::MISSING_VALUE;
         }else{
@@ -370,16 +419,188 @@ class FinancialAnalysisToolkit {
       }
 
       if(appendTermRecord){
-        termNames.push_back(parentCategoryName+"returnOnInvestedCapital_longTermDebt");
-        termNames.push_back(parentCategoryName+"returnOnInvestedCapital_totalStockholderEquity");
-        termNames.push_back(parentCategoryName+"returnOnInvestedCapital_netIncome");
-        termNames.push_back(parentCategoryName+"returnOnInvestedCapital_dividendsPaid");
-        termNames.push_back(parentCategoryName+"returnOnInvestedCapital");
+        termNames.push_back(parentCategoryName+"returnOnInvestedOperatingCapital_netWorkingCapital");
+        termNames.push_back(parentCategoryName+"returnOnInvestedOperatingCapital_propertyPlantAndEquipmentNet");
+        termNames.push_back(parentCategoryName+"returnOnInvestedOperatingCapital_intangibleAssets");
+        termNames.push_back(parentCategoryName+"returnOnInvestedOperatingCapital_goodWill");
+        termNames.push_back(parentCategoryName+"returnOnInvestedOperatingCapital_otherAssets");
+        termNames.push_back(parentCategoryName+"returnOnInvestedOperatingCapital_operatingIncome");
+        termNames.push_back(parentCategoryName+"returnOnInvestedOperatingCapital_taxRate");
+        termNames.push_back(parentCategoryName+"returnOnInvestedOperatingCapital_afterTaxOperatingIncome");
+        termNames.push_back(parentCategoryName+"returnOnInvestedOperatingCapital");
 
+        termValues.push_back(netWorkingCapital);
+        termValues.push_back(propertyPlantEquipmentNet);
+        termValues.push_back(intangibleAssets);
+        termValues.push_back(goodWill);
+        termValues.push_back(otherAssets);
+        termValues.push_back(operatingIncome);
+        termValues.push_back(taxRate);
+        termValues.push_back(afterTaxOperatingIncome);
+        termValues.push_back(returnOnInvestedCapital);
+      }
+
+      return returnOnInvestedCapital;
+    };
+
+    //==========================================================================
+    /**
+     Here ROIC is calculated using the financing information about the company.
+     This can give a skewed view of ROIC when there is not a clear translation
+     between debt, equity, and the acquisition/maintaince of capital. The most
+     common version of this is the use of high amounts of debt to result in
+     a negative value for equity which artifically boosts ROIC. This is 
+     misleading. In any case, using the Morgan Stanely article:
+
+      Invested capital = 
+        total-debt
+        + deferred-taxes*
+        + other-liabilities**
+        + preferred-stock**
+        + common-equity**
+        + share-holder equity
+
+      Terms marked * have no equivalent in EOD. These terms ** have equivalents
+      but the data is frequenty missing:
+
+      other-liabilities
+        nonCurrentLiabilitiesTotal
+        nonCurrentLiabilitiesTotal
+      
+      preferred-stock
+        preferredStockTotalEquity
+      
+      common-equity
+        commonStockTotalEquity
+
+      Unfortunately this is really not a definition of invested capital that
+      can be implemented using EODHD's data.
+
+      To be consistent with Damodaran, I'm instead going to use this definition
+      
+      Invested capital = 
+        BV-of-debt
+        + BV-of-equity
+        - cash
+
+      BV-of-debt  : shortLongTermDebtTotal if it exists, otherwise longTermDebt
+      BV-of-equity: totalStockholderEquity
+
+      The return given by Damodaran is:
+
+      return: operatingIncome * (1-taxRate)
+
+      It would be probably more accurate to subtract dividends and also
+      any stock buybacks. However, EOD doesn't have stock buy backs in its
+      reporting. While dividends are reported, Damodaran does not include this
+      in his definition of ROIC. For a company that does give out dividends
+      the ROIC will be artificially high (obviously they are not investing
+      the dividend) unless they cut the dividend. I expect that Damodaran has 
+      ignored dividends in the DCM he presented to keep the ROIC compatible 
+      with the definition of reinvestment rate (ROIC has afterTaxOperatingIncome
+      in the numerator, and the reinvestment rate has the afterTaxOperatingIncome
+      in the denominator)
+
+      Note:
+      *longTermDebt is used rather than totalLongTermDebt as many companies in
+      EOD's database have null entries for totalLongTermDebt and shortTermDebt
+      *I cannot find an equivalent for other-long-term-liabilities in EOD's 
+       data base, and this would surely be something to be determined on a 
+       company-by-company basis.
+
+     source:
+      https://www.morganstanley.com/im/publication/insights/articles/article_returnoninvestedcapital.pdf 
+    */
+    static double calcReturnOnInvestedFinancialCapital(
+                                    nlohmann::ordered_json &jsonData, 
+                                    std::vector< std::string> &dateSet,
+                                    const char *timeUnit,
+                                    double taxRate,
+                                    bool appendTermRecord,
+                                    std::string &parentCategoryName,
+                                    bool setNansToMissingValue,
+                                    std::vector< std::string> &termNames,
+                                    std::vector< double > &termValues){
+
+      double shortLongTermDebt = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                      ["shortLongTermDebtTotal"], setNansToMissingValue);       
+        
+      double longTermDebt = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                      ["longTermDebt"], setNansToMissingValue); 
+
+      double bookValueOfDebt=0.;
+
+      if(JsonFunctions::isJsonFloatValid(shortLongTermDebt)){
+        bookValueOfDebt = shortLongTermDebt;
+      }else{
+        bookValueOfDebt = longTermDebt;
+      }     
+
+      double totalStockholderEquity = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                      ["totalStockholderEquity"], setNansToMissingValue);
+      
+      double cash = 
+        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                      ["cash"], true);
+
+      double operatingIncome = 
+        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+          jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
+          setNansToMissingValue);
+        
+      double afterTaxOperatingIncome = operatingIncome*(1.0-taxRate);
+    
+      //Interesting fact: dividends paid can be negative. This would have
+      //the effect of increasing the ROIC for a misleading reason.
+
+      //double dividendsPaid = 
+      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+      //    jsonData,FIN,CF,timeUnit,dateSet,"dividendsPaid",
+      //    true);   
+
+      double returnOnInvestedCapital =  
+        (afterTaxOperatingIncome) 
+        / (bookValueOfDebt+totalStockholderEquity-cash);
+
+      //The ROIC is meaningless unless the denominator is defined.
+      //I'm willing to accept cash being missing from the EOD 
+      //records because this is often small in comparison to debt and equity.
+      if(    !JsonFunctions::isJsonFloatValid(longTermDebt) 
+          || !JsonFunctions::isJsonFloatValid(totalStockholderEquity)
+          || !JsonFunctions::isJsonFloatValid(operatingIncome)){
+        if(setNansToMissingValue){
+          returnOnInvestedCapital = JsonFunctions::MISSING_VALUE;
+        }else{
+          returnOnInvestedCapital = std::nan("1");
+        }
+      }
+
+      if(appendTermRecord){
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital_debtBookValue");
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital_shortLongTermDebt");
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital_longTermDebt");
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital_otherLongTermLiabilities");
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital_totalStockholderEquity");
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital_cash");
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital_operatingIncome");
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital_taxRate");
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital_afterTaxOperatingIncome");
+        //termNames.push_back(parentCategoryName+"returnOnInvestedCapitalFromFinancing_dividendsPaid");
+        termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital");
+
+        termValues.push_back(bookValueOfDebt);
+        termValues.push_back(shortLongTermDebt);
         termValues.push_back(longTermDebt);
+        termValues.push_back(std::nan("1"));
         termValues.push_back(totalStockholderEquity);
-        termValues.push_back(netIncome);
-        termValues.push_back(dividendsPaid);
+        termValues.push_back(cash);
+        termValues.push_back(operatingIncome);
+        termValues.push_back(taxRate);
+        termValues.push_back(afterTaxOperatingIncome);
+        //termValues.push_back(dividendsPaid);
         termValues.push_back(returnOnInvestedCapital);
       }
 
@@ -426,9 +647,11 @@ class FinancialAnalysisToolkit {
         termValues.push_back(netIncome);
         termValues.push_back(totalStockholderEquity);
         termValues.push_back(returnOnEquity);
-
       }
 
+      if(returnOnEquity < 0){
+        returnOnEquity = JsonFunctions::MISSING_VALUE;
+      }
       return returnOnEquity;
     };    
 
@@ -1857,6 +2080,8 @@ class FinancialAnalysisToolkit {
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
 
+      double debtBookValue=JsonFunctions::MISSING_VALUE;
+
       double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
         fundamentalData[FIN][BAL][timeUnit][dateSet[0].c_str()]
         ["shortLongTermDebtTotal"],setNansToMissingValue);
@@ -1868,8 +2093,9 @@ class FinancialAnalysisToolkit {
         ["longTermDebt"],setNansToMissingValue);
 
       if(JsonFunctions::isJsonFloatValid(shortLongTermDebtTotal)){
-        longTermDebt = 0.;        
+        debtBookValue = shortLongTermDebtTotal;   
       }else if(JsonFunctions::isJsonFloatValid(longTermDebt)){
+        debtBookValue = longTermDebt;
         shortLongTermDebtTotal= JsonFunctions::MISSING_VALUE;
       }else{
         shortLongTermDebtTotal = JsonFunctions::MISSING_VALUE;
@@ -1883,11 +2109,12 @@ class FinancialAnalysisToolkit {
 
       double cash = JsonFunctions::getJsonFloat(
         fundamentalData[FIN][BAL][timeUnit][dateSet[0].c_str()]["cash"],
-        setNansToMissingValue);
+        true);
       
+      double cashAndEquivalentsEntry=cashAndEquivalents;
 
-      if(JsonFunctions::isJsonFloatValid(cashAndEquivalents)){
-        cash = 0.;        
+      if(!JsonFunctions::isJsonFloatValid(cashAndEquivalentsEntry)){
+        cashAndEquivalentsEntry=cash;       
       }
 
       //From Investopedia: https://www.investopedia.com/terms/e/enterprisevalue.asp
@@ -1901,8 +2128,8 @@ class FinancialAnalysisToolkit {
       //    available. I'm also willing to ignore this field if neither cash
       //    and cash equivalents are not available.
       double enterpriseValue = marketCapitalization
-                              + (shortLongTermDebtTotal+longTermDebt) 
-                              - (cashAndEquivalents + cash);
+                              + (debtBookValue) 
+                              - (cashAndEquivalentsEntry);
 
       
       if(    !JsonFunctions::isJsonFloatValid(shortLongTermDebtTotal)
@@ -1915,15 +2142,19 @@ class FinancialAnalysisToolkit {
       }
 
       if(appendTermRecord){
+        termNames.push_back(parentCategoryName+"enterpriseValue_debtBookValue");
         termNames.push_back(parentCategoryName+"enterpriseValue_shortLongTermDebtTotal");
         termNames.push_back(parentCategoryName+"enterpriseValue_longTermDebt");
+        termNames.push_back(parentCategoryName+"enterpriseValue_cashAndEquivalentsEntry");
         termNames.push_back(parentCategoryName+"enterpriseValue_cashAndEquivalents");
         termNames.push_back(parentCategoryName+"enterpriseValue_cash");
         termNames.push_back(parentCategoryName+"enterpriseValue_marketCapitalization");
         termNames.push_back(parentCategoryName+"enterpriseValue");
 
+        termValues.push_back(debtBookValue);
         termValues.push_back(shortLongTermDebtTotal);
         termValues.push_back(longTermDebt);
+        termValues.push_back(cashAndEquivalentsEntry);
         termValues.push_back(cashAndEquivalents);
         termValues.push_back(cash);
         termValues.push_back(marketCapitalization);
@@ -1972,9 +2203,11 @@ class FinancialAnalysisToolkit {
                                                     termValues);
 
       double returnOnInvestedCapital = 
-                    calcReturnOnInvestedCapital(  jsonData,
+                    calcReturnOnInvestedFinancialCapital(  
+                                                  jsonData,
                                                   dateSet,
                                                   timeUnit,
+                                                  taxRate,
                                                   appendTermRecord,
                                                   parentName,
                                                   setNansToMissingValue,

@@ -221,14 +221,21 @@ void updatePlotArray(
     JsonFunctions::getJsonFloat(plotConfiguration["settings"]["columns"],false);
   size_t ncols = static_cast<size_t>(tmp);
 
+  std::vector< std::vector< PlottingFunctions::AxisSettings > > axisSettings;
+
+
   if(matrixOfPlots.size() != nrows){
     matrixOfPlots.resize(nrows);
+    axisSettings.resize(nrows);
   }
   for(size_t i=0; i < nrows; ++i){
     if(matrixOfPlots[i].size() != ncols){
       matrixOfPlots[i].resize(ncols);
+      axisSettings[i].resize(ncols);
     }
   }
+
+
 
   double plotWidthCm = 
     JsonFunctions::getJsonFloat(
@@ -311,34 +318,55 @@ void updatePlotArray(
 
 
 
-    //Get the AxixSettings
-    PlottingFunctions::AxisSettings axisSettings;
-    std::string xAxisLabel, yAxisLabel;
-    JsonFunctions::getJsonString(plotConfig.value()["xAxisLabel"],
-                                 axisSettings.xAxisName);        
-    findReplaceKeywords(axisSettings.xAxisName,keywords,replacements);
-                                 
-    JsonFunctions::getJsonString(plotConfig.value()["yAxisLabel"],
-                                 axisSettings.yAxisName);        
-    findReplaceKeywords(axisSettings.yAxisName,keywords,replacements);
-
-    axisSettings.xMin = JsonFunctions::getJsonFloat(plotConfig.value()["xMin"],
-                        false);
-    axisSettings.xMax = JsonFunctions::getJsonFloat(plotConfig.value()["xMax"],
-                        false);
-    axisSettings.yMin = JsonFunctions::getJsonFloat(plotConfig.value()["yMin"],
-                        false);
-    axisSettings.yMax = JsonFunctions::getJsonFloat(plotConfig.value()["yMax"],
-                        false);
-
     //Get SubplotSettings
     PlottingFunctions::SubplotSettings subplotSettings;
 
     tmp = JsonFunctions::getJsonFloat(plotConfig.value()["row"],false);
     subplotSettings.indexRow = static_cast<size_t>(tmp);
+    size_t indexRow = subplotSettings.indexRow;
 
     tmp = JsonFunctions::getJsonFloat(plotConfig.value()["column"],false);
     subplotSettings.indexColumn = static_cast<size_t>(tmp);
+    size_t indexColumn = subplotSettings.indexColumn;
+
+    //Get the AxisSettings
+    std::string xAxisLabel, yAxisLabel;
+    JsonFunctions::getJsonString(plotConfig.value()["xAxisLabel"],
+                                 axisSettings[indexRow][indexColumn].xAxisName);        
+    
+    findReplaceKeywords(axisSettings[indexRow][indexColumn].xAxisName,
+                        keywords,replacements);
+                                 
+    JsonFunctions::getJsonString(plotConfig.value()["yAxisLabel"],
+                                 axisSettings[indexRow][indexColumn].yAxisName);  
+
+    findReplaceKeywords(axisSettings[indexRow][indexColumn].yAxisName,
+                        keywords,replacements);
+
+    //Only update the axis if the values have not been already set
+    if( std::isnan(axisSettings[indexRow][indexColumn].xMin) ){
+      axisSettings[indexRow][indexColumn].xMin = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["xMin"],false);
+    }
+
+    if( std::isnan(axisSettings[indexRow][indexColumn].xMax) ){
+      axisSettings[indexRow][indexColumn].xMax = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["xMax"], false);
+    }
+
+    if( std::isnan(axisSettings[indexRow][indexColumn].yMin) ){
+      axisSettings[indexRow][indexColumn].yMin = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["yMin"],false);
+    }
+
+    if( std::isnan(axisSettings[indexRow][indexColumn].yMax) ){
+      axisSettings[indexRow][indexColumn].yMax = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["yMax"], false);
+    }
+
+
+
+
 
     //Get Box and Whisker Settings
     PlottingFunctions::BoxAndWhiskerSettings boxWhiskerSettings;
@@ -365,13 +393,16 @@ void updatePlotArray(
         xTmp,
         yTmp); 
 
+
+
+
     PlottingFunctions::updatePlot(
         xTmp,
         yTmp,
         jsonMetaDataVector[indexEnd].fieldName,
         plotSettingsUpd,
         lineSettings,
-        axisSettings,
+        axisSettings[indexRow][indexColumn],
         boxWhiskerSettings,
         matrixOfPlots[subplotSettings.indexRow][subplotSettings.indexColumn],
         true,
@@ -642,6 +673,28 @@ bool generateLaTeXReport(
     latexReport << "\\end{tabular}" << std::endl << std::endl;
 
     //std::string date = calculateData.begin().key();
+
+
+    ReportingFunctions::appendExcessReturnOnInvestedFinancialCapitalTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData,
+      date,
+      verbose);
+
+    ReportingFunctions::appendExcessReturnOnInvestedOperationsCapitalTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData,
+      date,
+      verbose);
+
+    ReportingFunctions::appendResidualCashflowToEnterpriseValueTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData,
+      date,
+      verbose);
 
     ReportingFunctions::appendValuationTable(
       latexReport,

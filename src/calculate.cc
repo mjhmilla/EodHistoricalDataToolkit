@@ -2117,19 +2117,35 @@ int main (int argc, char* argv[]) {
 
 
         std::string emptyParentName("");
-        double roic = FinancialAnalysisToolkit::
-          calcReturnOnInvestedCapital(fundamentalData,
+        double roicFin = FinancialAnalysisToolkit::
+          calcReturnOnInvestedFinancialCapital(fundamentalData,
                                       dateSet,
                                       timePeriod.c_str(),
+                                      taxRate,
                                       appendTermRecord, 
                                       emptyParentName,
                                       setNansToMissingValue,
                                       termNames, 
                                       termValues);
 
-        double roicLessCostOfCapital = roic - costOfCapitalMature;  
-        termNames.push_back("returnOnInvestedCapitalLessCostOfCapital");
-        termValues.push_back(roicLessCostOfCapital);                                    
+        double roicFinLessCostOfCapital = roicFin - costOfCapitalMature;  
+        termNames.push_back("returnOnInvestedFinancialCapitalLessCostOfCapital");
+        termValues.push_back(roicFinLessCostOfCapital);                                    
+
+        double roicOp = FinancialAnalysisToolkit::
+          calcReturnOnInvestedOperatingCapital(fundamentalData,
+                                      dateSet,
+                                      timePeriod.c_str(),
+                                      taxRate,
+                                      appendTermRecord, 
+                                      emptyParentName,
+                                      setNansToMissingValue,
+                                      termNames, 
+                                      termValues);
+        double roicOpLessCostOfCapital = roicOp - costOfCapitalMature;  
+        termNames.push_back("returnOnInvestedOperatingCapitalLessCostOfCapital");
+        termValues.push_back(roicOpLessCostOfCapital); 
+
 
         double roce = FinancialAnalysisToolkit::
           calcReturnOnCapitalDeployed(  fundamentalData,
@@ -2253,11 +2269,16 @@ int main (int argc, char* argv[]) {
 
         double crossHoldings = JsonFunctions::MISSING_VALUE;
 
-        double shortTermDebt = JsonFunctions::getJsonFloat(
+        double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
           fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                          ["shortTermDebt"],true);
+                          ["shortLongTermDebtTotal"],true);
 
-        double shortLongTermDebtTotal = longTermDebt+shortTermDebt; //here
+        double shortLongTermDebtTotalEntry=shortLongTermDebtTotal;
+
+
+        if(!JsonFunctions::isJsonFloatValid(shortLongTermDebtTotalEntry)){
+          shortLongTermDebtTotalEntry = longTermDebt; //here
+        }
 
         double potentialLiabilities = JsonFunctions::MISSING_VALUE;
 
@@ -2289,7 +2310,9 @@ int main (int argc, char* argv[]) {
           //termNames.push_back("priceToValue_netDebt");
 
           termNames.push_back("priceToValue_crossHolding");
+          termNames.push_back("priceToValue_shortLongTermDebtTotalEntry");
           termNames.push_back("priceToValue_shortLongTermDebtTotal");
+          termNames.push_back("priceToValue_longTermDebt");
           termNames.push_back("priceToValue_potentialLiabilities");
           termNames.push_back("priceToValue_stockOptionValuation");
           termNames.push_back("priceToValue_presentValue_approximation");
@@ -2299,7 +2322,9 @@ int main (int argc, char* argv[]) {
           termValues.push_back(presentValueOfFutureCashFlows);
           termValues.push_back(cash);
           termValues.push_back(crossHoldings);          
+          termValues.push_back(shortLongTermDebtTotalEntry);
           termValues.push_back(shortLongTermDebtTotal);
+          termValues.push_back(longTermDebt);
           termValues.push_back(potentialLiabilities);
           termValues.push_back(optionValue);
           termValues.push_back(presentValue);
@@ -2309,14 +2334,13 @@ int main (int argc, char* argv[]) {
         }
 
         //Residual cash flow to enterprise value
-        std::string rFcfToEvLabel = "residualCashFlowToEnterpriseValue_"; 
         double enterpriseValue = FinancialAnalysisToolkit::
             calcEnterpriseValue(fundamentalData, 
                                 marketCapitalization, 
                                 dateSet,
                                 timePeriod.c_str(),
                                 appendTermRecord,                                
-                                rFcfToEvLabel,
+                                emptyParentName,
                                 setNansToMissingValue,
                                 termNames,
                                 termValues);
@@ -2334,9 +2358,7 @@ int main (int argc, char* argv[]) {
         }
 
         if(appendTermRecord){
-          termNames.push_back("residualCashFlowToEnterpriseValue_residualCashFlow");
           termNames.push_back("residualCashFlowToEnterpriseValue");
-          termValues.push_back(residualCashFlow);
           termValues.push_back(residualCashFlowToEnterpriseValue);
         }
 
