@@ -949,6 +949,7 @@ static void appendValuationTable(std::ofstream &latexReport,
     latexReport << "\\begin{tabular}{l l}" << std::endl;
     latexReport << "\\hline \\multicolumn{2}{c}{Part 13: Price to value} \\\\" 
                 << std::endl;
+    latexReport << "\\hline";               
     latexReport << "$A_{13}$. Cash balance & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["priceToValue_cash"],true))
@@ -994,12 +995,80 @@ static void appendValuationTable(std::ofstream &latexReport,
                 << " \\\\" << std::endl; 
     latexReport << "\\multicolumn{2}{c}{ $G_{2}= C_{2} / F_{13}$} \\\\" 
                 << std::endl; 
-
-
     latexReport << "\\end{tabular}" << std::endl 
                 << "\\bigskip" << std::endl<< std::endl;  
 
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\hline \\multicolumn{2}{c}{Part 14: Empirical Growth Check} \\\\" 
+                << std::endl;
+    latexReport << "\\hline" << std::endl;   
 
+    latexReport << "$A_{14}$. Calc. Operating income growth & " 
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date]["presentValueDCF_operatingIncomeGrowth"],true))
+                << " \\\\" << std::endl;  
+
+    latexReport << "$B_{14}$. Current Op. Income & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date]["presentValueDCF_reinvestmentRate_operatingIncome"],true))
+                << " \\\\" << std::endl;  
+
+    double opIncome = JsonFunctions::getJsonFloat(
+                    calculateData[date]["presentValueDCF_reinvestmentRate_operatingIncome"]);
+
+    std::string dateBest;
+    double opIncomeTarget = opIncome*0.5;
+    double opIncomeBest = 0.;
+    double opIncomeError = std::numeric_limits<double>::max();
+    //Now go find the date when the operating income was half its present value
+    for(auto &el : calculateData.items()){
+        double opInc = 
+            JsonFunctions::getJsonFloat(
+                el.value()["presentValueDCF_reinvestmentRate_operatingIncome"],true);
+        double opIncError = std::abs(opInc-opIncomeTarget);
+        if(opIncError < opIncomeError){
+            opIncomeError=opIncError;
+            opIncomeBest=opInc;
+            dateBest=el.key();
+        }               
+    }
+
+    int days = 
+        FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+                date,"%Y-%m-%d",dateBest,"%Y-%m-%d");
+        
+    double yearsToDouble = static_cast<double>(days)/365.25;
+
+
+    latexReport << "$C_{14}$. Past doubling time (years) & "
+                    << formatJsonEntry(yearsToDouble)
+                << " \\\\" << std::endl;    
+
+    double t0  = std::log10(opIncome/opIncomeBest);
+    double t1  = t0/yearsToDouble;
+    double empiricalGrowthRate = std::pow(10.0,t1)-1;
+
+    double calcGrowthRate = JsonFunctions::getJsonFloat(
+            calculateData[date]["presentValueDCF_operatingIncomeGrowth"]);
+
+    latexReport << "$D_{14}$. Empirical rate of growth & "
+                    << formatJsonEntry(empiricalGrowthRate)
+                << " \\\\" << std::endl;     
+    double rateOfReinvestment = JsonFunctions::getJsonFloat(
+                    calculateData[date]["presentValueDCF_reinvestmentRate"],true);
+
+    latexReport << "$E_{14}$. Rate of reinvestment & "
+                    << formatJsonEntry(rateOfReinvestment)
+                << " \\\\" << std::endl;  
+
+    double roicImp = empiricalGrowthRate / rateOfReinvestment;
+
+    latexReport << "$F_{14}$. Implied ROIC & "
+                    << formatJsonEntry(roicImp)
+                << " \\\\" << std::endl; 
+
+    latexReport << "\\end{tabular}" << std::endl 
+            << "\\bigskip" << std::endl<< std::endl;  
 
     //latexReport << "\\underline{References}" << std::endl;
     //latexReport << "\\begin{enumerate}" << std::endl;
