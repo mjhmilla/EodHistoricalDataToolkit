@@ -13,7 +13,7 @@
 #include "date.h"
 #include <nlohmann/json.hpp>
 #include "JsonFunctions.h"
-
+#include "DateFunctions.h"
 
 const char *GEN = "General";
 const char *TECH= "Technicals";
@@ -94,27 +94,6 @@ class FinancialAnalysisToolkit {
     };
 
     //==========================================================================
-    static int calcDifferenceInDaysBetweenTwoDates(const std::string &dateA,
-                                            const char* dateAFormat,
-                                            const std::string &dateB,
-                                            const char* dateBFormat){
-
-      std::istringstream dateStream(dateA);
-      dateStream.exceptions(std::ios::failbit);
-      date::sys_days daysA;
-      dateStream >> date::parse(dateAFormat,daysA);
-
-      dateStream.clear();
-      dateStream.str(dateB);
-      date::sys_days daysB;
-      dateStream >> date::parse(dateBFormat,daysB);
-
-      int daysDifference = (daysA-daysB).count();
-
-      return daysDifference;
-
-    };
-    //==========================================================================
     static int calcIndexOfClosestDateInHistorcalData(
                                     const std::string &targetDate,
                                     const char* targetDateFormat,
@@ -125,11 +104,13 @@ class FinancialAnalysisToolkit {
       int indexA = 0;
       int indexB = historicalData.size()-1;
 
-      int indexAError = calcDifferenceInDaysBetweenTwoDates(
+      int indexAError = 
+        DateFunctions::calcDifferenceInDaysBetweenTwoDates(
                           targetDate, targetDateFormat, 
                           historicalData[indexA]["date"],dateSetFormat);
                           
-      int indexBError = calcDifferenceInDaysBetweenTwoDates(
+      int indexBError = 
+        DateFunctions::calcDifferenceInDaysBetweenTwoDates(
                           targetDate, targetDateFormat, 
                           historicalData[indexB]["date"],dateSetFormat);
       int index      = std::round((indexB+indexA)*0.5);
@@ -141,7 +122,8 @@ class FinancialAnalysisToolkit {
           && std::abs(indexBError)>0
           && changeInError > 0){
 
-        int indexError = calcDifferenceInDaysBetweenTwoDates(
+        int indexError = 
+          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
                           targetDate, targetDateFormat, 
                           historicalData[index]["date"],dateSetFormat);
 
@@ -274,7 +256,7 @@ class FinancialAnalysisToolkit {
                                     std::vector< std::string > &dateSet, 
                                     const char *timeUnit,
                                     bool appendTermRecord,
-                                    std::string &parentCategoryName,
+                                    const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
@@ -366,7 +348,7 @@ class FinancialAnalysisToolkit {
                                     const char *timeUnit,
                                     double taxRate,
                                     bool appendTermRecord,
-                                    std::string &parentCategoryName,
+                                    const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
@@ -517,7 +499,7 @@ class FinancialAnalysisToolkit {
                                     const char *timeUnit,
                                     double taxRate,
                                     bool appendTermRecord,
-                                    std::string &parentCategoryName,
+                                    const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
@@ -614,7 +596,7 @@ class FinancialAnalysisToolkit {
                                     std::vector< std::string > &dateSet,
                                     const char *timeUnit,
                                     bool appendTermRecord,
-                                    std::string &parentCategoryName,
+                                    const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
@@ -660,7 +642,7 @@ class FinancialAnalysisToolkit {
                                     std::vector< std::string > &dateSet,
                                     const char *timeUnit,
                                     bool appendTermRecord,
-                                    std::string &parentCategoryName,
+                                    const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
@@ -1288,7 +1270,7 @@ class FinancialAnalysisToolkit {
                                      std::vector< std::string > &previousDateSet,
                                      const char *timeUnit,
                                      bool appendTermRecord,
-                                     std::string &parentCategoryName,
+                                     const std::string &parentCategoryName,
                                      bool setNansToMissingValue,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
@@ -1402,7 +1384,7 @@ class FinancialAnalysisToolkit {
                                     std::vector< std::string > &previousDateSet,
                                     const char *timeUnit,
                                     bool appendTermRecord,
-                                    std::string &parentCategoryName,
+                                    const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
@@ -1774,7 +1756,7 @@ class FinancialAnalysisToolkit {
                                      std::string &date,
                                      const char *timeUnit,
                                      bool appendTermRecord,
-                                     std::string &parentCategoryName,
+                                     const std::string &parentCategoryName,
                                      bool setNansToMissingValue,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
@@ -1819,7 +1801,7 @@ class FinancialAnalysisToolkit {
                                      const char *timeUnit,
                                      double taxRate,
                                      bool appendTermRecord,
-                                     std::string &parentCategoryName,
+                                     const std::string &parentCategoryName,
                                      bool setNansToMissingValue,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
@@ -2075,7 +2057,7 @@ class FinancialAnalysisToolkit {
                                     std::vector< std::string > &dateSet,
                                     const char *timeUnit, 
                                     bool appendTermRecord,                                      
-                                    std::string &parentCategoryName,
+                                    const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
@@ -2165,7 +2147,7 @@ class FinancialAnalysisToolkit {
 
 
     }
-
+                                 
     //==========================================================================
     static double calcPresentValueOfDiscountedFutureCashFlows(
                                 nlohmann::ordered_json &jsonData, 
@@ -2176,17 +2158,20 @@ class FinancialAnalysisToolkit {
                                 double costOfCapital,
                                 double costOfCapitalMature,
                                 double taxRate,
-                                int numberOfYearsForTerminalValuation,                              
+                                int numberOfYearsForTerminalValuation,
+                                double empiricalGrowthRate,
+                                bool useEmpiricalGrowthRate,                              
                                 bool appendTermRecord,
                                 bool setNansToMissingValue,
+                                const std::string &parentName,
                                 std::vector< std::string> &termNames,
                                 std::vector< double > &termValues){
 
-      std::string parentName("presentValueDCF_");
 
+      
       if(appendTermRecord){
-        termNames.push_back("presentValueDCF_riskFreeRate");
-        termNames.push_back("presentValueDCF_costOfCapital");
+        termNames.push_back(parentName+"riskFreeRate");
+        termNames.push_back(parentName+"costOfCapital");
         termValues.push_back(riskFreeRate);
         termValues.push_back(costOfCapital);
       }
@@ -2225,6 +2210,7 @@ class FinancialAnalysisToolkit {
                                                   termNames,
                                                   termValues);
 
+      /*
       double returnOnEquity = calcReturnOnEquity(   jsonData,
                                                     dateSet,
                                                     timeUnit,
@@ -2235,26 +2221,41 @@ class FinancialAnalysisToolkit {
                                                     termValues);                                       
 
       double netIncomeGrowth = retentionRatio*returnOnEquity;
+      */
 
-      if(appendTermRecord){
+      if(useEmpiricalGrowthRate){   
+        //Scaling the ROIC so that it still holds that
+        // growth = roic*reinvestment
+        //
+        //I could also scale the reinvestment rate, but if I do, it is 
+        //possible it will become unrealistically large. Here I'm assuming
+        //instead that all of the differences between accounting and
+        //empirical growth are explained by a change in demand, which
+        //I'm capturing by changing the ROIC.
 
-        termNames.push_back("presentValueDCF_taxRate");
-        termNames.push_back("presentValueDCF_reinvestmentRate");
-        termNames.push_back("presentValueDCF_returnOnInvestedCapital");
-        termNames.push_back("presentValueDCF_operatingIncomeGrowth");
-        termNames.push_back("presentValueDCF_retentionRatio");
-        termNames.push_back("presentValueDCF_returnOnEquity");
-        termNames.push_back("presentValueDCF_netIncomeGrowth");
-
-        termValues.push_back(taxRate);
-        termValues.push_back(reinvestmentRate);
-        termValues.push_back(returnOnInvestedCapital);
-        termValues.push_back(operatingIncomeGrowth);
-        termValues.push_back(retentionRatio);
-        termValues.push_back(returnOnEquity);
-        termValues.push_back(netIncomeGrowth);
+        double scale = empiricalGrowthRate / operatingIncomeGrowth;
+        returnOnInvestedCapital *= scale;
+        operatingIncomeGrowth = empiricalGrowthRate;
       }
 
+      if(appendTermRecord){
+          termNames.push_back(parentName+"taxRate");
+          termNames.push_back(parentName+"reinvestmentRate");
+          termNames.push_back(parentName+"returnOnInvestedCapital");
+          termNames.push_back(parentName+"operatingIncomeGrowth");
+          termNames.push_back(parentName+"retentionRatio");
+          //termNames.push_back(parentName+"returnOnEquity");
+          //termNames.push_back(parentName+"netIncomeGrowth");
+
+          termValues.push_back(taxRate);
+          termValues.push_back(reinvestmentRate);
+          termValues.push_back(returnOnInvestedCapital);
+          termValues.push_back(operatingIncomeGrowth);
+          termValues.push_back(retentionRatio);
+          //termValues.push_back(returnOnEquity);
+          //termValues.push_back(netIncomeGrowth);        
+      }
+      
       std::vector< double > afterTaxOperatingIncomeVector(
                               1+numberOfYearsForTerminalValuation);
       std::vector< double > reinvestmentVector(
@@ -2281,9 +2282,9 @@ class FinancialAnalysisToolkit {
         operatingIncome*(1.0-taxRate);
 
       if(appendTermRecord){
-        termNames.push_back("presentValueDCF_afterTaxOperatingIncome_operatingIncome");
-        termNames.push_back("presentValueDCF_afterTaxOperatingIncome_taxRate");
-        termNames.push_back("presentValueDCF_afterTaxOperatingIncome");
+        termNames.push_back(parentName+"afterTaxOperatingIncome_operatingIncome");
+        termNames.push_back(parentName+"afterTaxOperatingIncome_taxRate");
+        termNames.push_back(parentName+"afterTaxOperatingIncome");
 
         termValues.push_back(operatingIncome);
         termValues.push_back(taxRate);
@@ -2308,15 +2309,15 @@ class FinancialAnalysisToolkit {
         if(appendTermRecord){
           std::stringstream sstreamName;
           sstreamName.str(std::string());
-          sstreamName << "presentValueDCF_afterTaxOperatingIncome_"<< i;
+          sstreamName << parentName+"afterTaxOperatingIncome_"<< i;
           termNames.push_back(sstreamName.str());
 
           sstreamName.str(std::string());
-          sstreamName << "presentValueDCF_reinvestment_"<< i;
+          sstreamName << parentName+"presentValueDCF_reinvestment_"<< i;
           termNames.push_back(sstreamName.str());          
 
           sstreamName.str(std::string());
-          sstreamName << "presentValueDCF_freeCashFlowToFirm_"<< i;
+          sstreamName << parentName+"presentValueDCF_freeCashFlowToFirm_"<< i;
           termNames.push_back(sstreamName.str());
 
           termValues.push_back(afterTaxOperatingIncomeVector[i]);
@@ -2336,48 +2337,113 @@ class FinancialAnalysisToolkit {
           *(1-reinvestmentRateStableGrowth)
         )/(costOfCapitalMature-riskFreeRate);
 
-      double presentValue = 0;
+      double presentValueOfFutureCashFlows = 0;
 
       for(int i=1; i<=numberOfYearsForTerminalValuation; ++i){
-        presentValue += freeCashFlowToFirmVector[i]/std::pow(1.+costOfCapital,i);
+        presentValueOfFutureCashFlows += 
+          freeCashFlowToFirmVector[i]/std::pow(1.+costOfCapital,i);
       }
-      presentValue += terminalValue 
+      presentValueOfFutureCashFlows += 
+        terminalValue 
         / std::pow(1.+costOfCapital,numberOfYearsForTerminalValuation);
+
+//          || !JsonFunctions::isJsonFloatValid( returnOnEquity)
+
 
       if(    !JsonFunctions::isJsonFloatValid( reinvestmentRate)
           || !JsonFunctions::isJsonFloatValid( returnOnInvestedCapital)
           || !JsonFunctions::isJsonFloatValid( retentionRatio)
-          || !JsonFunctions::isJsonFloatValid( returnOnEquity)
           || !JsonFunctions::isJsonFloatValid( operatingIncome)
           || !JsonFunctions::isJsonFloatValid( taxRate)){
 
         if(setNansToMissingValue){
-          presentValue = JsonFunctions::MISSING_VALUE;
+          presentValueOfFutureCashFlows = JsonFunctions::MISSING_VALUE;
         }else{
-          presentValue = std::nan("1");
+          presentValueOfFutureCashFlows = std::nan("1");
         }
       }
 
 
-      if(appendTermRecord){
-        termNames.push_back("presentValueDCF_terminalValue_afterTaxOperatingIncome");
-        termNames.push_back("presentValueDCF_terminalValue_riskFreeRate");
-        termNames.push_back("presentValueDCF_terminalValue_reinvestmentRateStableGrowth");
-        termNames.push_back("presentValueDCF_terminalValue_costOfCapital");
-        termNames.push_back("presentValueDCF_terminalValue_costOfCapitalMature");
-        termNames.push_back("presentValueDCF_terminalValue");
-        termNames.push_back("presentValueDCF");
 
+      if(appendTermRecord){
+        termNames.push_back(parentName+"terminalValue_afterTaxOperatingIncome");
+        termNames.push_back(parentName+"terminalValue_riskFreeRate");
+        termNames.push_back(parentName+"terminalValue_reinvestmentRateStableGrowth");
+        termNames.push_back(parentName+"terminalValue_costOfCapital");
+        termNames.push_back(parentName+"terminalValue_costOfCapitalMature");
+        termNames.push_back(parentName+"terminalValue");
+        termNames.push_back(parentName+"presentValueOfFutureCashFlows");        
+        
         termValues.push_back(terminalAfterTaxOperatingIncome);
         termValues.push_back(riskFreeRate);
         termValues.push_back(reinvestmentRateStableGrowth);
         termValues.push_back(costOfCapital);
         termValues.push_back(costOfCapitalMature);
         termValues.push_back(terminalValue);
+        termValues.push_back(presentValueOfFutureCashFlows);
+
+      }
+
+      //Market value (make adjustments as described in Damodaran Ch. 3)
+      double cash = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["cash"],
+        true);
+
+      double crossHoldings = JsonFunctions::MISSING_VALUE;
+
+      double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                        ["shortLongTermDebtTotal"],true);
+
+      double longTermDebt = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+                        ["longTermDebt"],true);
+
+      double shortLongTermDebtTotalEntry=shortLongTermDebtTotal;
+
+
+      if(!JsonFunctions::isJsonFloatValid(shortLongTermDebtTotalEntry)){
+        shortLongTermDebtTotalEntry = longTermDebt; //here
+      }
+
+      double potentialLiabilities = JsonFunctions::MISSING_VALUE;
+
+      double optionValue  = JsonFunctions::MISSING_VALUE;      
+
+      double presentValue = presentValueOfFutureCashFlows
+                      + cash
+                      + crossHoldings
+                      - shortLongTermDebtTotal
+                      - potentialLiabilities
+                      - optionValue;
+
+
+      //Ratio: price to value
+      if(appendTermRecord){
+
+        termNames.push_back(parentName+"cash");
+        termNames.push_back(parentName+"crossHolding");
+        termNames.push_back(parentName+"shortLongTermDebtTotalEntry");
+        termNames.push_back(parentName+"shortLongTermDebtTotal");
+        termNames.push_back(parentName+"longTermDebt");
+        termNames.push_back(parentName+"potentialLiabilities");
+        termNames.push_back(parentName+"stockOptionValuation");
+        termNames.push_back(parentName+"presentValue_approximation");
+
+        termValues.push_back(cash);
+        termValues.push_back(crossHoldings);          
+        termValues.push_back(shortLongTermDebtTotalEntry);
+        termValues.push_back(shortLongTermDebtTotal);
+        termValues.push_back(longTermDebt);
+        termValues.push_back(potentialLiabilities);
+        termValues.push_back(optionValue);
         termValues.push_back(presentValue);
+
       }
 
       return presentValue;
+
+
 
     };
 

@@ -9,9 +9,9 @@
 #include <stdlib.h>
 #include <numeric>
 
-#include <chrono>
+//#include <chrono>
 #include "date.h"
-
+#include "DateFunctions.h"
 
 class JsonFunctions {
 
@@ -42,36 +42,6 @@ class JsonFunctions {
       return idx;
     }
 
-//==============================================================================
-    static double convertToFractionalYear(const std::string &dateStr){
-      date::year_month_day dateYmd;
-      date::sys_days dateDay, dateDayFirstOfYear;
-
-      std::istringstream dateStrStreamA(dateStr);
-      dateStrStreamA.exceptions(std::ios::failbit);
-      dateStrStreamA >> date::parse("%Y-%m-%d",dateDay);
-
-      std::istringstream dateStrStreamB(dateStr);
-      dateStrStreamB.exceptions(std::ios::failbit);
-      dateStrStreamB >> date::parse("%Y-%m-%d",dateYmd);
-
-      int year = int(dateYmd.year());
-      std::string dateStrFirstOfYear(dateStr.substr(0,4));
-      dateStrFirstOfYear.append("-01-01");
-
-      std::istringstream dateStrStreamC(dateStrFirstOfYear);
-      dateStrStreamC.exceptions(std::ios::failbit);      
-      dateStrStreamC >> date::parse("%Y-%m-%d",dateDayFirstOfYear);
-
-      double daysInYear = 365.0;
-      if(dateYmd.year().is_leap()){
-        daysInYear=364.0;
-      }
-      double date = double(year) 
-        + double( (dateDay-dateDayFirstOfYear).count() )/daysInYear;
-
-      return date;
-    };
 
 //==============================================================================
     static bool loadJsonFile(const std::string &fileName, 
@@ -476,7 +446,8 @@ class JsonFunctions {
             JsonFunctions::getJsonString(el.value()[dateFieldName],
                             dateEntryStr); 
 
-            double timeData = convertToFractionalYear(dateEntryStr);
+            double timeData = 
+              DateFunctions::convertToFractionalYear(dateEntryStr);
             dateSeries.push_back(timeData);
           }
         

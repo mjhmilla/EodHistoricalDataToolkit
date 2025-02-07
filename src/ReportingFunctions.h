@@ -11,7 +11,7 @@
 #include <nlohmann/json.hpp>
 
 #include "JsonFunctions.h"
-
+#include "DateFunctions.h"
 
 class ReportingFunctions {
 
@@ -1034,7 +1034,7 @@ static void appendValuationTable(std::ofstream &latexReport,
     }
 
     int days = 
-        FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+        DateFunctions::calcDifferenceInDaysBetweenTwoDates(
                 date,"%Y-%m-%d",dateBest,"%Y-%m-%d");
         
     double yearsToDouble = static_cast<double>(days)/365.25;

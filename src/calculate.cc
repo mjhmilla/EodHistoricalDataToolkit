@@ -7,17 +7,27 @@
 #include <cmath>
 #include <limits>
 
+#include <boost/math/statistics/linear_regression.hpp>
+
 #include "date.h"
 #include <iostream>
 #include <sstream>
 #include <nlohmann/json.hpp>
 #include <tclap/CmdLine.h>
-
 #include <filesystem>
 
 #include "FinancialAnalysisToolkit.h"
 #include "JsonFunctions.h"
+#include "DateFunctions.h"
 
+//============================================================================
+struct EmpiricalGrowthDataSet{
+
+  std::vector< std::string > dates;
+  std::vector< double > datesDouble;
+  std::vector< double > growthRate;  
+  
+};
 
 //============================================================================
 struct TaxFoundationDataSet{
@@ -153,7 +163,7 @@ bool extractDatesOfClosestMatch(
 
   //Get the indicies of the most recent and oldest indexes "%Y-%m-%d"
   int firstMinusLastSetA = 
-    FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+    DateFunctions::calcDifferenceInDaysBetweenTwoDates(
                                 datesSetA[0],
                                 dateAFormat,        
                                 datesSetA[datesSetA.size()-1],
@@ -162,7 +172,7 @@ bool extractDatesOfClosestMatch(
 
   //Get the indicies of the most recent and oldest indexes
   int firstMinusLastSetB = 
-    FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+    DateFunctions::calcDifferenceInDaysBetweenTwoDates(
                                 datesSetB[0],
                                 dateBFormat,        
                                 datesSetB[datesSetB.size()-1],
@@ -212,7 +222,7 @@ bool extractDatesOfClosestMatch(
       tempDateSetB = datesSetB[indexSetB];
 
       int daysSetALessSetB = 
-        FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+        DateFunctions::calcDifferenceInDaysBetweenTwoDates(
                                     tempDateSetA,
                                     dateAFormat,        
                                     tempDateSetB,
@@ -388,7 +398,7 @@ bool extractAnalysisDates(
     //Make sure the financial data proceed from most recent to oldest
     //
     int dateProgression=
-      FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+      DateFunctions::calcDifferenceInDaysBetweenTwoDates(
         analysisDates.financial[0],
         "%Y-%m-%d",
         analysisDates.financial[analysisDates.financial.size()-1],
@@ -969,6 +979,195 @@ double calcLastValidDateIndex(
 
 
 //============================================================================
+double getTaxRate(std::string &date, 
+                  const CountryRiskDataSet &riskTable,
+                  const std::string& countryISO2, 
+                  const TaxFoundationDataSet &corpWorldTaxTable,
+                  double meanTaxRate,
+                  double defaultTaxRate,
+                  int acceptableBackwardsYearErrorForTaxRate,
+                  bool usingTaxTable,
+                  bool riskTableFound){
+
+  double taxRate=0.;
+
+  bool taxRateTableFound=true;
+
+  if(usingTaxTable){
+    int year  = std::stoi(date.substr(0,4));
+    int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
+    taxRate = getTaxRateFromTable(countryISO2, year, yearMin, 
+                                  corpWorldTaxTable);
+    taxRate = taxRate*0.01;  //convert from percent to decimal                                     
+    if(std::isnan(taxRate)){
+      taxRate=meanTaxRate;    
+      taxRateTableFound=false;        
+    }                    
+    if(std::isnan(taxRate)){
+      taxRate=defaultTaxRate;
+      taxRateTableFound=false;
+    }          
+  }else{
+    taxRate = defaultTaxRate;
+    taxRateTableFound=false;
+  }        
+  
+  //Update (if necessary) the tax rate
+  if(!taxRateTableFound && riskTableFound 
+        && !std::isnan(riskTable.taxRate)){
+    taxRate = riskTable.taxRate;
+  }    
+
+  return taxRate;
+};
+
+//============================================================================
+void extractEmpiricalGrowthRates(
+      EmpiricalGrowthDataSet &empiricalGrowthDataUpd,
+      const nlohmann::ordered_json &fundamentalData,
+      const std::vector< double > &taxRateRecord,
+      const AnalysisDates &analysisDates,
+      std::string &timePeriod,
+      int indexLastCommonDate,
+      bool quarterlyTTMAnalysis,
+      int maxDayErrorTTM,
+      int numberOfYearsOfGrowthForDcmValuation)
+{
+
+  int indexDate       = -1;
+  bool validDateSet    = true;
+
+  std::vector < double > xV; //Fractional year
+  std::vector < double > yV; //Operating income after tax
+
+
+  while( (indexDate+1) < indexLastCommonDate && validDateSet){
+    ++indexDate;
+
+    //The set of dates used for the TTM analysis
+    std::vector < std::string > dateSetTTM;
+    std::vector < double > dateSetTTMWeight;
+
+    if(quarterlyTTMAnalysis){
+      validDateSet = extractTTM(indexDate,
+                                analysisDates.common,
+                                "%Y-%m-%d",
+                                dateSetTTM,                                    
+                                dateSetTTMWeight,
+                                maxDayErrorTTM); 
+      if(!validDateSet){
+        break;
+      }     
+    }else{
+      dateSetTTM.push_back(analysisDates.common[indexDate]);
+    }                     
+
+    if(validDateSet){
+      double operatingIncome = 
+        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+            fundamentalData,FIN,IS,timePeriod.c_str(),dateSetTTM,
+            "operatingIncome",true);
+      
+      if(JsonFunctions::isJsonFloatValid(operatingIncome)){
+
+      
+        double x = 
+          DateFunctions::convertToFractionalYear(
+                        analysisDates.common[indexDate]); 
+        xV.push_back(x);
+
+        double taxRate = taxRateRecord[indexDate];
+        double afterTaxOperatingIncome = operatingIncome*(1-taxRate);
+        yV.push_back(afterTaxOperatingIncome);
+      }
+    }
+  }
+  
+  //Extract the growth values for an interval with 
+  //numberOfYearsOfGrowthForDcmValuation in it
+
+  indexDate = -1;
+  while( (indexDate+1) < indexLastCommonDate && validDateSet){
+    ++indexDate;
+
+    std::vector< double > xInterval;
+    std::vector< double > yInterval;
+
+    //
+    //Extract the sub interval
+    //
+    xInterval.push_back(xV[indexDate]);
+    yInterval.push_back(yV[indexDate]);
+
+    int indexDateStart=indexDate+1;
+    bool foundStartDate=false;
+
+    while(!foundStartDate){
+      if(indexDateStart < indexLastCommonDate){
+        
+        double timeSpan = xInterval[0] - xV[indexDateStart]; 
+
+        if(timeSpan <= numberOfYearsOfGrowthForDcmValuation){
+          xInterval.push_back(xV[indexDateStart]);
+          yInterval.push_back(yV[indexDateStart]);
+        }else{
+          foundStartDate = true;
+        }       
+        ++indexDateStart;
+
+      }else{
+        foundStartDate = true;
+      }  
+    }
+
+    //
+    //Fit a line to the data 
+    //
+    if(xInterval.size() >= 2 && (xInterval.size()==yInterval.size())){
+      auto [c0, c1] = 
+        boost::math::statistics::simple_ordinary_least_squares(
+                                          xInterval,yInterval);
+
+      //Get the start and end of the least squares fitted line
+      double y1 = c0 + c1*xInterval.front();
+      double y0 = c0 + c1*xInterval.back();   
+
+      //Evaluate the exponential growth rate
+      if(y1/y0 > 0){
+        double g = 
+          std::exp(std::log(y1/y0)
+                  /numberOfYearsOfGrowthForDcmValuation)-1.0;
+                                                        
+        empiricalGrowthDataUpd.growthRate.push_back(g);
+        empiricalGrowthDataUpd.dates.push_back(analysisDates.common[indexDate]);
+        empiricalGrowthDataUpd.datesDouble.push_back(xV[indexDate]);      
+      }
+      
+    }
+  }
+
+};
+
+//==============================================================================
+double getGrowthRate(double dateTarget, 
+                      const EmpiricalGrowthDataSet &empiricalGrowthData )
+{
+
+  bool found = false;
+  size_t index = 0;
+  while(found){
+    if(dateTarget > empiricalGrowthData.datesDouble[index]){
+      found = true;
+    }else{
+      ++index;
+    }
+  }
+
+  return empiricalGrowthData.growthRate[index];
+
+};
+
+//============================================================================
 int main (int argc, char* argv[]) {
 
   std::string exchangeCode;
@@ -996,7 +1195,7 @@ int main (int argc, char* argv[]) {
   double defaultInflationRate;
   int numberOfYearsToAverageCapitalExpenditures;
 
-  int numberOfYearsForTerminalValuation;
+  int numberOfYearsOfGrowthForDcmValuation;
   int maxDayErrorTabularData;
   bool relaxedCalculation;
 
@@ -1124,12 +1323,13 @@ int main (int argc, char* argv[]) {
       false,3,"int");
     cmd.add(numberOfYearsToAverageCapitalExpendituresInput);  
 
-    TCLAP::ValueArg<int>numberOfYearsForTerminalValuationInput("m",
-      "number_of_years_for_terminal_valuation_calculation", 
-      "Number of years for terminal valuation calculation."
+    TCLAP::ValueArg<int>numberOfYearsOfGrowthForDcmValuationInput("m",
+      "number_of_years_of_growth", 
+      "Number of years of growth prior to terminal valuation calculation "
+      "in the discounted cash flow valuation."
       " Default value of 5 taken from Ch. 3 of Damodran.",
       false,5,"int");
-    cmd.add(numberOfYearsForTerminalValuationInput); 
+    cmd.add(numberOfYearsOfGrowthForDcmValuationInput); 
 
 
     TCLAP::ValueArg<int>maxDayErrorTabularDataInput("a",
@@ -1194,8 +1394,8 @@ int main (int argc, char* argv[]) {
     numberOfYearsToAverageCapitalExpenditures 
       = numberOfYearsToAverageCapitalExpendituresInput.getValue();              
 
-    numberOfYearsForTerminalValuation
-      = numberOfYearsForTerminalValuationInput.getValue();
+    numberOfYearsOfGrowthForDcmValuation
+      = numberOfYearsOfGrowthForDcmValuationInput.getValue();
 
     maxDayErrorTabularData
       = maxDayErrorTabularDataInput.getValue();
@@ -1260,9 +1460,9 @@ int main (int argc, char* argv[]) {
       std::cout << "  Assumed mature firm fraction of capital from debt" << std::endl;
       std::cout << "    " << matureFirmFractionOfDebtCapital << std::endl;
 
-      std::cout << "  Number of years to use when evaluating the terminal value " 
+      std::cout << "  Number of years of growth in the DCM valuation " 
                 << std::endl;
-      std::cout << "    " << numberOfYearsForTerminalValuation 
+      std::cout << "    " << numberOfYearsOfGrowthForDcmValuation 
                 << std::endl;
 
       std::cout << "  Maximum number of days in error allowed for tabular " 
@@ -1332,15 +1532,15 @@ int main (int argc, char* argv[]) {
   //============================================================================
   // Load the corporate tax rate table
   //============================================================================
-  bool flag_usingTaxTable=false;
+  bool usingTaxTable=false;
   TaxFoundationDataSet corpWorldTaxTable;
   if(corpTaxesWorldFile.length() > 0){
-    flag_usingTaxTable=true;
+    usingTaxTable=true;
     bool validFormat = 
       loadTaxFoundationDataSet(corpTaxesWorldFile,corpWorldTaxTable);
 
     if(!validFormat){
-      flag_usingTaxTable=false;
+      usingTaxTable=false;
       std::cout << "Warning: could not load the world corporate tax rate file "
                 << corpTaxesWorldFile << std::endl;
       std::cout << "Reverting to the default rate " << std::endl;
@@ -1607,7 +1807,7 @@ int main (int argc, char* argv[]) {
       //========================================================================
 
       double meanTaxRate = 0.;
-      if(flag_usingTaxTable){        
+      if(usingTaxTable){        
         meanTaxRate=
         calcAverageTaxRate( analysisDates,
                             countryISO2, 
@@ -1642,21 +1842,123 @@ int main (int argc, char* argv[]) {
             quarterlyTTMAnalysis,
             maxDayErrorTTM);
 
+        //======================================================================
+        //Evaluate the equity risk premium for this country.
+        //======================================================================
+        CountryRiskDataSet riskTable;        
+        bool riskTableFound=false;
+
+        double equityRiskPremium=erpUSADefault;
+        double inflation = defaultInflationRate;
+
+        if(validRiskTable){
+          for(auto &riskEntry : riskByCountryData){
+            std::string erpCountryISO2;
+            JsonFunctions::getJsonString(riskEntry["CountryISO2"],erpCountryISO2);
+            if(countryISO2.compare(erpCountryISO2)==0){
+
+              riskTable.CountryISO2=erpCountryISO2;
+
+              JsonFunctions::getJsonString(riskEntry["CountryISO3"],
+                                          riskTable.CountryISO3);
+
+              JsonFunctions::getJsonString(riskEntry["Country"],
+                                          riskTable.Country);
+
+              riskTable.PRS  
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["PRS"]);
+
+              riskTable.defaultSpread 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["defaultSpread"])*0.01;
+
+              riskTable.ERP 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["ERP"])*0.01;
+
+              riskTable.taxRate 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["taxRate"])*0.01;
+
+              riskTable.CRP 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["CRP"])*0.01;
+
+              riskTable.inflation_2019_2023 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["inflation_2019_2023"])*0.01;                   
+              riskTable.inflation_2024_2028 
+              
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["inflation_2024_2028"])*0.01;
+
+              riskTable.riskFreeRate 
+                    = JsonFunctions::getJsonFloat(
+                        riskEntry["riskFreeRate"])*0.01;                                                      
+              riskTableFound=true;
+
+              break;
+            }
+          }
+
+
+        }
+
+      //=======================================================================
+      //  Extract empirical growth rates from the time series of
+      //  after tax operating income
+      //======================================================================= 
+      int indexDate = -1;
+
+      std::vector< double > taxRateRecord;
+
+      while( (indexDate+1) < indexLastCommonDate ){
+          ++indexDate;
+
+        double taxRate = 
+          getTaxRate( analysisDates.common[indexDate],
+                      riskTable,
+                      countryISO2,
+                      corpWorldTaxTable,
+                      meanTaxRate,
+                      defaultTaxRate,
+                      acceptableBackwardsYearErrorForTaxRate,
+                      usingTaxTable,
+                      riskTableFound);
+
+        taxRateRecord.push_back(taxRate);                      
+      }
+
+      EmpiricalGrowthDataSet empiricalGrowthData;
+      
+      extractEmpiricalGrowthRates(
+            empiricalGrowthData,            
+            fundamentalData,
+            taxRateRecord,
+            analysisDates,
+            timePeriod,
+            indexLastCommonDate,
+            quarterlyTTMAnalysis,
+            maxDayErrorTTM,
+            numberOfYearsOfGrowthForDcmValuation);
+
       //=======================================================================
       //
       //  Calculate the metrics for every data entry in the file
       //
       //======================================================================= 
 
-      int indexDate       = -1;
-
-      bool validDateSet    = true;
+      indexDate         = -1;
+      bool validDateSet = true;
 
       while( (indexDate+1) < indexLastCommonDate && validDateSet){
 
         ++indexDate;
         std::string date = analysisDates.common[indexDate]; 
-        int dateYear = std::stoi(date.substr(0,4));
+        double dateDouble = DateFunctions::convertToFractionalYear(date);
+
+        int dateYear = static_cast<int>( std::floor(dateDouble) );
 
                 
         //The set of dates used for the TTM analysis
@@ -1749,66 +2051,13 @@ int main (int argc, char* argv[]) {
 
         }
 
-//======================================================================
-        //Evaluate the equity risk premium for this country.
+       
+        
         //======================================================================
-        CountryRiskDataSet riskTable;        
-        bool riskTableFound=false;
-
-        double equityRiskPremium=erpUSADefault;
-        double inflation = defaultInflationRate;
-
+        //Update the risk premium using the risk table, if it exists
+        //======================================================================
+        
         if(validRiskTable){
-          for(auto &riskEntry : riskByCountryData){
-            std::string erpCountryISO2;
-            JsonFunctions::getJsonString(riskEntry["CountryISO2"],erpCountryISO2);
-            if(countryISO2.compare(erpCountryISO2)==0){
-
-              riskTable.CountryISO2=erpCountryISO2;
-
-              JsonFunctions::getJsonString(riskEntry["CountryISO3"],
-                                          riskTable.CountryISO3);
-
-              JsonFunctions::getJsonString(riskEntry["Country"],
-                                          riskTable.Country);
-
-              riskTable.PRS  
-                    = JsonFunctions::getJsonFloat(
-                        riskEntry["PRS"]);
-
-              riskTable.defaultSpread 
-                    = JsonFunctions::getJsonFloat(
-                        riskEntry["defaultSpread"])*0.01;
-
-              riskTable.ERP 
-                    = JsonFunctions::getJsonFloat(
-                        riskEntry["ERP"])*0.01;
-
-              riskTable.taxRate 
-                    = JsonFunctions::getJsonFloat(
-                        riskEntry["taxRate"])*0.01;
-
-              riskTable.CRP 
-                    = JsonFunctions::getJsonFloat(
-                        riskEntry["CRP"])*0.01;
-
-              riskTable.inflation_2019_2023 
-                    = JsonFunctions::getJsonFloat(
-                        riskEntry["inflation_2019_2023"])*0.01;                   
-              riskTable.inflation_2024_2028 
-              
-                    = JsonFunctions::getJsonFloat(
-                        riskEntry["inflation_2024_2028"])*0.01;
-
-              riskTable.riskFreeRate 
-                    = JsonFunctions::getJsonFloat(
-                        riskEntry["riskFreeRate"])*0.01;                                                      
-              riskTableFound=true;
-
-              break;
-            }
-          }
-
           //Calculate the country-specific equity risk premium
           if(riskTableFound && !std::isnan(riskTable.CRP)){
             equityRiskPremium = riskTable.CRP + erpUSADefault;
@@ -1824,7 +2073,7 @@ int main (int argc, char* argv[]) {
             }else{
               inflation = riskTable.inflation_2019_2023;
             }
-          }
+          }        
         }
 
         //======================================================================
@@ -1895,9 +2144,21 @@ int main (int argc, char* argv[]) {
         //======================================================================
         //Get the tax rate
         //======================================================================
+
+        double taxRate = 
+          getTaxRate( analysisDates.common[indexDate],
+                      riskTable,
+                      countryISO2,
+                      corpWorldTaxTable,
+                      meanTaxRate,
+                      defaultTaxRate,
+                      acceptableBackwardsYearErrorForTaxRate,
+                      usingTaxTable,
+                      riskTableFound);        
+        /*
         double taxRate=0.;
         bool taxRateTableFound=true;
-        if(flag_usingTaxTable){
+        if(usingTaxTable){
           int year  = std::stoi(date.substr(0,4));
           int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
           taxRate = getTaxRateFromTable(countryISO2, year, yearMin, 
@@ -1920,7 +2181,8 @@ int main (int argc, char* argv[]) {
         if(!taxRateTableFound && riskTableFound 
               && !std::isnan(riskTable.taxRate)){
           taxRate = riskTable.taxRate;
-        }        
+        }   
+        */     
         //======================================================================
         //Evaluate the cost of debt
         //======================================================================
@@ -1971,7 +2233,7 @@ int main (int argc, char* argv[]) {
           std::string dateOS("");
           JsonFunctions::getJsonString(el["dateFormatted"],dateOS);         
           int dateDifference = 
-            FinancialAnalysisToolkit::calcDifferenceInDaysBetweenTwoDates(
+            DateFunctions::calcDifferenceInDaysBetweenTwoDates(
               date,"%Y-%m-%d",dateOS,"%Y-%m-%d");
           if(std::abs(dateDifference)<smallestDateDifference){
             closestDate = dateOS;
@@ -2245,8 +2507,12 @@ int main (int argc, char* argv[]) {
                                  termNames, 
                                  termValues);
 
+        double empiricalGrowth = getGrowthRate(dateDouble,empiricalGrowthData);
+        bool useEmpiricalGrowth=false;
+        parentName="presentValueDCV_";
+
         //Valuation (discounted cash flow)
-        double presentValueOfFutureCashFlows = FinancialAnalysisToolkit::
+        double presentValue = FinancialAnalysisToolkit::
             calcPresentValueOfDiscountedFutureCashFlows(  
               fundamentalData,
               dateSet,
@@ -2256,84 +2522,151 @@ int main (int argc, char* argv[]) {
               costOfCapital,
               costOfCapitalMature,
               taxRate,
-              numberOfYearsForTerminalValuation,
+              numberOfYearsOfGrowthForDcmValuation,
+              empiricalGrowth,
+              useEmpiricalGrowth,
               appendTermRecord,
               setNansToMissingValue,
+              parentName,
               termNames,
               termValues);
 
-        //Market value (make adjustments as described in Damodaran Ch. 3)
-        double cash = JsonFunctions::getJsonFloat(
-          fundamentalData[FIN][BAL][timePeriod.c_str()][dateSet[0].c_str()]["cash"],
-          true);
-
-        double crossHoldings = JsonFunctions::MISSING_VALUE;
-
-        double shortLongTermDebtTotal = JsonFunctions::getJsonFloat(
-          fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                          ["shortLongTermDebtTotal"],true);
-
-        double shortLongTermDebtTotalEntry=shortLongTermDebtTotal;
-
-
-        if(!JsonFunctions::isJsonFloatValid(shortLongTermDebtTotalEntry)){
-          shortLongTermDebtTotalEntry = longTermDebt; //here
-        }
-
-        double potentialLiabilities = JsonFunctions::MISSING_VALUE;
-
-        double optionValue  = JsonFunctions::MISSING_VALUE;
-
-        double presentValue = presentValueOfFutureCashFlows
-                            + cash
-                            + crossHoldings
-                            - shortLongTermDebtTotal
-                            - potentialLiabilities
-                            - optionValue;
-
         double priceToValue = marketCapitalization / presentValue;
 
-        if(  !JsonFunctions::isJsonFloatValid(presentValueOfFutureCashFlows)
+        if(  !JsonFunctions::isJsonFloatValid(presentValue)
           || !JsonFunctions::isJsonFloatValid(marketCapitalization)){
           if(setNansToMissingValue){
             priceToValue = JsonFunctions::MISSING_VALUE;
           }else{
             priceToValue = std::nan("1");
           }
-
         }
            
         //Ratio: price to value
         if(appendTermRecord){
-          termNames.push_back("priceToValue_presentValueOfFutureCashFlows");
-          termNames.push_back("priceToValue_cash");
-          //termNames.push_back("priceToValue_netDebt");
-
-          termNames.push_back("priceToValue_crossHolding");
-          termNames.push_back("priceToValue_shortLongTermDebtTotalEntry");
-          termNames.push_back("priceToValue_shortLongTermDebtTotal");
-          termNames.push_back("priceToValue_longTermDebt");
-          termNames.push_back("priceToValue_potentialLiabilities");
-          termNames.push_back("priceToValue_stockOptionValuation");
           termNames.push_back("priceToValue_presentValue_approximation");
           termNames.push_back("priceToValue_marketCapitalization");
           termNames.push_back("priceToValue");
 
-          termValues.push_back(presentValueOfFutureCashFlows);
-          termValues.push_back(cash);
-          termValues.push_back(crossHoldings);          
-          termValues.push_back(shortLongTermDebtTotalEntry);
-          termValues.push_back(shortLongTermDebtTotal);
-          termValues.push_back(longTermDebt);
-          termValues.push_back(potentialLiabilities);
-          termValues.push_back(optionValue);
           termValues.push_back(presentValue);
           termValues.push_back(marketCapitalization);
           termValues.push_back(priceToValue);
-
         }
 
+        //
+        // Empirical - last 5 years
+        //
+        empiricalGrowth = getGrowthRate(dateDouble,empiricalGrowthData);
+        useEmpiricalGrowth=true;
+        parentName="presentValueDCVEmpirical_";
+
+        //Valuation (discounted cash flow) using empirical growth
+        double presentValueEmpirical = 
+        FinancialAnalysisToolkit::
+            calcPresentValueOfDiscountedFutureCashFlows(  
+              fundamentalData,
+              dateSet,
+              previousDateSet,
+              timePeriod.c_str(),
+              riskFreeRate,
+              costOfCapital,
+              costOfCapitalMature,
+              taxRate,
+              numberOfYearsOfGrowthForDcmValuation,
+              empiricalGrowth,
+              useEmpiricalGrowth,
+              appendTermRecord,
+              setNansToMissingValue,
+              parentName,
+              termNames,
+              termValues);
+
+        double priceToValueEmpirical = marketCapitalization 
+                                     / presentValueEmpirical;
+
+        if(  !JsonFunctions::isJsonFloatValid(presentValueEmpirical)
+          || !JsonFunctions::isJsonFloatValid(marketCapitalization)){
+          if(setNansToMissingValue){
+            priceToValueEmpirical = JsonFunctions::MISSING_VALUE;
+          }else{
+            priceToValueEmpirical = std::nan("1");
+          }
+        }
+           
+        //Ratio: price to value
+        if(appendTermRecord){
+          termNames.push_back("priceToValueEmpirical_presentValue_approximation");
+          termNames.push_back("priceToValueEmpirical_marketCapitalization");
+          termNames.push_back("priceToValueEmpirical");
+
+          termValues.push_back(presentValueEmpirical);
+          termValues.push_back(marketCapitalization);
+          termValues.push_back(priceToValueEmpirical);
+        }
+
+        //
+        // Empirical - average all time years
+        //
+        double empiricalGrowthAvg = 0;
+        double count=0;
+        for(size_t i=0; i<empiricalGrowthData.growthRate.size();++i){
+          if(!std::isnan(empiricalGrowthData.growthRate[i])){
+            count = count+1;
+            empiricalGrowthAvg += empiricalGrowthData.growthRate[i];
+          }
+        }
+        empiricalGrowthAvg = empiricalGrowthAvg / count;
+
+        useEmpiricalGrowth=true;
+        parentName="presentValueDCVEmpiricalAvg_";
+
+        //Valuation (discounted cash flow) using empirical growth
+        double presentValueEmpiricalAvg = 
+        FinancialAnalysisToolkit::
+            calcPresentValueOfDiscountedFutureCashFlows(  
+              fundamentalData,
+              dateSet,
+              previousDateSet,
+              timePeriod.c_str(),
+              riskFreeRate,
+              costOfCapital,
+              costOfCapitalMature,
+              taxRate,
+              numberOfYearsOfGrowthForDcmValuation,
+              empiricalGrowthAvg,
+              useEmpiricalGrowth,
+              appendTermRecord,
+              setNansToMissingValue,
+              parentName,
+              termNames,
+              termValues);
+
+        double priceToValueEmpiricalAvg = marketCapitalization 
+                                     / presentValueEmpiricalAvg;
+
+        if(  !JsonFunctions::isJsonFloatValid(presentValueEmpiricalAvg)
+          || !JsonFunctions::isJsonFloatValid(marketCapitalization)){
+          if(setNansToMissingValue){
+            priceToValueEmpiricalAvg = JsonFunctions::MISSING_VALUE;
+          }else{
+            priceToValueEmpiricalAvg = std::nan("1");
+          }
+        }
+           
+        //Ratio: price to value
+        if(appendTermRecord){
+          termNames.push_back("priceToValueEmpiricalAvg_presentValue_approximation");
+          termNames.push_back("priceToValueEmpiricalAvg_marketCapitalization");
+          termNames.push_back("priceToValueEmpiricalAvg");
+
+          termValues.push_back(presentValueEmpiricalAvg);
+          termValues.push_back(marketCapitalization);
+          termValues.push_back(priceToValueEmpiricalAvg);
+        }        
+
+        //
         //Residual cash flow to enterprise value
+        //
         double enterpriseValue = FinancialAnalysisToolkit::
             calcEnterpriseValue(fundamentalData, 
                                 marketCapitalization, 
