@@ -24,8 +24,9 @@
 struct EmpiricalGrowthDataSet{
 
   std::vector< std::string > dates;
-  std::vector< double > datesDouble;
-  std::vector< double > growthRate;  
+  std::vector< double > datesNumerical;
+  std::vector< double > afterTaxOperatingIncomeGrowth;
+  std::vector< double > reinvestmentRate;
   
 };
 
@@ -1037,9 +1038,14 @@ void extractEmpiricalGrowthRates(
   int indexDate       = -1;
   bool validDateSet    = true;
 
-  std::vector < double > xV; //Fractional year
-  std::vector < double > yV; //Operating income after tax
+  std::vector < double > dateNumV;    //Fractional year
+  std::vector < std::string > dateV;  //string yer
+  std::vector < double > atoiV;       //after tax operating income 
+  std::vector < double > rrV;         //reinvestment rate
 
+  std::string previousTimePeriod("");
+  std::vector< std::string > previousDateSet;
+  std::vector< double > previousDateSetWeight;
 
   while( (indexDate+1) < indexLastCommonDate && validDateSet){
     ++indexDate;
@@ -1062,6 +1068,29 @@ void extractEmpiricalGrowthRates(
       dateSetTTM.push_back(analysisDates.common[indexDate]);
     }                     
 
+    //Check if we have enough data to get the previous time period
+    int indexPrevious = indexDate+static_cast<int>(dateSetTTM.size());        
+
+    //
+    //Fetch the previous TTM
+    //
+    previousTimePeriod = analysisDates.common[indexPrevious];
+    previousDateSet.resize(0);
+
+    if(quarterlyTTMAnalysis){
+      validDateSet = extractTTM(indexPrevious,
+                                analysisDates.common,
+                                "%Y-%m-%d",
+                                previousDateSet,
+                                previousDateSetWeight,
+                                maxDayErrorTTM); 
+      if(!validDateSet){
+        break;
+      }     
+    }else{
+      previousDateSet.push_back(previousTimePeriod);
+    } 
+
     if(validDateSet){
       double operatingIncome = 
         FinancialAnalysisToolkit::sumFundamentalDataOverDates(
@@ -1071,14 +1100,58 @@ void extractEmpiricalGrowthRates(
       if(JsonFunctions::isJsonFloatValid(operatingIncome)){
 
       
-        double x = 
+        double dateEntry = 
           DateFunctions::convertToFractionalYear(
                         analysisDates.common[indexDate]); 
-        xV.push_back(x);
 
         double taxRate = taxRateRecord[indexDate];
-        double afterTaxOperatingIncome = operatingIncome*(1-taxRate);
-        yV.push_back(afterTaxOperatingIncome);
+        double atoiEntry = operatingIncome*(1-taxRate);
+
+
+        bool appendTermRecord=false;
+        bool setNansToMissingValue=true;
+        std::vector< std::string > termNames;
+        std::vector< double > termValues;
+
+        std::string parentName("");
+
+        double netCapitalExpenditures = 
+         FinancialAnalysisToolkit::
+          calcNetCapitalExpenditures( fundamentalData, 
+                                      dateSetTTM,
+                                      previousDateSet,
+                                      timePeriod.c_str(),
+                                      appendTermRecord,
+                                      parentName,
+                                      setNansToMissingValue,
+                                      termNames,
+                                      termValues);
+
+        double changeInNonCashWorkingCapital = 
+          FinancialAnalysisToolkit::
+            calcChangeInNonCashWorkingCapital(  fundamentalData, 
+                                                dateSetTTM,
+                                                previousDateSet,
+                                                timePeriod.c_str(),
+                                                appendTermRecord,
+                                                parentName,
+                                                setNansToMissingValue,
+                                                termNames,
+                                                termValues); 
+        double rrEntry = (netCapitalExpenditures
+                    +changeInNonCashWorkingCapital)
+                    /atoiEntry;
+
+        bool rrEntryValid   = JsonFunctions::isJsonFloatValid(rrEntry);
+        bool dateEntryValid = JsonFunctions::isJsonFloatValid(dateEntry);
+        bool atoiEntryValid = JsonFunctions::isJsonFloatValid(atoiEntry);
+
+        if(rrEntryValid && dateEntryValid && atoiEntryValid && atoiEntry > 0.){
+          dateV.push_back(analysisDates.common[indexDate]);
+          dateNumV.push_back(dateEntry);
+          atoiV.push_back(atoiEntry);
+          rrV.push_back(rrEntry);              
+        }
       }
     }
   }
@@ -1086,30 +1159,43 @@ void extractEmpiricalGrowthRates(
   //Extract the growth values for an interval with 
   //numberOfYearsOfGrowthForDcmValuation in it
 
+
+
   indexDate = -1;
-  while( (indexDate+1) < indexLastCommonDate && validDateSet){
+  validDateSet=true;
+  int indexDateMax = static_cast<int>(rrV.size());
+
+  while( (indexDate+1) < indexLastCommonDate 
+          && indexDate < indexDateMax 
+          && validDateSet){
+
     ++indexDate;
 
-    std::vector< double > xInterval;
-    std::vector< double > yInterval;
+    std::vector< double > dateSubV; //date sub vector
+    std::vector< double > atoiSubV; // after-tax operating income sub vector
+    std::vector< double > rrSubV; //rate of return sub vector
 
     //
     //Extract the sub interval
     //
-    xInterval.push_back(xV[indexDate]);
-    yInterval.push_back(yV[indexDate]);
+    dateSubV.push_back(dateNumV[indexDate]);
+    atoiSubV.push_back(atoiV[indexDate]);
+    rrSubV.push_back(rrV[indexDate]);
 
     int indexDateStart=indexDate+1;
     bool foundStartDate=false;
 
     while(!foundStartDate){
-      if(indexDateStart < indexLastCommonDate){
+      if(indexDateStart < indexLastCommonDate && indexDateStart < indexDateMax){
         
-        double timeSpan = xInterval[0] - xV[indexDateStart]; 
+        double timeSpan = dateSubV[0] - dateNumV[indexDateStart]; 
 
         if(timeSpan <= numberOfYearsOfGrowthForDcmValuation){
-          xInterval.push_back(xV[indexDateStart]);
-          yInterval.push_back(yV[indexDateStart]);
+
+          dateSubV.push_back(dateNumV[indexDateStart]);
+          atoiSubV.push_back(atoiV[indexDateStart]);
+          rrSubV.push_back(rrV[indexDateStart]);
+        
         }else{
           foundStartDate = true;
         }       
@@ -1123,24 +1209,40 @@ void extractEmpiricalGrowthRates(
     //
     //Fit a line to the data 
     //
-    if(xInterval.size() >= 2 && (xInterval.size()==yInterval.size())){
+    if(dateSubV.size() >= 2 && (dateSubV.size()==atoiSubV.size())){
       auto [c0, c1] = 
         boost::math::statistics::simple_ordinary_least_squares(
-                                          xInterval,yInterval);
+                                          dateSubV,atoiSubV);
 
       //Get the start and end of the least squares fitted line
-      double y1 = c0 + c1*xInterval.front();
-      double y0 = c0 + c1*xInterval.back();   
+      double y1 = c0 + c1*dateSubV.front();
+      double y0 = c0 + c1*dateSubV.back();   
 
-      //Evaluate the exponential growth rate
-      if(y1/y0 > 0){
+      if(y1 > 0  && y0 > 0){
+        //Evaluate the exponential growth rate
         double g = 
           std::exp(std::log(y1/y0)
                   /numberOfYearsOfGrowthForDcmValuation)-1.0;
-                                                        
-        empiricalGrowthDataUpd.growthRate.push_back(g);
-        empiricalGrowthDataUpd.dates.push_back(analysisDates.common[indexDate]);
-        empiricalGrowthDataUpd.datesDouble.push_back(xV[indexDate]);      
+
+        //Evaluate the average rate of reinvestment
+        double count=0.;
+        double rrAvg = 0.;
+
+        for(size_t i=0; i < rrSubV.size();++i){
+          if(JsonFunctions::isJsonFloatValid(rrSubV[i])){
+            rrAvg += rrSubV[i];
+            count += 1.0;
+          }
+        }
+
+        rrAvg = rrAvg/count;
+
+        if(count > 0 && !std::isnan(rrAvg) && !std::isinf(rrAvg)){
+          empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(g);
+          empiricalGrowthDataUpd.reinvestmentRate.push_back(rrAvg);
+          empiricalGrowthDataUpd.dates.push_back(dateV[indexDate]);
+          empiricalGrowthDataUpd.datesNumerical.push_back(dateNumV[indexDate]);      
+        }
       }
       
     }
@@ -1149,22 +1251,20 @@ void extractEmpiricalGrowthRates(
 };
 
 //==============================================================================
-double getGrowthRate(double dateTarget, 
+size_t getIndexOfEmpiricalGrowthDataSet(double dateTarget, 
                       const EmpiricalGrowthDataSet &empiricalGrowthData )
 {
 
   bool found = false;
   size_t index = 0;
-  while(found){
-    if(dateTarget > empiricalGrowthData.datesDouble[index]){
+  while(!found && index < empiricalGrowthData.datesNumerical.size()){
+    if(dateTarget > empiricalGrowthData.datesNumerical[index]){
       found = true;
     }else{
       ++index;
     }
   }
-
-  return empiricalGrowthData.growthRate[index];
-
+  return index;
 };
 
 //============================================================================
@@ -2507,7 +2607,8 @@ int main (int argc, char* argv[]) {
                                  termNames, 
                                  termValues);
 
-        double empiricalGrowth = getGrowthRate(dateDouble,empiricalGrowthData);
+
+
         bool useEmpiricalGrowth=false;
         parentName="presentValueDCV_";
 
@@ -2523,7 +2624,8 @@ int main (int argc, char* argv[]) {
               costOfCapitalMature,
               taxRate,
               numberOfYearsOfGrowthForDcmValuation,
-              empiricalGrowth,
+              std::nan("1"),
+              std::nan("1"),
               useEmpiricalGrowth,
               appendTermRecord,
               setNansToMissingValue,
@@ -2554,9 +2656,14 @@ int main (int argc, char* argv[]) {
         }
 
         //
-        // Empirical - last 5 years
+        // Empirical - recent average 
         //
-        empiricalGrowth = getGrowthRate(dateDouble,empiricalGrowthData);
+        size_t indexGrowth = getIndexOfEmpiricalGrowthDataSet(
+                              dateDouble,empiricalGrowthData);
+
+        double atoiGrowth = empiricalGrowthData.afterTaxOperatingIncomeGrowth[indexGrowth];
+        double rr = empiricalGrowthData.reinvestmentRate[indexGrowth];
+
         useEmpiricalGrowth=true;
         parentName="presentValueDCVEmpirical_";
 
@@ -2573,7 +2680,8 @@ int main (int argc, char* argv[]) {
               costOfCapitalMature,
               taxRate,
               numberOfYearsOfGrowthForDcmValuation,
-              empiricalGrowth,
+              atoiGrowth,
+              rr,
               useEmpiricalGrowth,
               appendTermRecord,
               setNansToMissingValue,
@@ -2607,15 +2715,16 @@ int main (int argc, char* argv[]) {
         //
         // Empirical - average all time years
         //
-        double empiricalGrowthAvg = 0;
+        double atoiGrowthAvg = 0;
+        double rrAvg = 0;
         double count=0;
-        for(size_t i=0; i<empiricalGrowthData.growthRate.size();++i){
-          if(!std::isnan(empiricalGrowthData.growthRate[i])){
+        for(size_t i=0; i<empiricalGrowthData.dates.size();++i){
             count = count+1;
-            empiricalGrowthAvg += empiricalGrowthData.growthRate[i];
-          }
+            atoiGrowthAvg += empiricalGrowthData.afterTaxOperatingIncomeGrowth[i];
+            rrAvg += empiricalGrowthData.reinvestmentRate[i];
         }
-        empiricalGrowthAvg = empiricalGrowthAvg / count;
+        atoiGrowthAvg = atoiGrowthAvg / count;
+        rrAvg = rrAvg / count;
 
         useEmpiricalGrowth=true;
         parentName="presentValueDCVEmpiricalAvg_";
@@ -2633,7 +2742,8 @@ int main (int argc, char* argv[]) {
               costOfCapitalMature,
               taxRate,
               numberOfYearsOfGrowthForDcmValuation,
-              empiricalGrowthAvg,
+              atoiGrowthAvg,
+              rrAvg,
               useEmpiricalGrowth,
               appendTermRecord,
               setNansToMissingValue,
