@@ -2327,11 +2327,11 @@ class FinancialAnalysisToolkit {
           termNames.push_back(sstreamName.str());
 
           sstreamName.str(std::string());
-          sstreamName << parentName+"presentValueDCF_reinvestment_"<< i;
+          sstreamName << parentName+"reinvestment_"<< i;
           termNames.push_back(sstreamName.str());          
 
           sstreamName.str(std::string());
-          sstreamName << parentName+"presentValueDCF_freeCashFlowToFirm_"<< i;
+          sstreamName << parentName+"freeCashFlowToFirm_"<< i;
           termNames.push_back(sstreamName.str());
 
           termValues.push_back(afterTaxOperatingIncomeVector[i]);
@@ -2377,7 +2377,7 @@ class FinancialAnalysisToolkit {
 
 
       if(appendTermRecord){
-        termNames.push_back(parentName+"terminalValue_terminalAfterTaxOperatingIncome");
+        termNames.push_back(parentName+"terminalValue_afterTaxOperatingIncome");
         termNames.push_back(parentName+"terminalValue_riskFreeRate");
         termNames.push_back(parentName+"terminalValue_reinvestmentRateStableGrowth");
         termNames.push_back(parentName+"terminalValue_costOfCapital");
@@ -2439,7 +2439,7 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentName+"longTermDebt");
         termNames.push_back(parentName+"potentialLiabilities");
         termNames.push_back(parentName+"stockOptionValuation");
-        termNames.push_back(parentName+"presentValue_approximation");
+        termNames.push_back(parentName.substr(0,parentName.size()-1));
 
         termValues.push_back(cash);
         termValues.push_back(crossHoldings);          

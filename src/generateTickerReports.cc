@@ -696,6 +696,27 @@ bool generateLaTeXReport(
       date,
       verbose);
 
+    ReportingFunctions::appendRetentionRatioTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData,
+      date,
+      verbose);
+
+    ReportingFunctions::appendReturnOnEquityTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData,
+      date,
+      verbose);      
+
+    ReportingFunctions::appendNetIncomeGrowthTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData,
+      date,
+      verbose);      
+
     ReportingFunctions::appendValuationTable(
       latexReport,
       tickerMetaData.primaryTicker,

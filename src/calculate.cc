@@ -2608,9 +2608,37 @@ int main (int argc, char* argv[]) {
                                  termValues);
 
 
+        double retentionRatio = 
+          FinancialAnalysisToolkit::calcRetentionRatio(
+                                 fundamentalData, 
+                                 dateSet, 
+                                 timePeriod.c_str(),
+                                 appendTermRecord,
+                                 emptyParentName,
+                                 setNansToMissingValue,
+                                 termNames, 
+                                 termValues);
+        
+        double returnOnEquity = 
+          FinancialAnalysisToolkit::calcReturnOnEquity(
+                                fundamentalData, 
+                                dateSet, 
+                                timePeriod.c_str(),
+                                appendTermRecord,
+                                emptyParentName,
+                                setNansToMissingValue,
+                                termNames, 
+                                termValues);
+
+        double netIncomeGrowth = retentionRatio*returnOnEquity;                                
+
+        if(appendTermRecord){
+          termNames.push_back("netIncomeGrowth");
+          termValues.push_back(netIncomeGrowth);
+        }
 
         bool useEmpiricalGrowth=false;
-        parentName="presentValueDCV_";
+        parentName="presentValueDCF_";
 
         //Valuation (discounted cash flow)
         double presentValue = FinancialAnalysisToolkit::
@@ -2665,7 +2693,7 @@ int main (int argc, char* argv[]) {
         double rr = empiricalGrowthData.reinvestmentRate[indexGrowth];
 
         useEmpiricalGrowth=true;
-        parentName="presentValueDCVEmpirical_";
+        parentName="presentValueDCFEmpirical_";
 
         //Valuation (discounted cash flow) using empirical growth
         double presentValueEmpirical = 
@@ -2727,7 +2755,7 @@ int main (int argc, char* argv[]) {
         rrAvg = rrAvg / count;
 
         useEmpiricalGrowth=true;
-        parentName="presentValueDCVEmpiricalAvg_";
+        parentName="presentValueDCFEmpiricalAvg_";
 
         //Valuation (discounted cash flow) using empirical growth
         double presentValueEmpiricalAvg = 
