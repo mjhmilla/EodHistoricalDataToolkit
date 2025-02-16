@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <sstream>
+#include <boost/math/statistics/linear_regression.hpp>
+
 
 #include "date.h"
 #include <nlohmann/json.hpp>
@@ -31,7 +33,37 @@ const char *Q = "quarterly";
 class FinancialAnalysisToolkit {
 
   public:
+    //============================================================================
 
+    struct AnalysisDates{
+      std::vector< std::string > common;
+      std::vector< std::string > financial;
+      std::vector< std::string > outstandingShares;
+      std::vector< std::string > historical;
+      std::vector< std::string > bond;
+
+      std::vector< unsigned int > indicesFinancial;
+      std::vector< unsigned int > indicesOutstandingShares;
+      std::vector< unsigned int > indicesHistorical;
+      std::vector< unsigned int > indicesBond;
+    };
+    //============================================================================
+    enum EmpiricalGrowthModelTypes{
+      ExponentialGrowthModel=0,
+      ApproximateExponentialModel,
+      NUM_EMPIRICAL_GROWTH_MODELS
+    };
+    //============================================================================
+    struct EmpiricalGrowthDataSet{
+
+      std::vector< std::string > dates;
+      std::vector< double > datesNumerical;
+      std::vector< double > afterTaxOperatingIncomeGrowth;
+      std::vector< double > growthModelR2;
+      std::vector< double > reinvestmentRate;
+      std::vector< double > reinvestmentRateStandardDeviation;
+      std::vector< int > typeOfGrowthModel;
+    };
 
     //==========================================================================
     struct TickerMetricData{
@@ -49,6 +81,362 @@ class FinancialAnalysisToolkit {
       std::vector< std::vector< size_t > > metricRank;
       //std::vector< size_t > metricRankSum;
       //std::vector< size_t > rank;
+    };
+
+
+    //============================================================================
+    static bool extractTTM( int indexA,
+                            const std::vector<std::string> &dateSet,
+                            const char* dateFormat, 
+                            std::vector<std::string> &dateSetTTMUpd,
+                            std::vector<double> &weightTTMUpd,
+                            int maximumTTMDateSetErrorInDays){
+
+      dateSetTTMUpd.clear();
+      //weightingTTMUpd.clear();
+
+      int indexB = indexA;
+
+      std::istringstream dateStream(dateSet[indexA]);
+      dateStream.exceptions(std::ios::failbit);
+      date::sys_days daysA;
+      dateStream >> date::parse(dateFormat,daysA);
+      
+
+      int indexPrevious = indexA;
+      date::sys_days daysPrevious = daysA;
+      int count = 0;
+      bool flagDateSetFilled = false;
+
+      int daysInAYear = 365;
+      int countError = maximumTTMDateSetErrorInDays*2.0;
+
+      while((indexB+1) < dateSet.size() 
+              && std::abs(countError) > maximumTTMDateSetErrorInDays){
+        ++indexB;
+
+        dateStream.clear();
+        dateStream.str(dateSet[indexB]);
+        dateStream.exceptions(std::ios::failbit);
+        date::sys_days daysB;
+        dateStream >> date::parse(dateFormat,daysB);
+
+        int daysInterval  = (daysPrevious-daysB).count();    
+        countError        = daysInAYear - (count+daysInterval);
+        count             += daysInterval;
+
+        dateSetTTMUpd.push_back(dateSet[indexPrevious]);
+        weightTTMUpd.push_back(static_cast<double>(daysInterval));
+        
+        daysPrevious = daysB;
+        indexPrevious=indexB;
+
+      }
+
+      for(size_t i =0; i<weightTTMUpd.size(); ++i){
+        weightTTMUpd[i] = weightTTMUpd[i] / static_cast<double>(count);
+      }
+
+
+      if( std::abs(daysInAYear-count) <= maximumTTMDateSetErrorInDays){
+        return true;
+      }else{
+        return false;
+      }
+
+    };
+
+
+
+    //==========================================================================
+    static void extractEmpiricalGrowthRates(
+                    EmpiricalGrowthDataSet &empiricalGrowthDataUpd,
+                    const nlohmann::ordered_json &fundamentalData,
+                    const std::vector< double > &taxRateRecord,
+                    const AnalysisDates &analysisDates,
+                    std::string &timePeriod,
+                    int indexLastCommonDate,
+                    bool quarterlyTTMAnalysis,
+                    int maxDayErrorTTM,
+                    int numberOfYearsOfGrowthForDcmValuation)
+    {
+
+      int indexDate       = -1;
+      bool validDateSet    = true;
+
+      std::vector < double > dateNumV;    //Fractional year
+      std::vector < std::string > dateV;  //string yer
+      std::vector < double > atoiV;       //after tax operating income 
+      std::vector < double > rrV;         //reinvestment rate
+
+      std::string previousTimePeriod("");
+      std::vector< std::string > previousDateSet;
+      std::vector< double > previousDateSetWeight;
+
+      while( (indexDate+1) < indexLastCommonDate && validDateSet){
+        ++indexDate;
+
+        //The set of dates used for the TTM analysis
+        std::vector < std::string > dateSetTTM;
+        std::vector < double > dateSetTTMWeight;
+
+        if(quarterlyTTMAnalysis){
+          validDateSet = extractTTM(indexDate,
+                                    analysisDates.common,
+                                    "%Y-%m-%d",
+                                    dateSetTTM,                                    
+                                    dateSetTTMWeight,
+                                    maxDayErrorTTM); 
+          if(!validDateSet){
+            break;
+          }     
+        }else{
+          dateSetTTM.push_back(analysisDates.common[indexDate]);
+        }                     
+
+        //Check if we have enough data to get the previous time period
+        int indexPrevious = indexDate+static_cast<int>(dateSetTTM.size());        
+
+        //
+        //Fetch the previous TTM
+        //
+        previousTimePeriod = analysisDates.common[indexPrevious];
+        previousDateSet.resize(0);
+
+        if(quarterlyTTMAnalysis){
+          validDateSet = extractTTM(indexPrevious,
+                                    analysisDates.common,
+                                    "%Y-%m-%d",
+                                    previousDateSet,
+                                    previousDateSetWeight,
+                                    maxDayErrorTTM); 
+          if(!validDateSet){
+            break;
+          }     
+        }else{
+          previousDateSet.push_back(previousTimePeriod);
+        } 
+
+        if(validDateSet){
+          double operatingIncome = 
+            FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+                fundamentalData,FIN,IS,timePeriod.c_str(),dateSetTTM,
+                "operatingIncome",true);
+          
+          if(JsonFunctions::isJsonFloatValid(operatingIncome)){
+
+          
+            double dateEntry = 
+              DateFunctions::convertToFractionalYear(
+                            analysisDates.common[indexDate]); 
+
+            double taxRate = taxRateRecord[indexDate];
+            double atoiEntry = operatingIncome*(1-taxRate);
+
+
+            bool appendTermRecord=false;
+            bool setNansToMissingValue=true;
+            std::vector< std::string > termNames;
+            std::vector< double > termValues;
+
+            std::string parentName("");
+
+            double netCapitalExpenditures = 
+            FinancialAnalysisToolkit::
+              calcNetCapitalExpenditures( fundamentalData, 
+                                          dateSetTTM,
+                                          previousDateSet,
+                                          timePeriod.c_str(),
+                                          appendTermRecord,
+                                          parentName,
+                                          setNansToMissingValue,
+                                          termNames,
+                                          termValues);
+
+            double changeInNonCashWorkingCapital = 
+              FinancialAnalysisToolkit::
+                calcChangeInNonCashWorkingCapital(  fundamentalData, 
+                                                    dateSetTTM,
+                                                    previousDateSet,
+                                                    timePeriod.c_str(),
+                                                    appendTermRecord,
+                                                    parentName,
+                                                    setNansToMissingValue,
+                                                    termNames,
+                                                    termValues); 
+            double rrEntry = (netCapitalExpenditures
+                        +changeInNonCashWorkingCapital)
+                        /atoiEntry;
+
+            bool rrEntryValid   = JsonFunctions::isJsonFloatValid(rrEntry);
+            bool dateEntryValid = JsonFunctions::isJsonFloatValid(dateEntry);
+            bool atoiEntryValid = JsonFunctions::isJsonFloatValid(atoiEntry);
+
+            if(rrEntryValid && dateEntryValid && atoiEntryValid && atoiEntry > 0.){
+              dateV.push_back(analysisDates.common[indexDate]);
+              dateNumV.push_back(dateEntry);
+              atoiV.push_back(atoiEntry);
+              rrV.push_back(rrEntry);              
+            }
+          }
+        }
+      }
+      
+      //Extract the growth values for an interval with 
+      //numberOfYearsOfGrowthForDcmValuation in it
+
+
+
+      indexDate = -1;
+      validDateSet=true;
+      int indexDateMax = static_cast<int>(rrV.size());
+
+      while( (indexDate+1) < indexLastCommonDate 
+              && indexDate < indexDateMax 
+              && validDateSet){
+
+        ++indexDate;
+
+        std::vector< double > dateSubV; //date sub vector
+        std::vector< double > atoiSubV; // after-tax operating income sub vector
+        std::vector< double > rrSubV; //rate of return sub vector
+
+        //
+        //Extract the sub interval
+        //
+        dateSubV.push_back(dateNumV[indexDate]);
+        atoiSubV.push_back(atoiV[indexDate]);
+        rrSubV.push_back(rrV[indexDate]);
+
+        int indexDateStart=indexDate+1;
+        bool foundStartDate=false;
+        bool isAllAtoiDataPositive = true;
+
+        while(!foundStartDate){
+          if(indexDateStart < indexLastCommonDate && indexDateStart < indexDateMax){
+            
+            double timeSpan = dateSubV[0] - dateNumV[indexDateStart]; 
+
+            if(timeSpan <= numberOfYearsOfGrowthForDcmValuation){
+
+              dateSubV.push_back(dateNumV[indexDateStart]);
+              atoiSubV.push_back(atoiV[indexDateStart]);
+              rrSubV.push_back(rrV[indexDateStart]);
+              if( atoiV[indexDateStart] <= 0.){
+                isAllAtoiDataPositive=false;
+              }
+            
+            }else{
+              foundStartDate = true;
+            }       
+            ++indexDateStart;
+
+          }else{
+            foundStartDate = true;
+          }  
+        }
+
+        //
+        //Fit a line to the data 
+        //
+        if(dateSubV.size() >= 2 && (dateSubV.size()==atoiSubV.size())){
+          //Update the date to start at 0.
+          auto dateMin = *std::min_element(dateSubV.begin(),dateSubV.end());
+          for(size_t i=0; i<dateSubV.size();++i){
+            dateSubV[i] -= dateMin;
+          }
+          auto [c0, c1, R2] = 
+            boost::math::statistics::simple_ordinary_least_squares_with_R_squared(
+                                              dateSubV,atoiSubV);
+
+          //Get the start and end of the least squares fitted line
+          double y1 = c0 + c1*dateSubV.front();
+          double y0 = c0 + c1*dateSubV.back();   
+
+          if(y1 > 0  && y0 > 0){
+            //Evaluate the exponential growth rate
+            double g = 
+              std::exp(std::log(y1/y0)
+                      /numberOfYearsOfGrowthForDcmValuation)-1.0;
+
+            int typeOfGrowthModel = 
+              static_cast<int>(
+                  EmpiricalGrowthModelTypes::ApproximateExponentialModel);                      
+
+            //If all of the ATOI data is positive, then we can fit 
+            // the function y(x) = a*(1+g)^x
+            if(isAllAtoiDataPositive){
+              std::vector<double> logAtoiSubV(atoiSubV.size());
+              for(size_t i=0; i< atoiSubV.size();++i){
+                logAtoiSubV[i] = std::log(atoiSubV[i]);
+              }
+              auto [e0, e1, eR2] = 
+                boost::math::statistics::simple_ordinary_least_squares_with_R_squared(
+                                                  dateSubV,logAtoiSubV);
+              double gExp = std::exp(e1)-1.0;
+              double aExp = std::exp(e0 + e1*dateSubV.back());
+              double y0Exp = std::exp( e0 + e1*dateSubV.back());
+              double y1Exp = std::exp( e0 + e1*dateSubV.front());
+                          
+              //Update the model outputs
+              g = gExp;
+              typeOfGrowthModel = 
+                static_cast<int>(
+                    EmpiricalGrowthModelTypes::ExponentialGrowthModel);              
+              R2 = eR2;                    
+            }
+
+            //Evaluate the average rate of reinvestment
+            double count=0.;
+            double rrAvg = 0.;
+
+            for(size_t i=0; i < rrSubV.size();++i){
+              if(JsonFunctions::isJsonFloatValid(rrSubV[i])){
+                rrAvg += rrSubV[i];
+                count += 1.0;
+              }
+            }
+
+            rrAvg = rrAvg/count;
+
+            double rrSd = 0;
+            for(size_t i=0; i<rrSubV.size();++i){
+              double rrError = (rrSubV[i]-rrAvg);
+              rrSd += rrError*rrError;
+            }
+            rrSd = std::sqrt(rrSd / count);
+
+            if(count > 0 && !std::isnan(rrAvg) && !std::isinf(rrAvg)){
+              empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(g);
+              empiricalGrowthDataUpd.reinvestmentRate.push_back(rrAvg);
+              empiricalGrowthDataUpd.reinvestmentRateStandardDeviation.push_back(rrSd);
+              empiricalGrowthDataUpd.dates.push_back(dateV[indexDate]);
+              empiricalGrowthDataUpd.datesNumerical.push_back(dateNumV[indexDate]); 
+              empiricalGrowthDataUpd.typeOfGrowthModel.push_back(typeOfGrowthModel);    
+              empiricalGrowthDataUpd.growthModelR2.push_back(R2);
+            }
+          }
+          
+        }
+      }
+
+    };
+
+    //==============================================================================
+    static size_t getIndexOfEmpiricalGrowthDataSet(double dateTarget, 
+                          const EmpiricalGrowthDataSet &empiricalGrowthData )
+    {
+
+      bool found = false;
+      size_t index = 0;
+      while(!found && index < empiricalGrowthData.datesNumerical.size()){
+        if(dateTarget > empiricalGrowthData.datesNumerical[index]){
+          found = true;
+        }else{
+          ++index;
+        }
+      }
+      return index;
     };
 
     //==========================================================================
@@ -2162,7 +2550,7 @@ class FinancialAnalysisToolkit {
     }
                                  
     //==========================================================================
-    static double calcPresentValueOfDiscountedFutureCashFlows(
+    static double calcPriceToValueUsingDiscountedCashflowModel(
                                 const nlohmann::ordered_json &jsonData, 
                                 std::vector< std::string > &dateSet,
                                 std::vector< std::string > &previousDateSet,
@@ -2171,10 +2559,11 @@ class FinancialAnalysisToolkit {
                                 double costOfCapital,
                                 double costOfCapitalMature,
                                 double taxRate,
+                                double afterTaxOperatingIncomeGrowth,
+                                double reinvestmentRate,
+                                double returnOnInvestedCapital,
+                                double marketCaptialization,
                                 int numberOfYearsForTerminalValuation,
-                                double empiricalAfterTaxOperatingIncomeGrowth,
-                                double empiricalReinvestmentRate,
-                                bool useEmpiricalGrowthRate,                              
                                 bool appendTermRecord,
                                 bool setNansToMissingValue,
                                 const std::string &parentName,
@@ -2190,17 +2579,18 @@ class FinancialAnalysisToolkit {
         termValues.push_back(costOfCapital);
       }
 
-      double reinvestmentRate=0.;
-      double operatingIncomeGrowth = 0.;
-      double returnOnInvestedCapital = 0.;
+      //double reinvestmentRate=0.;
+      //double operatingIncomeGrowth = 0.;
+     // double returnOnInvestedCapital = 0.;
 
-      if(useEmpiricalGrowthRate){
+      //if(useEmpiricalGrowthRate){
 
-        operatingIncomeGrowth   = empiricalAfterTaxOperatingIncomeGrowth;
-        reinvestmentRate        = empiricalReinvestmentRate;
-        returnOnInvestedCapital = operatingIncomeGrowth / reinvestmentRate;
+      //  operatingIncomeGrowth   = empiricalAfterTaxOperatingIncomeGrowth;
+      //  reinvestmentRate        = empiricalReinvestmentRate;
+      //  returnOnInvestedCapital = operatingIncomeGrowth / reinvestmentRate;
       
-      }else{
+     // }else{
+      /*
         reinvestmentRate = calcReinvestmentRate(jsonData,
                                                     dateSet,
                                                     previousDateSet,
@@ -2225,6 +2615,7 @@ class FinancialAnalysisToolkit {
                                                   termValues);
 
         operatingIncomeGrowth = reinvestmentRate*returnOnInvestedCapital;
+        */
 
         /*
         double retentionRatio = calcRetentionRatio( jsonData,
@@ -2249,13 +2640,13 @@ class FinancialAnalysisToolkit {
         double netIncomeGrowth = retentionRatio*returnOnEquity;
         */
 
-      }
+      //}
 
       if(appendTermRecord){
           termNames.push_back(parentName+"taxRate");
           termNames.push_back(parentName+"reinvestmentRate");
           termNames.push_back(parentName+"returnOnInvestedCapital");
-          termNames.push_back(parentName+"operatingIncomeGrowth");
+          termNames.push_back(parentName+"afterTaxOperatingIncomeGrowth");
           //termNames.push_back(parentName+"retentionRatio");
           //termNames.push_back(parentName+"returnOnEquity");
           //termNames.push_back(parentName+"netIncomeGrowth");
@@ -2263,7 +2654,7 @@ class FinancialAnalysisToolkit {
           termValues.push_back(taxRate);
           termValues.push_back(reinvestmentRate);
           termValues.push_back(returnOnInvestedCapital);
-          termValues.push_back(operatingIncomeGrowth);
+          termValues.push_back(afterTaxOperatingIncomeGrowth);
           //termValues.push_back(retentionRatio);
           //termValues.push_back(returnOnEquity);
           //termValues.push_back(netIncomeGrowth);        
@@ -2296,12 +2687,10 @@ class FinancialAnalysisToolkit {
         operatingIncome*(1.0-taxRate);
 
       if(appendTermRecord){
-        termNames.push_back(parentName+"afterTaxOperatingIncome_operatingIncome");
-        termNames.push_back(parentName+"afterTaxOperatingIncome_taxRate");
+        termNames.push_back(parentName+"operatingIncome");
         termNames.push_back(parentName+"afterTaxOperatingIncome");
 
         termValues.push_back(operatingIncome);
-        termValues.push_back(taxRate);
         termValues.push_back(afterTaxOperatingIncome);
       }
 
@@ -2314,7 +2703,7 @@ class FinancialAnalysisToolkit {
           freeCashFlowToFirmVector[i]=0.;
         }else{
           afterTaxOperatingIncomeVector[i] = 
-            afterTaxOperatingIncomeVector[i-1]*(1.0+operatingIncomeGrowth);
+            afterTaxOperatingIncomeVector[i-1]*(1.0+afterTaxOperatingIncomeGrowth);
           reinvestmentVector[i]=
             afterTaxOperatingIncomeVector[i]*reinvestmentRate;
           freeCashFlowToFirmVector[i]=afterTaxOperatingIncomeVector[i]
@@ -2428,6 +2817,7 @@ class FinancialAnalysisToolkit {
                       - potentialLiabilities
                       - optionValue;
 
+      double priceToValue = marketCaptialization / presentValue;
 
       //Ratio: price to value
       if(appendTermRecord){
@@ -2439,6 +2829,8 @@ class FinancialAnalysisToolkit {
         termNames.push_back(parentName+"longTermDebt");
         termNames.push_back(parentName+"potentialLiabilities");
         termNames.push_back(parentName+"stockOptionValuation");
+        termNames.push_back(parentName+"presentValue");
+        termNames.push_back(parentName+"marketCapitalization");
         termNames.push_back(parentName.substr(0,parentName.size()-1));
 
         termValues.push_back(cash);
@@ -2449,6 +2841,8 @@ class FinancialAnalysisToolkit {
         termValues.push_back(potentialLiabilities);
         termValues.push_back(optionValue);
         termValues.push_back(presentValue);
+        termValues.push_back(marketCaptialization);
+        termValues.push_back(priceToValue);
 
       }
 

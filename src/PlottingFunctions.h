@@ -178,7 +178,8 @@ public:
       ymin=data[i];
       }
     }
-    if(ymax-ymin < minimumRange){
+    double yRange=ymax-ymin;
+    if( yRange < minimumRange){
       ymax = 0.5*(ymax+ymin)+0.5*minimumRange;
       ymin = ymax - minimumRange;
     }
@@ -419,7 +420,8 @@ public:
       if(yRange[0] > 0){
         yRange[0] = 0;
       }
-      if(yRange[1]-yRange[0] <= 0){
+      double ySpan = yRange[1]-yRange[0];
+      if( ySpan <= 0){
         yRange[1] = 1.0;
       }
       //Add some blank space to the top of the plot
@@ -427,19 +429,27 @@ public:
       int currentLineType=1;
 
       if(!std::isnan(axisSettingsUpd.xMin)){
-        xRange[0]=axisSettingsUpd.xMin;
+        if(xRange[0] > axisSettingsUpd.xMin){
+          xRange[0]=axisSettingsUpd.xMin;
+        }
       }
 
       if(!std::isnan(axisSettingsUpd.xMax)){
-        xRange[1]=axisSettingsUpd.xMax;
+        if(xRange[1]<axisSettingsUpd.xMax){
+          xRange[1]=axisSettingsUpd.xMax;
+        }
       }
 
       if(!std::isnan(axisSettingsUpd.yMin)){
-        yRange[0]=axisSettingsUpd.yMin;
+        if(yRange[0]>axisSettingsUpd.yMin){
+          yRange[0]=axisSettingsUpd.yMin;
+        }
       }
 
       if(!std::isnan(axisSettingsUpd.yMax)){
-        yRange[1]=axisSettingsUpd.yMax;
+        if(yRange[1]<axisSettingsUpd.yMax){
+          yRange[1]=axisSettingsUpd.yMax;
+        }
       }
 
       plotMetricUpd.legend().atTopLeft();   
