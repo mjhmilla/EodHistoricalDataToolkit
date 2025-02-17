@@ -1707,8 +1707,13 @@ int main (int argc, char* argv[]) {
         taxRateRecord.push_back(taxRate);                      
       }
 
+      //Evaluate the growth rate data over the same relatively short
+      //period of time that is used for the growth period during
+      //the valution (5 years)
       FinancialAnalysisToolkit::EmpiricalGrowthDataSet empiricalGrowthData;
-      
+      double growthIntervalInYears = 
+        static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
+      bool calcOneGrowthRateForAllData=false;
       FinancialAnalysisToolkit::extractEmpiricalGrowthRates(
                                   empiricalGrowthData,            
                                   fundamentalData,
@@ -1718,7 +1723,28 @@ int main (int argc, char* argv[]) {
                                   indexLastCommonDate,
                                   quarterlyTTMAnalysis,
                                   maxDayErrorTTM,
-                                  numberOfYearsOfGrowthForDcmValuation);
+                                  growthIntervalInYears,
+                                  calcOneGrowthRateForAllData);
+
+
+      //Evaluate the growth rate using all of the data available
+      FinancialAnalysisToolkit::EmpiricalGrowthDataSet empiricalGrowthDataAll;
+      growthIntervalInYears = 
+        DateFunctions::convertToFractionalYear(analysisDates.common.front())
+      - DateFunctions::convertToFractionalYear(analysisDates.common.back());
+
+      calcOneGrowthRateForAllData=true;
+      FinancialAnalysisToolkit::extractEmpiricalGrowthRates(
+                                  empiricalGrowthDataAll,            
+                                  fundamentalData,
+                                  taxRateRecord,
+                                  analysisDates,
+                                  timePeriod,
+                                  indexLastCommonDate,
+                                  quarterlyTTMAnalysis,
+                                  maxDayErrorTTM,
+                                  growthIntervalInYears,
+                                  calcOneGrowthRateForAllData);                                  
 
       //=======================================================================
       //
@@ -2482,7 +2508,8 @@ int main (int argc, char* argv[]) {
         //
         // Empirical - average all time years
         //
-        if(empiricalGrowthData.dates.size() > 0){        
+        if(empiricalGrowthDataAll.dates.size() == 1){   
+          /*     
           double growthAtoiEmpAvg = 0;
           double r2GrowthAtoiEmpAvg = 0;
           double rrEmpAvg = 0;
@@ -2501,17 +2528,27 @@ int main (int argc, char* argv[]) {
           rrEmpSd = rrEmpSd / count;
 
           double roicAvgEmp = growthAtoiEmpAvg/rrEmpAvg;
+          */
+
+          double roicAvgEmp = 
+              empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0]
+            / empiricalGrowthDataAll.reinvestmentRate[0];
 
           termNames.push_back("empiricalAvgAfterTaxOperatingIncomeGrowth");
-          termValues.push_back(growthAtoiEmpAvg);
+          termValues.push_back(
+              empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0]);
 
           termNames.push_back("empiricalAvgGrowthModelR2");
-          termValues.push_back(r2GrowthAtoiEmpAvg); 
+          termValues.push_back(
+              empiricalGrowthDataAll.growthModelR2[0]); 
 
           termNames.push_back("empiricalAvgReinvestmentRateMean");
-          termValues.push_back(rrEmpAvg);
+          termValues.push_back(
+              empiricalGrowthDataAll.reinvestmentRate[0]
+          );
           termNames.push_back("empiricalAvgReinvestmentRateStandardDeviation");
-          termValues.push_back(rrEmpSd);
+          termValues.push_back(
+              empiricalGrowthDataAll.reinvestmentRateStandardDeviation[0]);
 
           termNames.push_back("empiricalAvgReturnOnInvestedCapital");
           termValues.push_back(roicAvgEmp);
@@ -2521,9 +2558,7 @@ int main (int argc, char* argv[]) {
           termValues.push_back(roicAvgEmpLCC);
 
           termNames.push_back("empiricalAvgDataDuration");
-          double duration = 
-              empiricalGrowthData.datesNumerical.front()
-            - empiricalGrowthData.datesNumerical.back();
+          double duration = empiricalGrowthDataAll.durationNumerical[0];
 
           termValues.push_back(duration); 
 
@@ -2542,8 +2577,8 @@ int main (int argc, char* argv[]) {
                 costOfCapital,
                 costOfCapitalMature,
                 taxRate,
-                growthAtoiEmpAvg,
-                rrEmpAvg,
+                empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0],
+                empiricalGrowthDataAll.reinvestmentRate[0],
                 roicAvgEmp,             
                 marketCapitalization,   
                 numberOfYearsOfGrowthForDcmValuation,
