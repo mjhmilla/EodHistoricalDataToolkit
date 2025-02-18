@@ -1274,6 +1274,18 @@ int main (int argc, char* argv[]) {
 
   int maxDayErrorOutstandingShareData = 365; 
 
+  //In extractEmpiricalGrowthRates an exponential growth model is fit to
+  //data. Such a model requires that the input data (after tax operating income
+  // in this case) must be greater than 1. Here a certain proportion of the
+  // data is allowed to be less than 1. These values are set to 1, so that
+  // the low values (approximately) still influence the fit.
+  double maxProportionOfNegativeOpIncomeInEmpiricalData = 0.10;
+
+  //This date error is over 1 year to accomodate for firms that only
+  //report financial data on an annual basis
+  double maxDateErrorInYearsInEmpiricalData = 1.5;
+
+
   //2024/8/4 
   //  Note: some fields used in the functions in the FinanacialToolkit
   //  will replace nan's with a coded MISSING_NUMBER. Why?
@@ -1707,6 +1719,7 @@ int main (int argc, char* argv[]) {
         taxRateRecord.push_back(taxRate);                      
       }
 
+
       //Evaluate the growth rate data over the same relatively short
       //period of time that is used for the growth period during
       //the valution (5 years)
@@ -1724,6 +1737,7 @@ int main (int argc, char* argv[]) {
                                   quarterlyTTMAnalysis,
                                   maxDayErrorTTM,
                                   growthIntervalInYears,
+                                  maxProportionOfNegativeOpIncomeInEmpiricalData,
                                   calcOneGrowthRateForAllData);
 
 
@@ -1744,6 +1758,7 @@ int main (int argc, char* argv[]) {
                                   quarterlyTTMAnalysis,
                                   maxDayErrorTTM,
                                   growthIntervalInYears,
+                                  maxProportionOfNegativeOpIncomeInEmpiricalData,
                                   calcOneGrowthRateForAllData);                                  
 
       //=======================================================================
@@ -2402,7 +2417,7 @@ int main (int argc, char* argv[]) {
         termNames.push_back("afterTaxOperatingIncomeGrowth");
         termValues.push_back(afterTaxOperatingIncomeGrowth); 
 
-        bool useEmpiricalGrowth=false;
+
         parentName="priceToValue_";
 
         //Valuation (discounted cash flow)
@@ -2434,74 +2449,103 @@ int main (int argc, char* argv[]) {
         if(empiricalGrowthData.dates.size() > 0){
           size_t indexGrowth = 
           FinancialAnalysisToolkit::getIndexOfEmpiricalGrowthDataSet(
-                                dateDouble,empiricalGrowthData);
+                                dateDouble,
+                                maxDateErrorInYearsInEmpiricalData,
+                                empiricalGrowthData);
 
-          double growthAtoiEmp = empiricalGrowthData.afterTaxOperatingIncomeGrowth[indexGrowth];
-          int typeModel = empiricalGrowthData.typeOfGrowthModel[indexGrowth];
+          if(appendTermRecord 
+            && indexGrowth < empiricalGrowthData.datesNumerical.size()){
+            std::string nameToPrepend("empirical");
+
+            FinancialAnalysisToolkit::appendEmpiricalGrowthRateData(
+                  indexGrowth,      
+                  empiricalGrowthData,
+                  dateDouble,
+                  costOfCapitalMature,
+                  nameToPrepend,
+                  termNames,
+                  termValues);
+          }
+
+          /*
+          double growthAtoiEmp   = empiricalGrowthData.afterTaxOperatingIncomeGrowth[indexGrowth];
+          int typeModel          = empiricalGrowthData.typeOfGrowthModel[indexGrowth];
           double r2GrowthAtoiEmp = empiricalGrowthData.growthModelR2[indexGrowth];
 
-          double rrEmp = empiricalGrowthData.reinvestmentRate[indexGrowth];
-          double rrSdEmp = empiricalGrowthData.reinvestmentRateStandardDeviation[indexGrowth];
+          double rrEmp           = empiricalGrowthData.reinvestmentRate[indexGrowth];
+          double rrSdEmp         = empiricalGrowthData.reinvestmentRateStandardDeviation[indexGrowth];
 
-          double roicEmp = growthAtoiEmp/rrEmp;
+          double roicEmp         = growthAtoiEmp/rrEmp;
 
-          termNames.push_back("empiricalAfterTaxOperatingIncomeGrowth");
+          double durationEmp     = empiricalGrowthData.durationNumerical[indexGrowth];
+
+          std::string prependName("empirical");
+
+          termNames.push_back(prependName+"AfterTaxOperatingIncomeGrowth");
           termValues.push_back(growthAtoiEmp);
 
-          termNames.push_back("empiricalModelR2");
+          termNames.push_back(prependName+"ModelR2");
           termValues.push_back(r2GrowthAtoiEmp); 
 
-          termNames.push_back("empiricalModelType");
+          termNames.push_back(prependName+"ModelType");
           termValues.push_back(typeModel); 
 
-          termNames.push_back("empiricalReinvestmentRateMean");
+          termNames.push_back(prependName+"ReinvestmentRateMean");
           termValues.push_back(rrEmp);
 
-          termNames.push_back("empiricalReinvestmentRateStandardDeviation");
+          termNames.push_back(prependName+"ReinvestmentRateStandardDeviation");
           termValues.push_back(rrSdEmp);
 
-          termNames.push_back("empiricalReturnOnInvestedCapital");
+          termNames.push_back(prependName+"ReturnOnInvestedCapital");
           termValues.push_back(roicEmp);
 
-          termNames.push_back("empiricalReturnOnInvestedCapitalLessCostOfCapital");
+          termNames.push_back(prependName+"ReturnOnInvestedCapitalLessCostOfCapital");
           double roicEmpLCC = roicEmp-costOfCapitalMature;          
           termValues.push_back(roicEmpLCC);
 
+          termNames.push_back(prependName+"DataDuration");
+          termValues.push_back(durationEmp); 
 
-          termNames.push_back("empiricalDataDuration");
-          termValues.push_back(numberOfYearsOfGrowthForDcmValuation); 
-
-          termNames.push_back("empiricalModelDateError");
+          termNames.push_back(prependName+"ModelDateError");
           double dateError = 
             dateDouble - empiricalGrowthData.datesNumerical[indexGrowth];
           termValues.push_back(dateError); 
 
+          termNames.push_back(prependName+"OutlierCount");
+          termValues.push_back(empiricalGrowthData.outlierCount[indexGrowth]); 
+          */
 
-          useEmpiricalGrowth=true;
-          parentName="priceToValueEmpirical_";
 
-          //Valuation (discounted cash flow) using empirical growth
-          double presentValueEmpirical = 
-          FinancialAnalysisToolkit::
-              calcPriceToValueUsingDiscountedCashflowModel(  
-                fundamentalData,
-                dateSet,
-                previousDateSet,
-                timePeriod.c_str(),
-                riskFreeRate,
-                costOfCapital,
-                costOfCapitalMature,
-                taxRate,
-                growthAtoiEmp,
-                rrEmp,
-                roicEmp,
-                marketCapitalization,
-                numberOfYearsOfGrowthForDcmValuation,
-                appendTermRecord,
-                setNansToMissingValue,
-                parentName,
-                termNames,
-                termValues);
+          if(indexGrowth < empiricalGrowthData.datesNumerical.size()){
+            parentName="priceToValueEmpirical_";
+
+            double roicEmp = 
+              empiricalGrowthData.afterTaxOperatingIncomeGrowth[indexGrowth]
+              /empiricalGrowthData.reinvestmentRate[indexGrowth];
+
+            //Valuation (discounted cash flow) using empirical growth
+            double presentValueEmpirical = 
+            FinancialAnalysisToolkit::
+                calcPriceToValueUsingDiscountedCashflowModel(  
+                  fundamentalData,
+                  dateSet,
+                  previousDateSet,
+                  timePeriod.c_str(),
+                  riskFreeRate,
+                  costOfCapital,
+                  costOfCapitalMature,
+                  taxRate,
+                  empiricalGrowthData.afterTaxOperatingIncomeGrowth[indexGrowth],
+                  empiricalGrowthData.reinvestmentRate[indexGrowth],
+                  roicEmp,
+                  marketCapitalization,
+                  numberOfYearsOfGrowthForDcmValuation,
+                  appendTermRecord,
+                  setNansToMissingValue,
+                  parentName,
+                  termNames,
+                  termValues);
+          }
         }
 
 
@@ -2509,27 +2553,9 @@ int main (int argc, char* argv[]) {
         // Empirical - average all time years
         //
         if(empiricalGrowthDataAll.dates.size() == 1){   
-          /*     
-          double growthAtoiEmpAvg = 0;
-          double r2GrowthAtoiEmpAvg = 0;
-          double rrEmpAvg = 0;
-          double rrEmpSd = 0;
-          double count=0;
-          for(size_t i=0; i<empiricalGrowthData.dates.size();++i){
-              count = count+1;
-              growthAtoiEmpAvg += empiricalGrowthData.afterTaxOperatingIncomeGrowth[i];
-              rrEmpAvg += empiricalGrowthData.reinvestmentRate[i];
-              rrEmpSd += empiricalGrowthData.reinvestmentRateStandardDeviation[i];
-              r2GrowthAtoiEmpAvg += empiricalGrowthData.growthModelR2[i];
-          }
-          growthAtoiEmpAvg = growthAtoiEmpAvg / count;
-          rrEmpAvg = rrEmpAvg / count;
-          r2GrowthAtoiEmpAvg = r2GrowthAtoiEmpAvg / count;
-          rrEmpSd = rrEmpSd / count;
 
-          double roicAvgEmp = growthAtoiEmpAvg/rrEmpAvg;
-          */
 
+          /*
           double roicAvgEmp = 
               empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0]
             / empiricalGrowthDataAll.reinvestmentRate[0];
@@ -2559,34 +2585,103 @@ int main (int argc, char* argv[]) {
 
           termNames.push_back("empiricalAvgDataDuration");
           double duration = empiricalGrowthDataAll.durationNumerical[0];
-
           termValues.push_back(duration); 
 
-          useEmpiricalGrowth=true;
-          parentName="priceToValueEmpiricalAvg_";
+          termNames.push_back("empiricalAvgOutlierCount");
+          termValues.push_back(empiricalGrowthData.outlierCount[0]);  
+          */
+          /*
+          double growthAtoiEmpAvg   = empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0];
+          int typeModelAvg          = empiricalGrowthDataAll.typeOfGrowthModel[0];
+          double r2GrowthAtoiEmpAvg = empiricalGrowthDataAll.growthModelR2[0];
 
-          //Valuation (discounted cash flow) using empirical growth
-          double presentValueEmpiricalAvg = 
-            FinancialAnalysisToolkit::
-              calcPriceToValueUsingDiscountedCashflowModel(  
-                fundamentalData,
-                dateSet,
-                previousDateSet,
-                timePeriod.c_str(),
-                riskFreeRate,
-                costOfCapital,
-                costOfCapitalMature,
-                taxRate,
-                empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0],
-                empiricalGrowthDataAll.reinvestmentRate[0],
-                roicAvgEmp,             
-                marketCapitalization,   
-                numberOfYearsOfGrowthForDcmValuation,
-                appendTermRecord,
-                setNansToMissingValue,
-                parentName,
-                termNames,
-                termValues);
+          double rrEmpAvg           = empiricalGrowthDataAll.reinvestmentRate[0];
+          double rrSdEmpAvg         = empiricalGrowthDataAll.reinvestmentRateStandardDeviation[0];
+
+          double roicEmpAvg         = growthAtoiEmpAvg/rrEmpAvg;
+
+          double durationEmpAvg     = empiricalGrowthDataAll.durationNumerical[0];
+          
+          std::string prependName("empiricalAvg");
+
+          termNames.push_back(prependName+"AfterTaxOperatingIncomeGrowth");
+          termValues.push_back(growthAtoiEmpAvg);
+
+          termNames.push_back(prependName+"ModelR2");
+          termValues.push_back(r2GrowthAtoiEmpAvg); 
+
+          termNames.push_back(prependName+"ModelType");
+          termValues.push_back(typeModelAvg); 
+
+          termNames.push_back(prependName+"ReinvestmentRateMean");
+          termValues.push_back(rrEmpAvg);
+
+          termNames.push_back(prependName+"ReinvestmentRateStandardDeviation");
+          termValues.push_back(rrSdEmpAvg);
+
+          termNames.push_back(prependName+"ReturnOnInvestedCapital");
+          termValues.push_back(roicEmpAvg);
+
+          termNames.push_back(prependName+"ReturnOnInvestedCapitalLessCostOfCapital");
+          double roicEmpAvgLCC = roicEmpAvg-costOfCapitalMature;          
+          termValues.push_back(roicEmpAvgLCC);
+
+          termNames.push_back(prependName+"DataDuration");
+          termValues.push_back(durationEmpAvg); 
+
+          termNames.push_back(prependName+"ModelDateError");
+          double dateError = 
+            dateDouble - empiricalGrowthDataAll.datesNumerical[0];
+          termValues.push_back(dateError); 
+
+          termNames.push_back(prependName+"OutlierCount");
+          termValues.push_back(empiricalGrowthDataAll.outlierCount[0]); 
+          */
+
+          if(appendTermRecord 
+              && empiricalGrowthDataAll.datesNumerical.size()==1){
+            std::string nameToPrepend("empiricalAvg");
+
+            FinancialAnalysisToolkit::appendEmpiricalGrowthRateData(
+                  0,      
+                  empiricalGrowthDataAll,
+                  dateDouble,
+                  costOfCapitalMature,
+                  nameToPrepend,
+                  termNames,
+                  termValues);
+          }
+
+          if(empiricalGrowthDataAll.datesNumerical.size()==1){
+            double roicEmpAvg = 
+              empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0]
+              /empiricalGrowthDataAll.reinvestmentRate[0];
+
+            parentName="priceToValueEmpiricalAvg_";
+
+            //Valuation (discounted cash flow) using empirical growth
+            double presentValueEmpiricalAvg = 
+              FinancialAnalysisToolkit::
+                calcPriceToValueUsingDiscountedCashflowModel(  
+                  fundamentalData,
+                  dateSet,
+                  previousDateSet,
+                  timePeriod.c_str(),
+                  riskFreeRate,
+                  costOfCapital,
+                  costOfCapitalMature,
+                  taxRate,
+                  empiricalGrowthData.afterTaxOperatingIncomeGrowth[0],
+                  empiricalGrowthData.reinvestmentRate[0],
+                  roicEmpAvg,                
+                  marketCapitalization,   
+                  numberOfYearsOfGrowthForDcmValuation,
+                  appendTermRecord,
+                  setNansToMissingValue,
+                  parentName,
+                  termNames,
+                  termValues);
+          }
         }
 
 

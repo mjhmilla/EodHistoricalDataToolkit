@@ -275,23 +275,23 @@ static void appendResidualCashflowToEnterpriseValueTable(
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["enterpriseValue_debtBookValue"],true))
                 << " \\\\" << std::endl;     
-    latexReport << "\\qquad short-long term debt & "
+    latexReport << "\\qquad Short-long term debt entry& "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["enterpriseValue_shortLongTermDebtTotal"],true))
                 << " \\\\" << std::endl; 
-    latexReport << "\\qquad long term debt & "
+    latexReport << "\\qquad Long term debt entry & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["enterpriseValue_longTermDebt"],true))
                 << " \\\\" << std::endl; 
-    latexReport << "$C$. Cash \\& Equivalents Entry& "
+    latexReport << "$C$. Cash \\& Equivalents & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["enterpriseValue_cashAndEquivalentsEntry"],true))
                 << " \\\\" << std::endl;   
-    latexReport << "Cash \\& Equivalents & "
+    latexReport << "\\qquad Cash \\& Equivalents entry & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["enterpriseValue_cashAndEquivalents"],true))
                 << " \\\\" << std::endl;   
-    latexReport << "Cash  & "
+    latexReport << "\\qquad Cash entry & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["enterpriseValue_cash"],true))
                 << " \\\\" << std::endl;   
@@ -569,6 +569,7 @@ static void appendNetIncomeGrowthTable(std::ofstream &latexReport,
 };
 
 //==============================================================================
+/*
 static void appendAverageEmpiricalGrowthTable(std::ofstream &latexReport, 
                            const std::string &primaryTicker, 
                            const nlohmann::ordered_json &calculateData,
@@ -581,16 +582,16 @@ static void appendAverageEmpiricalGrowthTable(std::ofstream &latexReport,
       latexReport << "\\hline \\multicolumn{2}{c}{Empirically Estimated Growth (all data)} \\\\" 
                   << std::endl;
       latexReport << "\\hline " << std::endl;   
-      latexReport << "$A$. Mean(Lsq. After-tax op. income growth) & "
+      latexReport << "$A$. After-tax op. income growth & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
                       calculateData[date]["empiricalAvgAfterTaxOperatingIncomeGrowth"],true))
                   << " \\\\" << std::endl;
-      latexReport << "$B$. Mean(Lsq. After-tax op. income R2) & "
+      latexReport << "$B$. After-tax op. income R2 & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
                       calculateData[date]["empiricalAvgGrowthModelR2"],true))
                   << " \\\\" << std::endl;
 
-      latexReport << "$C$. Mean(Avg. Reinvestment Rate) & "
+      latexReport << "$C$. Avg. Reinvestment Rate & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
                       calculateData[date]["empiricalAvgReinvestmentRateMean"],true))
                   << " \\\\" << std::endl;
@@ -618,14 +619,16 @@ static void appendAverageEmpiricalGrowthTable(std::ofstream &latexReport,
       latexReport << "\\end{tabular}" << std::endl; 
     }
 };
+*/
 //==============================================================================
 static void appendEmpiricalGrowthTable(std::ofstream &latexReport, 
                            const std::string &primaryTicker, 
                            const nlohmann::ordered_json &calculateData,
                            const std::string &date,
+                           const std::string &name,
                            bool verbose){
 
-    if(calculateData[date].contains("empiricalAfterTaxOperatingIncomeGrowth")){
+    if(calculateData[date].contains(name+"AfterTaxOperatingIncomeGrowth")){
       //latexReport << "\\bigskip" << std::endl<< std::endl;  
       latexReport << "\\begin{tabular}{l l}" << std::endl;
       latexReport << " & \\\\" << std::endl;      
@@ -634,23 +637,32 @@ static void appendEmpiricalGrowthTable(std::ofstream &latexReport,
       latexReport << "\\hline " << std::endl;                
       latexReport << "$A$. Lsq. After-tax op. income growth & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalAfterTaxOperatingIncomeGrowth"],true))
+                      calculateData[date][name+"AfterTaxOperatingIncomeGrowth"],true))
                   << " \\\\" << std::endl;
       latexReport << "$B$. Lsq. After-tax op. income R2 & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalModelR2"],true))
+                      calculateData[date][name+"ModelR2"],true))
                   << " \\\\" << std::endl;
       latexReport << "$C$. Years of data used in fit & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalDataDuration"],true))
+                      calculateData[date][name+"DataDuration"],true))
                   << " \\\\" << std::endl;
-      latexReport << "$D$. Model type & "
+      latexReport << "$D$. Age of estimate & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalModelType"],true))
+                      calculateData[date][name+"ModelDateError"],true))
+                  << " \\\\" << std::endl;
+      latexReport << "$E$. Negative outliers set to 1.0  & "
+                  << formatJsonEntry(JsonFunctions::getJsonFloat(
+                      calculateData[date][name+"OutlierCount"],true))
+                  << " \\\\" << std::endl;                  
+
+      latexReport << "$F$. Model type & "
+                  << formatJsonEntry(JsonFunctions::getJsonFloat(
+                      calculateData[date][name+"ModelType"],true))
                   << " \\\\" << std::endl;  
       int type = 
           static_cast<int>(
-              JsonFunctions::getJsonFloat(calculateData[date]["empiricalModelType"]));
+              JsonFunctions::getJsonFloat(calculateData[date][name+"ModelType"]));
       switch(type){
         case 0:
         {
@@ -679,24 +691,24 @@ static void appendEmpiricalGrowthTable(std::ofstream &latexReport,
 
                 
 
-      latexReport << "$E$. Avg. Reinvestment Rate & "
+      latexReport << "$G$. Avg. Reinvestment Rate & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalReinvestmentRateMean"],true))
+                      calculateData[date][name+"ReinvestmentRateMean"],true))
                   << " \\\\" << std::endl;
-      latexReport << "$F$. Reinvestment Rate S.D. & "
+      latexReport << "$H$. Reinvestment Rate S.D. & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalReinvestmentRateStandardDeviation"],true))
+                      calculateData[date][name+"ReinvestmentRateStandardDeviation"],true))
                   << " \\\\" << std::endl;
 
-      latexReport << "$G$. Return on invested capital & "
+      latexReport << "$I$. Return on invested capital & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalReturnOnInvestedCapital"],true))
+                      calculateData[date][name+"ReturnOnInvestedCapital"],true))
                   << " \\\\" << std::endl;                              
-      latexReport << "\\multicolumn{2}{c}{ $G = A/E$} \\\\" 
+      latexReport << "\\multicolumn{2}{c}{ $I = A/G$} \\\\" 
               << std::endl;  
-      latexReport << "$H$. Excess return on invested capital & "
+      latexReport << "$J$. Excess return on invested capital & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalReturnOnInvestedCapitalLessCostOfCapital"],true))
+                      calculateData[date][name+"ReturnOnInvestedCapitalLessCostOfCapital"],true))
                   << " \\\\" << std::endl;                              
 
       latexReport << "\\end{tabular}" << std::endl;  
@@ -1018,6 +1030,7 @@ static int appendValuationTable(std::ofstream &latexReport,
                            bool verbose){
 
 
+  if(calculateData[date].contains(jsonTableName+"_riskFreeRate")){
     //latexReport << "\\begin{table}[h]" << std::endl;
     latexReport << "\\begin{tabular}{l l}" << std::endl;
     latexReport << "\\multicolumn{2}{c}{\\textbf{" << tableTitle <<"}} \\\\" 
@@ -1299,7 +1312,7 @@ static int appendValuationTable(std::ofstream &latexReport,
         DateFunctions::calcDifferenceInDaysBetweenTwoDates(
                 date,"%Y-%m-%d",dateBest,"%Y-%m-%d");
         
-    double yearsToDouble = static_cast<double>(days)/365.25;
+    double yearsToDouble = static_cast<double>(days)/DateFunctions::DAYS_PER_YEAR;
 
 
     latexReport << "$C_{14}$. Past doubling time (years) & "
@@ -1349,6 +1362,7 @@ static int appendValuationTable(std::ofstream &latexReport,
     //latexReport << "\\end{enumerate}" << std::endl;
 
     */       
+  }
    return tableId;                
 };
 

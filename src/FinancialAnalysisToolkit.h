@@ -64,6 +64,7 @@ class FinancialAnalysisToolkit {
       std::vector< double > reinvestmentRateStandardDeviation;
       std::vector< int > typeOfGrowthModel;
       std::vector< double > durationNumerical;
+      std::vector< int > outlierCount;
     };
 
     //==========================================================================
@@ -147,7 +148,56 @@ class FinancialAnalysisToolkit {
 
     };
 
+    //==========================================================================
+    static void appendEmpiricalGrowthRateData(
+                  size_t index,      
+                  const EmpiricalGrowthDataSet &empiricalGrowthData,
+                  double dateInYears,
+                  double costOfCapitalMature,
+                  const std::string nameToPrepend,
+                  std::vector< std::string > &termNames,
+                  std::vector< double > &termValues)
+    {
 
+      double roicEmp = 
+         empiricalGrowthData.afterTaxOperatingIncomeGrowth[index]
+        /empiricalGrowthData.reinvestmentRate[index];
+
+
+      termNames.push_back(nameToPrepend+"AfterTaxOperatingIncomeGrowth");
+      termValues.push_back(empiricalGrowthData.afterTaxOperatingIncomeGrowth[index]);
+
+      termNames.push_back(nameToPrepend+"ModelR2");
+      termValues.push_back(empiricalGrowthData.growthModelR2[index]); 
+
+      termNames.push_back(nameToPrepend+"ModelType");
+      termValues.push_back(empiricalGrowthData.typeOfGrowthModel[index]); 
+
+      termNames.push_back(nameToPrepend+"ReinvestmentRateMean");
+      termValues.push_back(empiricalGrowthData.reinvestmentRate[index]);
+
+      termNames.push_back(nameToPrepend+"ReinvestmentRateStandardDeviation");
+      termValues.push_back(empiricalGrowthData.reinvestmentRateStandardDeviation[index]);
+
+      termNames.push_back(nameToPrepend+"ReturnOnInvestedCapital");
+      termValues.push_back(roicEmp);
+
+      termNames.push_back(nameToPrepend+"ReturnOnInvestedCapitalLessCostOfCapital");
+      double roicEmpLCC = roicEmp-costOfCapitalMature;          
+      termValues.push_back(roicEmpLCC);
+
+      termNames.push_back(nameToPrepend+"DataDuration");
+      termValues.push_back(empiricalGrowthData.durationNumerical[index]); 
+
+      termNames.push_back(nameToPrepend+"ModelDateError");
+      double dateError = 
+        dateInYears - empiricalGrowthData.datesNumerical[index];
+      termValues.push_back(dateError); 
+
+      termNames.push_back(nameToPrepend+"OutlierCount");
+      termValues.push_back(empiricalGrowthData.outlierCount[index]); 
+
+    };
 
     //==========================================================================
     static void extractEmpiricalGrowthRates(
@@ -160,6 +210,7 @@ class FinancialAnalysisToolkit {
                     bool quarterlyTTMAnalysis,
                     int maxDayErrorTTM,
                     double growthIntervalInYears,
+                    double maxProportionOfNegativeOpIncome,
                     bool calcOneGrowthRateForAllData)
     {
 
@@ -174,6 +225,8 @@ class FinancialAnalysisToolkit {
       std::string previousTimePeriod("");
       std::vector< std::string > previousDateSet;
       std::vector< double > previousDateSetWeight;
+
+      double maxYearErrorTTM = maxDayErrorTTM / DateFunctions::DAYS_PER_YEAR;
 
       while( (indexDate+1) < indexLastCommonDate && validDateSet){
         ++indexDate;
@@ -314,32 +367,43 @@ class FinancialAnalysisToolkit {
 
         int indexDateStart=indexDate+1;
         bool foundStartDate=false;
-        bool foundCompleteInterval = false;
-        bool isAllAtoiDataPositive = true;
+   
 
-        while(!foundStartDate){
-          if(indexDateStart < indexLastCommonDate && indexDateStart < indexDateMax){
+        while(  !foundStartDate 
+              && indexDateStart < indexLastCommonDate 
+              && indexDateStart < indexDateMax){
             
-            double timeSpan = dateSubV[0] - dateNumV[indexDateStart]; 
-
-            if(timeSpan <= growthIntervalInYears){
-
+            double timeSpan      = dateSubV[0] - dateNumV[indexDateStart]; 
+            double timeSpanError = timeSpan-growthIntervalInYears;
+            //timeSpan <= growthIntervalInYears
+            if( timeSpanError < maxYearErrorTTM ){
               dateSubV.push_back(dateNumV[indexDateStart]);
               atoiSubV.push_back(atoiV[indexDateStart]);
-              rrSubV.push_back(rrV[indexDateStart]);
-              if( atoiV[indexDateStart] <= 0.){
-                isAllAtoiDataPositive=false;
-              }
-            
+              rrSubV.push_back(rrV[indexDateStart]); 
             }else{
               foundStartDate = true;
-              foundCompleteInterval=true;
             }       
             ++indexDateStart;
 
-          }else{
-            foundStartDate = true;
-          }  
+        }
+
+        //
+        // Check the data for negative entries
+        //
+        bool sufficientValidEntries=true;
+        int invalidEntryCount = 0;
+        for(size_t i=0; i< atoiSubV.size();++i){
+          if(atoiSubV[i]<1){
+            atoiSubV[i]=1.0;
+            ++invalidEntryCount;
+          }
+        }
+        double invalidEntryProportion = 
+            static_cast<double>(invalidEntryCount)
+          / static_cast<double>(atoiSubV.size());
+
+        if(invalidEntryProportion > maxProportionOfNegativeOpIncome){
+          sufficientValidEntries=false;
         }
 
         //
@@ -347,13 +411,14 @@ class FinancialAnalysisToolkit {
         //
         if(    dateSubV.size() >= 2 
            && (dateSubV.size()==atoiSubV.size())
-           && isAllAtoiDataPositive 
-           && (foundCompleteInterval || calcOneGrowthRateForAllData)){
+           && sufficientValidEntries 
+           && (foundStartDate || calcOneGrowthRateForAllData)){
           //Update the date to start at 0.
           auto dateMin = *std::min_element(dateSubV.begin(),dateSubV.end());
           for(size_t i=0; i<dateSubV.size();++i){
             dateSubV[i] -= dateMin;
           }
+
           double duration = std::abs(dateSubV.front()-dateSubV.back());
           double g = std::nan("1");
           double R2 = std::nan("1");
@@ -363,24 +428,27 @@ class FinancialAnalysisToolkit {
               EmpiricalGrowthModelTypes::ExponentialGrowthModel);
 
           std::vector<double> logAtoiSubV(atoiSubV.size());
-            for(size_t i=0; i< atoiSubV.size();++i){
-              logAtoiSubV[i] = std::log(atoiSubV[i]);
-            }
-            auto [e0, e1, eR2] = 
-              boost::math::statistics::simple_ordinary_least_squares_with_R_squared(
-                                                dateSubV,logAtoiSubV);
-            double gExp   = std::exp(e1)-1.0;
-            double aExp   = std::exp(e0 + e1*dateSubV.back());
-            double y0Exp  = std::exp( e0 + e1*dateSubV.back());
-            double y1Exp  = std::exp( e0 + e1*dateSubV.front());
-                        
-            //Update the model outputs
-            g = gExp;
-            typeOfGrowthModel = 
-              static_cast<int>(
-                  EmpiricalGrowthModelTypes::ExponentialGrowthModel);              
-            R2 = eR2;                    
+          for(size_t i=0; i< atoiSubV.size();++i){
+            logAtoiSubV[i] = std::log(atoiSubV[i]);
+          }
+          auto [e0, e1, eR2] = 
+            boost::math::statistics::simple_ordinary_least_squares_with_R_squared(
+                                              dateSubV,logAtoiSubV);
+          double gExp   = std::exp(e1)-1.0;
+          double aExp   = std::exp(e0 + e1*dateSubV.back());
+          double y0Exp  = std::exp( e0 + e1*dateSubV.back());
+          double y1Exp  = std::exp( e0 + e1*dateSubV.front());
+                      
+          //Update the model outputs
+          g = gExp;
+          typeOfGrowthModel = 
+            static_cast<int>(
+                EmpiricalGrowthModelTypes::ExponentialGrowthModel);              
+          R2 = eR2;                    
           
+
+
+
 
           //Evaluate the average rate of reinvestment
           double count=0.;
@@ -411,6 +479,7 @@ class FinancialAnalysisToolkit {
             empiricalGrowthDataUpd.typeOfGrowthModel.push_back(typeOfGrowthModel);    
             empiricalGrowthDataUpd.growthModelR2.push_back(R2);
             empiricalGrowthDataUpd.durationNumerical.push_back(duration);
+            empiricalGrowthDataUpd.outlierCount.push_back(invalidEntryCount);
           }  
         }   
       }     
@@ -435,7 +504,7 @@ class FinancialAnalysisToolkit {
 
             //If all of the ATOI data is positive, then we can fit 
             // the function y(x) = a*(1+g)^x
-            if(isAllAtoiDataPositive){
+            if(isAllAtoiDataValid){
               std::vector<double> logAtoiSubV(atoiSubV.size());
               for(size_t i=0; i< atoiSubV.size();++i){
                 logAtoiSubV[i] = std::log(atoiSubV[i]);
@@ -493,14 +562,17 @@ class FinancialAnalysisToolkit {
     };
 
     //==============================================================================
-    static size_t getIndexOfEmpiricalGrowthDataSet(double dateTarget, 
-                          const EmpiricalGrowthDataSet &empiricalGrowthData )
+    static size_t getIndexOfEmpiricalGrowthDataSet(
+                          double dateTarget, 
+                          double maxDateTargetError,
+                          const EmpiricalGrowthDataSet &empiricalGrowthData)
     {
 
       bool found = false;
       size_t index = 0;
       while(!found && index < empiricalGrowthData.datesNumerical.size()){
-        if(dateTarget > empiricalGrowthData.datesNumerical[index]){
+        double dateError = dateTarget - empiricalGrowthData.datesNumerical[index];
+        if(dateError >= 0 && dateError <= maxDateTargetError){
           found = true;
         }else{
           ++index;

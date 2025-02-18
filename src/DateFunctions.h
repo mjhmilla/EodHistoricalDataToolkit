@@ -17,7 +17,7 @@
 class DateFunctions {
 
   public:
-
+    static constexpr double DAYS_PER_YEAR = 365.25;
 
   //==============================================================================
     static double convertToFractionalYear(const std::string &dateStr){

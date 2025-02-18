@@ -674,59 +674,20 @@ bool generateLaTeXReport(
     latexReport << "\\bigskip" << std::endl;
     //std::string date = calculateData.begin().key();
 
-    /*
-    ReportingFunctions::appendEmpiricalGrowthTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      verbose);
+    //Add a summary table
 
-    ReportingFunctions::appendExcessReturnOnInvestedFinancialCapitalTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      verbose);
+    //Append gross margin
+    //Append cash conversion ratio
 
-    ReportingFunctions::appendExcessReturnOnInvestedOperationsCapitalTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      verbose);
-    
     ReportingFunctions::appendResidualCashflowToEnterpriseValueTable(
       latexReport,
       tickerMetaData.primaryTicker,
       calculateData,
       date,
       verbose);
-    */
 
-
-    /*
-    ReportingFunctions::appendRetentionRatioTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      verbose);
-
-    ReportingFunctions::appendReturnOnEquityTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      verbose);      
-
-    ReportingFunctions::appendNetIncomeGrowthTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      verbose);      
-    */
+    latexReport << "\\break" << std::endl;
+    latexReport << "\\newpage" << std::endl;
 
     bool appendNote=false;
     ReportingFunctions::appendCostOfCapitalTableForValuation(
@@ -776,59 +737,63 @@ bool generateLaTeXReport(
 
     latexReport << "\\break" << std::endl;
     latexReport << "\\newpage" << std::endl;
+    ++tableId;
 
+      
     tableTitle ="Price to DCM-Value (Empirical)";
     jsonTableName = "priceToValueEmpirical";
 
-    ++tableId;
-  
+    if(calculateData[date].contains(jsonTableName+"_riskFreeRate")){
+      tableId = ReportingFunctions::appendValuationTable(
+                                      latexReport,
+                                      tickerMetaData.primaryTicker,
+                                      calculateData,
+                                      date,
+                                      tableId,
+                                      tableTitle,
+                                      jsonTableName,
+                                      verbose);
 
-    tableId = ReportingFunctions::appendValuationTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      tableId,
-      tableTitle,
-      jsonTableName,
-      verbose);
+      std::string nameToPrepend("empirical");
+      ReportingFunctions::appendEmpiricalGrowthTable(
+                                  latexReport,
+                                  tickerMetaData.primaryTicker,
+                                  calculateData,
+                                  date,
+                                  nameToPrepend,
+                                  verbose);
 
-    ReportingFunctions::appendEmpiricalGrowthTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      verbose);
 
-    latexReport << "\\break" << std::endl;
-    latexReport << "\\newpage" << std::endl;
-
+      latexReport << "\\break" << std::endl;
+      latexReport << "\\newpage" << std::endl;
+      ++tableId;      
+    }
     tableTitle ="Price to DCM-Value (Empirical Avg.)";
     jsonTableName = "priceToValueEmpiricalAvg";
 
-    ++tableId;
 
 
 
+    if(calculateData[date].contains(jsonTableName+"_riskFreeRate")){
+      tableId=ReportingFunctions::appendValuationTable(
+                                    latexReport,
+                                    tickerMetaData.primaryTicker,
+                                    calculateData,
+                                    date,
+                                    tableId,
+                                    tableTitle,
+                                    jsonTableName,
+                                    verbose);
 
-    tableId=ReportingFunctions::appendValuationTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      tableId,
-      tableTitle,
-      jsonTableName,
-      verbose);
-
-    ReportingFunctions::appendAverageEmpiricalGrowthTable(
-      latexReport,
-      tickerMetaData.primaryTicker,
-      calculateData,
-      date,
-      verbose);
-    
-
+      std::string nameToPrepend="empiricalAvg";
+      ReportingFunctions::appendEmpiricalGrowthTable(
+                            latexReport,
+                            tickerMetaData.primaryTicker,
+                            calculateData,
+                            date,
+                            nameToPrepend,
+                            verbose);
+    }
     latexReport << "\\end{multicols}" << std::endl;
 
     //latexReport << "\\begin{figure}[h]" << std::endl;
