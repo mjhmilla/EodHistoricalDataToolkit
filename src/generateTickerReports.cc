@@ -448,6 +448,7 @@ void generateLaTeXReportWrapper(
   latexReport << "\\usepackage{hyperref}"<<std::endl;
   latexReport << "\\usepackage{multicol}"<<std::endl;
   latexReport << "\\usepackage[usenames,dvipsnames,table]{xcolor}"<<std::endl;
+  latexReport << "\\usepackage{enumitem}" << std::endl;
   latexReport << "\\begin{document}"<<std::endl;
   latexReport << "\\input{" << reportFileName << "}" << std::endl;
   latexReport << "\\end{document}" << std::endl;
@@ -689,13 +690,11 @@ bool generateLaTeXReport(
     latexReport << "\\break" << std::endl;
     latexReport << "\\newpage" << std::endl;
 
-    bool appendNote=false;
     ReportingFunctions::appendCostOfCapitalTableForValuation(
       latexReport,
       tickerMetaData.primaryTicker,
       calculateData,
       date,
-      appendNote,
       verbose);
 
     ReportingFunctions::appendReinvestmentRateTableForValuation(
@@ -755,12 +754,14 @@ bool generateLaTeXReport(
                                       verbose);
 
       std::string nameToPrepend("empirical");
+      std::string empTableTitle="Empirically Estimated Growth (recent)";
       ReportingFunctions::appendEmpiricalGrowthTable(
                                   latexReport,
                                   tickerMetaData.primaryTicker,
                                   calculateData,
                                   date,
                                   nameToPrepend,
+                                  empTableTitle,
                                   verbose);
 
 
@@ -786,12 +787,14 @@ bool generateLaTeXReport(
                                     verbose);
 
       std::string nameToPrepend="empiricalAvg";
+      std::string empTableTitle="Empirically Estimated Growth (avg. of all)";      
       ReportingFunctions::appendEmpiricalGrowthTable(
                             latexReport,
                             tickerMetaData.primaryTicker,
                             calculateData,
                             date,
                             nameToPrepend,
+                            empTableTitle,
                             verbose);
     }
     latexReport << "\\end{multicols}" << std::endl;

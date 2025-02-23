@@ -626,13 +626,14 @@ static void appendEmpiricalGrowthTable(std::ofstream &latexReport,
                            const nlohmann::ordered_json &calculateData,
                            const std::string &date,
                            const std::string &name,
+                           const std::string &title,
                            bool verbose){
 
     if(calculateData[date].contains(name+"AfterTaxOperatingIncomeGrowth")){
       //latexReport << "\\bigskip" << std::endl<< std::endl;  
       latexReport << "\\begin{tabular}{l l}" << std::endl;
       latexReport << " & \\\\" << std::endl;      
-      latexReport << "\\hline \\multicolumn{2}{c}{Empirically Estimated Growth (recent data)} \\\\" 
+      latexReport << "\\hline \\multicolumn{2}{c}{"+title+"} \\\\" 
                   << std::endl;
       latexReport << "\\hline " << std::endl;                
       latexReport << "$A$. Lsq. After-tax op. income growth & "
@@ -722,30 +723,9 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
                                       const std::string &primaryTicker, 
                                       const nlohmann::ordered_json &calculateData,
                                       const std::string &date,
-                                      bool appendNote,
                                       bool verbose){
   
-  if(appendNote){
-      latexReport << std::endl << std::endl << "\\bigskip" 
-                  << std::endl << std::endl;
-      latexReport << "Note the country specific "
-                << "equity risk premium comes from Professor Aswath Damodaran's "
-                << "2024 calculations listed on his webpage and blog:" 
-                << "\\href{https://aswathdamodaran.blogspot.com/2024/07/country-risk-my-2024-data-update.html}{Prof. Damodaran's country risk} method. "
-                << "These 2024 data are applied to all past valuations presented "
-                << "here, and as such, the past valuations calculated here may be "
-                << "inaccurate. To be more accurate, historical records for "
-                << "government bond yields, inflation, tax, and country-specific "
-                << "equity risk premimums would need to be available for the past "
-                << "10 years in the approximately 200 countries covered. Tax rates"
-                << "are updated (when available) as historical "
-                << "country-specific tax data are available through The Tax Foundation's "
-                << "\\href{https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/}{Corporate Tax Rates By Country}" 
-                << "Historical bond yield data is available only for US."
-                << "All other countries are limited to using the 2024 bond yields"
-                << "and inflation data."
-                << std::endl;
-  }
+
   latexReport << "\\begin{tabular}{l l}" << std::endl;
   latexReport << "\\multicolumn{2}{c}{\\textbf{Cost of Capital}} \\\\" 
               << std::endl;
@@ -754,61 +734,92 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
   latexReport << "\\hline \\multicolumn{2}{c}{Part 1: After-tax cost of debt} \\\\" 
                   << std::endl;
   latexReport << "\\hline ";
-  latexReport << "$A_1$: Risk-free-rate [1] & " 
+
+/*"
+.*/
+
+  latexReport << "$A_1$: Risk-free-rate (\\ref{data:risktable},"
+                 "\\ref{data:fredbond},\\ref{data:userinput}) & "   
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["costOfEquityAsAPercentage_riskFreeRate"],true))
               << " \\\\" << std::endl;
   latexReport << " & \\\\" << std::endl;
-  latexReport << "\\multicolumn{2}{c}{ Cost of equity } \\\\" << std::endl;
-  latexReport << "\\hline "
-              << "$B_1$: equity risk premium* & " 
-              << formatJsonEntry(JsonFunctions::getJsonFloat(
-                  calculateData[date]["costOfEquityAsAPercentage_equityRiskPremium"],true))
-              << " \\\\" << std::endl;
-  latexReport << "$C_1$: beta & " 
-              << formatJsonEntry(JsonFunctions::getJsonFloat(
-                  calculateData[date]["costOfEquityAsAPercentage_beta"],true))
-              << " \\\\" << std::endl;
-  latexReport << "$D_1$: cost of equity & " 
-              <<formatJsonEntry(JsonFunctions::getJsonFloat(
-                  calculateData[date]["costOfEquityAsAPercentage"],true))
-              << " \\\\" << std::endl;
-  latexReport << "\\multicolumn{2}{c}{ $D_1 = A_1 + B_1\\,C_1$} \\\\" << std::endl;
-  latexReport << " & \\\\" << std::endl;
-
   latexReport << "\\multicolumn{2}{c}{ After-tax cost of debt } \\\\" << std::endl;
   latexReport << "\\hline "
-              << "$E_1$: Operating income & "
+              << "$B_1$: Operating income & "
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["interestCover_operatingIncome"],true))
               << " \\\\" << std::endl;
-  latexReport << "$F_1$: Interest expense & "
+  latexReport << "$C_1$: Interest expense & "
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["interestCover_interestExpense"],true))
               << " \\\\" << std::endl;
-  latexReport << "$G_1$: Interest cover & "
+  latexReport << "$D_1$: Interest cover & "
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["interestCover"],true))
               << " \\\\" << std::endl;
   latexReport << "\\multicolumn{2}{c}{ $G_1 = E_1/F_1$} \\\\" << std::endl;
-  latexReport << " & \\\\" << std::endl;
-  latexReport << "$I_1$. Default spread [2] & "
+  latexReport << "$E_1$. Default spread (\\ref{data:risktable},"
+                 "\\ref{data:defaultSpread}) & "
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["defaultSpread"],true))
               << " \\\\" << std::endl;
-  latexReport << "$J_1$. Tax rate [3] & "
+  latexReport << "$F_1$. Tax rate (\\ref{data:taxfoundation},"
+                 "\\ref{data:risktable},\\ref{data:userinput}) & "
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["afterTaxCostOfDebt_taxRate"],true))
               << " \\\\" << std::endl;
-  latexReport << "$K_1$. After-tax cost of debt & "
+  latexReport << "$G_1$. After-tax cost of debt & "
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["afterTaxCostOfDebt"],true))
               << " \\\\" << std::endl;
-  latexReport << "\\multicolumn{2}{c}{ $K_1 = (A_1+I_1)\\,(1.0-J_1)$} \\\\" 
+  latexReport << "\\multicolumn{2}{c}{ $K_1 = (A_1+E_1)\\,(1.0-G_1)$} \\\\" 
               << std::endl;    
+  latexReport << " & \\\\" << std::endl;
+  latexReport << "\\multicolumn{2}{c}{ Cost of equity } \\\\" << std::endl;
+  latexReport << "\\hline "
+              << "$H_1$: equity risk premium (\\ref{data:risktable},\\ref{data:userinput})& " 
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                  calculateData[date]["costOfEquityAsAPercentage_equityRiskPremium"],true))
+              << " \\\\" << std::endl;
+  latexReport << "$I_1$: beta unleveraged & " 
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                  calculateData[date]["costOfEquityAsAPercentage_betaUnlevered"],true))
+              << " \\\\" << std::endl;
+  latexReport << "$J_1$: long term debt & " 
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                  calculateData[date]["costOfEquityAsAPercentage_longTermDebt"],true))
+              << " \\\\" << std::endl;
+  latexReport << "$K_1$: market capitalization & " 
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                  calculateData[date]["costOfEquityAsAPercentage_marketCapitalization"],true))
+              << " \\\\" << std::endl;
+  latexReport << "$L_1$: beta & " 
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                  calculateData[date]["costOfEquityAsAPercentage_beta"],true))
+              << " \\\\" << std::endl;
+  latexReport << "\\multicolumn{2}{c}{ $L_1 = I_1 \\,(1+ (1-F_1)(J_1/K_1))$} \\\\" << std::endl;            
+  latexReport << "$M_1$: cost of equity (ignoring inflation)& " 
+              <<formatJsonEntry(JsonFunctions::getJsonFloat(
+                  calculateData[date]["costOfEquityAsAPercentage_noInflation"],true))
+              << " \\\\" << std::endl;
+  latexReport << "\\multicolumn{2}{c}{ $D_1 = A_1 + H_1\\,L_1$} \\\\" << std::endl;
+  latexReport << "$N_1$: Inflation rate (firm country) \\ref{data:risktable}& " 
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                  calculateData[date]["costOfEquityAsAPercentage_inflation"],true))
+              << " \\\\" << std::endl;
+  latexReport << "$O_1$: Inflation rate (home country) \\ref{data:risktable} & " 
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                  calculateData[date]["costOfEquityAsAPercentage_inflationReference"],true))
+              << " \\\\" << std::endl;
+  latexReport << "$P_1$: cost of equity & " 
+              <<formatJsonEntry(JsonFunctions::getJsonFloat(
+                  calculateData[date]["costOfEquityAsAPercentage"],true))
+              << " \\\\" << std::endl;
+  latexReport << "\\multicolumn{2}{c}{ $P_1 = M_1\\,(1+N_1)/(1+O_1)$} \\\\" << std::endl;
+  latexReport << " & \\\\" << std::endl;              
   latexReport << "\\end{tabular}" << std::endl 
               << "\\bigskip" << std::endl<< std::endl;
-
 
   //Part II
   latexReport << "\\begin{tabular}{l l}" << std::endl;
@@ -837,9 +848,9 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["costOfCapital"],true))
               << " \\\\" << std::endl;
-  latexReport << "\\multicolumn{2}{c}{ $E_2 = (D_1\\,C_2 + K_1\\,D_2)/(C_2+D_2)$} \\\\" 
+  latexReport << "\\multicolumn{2}{c}{ $E_2 = (P_1\\,C_2 + G_1\\,D_2)/(C_2+D_2)$} \\\\" 
               << std::endl;              
-  latexReport << "$F_2$. Mature firm debt capital fraction* & "
+  latexReport << "$F_2$. Mature firm debt capital fraction \\ref{data:userinput} & "
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["costOfCapitalMature_matureFirmDebtCapitalFraction"],true))
               << " \\\\" << std::endl;   
@@ -851,7 +862,36 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
               << std::endl;              
   latexReport << "\\end{tabular}" << std::endl 
               << "\\bigskip" << std::endl<< std::endl;  
-   
+
+  latexReport << "\\center{Data sources (update annually)}" << std::endl;
+  latexReport << "\\hrule" << std::endl;
+  latexReport << "\\begin{enumerate}[noitemsep,nolistsep]" << std::endl;  
+  latexReport << "\\footnotesize" << std::endl;
+  latexReport << "\\item \\href{https://aswathdamodaran.blogspot.com/2024/07/"
+                "country-risk-my-2024-data-update.html}"
+              << "{Prof. Damodaran's 2024 country risk table}.\\\\ The PRS "
+              "Worksheet data from ctrypremJuly24.xlsx was "
+              "converted to json using src/csvTools and src/jsonTools"
+              " \\label{data:risktable}"
+              << std::endl;
+  latexReport << "\\item \\href{https://fred.stlouisfed.org/series/DGS10}{FRED US "
+                "10y bond yield historical record} \\label{data:fredbond}"
+              << std::endl;
+  latexReport << "\\item Default values (user input) \\label{data:userinput}" 
+              << std::endl;
+  latexReport << "\\item \\href{https://pages.stern.nyu.edu/~adamodar/New_Home"
+                 "_Page/datafile/ratings.html}"
+              << "{Prof. Damodaran's synthetic default spread table (USA)}. \\\\"
+                 " 2023-12-31 \\label{data:defaultSpread}"
+              << std::endl;
+  latexReport << "\\item \\href{https://taxfoundation.org/data/all/global/"
+                 "corporate-tax-rates-by-country-2023/}"
+              << "{taxfoundation.org tax table)} \\\\ Historical comporate tax "
+                 "rates by country (1980-2023 \\label{data:taxfoundation}"
+              << std::endl;
+  latexReport << "\\end{enumerate}" 
+              << std::endl;
+  latexReport << "\\bigskip " << std::endl << std::endl;  
 
 };
 //==============================================================================

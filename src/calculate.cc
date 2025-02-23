@@ -960,6 +960,8 @@ int main (int argc, char* argv[]) {
   std::string corpTaxesWorldFile;
   std::string riskByCountryFile;
 
+  std::string nameOfHomeCountryISO3;
+
   double defaultInterestCover;
 
   double defaultRiskFreeRate;
@@ -969,7 +971,7 @@ int main (int argc, char* argv[]) {
   std::string singleFileToEvaluate;
 
   double defaultTaxRate;
-  double defaultInflationRate;
+  //double defaultInflationRate;
   int numberOfYearsToAverageCapitalExpenditures;
 
   int numberOfYearsOfGrowthForDcmValuation;
@@ -1041,12 +1043,21 @@ int main (int argc, char* argv[]) {
       false,0.256,"double");
     cmd.add(defaultTaxRateInput);  
 
-    TCLAP::ValueArg<double> defaultInflationRateInput("g",
-      "default_inflation_rate", 
-      "The default inflation rate in the country that you are investing in."
-      " In my case this is 0.0248 (2.48 percent) in Germany.",
-      false,0.0248,"double");
-    cmd.add(defaultInflationRateInput);      
+    //TCLAP::ValueArg<double> defaultInflationRateInput("g",
+    //  "default_inflation_rate", 
+    //  "The default inflation rate in the country that you are investing in."
+    //  " In my case this is 0.0248 (2.48 percent) in Germany.",
+    //  false,0.0248,"double");
+    //cmd.add(defaultInflationRateInput);      
+
+
+    TCLAP::ValueArg<std::string> nameOfHomeCountryISO3Input("g",
+      "iso3_name_of_home_country", 
+      "Name of your home country in ISO3 format (e.g. USA for the"
+      " United States of America, DEU for Germany, etc)",
+      false,"","string");
+    cmd.add(nameOfHomeCountryISO3Input);  
+
 
     TCLAP::ValueArg<std::string> corpTaxesWorldFileInput("w","global_corporate_tax_rate_file", 
       "Corporate taxes reported around the world from the tax foundation"
@@ -1151,7 +1162,8 @@ int main (int argc, char* argv[]) {
     quarterlyTTMAnalysis  = quarterlyTTMAnalysisInput.getValue();
 
     defaultTaxRate      = defaultTaxRateInput.getValue();
-    defaultInflationRate= defaultInflationRateInput.getValue();
+    //defaultInflationRate= defaultInflationRateInput.getValue();
+    nameOfHomeCountryISO3= nameOfHomeCountryISO3Input.getValue(); 
     corpTaxesWorldFile  = corpTaxesWorldFileInput.getValue();
     defaultRiskFreeRate = defaultRiskFreeRateInput.getValue();
     defaultBeta         = defaultBetaInput.getValue();
@@ -1212,8 +1224,10 @@ int main (int argc, char* argv[]) {
       std::cout << "  Analyze TTM using Quaterly Data" << std::endl;
       std::cout << "    " << quarterlyTTMAnalysis << std::endl;
 
-      std::cout << "  Default inflation rate" << std::endl;
-      std::cout << "    " << defaultInflationRate << std::endl;
+      //std::cout << "  Default inflation rate" << std::endl;
+      //std::cout << "    " << defaultInflationRate << std::endl;
+      std::cout << "  Name of home country (ISO3)" << std::endl;
+      std::cout << "    " << nameOfHomeCountryISO3 << std::endl;
 
       std::cout << "  Default tax rate" << std::endl;
       std::cout << "    " << defaultTaxRate << std::endl;
@@ -1225,7 +1239,7 @@ int main (int argc, char* argv[]) {
       std::cout << "  Annual default risk free rate" << std::endl;
       std::cout << "    " << defaultRiskFreeRate << std::endl;
 
-      std::cout << "  Annual default equity risk premium" << std::endl;
+      std::cout << "  Annual default equity risk premium (U.S.A.)" << std::endl;
       std::cout << "    " << erpUSADefault << std::endl;
 
       std::cout << "  Risk by country" << std::endl;
@@ -1259,6 +1273,8 @@ int main (int argc, char* argv[]) {
     std::cerr << "error: "    << e.error() 
               << " for arg "  << e.argId() << std::endl; 
   }
+
+  double dateToday = DateFunctions::getTodaysDate();
 
   int acceptableBackwardsYearErrorForTaxRate = 5;
   //This defines how far back in time data from the tax table can be taken
@@ -1425,6 +1441,74 @@ int main (int argc, char* argv[]) {
               << std::endl;
   }                                
 
+  //
+  // Get the risk table entry for the home country
+  //
+  
+  double defaultInflationRate = 0.;
+  CountryRiskDataSet homeRiskTable;
+  bool homeRiskTableFound=false;
+
+  if(validRiskTable){
+    for(auto &riskEntry : riskByCountryData){
+      std::string erpCountryISO3;
+      JsonFunctions::getJsonString(riskEntry["CountryISO3"],
+                                      erpCountryISO3);    
+      if(nameOfHomeCountryISO3.compare(erpCountryISO3)==0){
+            homeRiskTable.CountryISO3=erpCountryISO3;
+
+            JsonFunctions::getJsonString(riskEntry["CountryISO2"],
+                                        homeRiskTable.CountryISO2);
+
+            JsonFunctions::getJsonString(riskEntry["Country"],
+                                        homeRiskTable.Country);
+
+            homeRiskTable.PRS  
+                  = JsonFunctions::getJsonFloat(
+                      riskEntry["PRS"]);
+
+            homeRiskTable.defaultSpread 
+                  = JsonFunctions::getJsonFloat(
+                      riskEntry["defaultSpread"])*0.01;
+
+            homeRiskTable.ERP 
+                  = JsonFunctions::getJsonFloat(
+                      riskEntry["ERP"])*0.01;
+
+            homeRiskTable.taxRate 
+                  = JsonFunctions::getJsonFloat(
+                      riskEntry["taxRate"])*0.01;
+
+            homeRiskTable.CRP 
+                  = JsonFunctions::getJsonFloat(
+                      riskEntry["CRP"])*0.01;
+
+            homeRiskTable.inflation_2019_2023 
+                  = JsonFunctions::getJsonFloat(
+                      riskEntry["inflation_2019_2023"])*0.01;                   
+            homeRiskTable.inflation_2024_2028 
+            
+                  = JsonFunctions::getJsonFloat(
+                      riskEntry["inflation_2024_2028"])*0.01;
+
+            homeRiskTable.riskFreeRate 
+                  = JsonFunctions::getJsonFloat(
+                      riskEntry["riskFreeRate"])*0.01;                                                      
+            homeRiskTableFound=true;
+
+            break;
+      }                                        
+    }
+  }
+
+  if(homeRiskTableFound){
+    if(dateToday >= 2024){
+      defaultInflationRate = homeRiskTable.inflation_2024_2028;
+    }else{
+      defaultInflationRate = homeRiskTable.inflation_2019_2023;
+    }
+  }
+
   //============================================================================
   //
   // Evaluate every file in the fundamental folder
@@ -1558,6 +1642,8 @@ int main (int argc, char* argv[]) {
         std::cout << "    Skipping: no valid dates" << std::endl;
       }
     }
+
+
     //==========================================================================
     //
     // Process these files, if all of the inputs are valid
@@ -2101,7 +2187,9 @@ int main (int argc, char* argv[]) {
         //Adjust for inflation
         //Using Table 31 from Damodaran, "Country risk: determinants, measures
         //and implications - The 2024 Edition".
-        
+        double costOfEquityAsAPercentageNoInflation = 
+                  annualCostOfEquityAsAPercentage; 
+
         annualCostOfEquityAsAPercentage = 
           (1.0+annualCostOfEquityAsAPercentage)
           *((1.0+inflation)/(1.0+defaultInflationRate)) - 1.0;
@@ -2122,6 +2210,7 @@ int main (int argc, char* argv[]) {
         termNames.push_back("costOfEquityAsAPercentage_outstandingShares");
         termNames.push_back("costOfEquityAsAPercentage_marketCapitalization");
         termNames.push_back("costOfEquityAsAPercentage_beta");
+        termNames.push_back("costOfEquityAsAPercentage_noInflation");
         termNames.push_back("costOfEquityAsAPercentage");
 
         termValues.push_back(riskFreeRate);
@@ -2135,6 +2224,7 @@ int main (int argc, char* argv[]) {
         termValues.push_back(outstandingShares);
         termValues.push_back(marketCapitalization);
         termValues.push_back(beta);
+        termValues.push_back(costOfEquityAsAPercentageNoInflation);
         termValues.push_back(costOfEquityAsAPercentage);
 
 

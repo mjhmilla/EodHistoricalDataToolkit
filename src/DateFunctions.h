@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <sstream>
+#include <chrono>
 
 #include "date.h"
 
@@ -49,7 +50,18 @@ class DateFunctions {
 
       return date;
     };
+    //==========================================================================
+    static double getTodaysDate(){
 
+      auto date = date::floor<date::days>(std::chrono::system_clock::now());  
+      auto ymd = date::year_month_day{date};
+            
+      std::stringstream ss;
+      ss << ymd;
+      std::string dateStr(ss.str());
+      return convertToFractionalYear(dateStr);
+
+    }
 
     //==========================================================================
     static int calcDifferenceInDaysBetweenTwoDates(const std::string &dateA,

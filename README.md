@@ -57,7 +57,7 @@ Make sure that the EOD urls contain {YOUR_API_TOKEN} and {EXCHANGE_CODE} in the 
 
     ./fetchExchanges.sh
 
-3. Fetch the list of exchange tickers from the Stuttgart stock exchange
+3. Fetch the list of exchange tickers from the Stuttgart stock exchange, where STU is the abbreviation used by EOD for the exchange.
 
     ./fetchExchangeTickers.sh STU
 
@@ -89,9 +89,9 @@ Make sure that the EOD urls contain {YOUR_API_TOKEN} and {EXCHANGE_CODE} in the 
 
     ./applyDataPatch.sh STU STU.patch.matching_isin.json
 
-11. Calculate all of the metrics used later. At the moment this primarily consists of metrics that are ultimately used to evaluate the value of the company (using the discounted cash flow model in Ch. 3 of The little book of Valuation by Aswath Damodaran). 
+11. Calculate all of the metrics used later. At the moment this primarily consists of metrics that are ultimately used to evaluate the value of the company (using the discounted cash flow model in Ch. 3 of The little book of Valuation by Aswath Damodaran). The second argument is the ISO3 format for the country from which you invest. This code is used to look up the inflation rate for your home country which is used to adjust the cost of capital when analyzing foreign companies.
 
-    ./calculate.sh STU
+    ./calculate.sh STU DEU
 
 12. Generate the report for each ticker. This command will create a folder in, for example, EodHistoricalDataToolkit/data/STU/generateTickerReports for each stock using its primary ticker. Using GOOG_US as an example, you will find these files:
 
