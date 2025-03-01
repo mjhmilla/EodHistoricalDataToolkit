@@ -20,7 +20,7 @@
             [],
             "fieldName": "adjusted_close",
             "dateName": "date",
-            "isArray": true,
+            "isArray": false,
             "legendEntry": "@PrimaryTickerLaTeX",
             "lineColor": "grey20",
             "lineWidth": 1.0,
@@ -32,7 +32,7 @@
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
-            "boxWhiskerPosition": -1
+            "boxWhiskerPosition": -0.5
         },
         "priceToValue":
         {
@@ -40,10 +40,12 @@
             "column": 1,
             "jsonData": "calculateData",
             "address":
-            [],
+            [
+                "metric_data"
+            ],
             "fieldName": "priceToValue",
             "dateName": "date",
-            "isArray": true,
+            "isArray": false,
             "legendEntry": "@PrimaryTickerLaTeX (Fin)",
             "lineColor": "grey20",
             "lineWidth": 1.0,
@@ -55,7 +57,7 @@
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
-            "boxWhiskerPosition": -2
+            "boxWhiskerPosition": -0.5
         },
         "priceToValueEmpirical":
         {
@@ -63,10 +65,12 @@
             "column": 1,
             "jsonData": "calculateData",
             "address":
-            [],
+            [
+                "metric_data"
+            ],
             "fieldName": "priceToValueEmpirical",
             "dateName": "date",
-            "isArray": true,
+            "isArray": false,
             "legendEntry": "@PrimaryTickerLaTeX (Emp)",
             "lineColor": "red",
             "lineWidth": 1.0,
@@ -78,7 +82,7 @@
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "red",
-            "boxWhiskerPosition": -1.5
+            "boxWhiskerPosition": -0.5
         },
         "priceToValueEmpiricalAvg":
         {
@@ -86,10 +90,12 @@
             "column": 1,
             "jsonData": "calculateData",
             "address":
-            [],
+            [
+                "metric_data"
+            ],
             "fieldName": "priceToValueEmpiricalAvg",
             "dateName": "date",
-            "isArray": true,
+            "isArray": false,
             "legendEntry": "@PrimaryTickerLaTeX (Emp Avg)",
             "lineColor": "orange",
             "lineWidth": 1.0,
@@ -109,10 +115,12 @@
             "column": 0,
             "jsonData": "calculateData",
             "address":
-            [],
+            [
+                "metric_data"
+            ],
             "fieldName": "residualCashFlowToEnterpriseValue",
             "dateName": "date",
-            "isArray": true,
+            "isArray": false,
             "legendEntry": "@PrimaryTickerLaTeX",
             "lineColor": "grey20",
             "lineWidth": 1.0,
@@ -124,7 +132,7 @@
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
-            "boxWhiskerPosition": -2
+            "boxWhiskerPosition": -0.5
         },
         "returnOnInvestedFinancialCapitalLessCostOfCapital":
         {
@@ -132,10 +140,12 @@
             "column": 1,
             "jsonData": "calculateData",
             "address":
-            [],
+            [
+                "metric_data"
+            ],
             "fieldName": "returnOnInvestedFinancialCapitalLessCostOfCapital",
             "dateName": "date",
-            "isArray": true,
+            "isArray": false,
             "legendEntry": "ROIC-CC (Fin)",
             "lineColor": "grey20",
             "lineWidth": 1.0,
@@ -147,7 +157,7 @@
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
-            "boxWhiskerPosition": -2
+            "boxWhiskerPosition": -0.5
         },
         "returnOnInvestedOperatingCapitalLessCostOfCapital":
         {
@@ -155,10 +165,12 @@
             "column": 1,
             "jsonData": "calculateData",
             "address":
-            [],
+            [
+                "metric_data"
+            ],
             "fieldName": "returnOnInvestedOperatingCapitalLessCostOfCapital",
             "dateName": "date",
-            "isArray": true,
+            "isArray": false,
             "legendEntry": "ROIC-CC (Op.)",
             "lineColor": "web-blue",
             "lineWidth": 1.0,
@@ -170,7 +182,7 @@
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "web-blue",
-            "boxWhiskerPosition": -1.5
+            "boxWhiskerPosition": -0.5
         },
         "returnOnInvestedCapitalLessCostOfCapitalEmpirical":
         {
@@ -178,10 +190,12 @@
             "column": 1,
             "jsonData": "calculateData",
             "address":
-            [],
+            [
+                "metric_data"
+            ],
             "fieldName": "empiricalReturnOnInvestedCapitalLessCostOfCapital",
             "dateName": "date",
-            "isArray": true,
+            "isArray": false,
             "legendEntry": "ROIC-CC (Emp)",
             "lineColor": "red",
             "lineWidth": 1.0,
@@ -193,7 +207,7 @@
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "red",
-            "boxWhiskerPosition": -1
+            "boxWhiskerPosition": -0.5
         },
         "returnOnInvestedCapitalLessCostOfCapitalEmpiricalAvg":
         {
@@ -201,10 +215,12 @@
             "column": 1,
             "jsonData": "calculateData",
             "address":
-            [],
+            [
+                "metric_data"
+            ],
             "fieldName": "empiricalAvgReturnOnInvestedCapitalLessCostOfCapital",
             "dateName": "date",
-            "isArray": true,
+            "isArray": false,
             "legendEntry": "ROIC-CC (Emp Avg)",
             "lineColor": "orange",
             "lineWidth": 1.0,

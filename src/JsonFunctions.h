@@ -296,7 +296,16 @@ class JsonFunctions {
       return success;            
     };
 
+//==============================================================================
+    static void getJsonFloatArray(const nlohmann::ordered_json &jsonEntry,
+                               std::vector< double > &data){
+      if(  jsonEntry.is_null()){
+        data.clear();
+      }else{
+          data = jsonEntry.get<std::vector<double> >();
+      }
 
+    };
 //==============================================================================
     static double getJsonFloat(const nlohmann::ordered_json &jsonEntry,
                                bool setNansToMissingValue=false){
@@ -411,6 +420,7 @@ class JsonFunctions {
           const std::vector<std::string> &addressToTimeSeries,
           const char* dateFieldName,
           const char* floatFieldName,
+          bool isArray,
           std::vector<double> &dateSeries,
           std::vector<double> &floatSeries){
 
@@ -433,29 +443,36 @@ class JsonFunctions {
       }
 
       if(isElementValid){
-        for(auto &el: jsonElement.items()){
+        if(isArray){
+          JsonFunctions::getJsonFloatArray(jsonElement[dateFieldName],
+                                           dateSeries);
+          JsonFunctions::getJsonFloatArray(jsonElement[floatFieldName],
+                                           floatSeries);
+        }else{
+          for(auto &el: jsonElement.items()){
 
-          double floatData = 
-            JsonFunctions::getJsonFloat(el.value()[floatFieldName]);
+            double floatData = 
+              JsonFunctions::getJsonFloat(el.value()[floatFieldName]);
 
-          if(JsonFunctions::isJsonFloatValid(floatData)){
-        
-            tmpFloatSeries.push_back(floatData);
+            if(JsonFunctions::isJsonFloatValid(floatData)){
+          
+              tmpFloatSeries.push_back(floatData);
 
-            std::string dateEntryStr;
-            JsonFunctions::getJsonString(el.value()[dateFieldName],
-                            dateEntryStr); 
+              std::string dateEntryStr;
+              JsonFunctions::getJsonString(el.value()[dateFieldName],
+                              dateEntryStr); 
 
-            double timeData = 
-              DateFunctions::convertToFractionalYear(dateEntryStr);
-            dateSeries.push_back(timeData);
+              double timeData = 
+                DateFunctions::convertToFractionalYear(dateEntryStr);
+              dateSeries.push_back(timeData);
+            }
+          
           }
-        
-        }
 
-        std::vector< size_t > indicesSorted = sort_indices(dateSeries);
-        for(size_t i=0; i<indicesSorted.size();++i){
-          floatSeries.push_back( tmpFloatSeries[ indicesSorted[i] ] );
+          std::vector< size_t > indicesSorted = sort_indices(dateSeries);
+          for(size_t i=0; i<indicesSorted.size();++i){
+            floatSeries.push_back( tmpFloatSeries[ indicesSorted[i] ] );
+          }
         }
       }
 

@@ -1,257 +1,496 @@
 {
-  "settings":
-  {    
-    "rows": 4,
-    "columns": 2,
-    "plotWidthCm": 8.0,
-    "plotHeightCm": 5.0,
-    "fileName": "fig_@PrimaryTicker_overview.pdf",
-    "title": "@CompanyNameLaTeX overview plot",
-    "caption": "@PrimaryTickerLaTeX (@URL) overview"
-  },   
-  "plots":
-  {
-    "afterTaxOperatingIncome":
+    "settings":
     {
-      "row":0,
-      "column":0,
-      "jsonData":"calculateData",
-      "address":[],
-      "fieldName":"priceToValue_afterTaxOperatingIncome",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX",
-      "lineColor":"black",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"After-Tax Operating Income (@CurrencyCodeLaTeX)",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null, 
-      "useLogScale": false,
-      "boxWhiskerColor": "grey40",
-      "boxWhiskerPosition" : -1      
+        "rows": 4,
+        "columns": 2,
+        "plotWidthCm": 8.0,
+        "plotHeightCm": 5.0,
+        "fileName": "fig_@PrimaryTicker_overview.pdf",
+        "title": "@CompanyNameLaTeX overview plot",
+        "caption": "@PrimaryTickerLaTeX (@URL) overview"
     },
-    "operatingIncomeGrowth":
+    "plots":
     {
-      "row":0,
-      "column":1,
-      "jsonData":"calculateData",
-      "address":[],
-      "fieldName":"priceToValue_afterTaxOperatingIncomeGrowth",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX",
-      "lineColor":"black",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Operating Income Growth",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null, 
-      "useLogScale": false,
-      "boxWhiskerColor": "grey40",
-      "boxWhiskerPosition" : -1      
-    },
-    "reinvestmentRate":
-    {
-      "row":1,
-      "column":0,
-      "jsonData":"calculateData",
-      "address":[],
-      "fieldName":"priceToValue_reinvestmentRate",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX",
-      "lineColor":"black",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Reinvestment Rate",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null, 
-      "useLogScale": false,
-      "boxWhiskerColor": "grey40",
-      "boxWhiskerPosition" : -1      
-    },   
-    "capitalOfCapital":
-    {
-      "row":1,
-      "column":1,
-      "jsonData":"calculateData",
-      "address":[],
-      "fieldName":"priceToValue_costOfCapital",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX",
-      "lineColor":"black",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Cost of Capital",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null, 
-      "useLogScale": false,
-      "boxWhiskerColor": "grey40",
-      "boxWhiskerPosition" : -1      
-    },    
-    "value":
-    {
-      "row":2,
-      "column":0,
-      "jsonData":"calculateData",
-      "address":[],
-      "fieldName":"priceToValue_presentValueOfFutureCashFlows",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX",
-      "lineColor":"black",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Present Value (DCM)",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null, 
-      "useLogScale": false,
-      "boxWhiskerColor": "grey70",
-      "boxWhiskerPosition" : -1      
-    },    
-    "outstandingSharesQ":
-    {
-      "row":2,
-      "column":1,
-      "jsonData":"fundamentalData",
-      "address":["outstandingShares","quarterly"],
-      "fieldName":"shares",
-      "dateName":"dateFormatted",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX-quarterly",      
-      "lineColor":"grey",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Outstanding Shares",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null, 
-      "useLogScale": false,
-      "boxWhiskerColor": "grey70",
-      "boxWhiskerPosition" : -1      
-    },
-    "outstandingSharesA":
-    {
-      "row":2,
-      "column":1,
-      "jsonData":"fundamentalData",
-      "address":["outstandingShares","annual"],
-      "fieldName":"shares",
-      "dateName":"dateFormatted",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX-annual",
-      "lineColor":"black",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Outstanding Shares",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null, 
-      "useLogScale": false,
-      "boxWhiskerColor": "grey40",
-      "boxWhiskerPosition" : -2      
-    },
-    "freeCashFlowQ":
-    {
-      "row":3,
-      "column":0,
-      "jsonData":"fundamentalData",
-      "address":["Financials","Cash_Flow","quarterly"],
-      "fieldName":"freeCashFlow",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX-quarterly",
-      "lineColor":"grey",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Free Cash Flow (EOD) (@CurrencyCodeLaTeX)",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null,       
-      "useLogScale": false,
-      "boxWhiskerColor": "grey70",
-      "boxWhiskerPosition" : -1      
-    },   
-    "freeCashFlowA":
-    {
-      "row":3,
-      "column":0,
-      "jsonData":"fundamentalData",
-      "address":["Financials","Cash_Flow","yearly"],
-      "fieldName":"freeCashFlow",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX-yearly",
-      "lineColor":"black",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Free Cash Flow (EOD) (@CurrencyCodeLaTeX)",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null,       
-      "useLogScale": false,
-      "boxWhiskerColor": "grey40",
-      "boxWhiskerPosition" : -2      
-    },            
-    "longTermDebtQ":
-    {
-      "row":3,
-      "column":1,
-      "jsonData":"fundamentalData",
-      "address":["Financials","Balance_Sheet","quarterly"],
-      "fieldName":"longTermDebt",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX-quarterly",
-      "lineColor":"grey",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Long Term Debt (@CurrencyCodeLaTeX)",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null,       
-      "useLogScale": false,
-      "boxWhiskerColor": "grey70",
-      "boxWhiskerPosition" : -1
-    },
-    "longTermDebtA":
-    {
-      "row":3,
-      "column":1,
-      "jsonData":"fundamentalData",
-      "address":["Financials","Balance_Sheet","yearly"],
-      "fieldName":"longTermDebt",
-      "dateName":"date",
-      "isArray":true,
-      "legendEntry": "@PrimaryTickerLaTeX-yearly",
-      "lineColor":"black",
-      "lineWidth": 0.5,
-      "xAxisLabel":"Years",
-      "yAxisLabel":"Long Term Debt (@CurrencyCodeLaTeX)",
-      "xMin": null,
-      "xMax": null,      
-      "yMin": null,
-      "yMax": null,       
-      "useLogScale": false,
-      "boxWhiskerColor": "grey40",
-      "boxWhiskerPosition" : -2      
-    } 
-  }   
+        "afterTaxOperatingIncome":
+        {
+            "row": 0,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "priceToValue_afterTaxOperatingIncome",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "black",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "After-Tax Operating Income (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey40",
+            "boxWhiskerPosition": -0.5
+        },
+        "afterTaxOperatingIncomeEmpiricalAvg":
+        {
+            "row": 0,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "growth_model"
+            ],
+            "fieldName": "average_afterTaxOperatingIncome",
+            "dateName": "average_years",
+            "isArray": true,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "orange",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "After-Tax Operating Income (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },
+        "afterTaxOperatingIncomeEmpirical":
+        {
+            "row": 0,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "growth_model"
+            ],
+            "fieldName": "recent_afterTaxOperatingIncome",
+            "dateName": "recent_years",
+            "isArray": true,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "red",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "After-Tax Operating Income (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "operatingIncomeGrowth":
+        {
+            "row": 1,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "priceToValue_afterTaxOperatingIncomeGrowth",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "black",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Operating Income Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey40",
+            "boxWhiskerPosition": -0.5
+        },
+        "operatingIncomeGrowthEmpiricalAvg":
+        {
+            "row": 1,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalAvgAfterTaxOperatingIncomeGrowth",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "orange",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Operating Income Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },
+        "operatingIncomeGrowthEmpirical":
+        {
+            "row": 1,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalAfterTaxOperatingIncomeGrowth",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "red",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Operating Income Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "returnOnInvestedFinancialCapital":
+        {
+            "row": 2,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "returnOnInvestedFinancialCapital",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "ROIC (Fin)",
+            "lineColor": "grey20",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "ROIC",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey20",
+            "boxWhiskerPosition": -0.5
+        },
+        "returnOnInvestedOperatingCapital":
+        {
+            "row": 2,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "returnOnInvestedOperatingCapital",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "ROIC (Op.)",
+            "lineColor": "web-blue",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "ROIC",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "web-blue",
+            "boxWhiskerPosition": -0.5
+        },
+        "empiricalReturnOnInvestedCapital":
+        {
+            "row": 2,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalReturnOnInvestedCapital",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "ROIC (Emp)",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "ROIC",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "empiricalAvgReturnOnInvestedCapital":
+        {
+            "row": 2,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalAvgReturnOnInvestedCapital",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "ROIC (Emp Avg)",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "ROIC",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },        
+        "reinvestmentRate":
+        {
+            "row": 3,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "priceToValue_reinvestmentRate",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "black",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Reinvestment Rate",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey40",
+            "boxWhiskerPosition": -0.5
+        },
+        "reinvestmentRateEmpiricalAvg":
+        {
+            "row": 3,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalAvgReinvestmentRateMean",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "orange",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Reinvestment Rate",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },
+        "reinvestmentRateEmpirical":
+        {
+            "row": 3,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalReinvestmentRateMean",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "red",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Reinvestment Rate",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "value":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "priceToValue_presentValueOfFutureCashFlows",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "black",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Present Value (DCM)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey70",
+            "boxWhiskerPosition": -0.5
+        },
+        "costOfCapital":
+        {
+            "row": 1,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "priceToValue_costOfCapital",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "black",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Cost of Capital",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey40",
+            "boxWhiskerPosition": -0.5
+        },
+        "outstandingSharesQ":
+        {
+            "row": 2,
+            "column": 1,
+            "jsonData": "fundamentalData",
+            "address":
+            [
+                "outstandingShares",
+                "quarterly"
+            ],
+            "fieldName": "shares",
+            "dateName": "dateFormatted",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX-quarterly",
+            "lineColor": "grey",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Outstanding Shares",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey70",
+            "boxWhiskerPosition": -0.5
+        },
+        "outstandingSharesA":
+        {
+            "row": 2,
+            "column": 1,
+            "jsonData": "fundamentalData",
+            "address":
+            [
+                "outstandingShares",
+                "annual"
+            ],
+            "fieldName": "shares",
+            "dateName": "dateFormatted",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX-annual",
+            "lineColor": "black",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Outstanding Shares",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey40",
+            "boxWhiskerPosition": -0.5
+        },
+        "longTermDebtQ":
+        {
+            "row": 3,
+            "column": 1,
+            "jsonData": "fundamentalData",
+            "address":
+            [
+                "Financials",
+                "Balance_Sheet",
+                "quarterly"
+            ],
+            "fieldName": "longTermDebt",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX-quarterly",
+            "lineColor": "grey",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Long Term Debt (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey70",
+            "boxWhiskerPosition": -0.5
+        },
+        "longTermDebtA":
+        {
+            "row": 3,
+            "column": 1,
+            "jsonData": "fundamentalData",
+            "address":
+            [
+                "Financials",
+                "Balance_Sheet",
+                "yearly"
+            ],
+            "fieldName": "longTermDebt",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX-yearly",
+            "lineColor": "black",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Long Term Debt (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey40",
+            "boxWhiskerPosition": -0.5
+        }
+    }
 }

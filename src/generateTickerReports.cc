@@ -390,6 +390,7 @@ void updatePlotArray(
         jsonMetaDataVector[indexEnd].address,
         jsonMetaDataVector[indexEnd].dateName.c_str(),
         jsonMetaDataVector[indexEnd].fieldName.c_str(),
+        jsonMetaDataVector[indexEnd].isArray,
         xTmp,
         yTmp); 
 
@@ -686,6 +687,35 @@ bool generateLaTeXReport(
     //std::string date = calculateData.begin().key();
 
     //Add a summary table
+    latexReport << "\\bigskip" << std::endl;
+    latexReport << "\\begin{tabular}{l l}" << std::endl;
+    latexReport << "\\multicolumn{2}{c}{\\textbf{Annual Milestone Data}} \\\\" 
+                << std::endl;
+
+    latexReport << "Years since IPO & "
+      << ReportingFunctions::formatJsonEntry(JsonFunctions::getJsonFloat(
+          calculateData["annual_milestones"]["years_since_IPO"],true))
+      << "\\\\" << std::endl;
+    latexReport << "Years in EOD record & "
+      << ReportingFunctions::formatJsonEntry(JsonFunctions::getJsonFloat(
+          calculateData["annual_milestones"]["years_reported"],true))
+      << "\\\\" << std::endl;      
+    latexReport << "Years of value creation (ROIC-CC $>$ 0) & "
+      << ReportingFunctions::formatJsonEntry(JsonFunctions::getJsonFloat(
+          calculateData["annual_milestones"]["years_value_created"],true))
+      << "\\\\" << std::endl;      
+    latexReport << "Years with a dividend & "
+      << ReportingFunctions::formatJsonEntry(JsonFunctions::getJsonFloat(
+          calculateData["annual_milestones"]["years_with_dividend"],true))
+      << "\\\\" << std::endl;      
+    latexReport << "Years with a dividend increase & "
+      << ReportingFunctions::formatJsonEntry(JsonFunctions::getJsonFloat(
+          calculateData["annual_milestones"]["years_with_dividend_increase"],true))
+      << "\\\\" << std::endl;      
+
+
+    latexReport << "\\end{tabular}" << std::endl << std::endl;
+    latexReport << "\\bigskip" << std::endl;
 
     //Append gross margin
     //Append cash conversion ratio
@@ -693,7 +723,7 @@ bool generateLaTeXReport(
     ReportingFunctions::appendResidualCashflowToEnterpriseValueTable(
       latexReport,
       tickerMetaData.primaryTicker,
-      calculateData,
+      calculateData["metric_data"],
       date,
       verbose);
 
@@ -703,28 +733,28 @@ bool generateLaTeXReport(
     ReportingFunctions::appendCostOfCapitalTableForValuation(
       latexReport,
       tickerMetaData.primaryTicker,
-      calculateData,
+      calculateData["metric_data"],
       date,
       verbose);
 
     ReportingFunctions::appendReinvestmentRateTableForValuation(
       latexReport,
       tickerMetaData.primaryTicker,
-      calculateData,
+      calculateData["metric_data"],
       date,
       verbose);
     
     ReportingFunctions::appendReturnOnInvestedCapitalTableForValuation(
       latexReport,
       tickerMetaData.primaryTicker,
-      calculateData,
+      calculateData["metric_data"],
       date,
       verbose);
 
     ReportingFunctions::appendOperatingIncomeGrowthTableForValuation(
       latexReport,
       tickerMetaData.primaryTicker,
-      calculateData,
+      calculateData["metric_data"],
       date,
       verbose);
 
@@ -737,7 +767,7 @@ bool generateLaTeXReport(
     tableId=ReportingFunctions::appendValuationTable(
       latexReport,
       tickerMetaData.primaryTicker,
-      calculateData,
+      calculateData["metric_data"],
       date,
       tableId,
       tableTitle,
@@ -752,11 +782,11 @@ bool generateLaTeXReport(
     tableTitle ="Price to DCM-Value (Empirical)";
     jsonTableName = "priceToValueEmpirical";
 
-    if(calculateData[date].contains(jsonTableName+"_riskFreeRate")){
+    if(calculateData["metric_data"][date].contains(jsonTableName+"_riskFreeRate")){
       tableId = ReportingFunctions::appendValuationTable(
                                       latexReport,
                                       tickerMetaData.primaryTicker,
-                                      calculateData,
+                                      calculateData["metric_data"],
                                       date,
                                       tableId,
                                       tableTitle,
@@ -768,7 +798,7 @@ bool generateLaTeXReport(
       ReportingFunctions::appendEmpiricalGrowthTable(
                                   latexReport,
                                   tickerMetaData.primaryTicker,
-                                  calculateData,
+                                  calculateData["metric_data"],
                                   date,
                                   nameToPrepend,
                                   empTableTitle,
@@ -785,11 +815,11 @@ bool generateLaTeXReport(
 
 
 
-    if(calculateData[date].contains(jsonTableName+"_riskFreeRate")){
+    if(calculateData["metric_data"][date].contains(jsonTableName+"_riskFreeRate")){
       tableId=ReportingFunctions::appendValuationTable(
                                     latexReport,
                                     tickerMetaData.primaryTicker,
-                                    calculateData,
+                                    calculateData["metric_data"],
                                     date,
                                     tableId,
                                     tableTitle,
@@ -801,7 +831,7 @@ bool generateLaTeXReport(
       ReportingFunctions::appendEmpiricalGrowthTable(
                             latexReport,
                             tickerMetaData.primaryTicker,
-                            calculateData,
+                            calculateData["metric_data"],
                             date,
                             nameToPrepend,
                             empTableTitle,
@@ -1182,7 +1212,7 @@ int main (int argc, char* argv[]) {
           reportFileName.append(".tex");
           outputReportFilePath.append(reportFileName);
 
-          std::string date = calculateData.begin().key();
+          std::string date = calculateData["metric_data"].begin().key();
           if(dateOfTable.length()>0){
             date=dateOfTable;
           }

@@ -1,7 +1,7 @@
 {
     "report":
     {
-        "number_of_screens_per_report": 1,
+        "number_of_screens_per_report": 5,
         "number_of_reports": 1,
         "number_of_tickers_per_screen": 50,
         "title": "Three GIC Industries"
@@ -36,7 +36,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "priceToValue"
+                        "metric_data","priceToValue"
                     ],
                     "measure": "recent",
                     "direction": "smallestIsBest",
@@ -59,7 +59,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "residualCashFlowToEnterpriseValue"
+                        "metric_data","residualCashFlowToEnterpriseValue"
                     ],
                     "measure": "p25",
                     "direction": "biggestIsBest",
@@ -82,7 +82,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "returnOnInvestedCapitalLessCostOfCapital"
+                        "metric_data","returnOnInvestedCapitalLessCostOfCapital"
                     ],
                     "measure": "p25",
                     "direction": "biggestIsBest",
@@ -105,7 +105,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "costOfCapital_marketCapitalization"
+                        "metric_data","costOfCapital_marketCapitalization"
                     ],
                     "measure": "recent",
                     "direction": "biggestIsBest",
@@ -129,7 +129,7 @@
                 "folder": "calculateData",
                 "field":
                 [
-                    "costOfCapital_marketCapitalization"
+                    "metric_data","costOfCapital_marketCapitalization"
                 ]
             }
         },
@@ -161,7 +161,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "priceToValue"
+                        "metric_data","priceToValue"
                     ],
                     "measure": "recent",
                     "direction": "smallestIsBest",
@@ -184,7 +184,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "residualCashFlowToEnterpriseValue"
+                        "metric_data","residualCashFlowToEnterpriseValue"
                     ],
                     "measure": "p25",
                     "direction": "biggestIsBest",
@@ -207,7 +207,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "returnOnInvestedCapitalLessCostOfCapital"
+                        "metric_data","returnOnInvestedCapitalLessCostOfCapital"
                     ],
                     "measure": "p25",
                     "direction": "biggestIsBest",
@@ -230,7 +230,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "costOfCapital_marketCapitalization"
+                        "metric_data","costOfCapital_marketCapitalization"
                     ],
                     "measure": "recent",
                     "direction": "biggestIsBest",
@@ -254,7 +254,7 @@
                 "folder": "calculateData",
                 "field":
                 [
-                    "costOfCapital_marketCapitalization"
+                    "metric_data","costOfCapital_marketCapitalization"
                 ]
             }
         },
@@ -286,7 +286,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "priceToValue"
+                        "metric_data","priceToValue"
                     ],
                     "measure": "recent",
                     "direction": "smallestIsBest",
@@ -309,7 +309,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "residualCashFlowToEnterpriseValue"
+                        "metric_data","residualCashFlowToEnterpriseValue"
                     ],
                     "measure": "p25",
                     "direction": "biggestIsBest",
@@ -332,7 +332,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "returnOnInvestedCapitalLessCostOfCapital"
+                        "metric_data","returnOnInvestedCapitalLessCostOfCapital"
                     ],
                     "measure": "p25",
                     "direction": "biggestIsBest",
@@ -355,7 +355,7 @@
                     "folder": "calculateData",
                     "field":
                     [
-                        "costOfCapital_marketCapitalization"
+                        "metric_data","costOfCapital_marketCapitalization"
                     ],
                     "measure": "recent",
                     "direction": "biggestIsBest",
@@ -379,7 +379,7 @@
                 "folder": "calculateData",
                 "field":
                 [
-                    "costOfCapital_marketCapitalization"
+                    "metric_data","costOfCapital_marketCapitalization"
                 ]
             }
         }

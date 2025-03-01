@@ -20,7 +20,22 @@
 #include "JsonFunctions.h"
 #include "DateFunctions.h"
 
-
+//============================================================================
+struct AnnualMilestoneDataSet{
+  double yearsSinceIPO;
+  double yearsOnRecord;
+  double yearsOfPositiveValueCreation; //ROIC - CC > 0
+  double yearsWithADividend;
+  double yearsWithADividendIncrease;
+  double lastDividend;
+    AnnualMilestoneDataSet():
+      yearsSinceIPO(0),
+      yearsOnRecord(0),
+      yearsOfPositiveValueCreation(0),
+      yearsWithADividend(0),
+      yearsWithADividendIncrease(0),
+      lastDividend(0){};
+};
 
 //============================================================================
 struct TaxFoundationDataSet{
@@ -482,6 +497,31 @@ bool extractAnalysisDates(
       validDates = validDates 
         && (analysisDates.common.size()
             ==analysisDates.indicesBond.size());
+    }
+
+    //Go through all of the common dates and mark which ones coincide with
+    //the date of the annual report
+    if(validDates){
+
+      //Get all of the annual reports
+      std::vector< std::string > annualReportDateSet;
+      for(auto& el : fundamentalData[FIN][BAL][Y].items() ){
+        std::string annualReportDate;
+        JsonFunctions::getJsonString(el.value()["date"],annualReportDate);
+        annualReportDateSet.push_back(annualReportDate);
+      }
+
+      //Go through all of the common dates and see which ones match
+      for(size_t i=0; i<analysisDates.common.size();++i){
+        bool isAnnualReport=false;
+        for(size_t j=0; j<annualReportDateSet.size(); ++j){
+          if(analysisDates.common[i].compare(annualReportDateSet[j]) == 0){
+            isAnnualReport=true;
+            break;
+          }
+        }
+        analysisDates.isAnnualReport.push_back(isAnnualReport);
+      }
     }
 
   }
@@ -1321,6 +1361,9 @@ int main (int argc, char* argv[]) {
   std::vector< std::string >  termNames;
   std::vector< double >       termValues;  
 
+  std::vector< std::string > vectorNames;
+  std::vector< std::vector< double > > vectorValues;
+
   bool loadSingleTicker=false;
   if(singleFileToEvaluate.size() > 0){
     loadSingleTicker = true;
@@ -1455,48 +1498,48 @@ int main (int argc, char* argv[]) {
       JsonFunctions::getJsonString(riskEntry["CountryISO3"],
                                       erpCountryISO3);    
       if(nameOfHomeCountryISO3.compare(erpCountryISO3)==0){
-            homeRiskTable.CountryISO3=erpCountryISO3;
+          homeRiskTable.CountryISO3=erpCountryISO3;
 
-            JsonFunctions::getJsonString(riskEntry["CountryISO2"],
-                                        homeRiskTable.CountryISO2);
+          JsonFunctions::getJsonString(riskEntry["CountryISO2"],
+                                      homeRiskTable.CountryISO2);
 
-            JsonFunctions::getJsonString(riskEntry["Country"],
-                                        homeRiskTable.Country);
+          JsonFunctions::getJsonString(riskEntry["Country"],
+                                      homeRiskTable.Country);
 
-            homeRiskTable.PRS  
-                  = JsonFunctions::getJsonFloat(
-                      riskEntry["PRS"]);
+          homeRiskTable.PRS  
+                = JsonFunctions::getJsonFloat(
+                    riskEntry["PRS"]);
 
-            homeRiskTable.defaultSpread 
-                  = JsonFunctions::getJsonFloat(
-                      riskEntry["defaultSpread"])*0.01;
+          homeRiskTable.defaultSpread 
+                = JsonFunctions::getJsonFloat(
+                    riskEntry["defaultSpread"])*0.01;
 
-            homeRiskTable.ERP 
-                  = JsonFunctions::getJsonFloat(
-                      riskEntry["ERP"])*0.01;
+          homeRiskTable.ERP 
+                = JsonFunctions::getJsonFloat(
+                    riskEntry["ERP"])*0.01;
 
-            homeRiskTable.taxRate 
-                  = JsonFunctions::getJsonFloat(
-                      riskEntry["taxRate"])*0.01;
+          homeRiskTable.taxRate 
+                = JsonFunctions::getJsonFloat(
+                    riskEntry["taxRate"])*0.01;
 
-            homeRiskTable.CRP 
-                  = JsonFunctions::getJsonFloat(
-                      riskEntry["CRP"])*0.01;
+          homeRiskTable.CRP 
+                = JsonFunctions::getJsonFloat(
+                    riskEntry["CRP"])*0.01;
 
-            homeRiskTable.inflation_2019_2023 
-                  = JsonFunctions::getJsonFloat(
-                      riskEntry["inflation_2019_2023"])*0.01;                   
-            homeRiskTable.inflation_2024_2028 
-            
-                  = JsonFunctions::getJsonFloat(
-                      riskEntry["inflation_2024_2028"])*0.01;
+          homeRiskTable.inflation_2019_2023 
+                = JsonFunctions::getJsonFloat(
+                    riskEntry["inflation_2019_2023"])*0.01;                   
+          homeRiskTable.inflation_2024_2028 
+          
+                = JsonFunctions::getJsonFloat(
+                    riskEntry["inflation_2024_2028"])*0.01;
 
-            homeRiskTable.riskFreeRate 
-                  = JsonFunctions::getJsonFloat(
-                      riskEntry["riskFreeRate"])*0.01;                                                      
-            homeRiskTableFound=true;
+          homeRiskTable.riskFreeRate 
+                = JsonFunctions::getJsonFloat(
+                    riskEntry["riskFreeRate"])*0.01;                                                      
+          homeRiskTableFound=true;
 
-            break;
+          break;
       }                                        
     }
   }
@@ -1827,12 +1870,14 @@ int main (int argc, char* argv[]) {
                                   calcOneGrowthRateForAllData);
 
 
+
       //Evaluate the growth rate using all of the data available
       FinancialAnalysisToolkit::EmpiricalGrowthDataSet empiricalGrowthDataAll;
+
       growthIntervalInYears = 
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
       - DateFunctions::convertToFractionalYear(analysisDates.common.back());
-
+      
       calcOneGrowthRateForAllData=true;
       FinancialAnalysisToolkit::extractEmpiricalGrowthRates(
                                   empiricalGrowthDataAll,            
@@ -1847,11 +1892,40 @@ int main (int argc, char* argv[]) {
                                   maxProportionOfNegativeOpIncomeInEmpiricalData,
                                   calcOneGrowthRateForAllData);                                  
 
+
+     
+
+      //
+      // Create and set the first values in annualMilesontes
+      //
+      AnnualMilestoneDataSet annualMilestones;
+
+      std::string ipoDate;
+      JsonFunctions::getJsonString(
+          fundamentalData["General"]["IPODate"],ipoDate);
+
+      double ipoDateNumerical = 
+        DateFunctions::convertToFractionalYear(ipoDate);
+      double firstRecordDate = 
+        DateFunctions::convertToFractionalYear(analysisDates.common.front());
+      double lastRecordDate = 
+        DateFunctions::convertToFractionalYear(analysisDates.common.back());
+
+      double recentDate = 
+        (firstRecordDate > lastRecordDate )? firstRecordDate:lastRecordDate;
+
+      annualMilestones.yearsSinceIPO = recentDate-ipoDateNumerical;
+      annualMilestones.yearsOnRecord = std::abs(firstRecordDate-lastRecordDate);
+
+
+
       //=======================================================================
       //
       //  Calculate the metrics for every data entry in the file
       //
       //======================================================================= 
+
+      nlohmann::ordered_json metricAnalysis;
 
       indexDate         = -1;
       bool validDateSet = true;
@@ -2061,34 +2135,7 @@ int main (int argc, char* argv[]) {
                       acceptableBackwardsYearErrorForTaxRate,
                       usingTaxTable,
                       riskTableFound);        
-        /*
-        double taxRate=0.;
-        bool taxRateTableFound=true;
-        if(usingTaxTable){
-          int year  = std::stoi(date.substr(0,4));
-          int yearMin = year-acceptableBackwardsYearErrorForTaxRate;
-          taxRate = getTaxRateFromTable(countryISO2, year, yearMin, 
-                                        corpWorldTaxTable);
-          taxRate = taxRate*0.01;  //convert from percent to decimal                                     
-          if(std::isnan(taxRate)){
-            taxRate=meanTaxRate;    
-            taxRateTableFound=false;        
-          }                    
-          if(std::isnan(taxRate)){
-            taxRate=defaultTaxRate;
-            taxRateTableFound=false;
-          }          
-        }else{
-          taxRate = defaultTaxRate;
-          taxRateTableFound=false;
-        }        
-        
-        //Update (if necessary) the tax rate
-        if(!taxRateTableFound && riskTableFound 
-              && !std::isnan(riskTable.taxRate)){
-          taxRate = riskTable.taxRate;
-        }   
-        */     
+   
         //======================================================================
         //Evaluate the cost of debt
         //======================================================================
@@ -2108,16 +2155,12 @@ int main (int argc, char* argv[]) {
 
         termNames.push_back("afterTaxCostOfDebt_riskFreeRate");
         termNames.push_back("afterTaxCostOfDebt_defaultSpread");
-        termNames.push_back("afterTaxCostOfDebt_taxRate");
-        //termNames.push_back("afterTaxCostOfDebt_inflationReference");
-        //termNames.push_back("afterTaxCostOfDebt_inflation");        
+        termNames.push_back("afterTaxCostOfDebt_taxRate");  
         termNames.push_back("afterTaxCostOfDebt");
         
         termValues.push_back(riskFreeRate);
         termValues.push_back(defaultSpread);
         termValues.push_back(taxRate);
-        //termValues.push_back(defaultInflationRate);
-        //termValues.push_back(inflation);
         termValues.push_back(afterTaxCostOfDebt);
 
 
@@ -2557,54 +2600,6 @@ int main (int argc, char* argv[]) {
                   termValues);
           }
 
-          /*
-          double growthAtoiEmp   = empiricalGrowthData.afterTaxOperatingIncomeGrowth[indexGrowth];
-          int typeModel          = empiricalGrowthData.typeOfGrowthModel[indexGrowth];
-          double r2GrowthAtoiEmp = empiricalGrowthData.growthModelR2[indexGrowth];
-
-          double rrEmp           = empiricalGrowthData.reinvestmentRate[indexGrowth];
-          double rrSdEmp         = empiricalGrowthData.reinvestmentRateStandardDeviation[indexGrowth];
-
-          double roicEmp         = growthAtoiEmp/rrEmp;
-
-          double durationEmp     = empiricalGrowthData.durationNumerical[indexGrowth];
-
-          std::string prependName("empirical");
-
-          termNames.push_back(prependName+"AfterTaxOperatingIncomeGrowth");
-          termValues.push_back(growthAtoiEmp);
-
-          termNames.push_back(prependName+"ModelR2");
-          termValues.push_back(r2GrowthAtoiEmp); 
-
-          termNames.push_back(prependName+"ModelType");
-          termValues.push_back(typeModel); 
-
-          termNames.push_back(prependName+"ReinvestmentRateMean");
-          termValues.push_back(rrEmp);
-
-          termNames.push_back(prependName+"ReinvestmentRateStandardDeviation");
-          termValues.push_back(rrSdEmp);
-
-          termNames.push_back(prependName+"ReturnOnInvestedCapital");
-          termValues.push_back(roicEmp);
-
-          termNames.push_back(prependName+"ReturnOnInvestedCapitalLessCostOfCapital");
-          double roicEmpLCC = roicEmp-costOfCapitalMature;          
-          termValues.push_back(roicEmpLCC);
-
-          termNames.push_back(prependName+"DataDuration");
-          termValues.push_back(durationEmp); 
-
-          termNames.push_back(prependName+"ModelDateError");
-          double dateError = 
-            dateDouble - empiricalGrowthData.datesNumerical[indexGrowth];
-          termValues.push_back(dateError); 
-
-          termNames.push_back(prependName+"OutlierCount");
-          termValues.push_back(empiricalGrowthData.outlierCount[indexGrowth]); 
-          */
-
 
           if(indexGrowth < empiricalGrowthData.datesNumerical.size()){
             parentName="priceToValueEmpirical_";
@@ -2643,90 +2638,6 @@ int main (int argc, char* argv[]) {
         // Empirical - average all time years
         //
         if(empiricalGrowthDataAll.dates.size() == 1){   
-
-
-          /*
-          double roicAvgEmp = 
-              empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0]
-            / empiricalGrowthDataAll.reinvestmentRate[0];
-
-          termNames.push_back("empiricalAvgAfterTaxOperatingIncomeGrowth");
-          termValues.push_back(
-              empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0]);
-
-          termNames.push_back("empiricalAvgGrowthModelR2");
-          termValues.push_back(
-              empiricalGrowthDataAll.growthModelR2[0]); 
-
-          termNames.push_back("empiricalAvgReinvestmentRateMean");
-          termValues.push_back(
-              empiricalGrowthDataAll.reinvestmentRate[0]
-          );
-          termNames.push_back("empiricalAvgReinvestmentRateStandardDeviation");
-          termValues.push_back(
-              empiricalGrowthDataAll.reinvestmentRateStandardDeviation[0]);
-
-          termNames.push_back("empiricalAvgReturnOnInvestedCapital");
-          termValues.push_back(roicAvgEmp);
-
-          termNames.push_back("empiricalAvgReturnOnInvestedCapitalLessCostOfCapital");
-          double roicAvgEmpLCC = roicAvgEmp-costOfCapitalMature;          
-          termValues.push_back(roicAvgEmpLCC);
-
-          termNames.push_back("empiricalAvgDataDuration");
-          double duration = empiricalGrowthDataAll.durationNumerical[0];
-          termValues.push_back(duration); 
-
-          termNames.push_back("empiricalAvgOutlierCount");
-          termValues.push_back(empiricalGrowthData.outlierCount[0]);  
-          */
-          /*
-          double growthAtoiEmpAvg   = empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0];
-          int typeModelAvg          = empiricalGrowthDataAll.typeOfGrowthModel[0];
-          double r2GrowthAtoiEmpAvg = empiricalGrowthDataAll.growthModelR2[0];
-
-          double rrEmpAvg           = empiricalGrowthDataAll.reinvestmentRate[0];
-          double rrSdEmpAvg         = empiricalGrowthDataAll.reinvestmentRateStandardDeviation[0];
-
-          double roicEmpAvg         = growthAtoiEmpAvg/rrEmpAvg;
-
-          double durationEmpAvg     = empiricalGrowthDataAll.durationNumerical[0];
-          
-          std::string prependName("empiricalAvg");
-
-          termNames.push_back(prependName+"AfterTaxOperatingIncomeGrowth");
-          termValues.push_back(growthAtoiEmpAvg);
-
-          termNames.push_back(prependName+"ModelR2");
-          termValues.push_back(r2GrowthAtoiEmpAvg); 
-
-          termNames.push_back(prependName+"ModelType");
-          termValues.push_back(typeModelAvg); 
-
-          termNames.push_back(prependName+"ReinvestmentRateMean");
-          termValues.push_back(rrEmpAvg);
-
-          termNames.push_back(prependName+"ReinvestmentRateStandardDeviation");
-          termValues.push_back(rrSdEmpAvg);
-
-          termNames.push_back(prependName+"ReturnOnInvestedCapital");
-          termValues.push_back(roicEmpAvg);
-
-          termNames.push_back(prependName+"ReturnOnInvestedCapitalLessCostOfCapital");
-          double roicEmpAvgLCC = roicEmpAvg-costOfCapitalMature;          
-          termValues.push_back(roicEmpAvgLCC);
-
-          termNames.push_back(prependName+"DataDuration");
-          termValues.push_back(durationEmpAvg); 
-
-          termNames.push_back(prependName+"ModelDateError");
-          double dateError = 
-            dateDouble - empiricalGrowthDataAll.datesNumerical[0];
-          termValues.push_back(dateError); 
-
-          termNames.push_back(prependName+"OutlierCount");
-          termValues.push_back(empiricalGrowthDataAll.outlierCount[0]); 
-          */
 
           if(appendTermRecord 
               && empiricalGrowthDataAll.datesNumerical.size()==1){
@@ -2783,10 +2694,84 @@ int main (int argc, char* argv[]) {
                                    termValues[i]});
         }
 
-        analysis[date]= analysisEntry;        
+        //
+        //annualMilestones
+        //
+        if(analysisDates.isAnnualReport[indexDate]){
+
+          double excessReturnOnInvestedCapital = 
+            returnOnInvestedCapitalFinanical-costOfCapital;
+
+          if((excessReturnOnInvestedCapital)>0){
+            ++annualMilestones.yearsOfPositiveValueCreation;
+          }
+
+          double dividendsPaid = 
+            JsonFunctions::getJsonFloat(
+              fundamentalData[FIN][CF][Y][date.c_str()]["dividendsPaid"],false);
+          if(std::isnan(dividendsPaid)){
+            dividendsPaid = 0;
+          }
+          if(dividendsPaid > 0){
+            ++annualMilestones.yearsWithADividend;
+          }
+          if(dividendsPaid > annualMilestones.lastDividend){
+            ++annualMilestones.yearsWithADividendIncrease;
+          }
+          annualMilestones.lastDividend=dividendsPaid;
+        }
+
+
+        metricAnalysis[date]= analysisEntry;        
         ++entryCount;
       }
 
+      nlohmann::ordered_json annualMilestoneReport;
+      annualMilestoneReport["years_since_IPO"] 
+        = annualMilestones.yearsSinceIPO;
+      annualMilestoneReport["years_reported"] 
+        = annualMilestones.yearsOnRecord;
+      annualMilestoneReport["years_value_created"] 
+        = annualMilestones.yearsOfPositiveValueCreation;
+      annualMilestoneReport["years_with_dividend"] 
+        = annualMilestones.yearsWithADividend;
+      annualMilestoneReport["years_with_dividend_increase"] 
+        = annualMilestones.yearsWithADividendIncrease;
+
+      analysis["annual_milestones"] = annualMilestoneReport;
+
+
+
+      //Evaluate the most recent rate of growth
+      FinancialAnalysisToolkit::EmpiricalGrowthDataSetSample recentGrowthSeries;
+
+      FinancialAnalysisToolkit::evaluateGrowthModel(
+                                  empiricalGrowthData.dates[0],
+                                  empiricalGrowthData,
+                                  recentGrowthSeries);
+
+      //Evaluate the most recent rate of growth
+      FinancialAnalysisToolkit::EmpiricalGrowthDataSetSample avgGrowthSeries;
+
+      FinancialAnalysisToolkit::evaluateGrowthModel(
+                                  empiricalGrowthDataAll.dates[0],
+                                  empiricalGrowthDataAll,
+                                  avgGrowthSeries);
+
+      nlohmann::ordered_json vectorAnalysis;      
+      vectorAnalysis["average_years"] 
+        = avgGrowthSeries.years;
+      vectorAnalysis["average_afterTaxOperatingIncome"] 
+        = avgGrowthSeries.afterTaxOperatingIncome;
+      vectorAnalysis["recent_years"] 
+        = recentGrowthSeries.years;
+      vectorAnalysis["recent_afterTaxOperatingIncome"] 
+        = recentGrowthSeries.afterTaxOperatingIncome;
+
+      analysis["growth_model"] =vectorAnalysis;
+
+
+      analysis["metric_data"] = metricAnalysis;
 
       std::string outputFilePath(analyseFolder);
       std::string outputFileName(fileName.c_str());    

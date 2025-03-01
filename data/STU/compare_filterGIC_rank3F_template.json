@@ -1,1 +1,589 @@
-{"report":{"number_of_screens_per_report":50,"number_of_reports":4,"number_of_tickers_per_screen":-1,"title":"The GIC Sub Industry Report"},"screen_variations":{"filterGicSubIndustry":{"field":["filter","GicSubIndustry","values"],"values":["Oil & Gas Drilling","Oil & Gas Equipment & Services","Integrated Oil & Gas","Oil & Gas Exploration & Production","Oil & Gas Refining & Marketing","Oil & Gas Storage & Transportation","Coal & Consumable Fuels","Commodity Chemicals","Diversified Chemicals","Fertilizers & Agricultural Chemicals","Industrial Gases","Specialty Chemicals","Construction Materials","Metal, Glass & Plastic Containers","Paper & Plastic Packaging Products & Materials","Aluminum","Diversified Metals & Mining","Copper","Gold","Precious Metals & Minerals","Silver","Steel","Forest Products","Paper Products","Aerospace & Defense","Building Products","Construction & Engineering","Electrical Components & Equipment","Heavy Electrical Equipment","Industrial Conglomerates","Construction Machinery & Heavy Transportation Equipment","Agricultural & Farm Machinery","Industrial Machinery & Supplies & Components","Trading Companies & Distributors","Commercial Printing","Environmental & Facilities Services","Office Services & Supplies","Diversified Support Services","Security & Alarm Services","Human Resource & Employment Services","Research & Consulting Services","Data Processing & Outsourced Services","Air Freight & Logistics","Passenger Airlines","Marine Transportation","Rail Transportation","Cargo Ground Transportation","Passenger Ground Transportation","Airport Services","Highways & Railtracks","Marine Ports & Services","Automotive Parts & Equipment","Tires & Rubber","Automobile Manufacturers","Motorcycle Manufacturers","Consumer Electronics","Home Furnishings","Homebuilding","Household Appliances","Housewares & Specialties","Leisure Products","Apparel, Accessories & Luxury Goods","Footwear","Textiles","Casinos & Gaming","Hotels, Resorts & Cruise Lines","Leisure Facilities","Restaurants","Education Services","Specialized Consumer Services","Distributors","Broadline Retail","Apparel Retail","Computer & Electronics Retail","Home Improvement Retail","Other Specialty Retail","Automotive Retail","Homefurnishing Retail","Drug Retail","Food Distributors","Food Retail","Consumer Staples Merchandise Retail","Brewers","Distillers & Vintners","Soft Drinks & Non-alcoholic Beverages","Agricultural Products & Services","Packaged Foods & Meats","Tobacco","Household Products","Personal Care Products","Health Care Equipment","Health CareHealth Care Distributors","Health Care Services","Health Care Facilities","Managed Health Care","Health Care Technology","Biotechnology","Pharmaceuticals","Life Sciences Tools & Services","Diversified Banks","Regional Banks","Diversified Financial Services","Multi-Sector Holdings","Specialized Finance","Commercial & Residential Mortgage Finance","Transaction & Payment Processing Services","Consumer Finance","Asset Management & Custody Banks","Investment Banking & Brokerage","Diversified Capital Markets","Financial Exchanges & Data","Mortgage REITs","Insurance Brokers","Life & Health Insurance","Multi-line Insurance","Property & Casualty Insurance","Reinsurance","IT Consulting & Other Services","Internet Services & Infrastructure","Application Software","Systems Software","Communications Equipment","Technology Hardware, Storage & Peripherals","Electronic Equipment & Instruments","Electronic Components","Electronic Manufacturing Services","Technology Distributors","Semiconductor Materials & Equipment","Semiconductors","Alternative Carriers","Integrated Telecommunication Services","Wireless Telecommunication Services","Advertising","Broadcasting","Cable & Satellite","Publishing","Movies & Entertainment","Interactive Home Entertainment","Interactive Media & Services","Electric Utilities","Gas Utilities","Multi-Utilities","Water Utilities","Independent Power Producers & Energy Traders","Renewable Electricity","Diversified REITs","Industrial REITs","Hotel & Resort REITs","Office REITs","Health Care REITs","Multi-Family Residential REITs","Single-Family Residential REITs","Retail REITs","Other Specialized REITs","Self-Storage REITs","Telecom Tower REITs","Timber REITs","Data Center REITs","Diversified Real Estate Activities","Real Estate Operating Companies","Real Estate Development","Real Estate Services"]}},"screen_names":["Oil & Gas Drilling","Oil & Gas Equipment & Services","Integrated Oil & Gas","Oil & Gas Exploration & Production","Oil & Gas Refining & Marketing","Oil & Gas Storage & Transportation","Coal & Consumable Fuels","Commodity Chemicals","Diversified Chemicals","Fertilizers & Agricultural Chemicals","Industrial Gases","Specialty Chemicals","Construction Materials","Metal, Glass & Plastic Containers","Paper & Plastic Packaging Products & Materials","Aluminum","Diversified Metals & Mining","Copper","Gold","Precious Metals & Minerals","Silver","Steel","Forest Products","Paper Products","Aerospace & Defense","Building Products","Construction & Engineering","Electrical Components & Equipment","Heavy Electrical Equipment","Industrial Conglomerates","Construction Machinery & Heavy Transportation Equipment","Agricultural & Farm Machinery","Industrial Machinery & Supplies & Components","Trading Companies & Distributors","Commercial Printing","Environmental & Facilities Services","Office Services & Supplies","Diversified Support Services","Security & Alarm Services","Human Resource & Employment Services","Research & Consulting Services","Data Processing & Outsourced Services","Air Freight & Logistics","Passenger Airlines","Marine Transportation","Rail Transportation","Cargo Ground Transportation","Passenger Ground Transportation","Airport Services","Highways & Railtracks","Marine Ports & Services","Automotive Parts & Equipment","Tires & Rubber","Automobile Manufacturers","Motorcycle Manufacturers","Consumer Electronics","Home Furnishings","Homebuilding","Household Appliances","Housewares & Specialties","Leisure Products","Apparel, Accessories & Luxury Goods","Footwear","Textiles","Casinos & Gaming","Hotels, Resorts & Cruise Lines","Leisure Facilities","Restaurants","Education Services","Specialized Consumer Services","Distributors","Broadline Retail","Apparel Retail","Computer & Electronics Retail","Home Improvement Retail","Other Specialty Retail","Automotive Retail","Homefurnishing Retail","Drug Retail","Food Distributors","Food Retail","Consumer Staples Merchandise Retail","Brewers","Distillers & Vintners","Soft Drinks & Non-alcoholic Beverages","Agricultural Products & Services","Packaged Foods & Meats","Tobacco","Household Products","Personal Care Products","Health Care Equipment","Health CareHealth Care Distributors","Health Care Services","Health Care Facilities","Managed Health Care","Health Care Technology","Biotechnology","Pharmaceuticals","Life Sciences Tools & Services","Diversified Banks","Regional Banks","Diversified Financial Services","Multi-Sector Holdings","Specialized Finance","Commercial & Residential Mortgage Finance","Transaction & Payment Processing Services","Consumer Finance","Asset Management & Custody Banks","Investment Banking & Brokerage","Diversified Capital Markets","Financial Exchanges & Data","Mortgage REITs","Insurance Brokers","Life & Health Insurance","Multi-line Insurance","Property & Casualty Insurance","Reinsurance","IT Consulting & Other Services","Internet Services & Infrastructure","Application Software","Systems Software","Communications Equipment","Technology Hardware, Storage & Peripherals","Electronic Equipment & Instruments","Electronic Components","Electronic Manufacturing Services","Technology Distributors","Semiconductor Materials & Equipment","Semiconductors","Alternative Carriers","Integrated Telecommunication Services","Wireless Telecommunication Services","Advertising","Broadcasting","Cable & Satellite","Publishing","Movies & Entertainment","Interactive Home Entertainment","Interactive Media & Services","Electric Utilities","Gas Utilities","Multi-Utilities","Water Utilities","Independent Power Producers & Energy Traders","Renewable Electricity","Diversified REITs","Industrial REITs","Hotel & Resort REITs","Office REITs","Health Care REITs","Multi-Family Residential REITs","Single-Family Residential REITs","Retail REITs","Other Specialized REITs","Self-Storage REITs","Telecom Tower REITs","Timber REITs","Data Center REITs","Diversified Real Estate Activities","Real Estate Operating Companies","Real Estate Development","Real Estate Services"],"screen_template":{"filter":{"GicSubIndustry":{"folder":"fundamentalData","field":["General","GicSubIndustry"],"condition":"==","operator":"||","valueType":"string","values":["MISSING_VALUE"]},"P/DCM-V":{"folder":"calculateData","field":["priceToValue"],"condition":">","operator":"","valueType":"float","values":[0.001]}},"ranking":{"P/DCM-V":{"folder":"calculateData","field":["priceToValue"],"measure":"recent","direction":"smallestIsBest","lowerBound":0,"upperBound":null,"weight":1.0,"plotSettings":{"threshold":0.75,"lowerBound":1E-7,"upperBound":10.0,"logarithmic":false,"width":18.0,"height":4.5,"addPlot":true}},"rCF/EV":{"folder":"calculateData","field":["residualCashFlowToEnterpriseValue"],"measure":"recent","direction":"biggestIsBest","lowerBound":0,"upperBound":null,"weight":0.5,"plotSettings":{"threshold":0.05,"lowerBound":-0.01,"upperBound":0.25,"logarithmic":false,"width":18.0,"height":4.5,"addPlot":true}},"ROIC-CC":{"folder":"calculateData","field":["returnOnInvestedCapitalLessCostOfCapital"],"measure":"recent","direction":"biggestIsBest","lowerBound":0,"upperBound":null,"weight":0.5,"plotSettings":{"threshold":0.15,"lowerBound":-0.01,"upperBound":0.25,"logarithmic":false,"width":18.0,"height":4.5,"addPlot":true}},"Mkt-Cap":{"folder":"calculateData","field":["costOfCapital_marketCapitalization"],"measure":"recent","direction":"biggestIsBest","lowerBound":0,"upperBound":null,"weight":0.0,"plotSettings":{"threshold":50000000,"lowerBound":1E-7,"upperBound":5.0E+12,"logarithmic":true,"width":18.0,"height":4.5,"addPlot":true}}},"weighting":{"folder":"calculateData","field":["costOfCapital_marketCapitalization"]}},"comparison_screener":{"ranking":{"P/DCM-V":{"folder":"calculateData","field":["priceToValue"],"measure":"recent","direction":"smallestIsBest","lowerBound":0,"upperBound":null,"weight":1.0,"plotSettings":{"threshold":0.75,"lowerBound":1E-7,"upperBound":10.0,"logarithmic":false,"width":18.0,"height":4.5,"addPlot":true}},"rCF/EV":{"folder":"calculateData","field":["residualCashFlowToEnterpriseValue"],"measure":"recent","direction":"biggestIsBest","lowerBound":0,"upperBound":null,"weight":0.5,"plotSettings":{"threshold":0.05,"lowerBound":-0.01,"upperBound":0.25,"logarithmic":false,"width":18.0,"height":4.5,"addPlot":true}},"ROIC-CC":{"folder":"calculateData","field":["returnOnInvestedCapitalLessCostOfCapital"],"measure":"recent","direction":"biggestIsBest","lowerBound":0,"upperBound":null,"weight":0.5,"plotSettings":{"threshold":0.15,"lowerBound":-0.01,"upperBound":0.25,"logarithmic":false,"width":18.0,"height":4.5,"addPlot":true}},"Mkt-Cap":{"folder":"calculateData","field":["costOfCapital_marketCapitalization"],"measure":"recent","direction":"biggestIsBest","lowerBound":0,"upperBound":null,"weight":0.0,"plotSettings":{"threshold":50000000,"lowerBound":1E-7,"upperBound":5.0E+12,"logarithmic":true,"width":18.0,"height":4.5,"addPlot":true}}}}}
+{
+    "report":
+    {
+        "number_of_screens_per_report": 50,
+        "number_of_reports": 4,
+        "number_of_tickers_per_screen": -1,
+        "title": "The GIC Sub Industry Report"
+    },
+    "screen_variations":
+    {
+        "filterGicSubIndustry":
+        {
+            "field":
+            [
+                "filter",
+                "GicSubIndustry",
+                "values"
+            ],
+            "values":
+            [
+                "Oil & Gas Drilling",
+                "Oil & Gas Equipment & Services",
+                "Integrated Oil & Gas",
+                "Oil & Gas Exploration & Production",
+                "Oil & Gas Refining & Marketing",
+                "Oil & Gas Storage & Transportation",
+                "Coal & Consumable Fuels",
+                "Commodity Chemicals",
+                "Diversified Chemicals",
+                "Fertilizers & Agricultural Chemicals",
+                "Industrial Gases",
+                "Specialty Chemicals",
+                "Construction Materials",
+                "Metal, Glass & Plastic Containers",
+                "Paper & Plastic Packaging Products & Materials",
+                "Aluminum",
+                "Diversified Metals & Mining",
+                "Copper",
+                "Gold",
+                "Precious Metals & Minerals",
+                "Silver",
+                "Steel",
+                "Forest Products",
+                "Paper Products",
+                "Aerospace & Defense",
+                "Building Products",
+                "Construction & Engineering",
+                "Electrical Components & Equipment",
+                "Heavy Electrical Equipment",
+                "Industrial Conglomerates",
+                "Construction Machinery & Heavy Transportation Equipment",
+                "Agricultural & Farm Machinery",
+                "Industrial Machinery & Supplies & Components",
+                "Trading Companies & Distributors",
+                "Commercial Printing",
+                "Environmental & Facilities Services",
+                "Office Services & Supplies",
+                "Diversified Support Services",
+                "Security & Alarm Services",
+                "Human Resource & Employment Services",
+                "Research & Consulting Services",
+                "Data Processing & Outsourced Services",
+                "Air Freight & Logistics",
+                "Passenger Airlines",
+                "Marine Transportation",
+                "Rail Transportation",
+                "Cargo Ground Transportation",
+                "Passenger Ground Transportation",
+                "Airport Services",
+                "Highways & Railtracks",
+                "Marine Ports & Services",
+                "Automotive Parts & Equipment",
+                "Tires & Rubber",
+                "Automobile Manufacturers",
+                "Motorcycle Manufacturers",
+                "Consumer Electronics",
+                "Home Furnishings",
+                "Homebuilding",
+                "Household Appliances",
+                "Housewares & Specialties",
+                "Leisure Products",
+                "Apparel, Accessories & Luxury Goods",
+                "Footwear",
+                "Textiles",
+                "Casinos & Gaming",
+                "Hotels, Resorts & Cruise Lines",
+                "Leisure Facilities",
+                "Restaurants",
+                "Education Services",
+                "Specialized Consumer Services",
+                "Distributors",
+                "Broadline Retail",
+                "Apparel Retail",
+                "Computer & Electronics Retail",
+                "Home Improvement Retail",
+                "Other Specialty Retail",
+                "Automotive Retail",
+                "Homefurnishing Retail",
+                "Drug Retail",
+                "Food Distributors",
+                "Food Retail",
+                "Consumer Staples Merchandise Retail",
+                "Brewers",
+                "Distillers & Vintners",
+                "Soft Drinks & Non-alcoholic Beverages",
+                "Agricultural Products & Services",
+                "Packaged Foods & Meats",
+                "Tobacco",
+                "Household Products",
+                "Personal Care Products",
+                "Health Care Equipment",
+                "Health CareHealth Care Distributors",
+                "Health Care Services",
+                "Health Care Facilities",
+                "Managed Health Care",
+                "Health Care Technology",
+                "Biotechnology",
+                "Pharmaceuticals",
+                "Life Sciences Tools & Services",
+                "Diversified Banks",
+                "Regional Banks",
+                "Diversified Financial Services",
+                "Multi-Sector Holdings",
+                "Specialized Finance",
+                "Commercial & Residential Mortgage Finance",
+                "Transaction & Payment Processing Services",
+                "Consumer Finance",
+                "Asset Management & Custody Banks",
+                "Investment Banking & Brokerage",
+                "Diversified Capital Markets",
+                "Financial Exchanges & Data",
+                "Mortgage REITs",
+                "Insurance Brokers",
+                "Life & Health Insurance",
+                "Multi-line Insurance",
+                "Property & Casualty Insurance",
+                "Reinsurance",
+                "IT Consulting & Other Services",
+                "Internet Services & Infrastructure",
+                "Application Software",
+                "Systems Software",
+                "Communications Equipment",
+                "Technology Hardware, Storage & Peripherals",
+                "Electronic Equipment & Instruments",
+                "Electronic Components",
+                "Electronic Manufacturing Services",
+                "Technology Distributors",
+                "Semiconductor Materials & Equipment",
+                "Semiconductors",
+                "Alternative Carriers",
+                "Integrated Telecommunication Services",
+                "Wireless Telecommunication Services",
+                "Advertising",
+                "Broadcasting",
+                "Cable & Satellite",
+                "Publishing",
+                "Movies & Entertainment",
+                "Interactive Home Entertainment",
+                "Interactive Media & Services",
+                "Electric Utilities",
+                "Gas Utilities",
+                "Multi-Utilities",
+                "Water Utilities",
+                "Independent Power Producers & Energy Traders",
+                "Renewable Electricity",
+                "Diversified REITs",
+                "Industrial REITs",
+                "Hotel & Resort REITs",
+                "Office REITs",
+                "Health Care REITs",
+                "Multi-Family Residential REITs",
+                "Single-Family Residential REITs",
+                "Retail REITs",
+                "Other Specialized REITs",
+                "Self-Storage REITs",
+                "Telecom Tower REITs",
+                "Timber REITs",
+                "Data Center REITs",
+                "Diversified Real Estate Activities",
+                "Real Estate Operating Companies",
+                "Real Estate Development",
+                "Real Estate Services"
+            ]
+        }
+    },
+    "screen_names":
+    [
+        "Oil & Gas Drilling",
+        "Oil & Gas Equipment & Services",
+        "Integrated Oil & Gas",
+        "Oil & Gas Exploration & Production",
+        "Oil & Gas Refining & Marketing",
+        "Oil & Gas Storage & Transportation",
+        "Coal & Consumable Fuels",
+        "Commodity Chemicals",
+        "Diversified Chemicals",
+        "Fertilizers & Agricultural Chemicals",
+        "Industrial Gases",
+        "Specialty Chemicals",
+        "Construction Materials",
+        "Metal, Glass & Plastic Containers",
+        "Paper & Plastic Packaging Products & Materials",
+        "Aluminum",
+        "Diversified Metals & Mining",
+        "Copper",
+        "Gold",
+        "Precious Metals & Minerals",
+        "Silver",
+        "Steel",
+        "Forest Products",
+        "Paper Products",
+        "Aerospace & Defense",
+        "Building Products",
+        "Construction & Engineering",
+        "Electrical Components & Equipment",
+        "Heavy Electrical Equipment",
+        "Industrial Conglomerates",
+        "Construction Machinery & Heavy Transportation Equipment",
+        "Agricultural & Farm Machinery",
+        "Industrial Machinery & Supplies & Components",
+        "Trading Companies & Distributors",
+        "Commercial Printing",
+        "Environmental & Facilities Services",
+        "Office Services & Supplies",
+        "Diversified Support Services",
+        "Security & Alarm Services",
+        "Human Resource & Employment Services",
+        "Research & Consulting Services",
+        "Data Processing & Outsourced Services",
+        "Air Freight & Logistics",
+        "Passenger Airlines",
+        "Marine Transportation",
+        "Rail Transportation",
+        "Cargo Ground Transportation",
+        "Passenger Ground Transportation",
+        "Airport Services",
+        "Highways & Railtracks",
+        "Marine Ports & Services",
+        "Automotive Parts & Equipment",
+        "Tires & Rubber",
+        "Automobile Manufacturers",
+        "Motorcycle Manufacturers",
+        "Consumer Electronics",
+        "Home Furnishings",
+        "Homebuilding",
+        "Household Appliances",
+        "Housewares & Specialties",
+        "Leisure Products",
+        "Apparel, Accessories & Luxury Goods",
+        "Footwear",
+        "Textiles",
+        "Casinos & Gaming",
+        "Hotels, Resorts & Cruise Lines",
+        "Leisure Facilities",
+        "Restaurants",
+        "Education Services",
+        "Specialized Consumer Services",
+        "Distributors",
+        "Broadline Retail",
+        "Apparel Retail",
+        "Computer & Electronics Retail",
+        "Home Improvement Retail",
+        "Other Specialty Retail",
+        "Automotive Retail",
+        "Homefurnishing Retail",
+        "Drug Retail",
+        "Food Distributors",
+        "Food Retail",
+        "Consumer Staples Merchandise Retail",
+        "Brewers",
+        "Distillers & Vintners",
+        "Soft Drinks & Non-alcoholic Beverages",
+        "Agricultural Products & Services",
+        "Packaged Foods & Meats",
+        "Tobacco",
+        "Household Products",
+        "Personal Care Products",
+        "Health Care Equipment",
+        "Health CareHealth Care Distributors",
+        "Health Care Services",
+        "Health Care Facilities",
+        "Managed Health Care",
+        "Health Care Technology",
+        "Biotechnology",
+        "Pharmaceuticals",
+        "Life Sciences Tools & Services",
+        "Diversified Banks",
+        "Regional Banks",
+        "Diversified Financial Services",
+        "Multi-Sector Holdings",
+        "Specialized Finance",
+        "Commercial & Residential Mortgage Finance",
+        "Transaction & Payment Processing Services",
+        "Consumer Finance",
+        "Asset Management & Custody Banks",
+        "Investment Banking & Brokerage",
+        "Diversified Capital Markets",
+        "Financial Exchanges & Data",
+        "Mortgage REITs",
+        "Insurance Brokers",
+        "Life & Health Insurance",
+        "Multi-line Insurance",
+        "Property & Casualty Insurance",
+        "Reinsurance",
+        "IT Consulting & Other Services",
+        "Internet Services & Infrastructure",
+        "Application Software",
+        "Systems Software",
+        "Communications Equipment",
+        "Technology Hardware, Storage & Peripherals",
+        "Electronic Equipment & Instruments",
+        "Electronic Components",
+        "Electronic Manufacturing Services",
+        "Technology Distributors",
+        "Semiconductor Materials & Equipment",
+        "Semiconductors",
+        "Alternative Carriers",
+        "Integrated Telecommunication Services",
+        "Wireless Telecommunication Services",
+        "Advertising",
+        "Broadcasting",
+        "Cable & Satellite",
+        "Publishing",
+        "Movies & Entertainment",
+        "Interactive Home Entertainment",
+        "Interactive Media & Services",
+        "Electric Utilities",
+        "Gas Utilities",
+        "Multi-Utilities",
+        "Water Utilities",
+        "Independent Power Producers & Energy Traders",
+        "Renewable Electricity",
+        "Diversified REITs",
+        "Industrial REITs",
+        "Hotel & Resort REITs",
+        "Office REITs",
+        "Health Care REITs",
+        "Multi-Family Residential REITs",
+        "Single-Family Residential REITs",
+        "Retail REITs",
+        "Other Specialized REITs",
+        "Self-Storage REITs",
+        "Telecom Tower REITs",
+        "Timber REITs",
+        "Data Center REITs",
+        "Diversified Real Estate Activities",
+        "Real Estate Operating Companies",
+        "Real Estate Development",
+        "Real Estate Services"
+    ],
+    "screen_template":
+    {
+        "filter":
+        {
+            "GicSubIndustry":
+            {
+                "folder": "fundamentalData",
+                "field":
+                [
+                    "General",
+                    "GicSubIndustry"
+                ],
+                "condition": "==",
+                "operator": "||",
+                "valueType": "string",
+                "values":
+                [
+                    "MISSING_VALUE"
+                ]
+            },
+            "P/DCM-V":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "metric_data","priceToValue"
+                ],
+                "condition": ">",
+                "operator": "",
+                "valueType": "float",
+                "values":
+                [
+                    0.001
+                ]
+            }
+        },
+        "ranking":
+        {
+            "P/DCM-V":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "metric_data","priceToValue"
+                ],
+                "measure": "recent",
+                "direction": "smallestIsBest",
+                "lowerBound": 0,
+                "upperBound": null,
+                "weight": 1.0,
+                "plotSettings":
+                {
+                    "threshold": 0.75,
+                    "lowerBound": 1E-7,
+                    "upperBound": 10.0,
+                    "logarithmic": false,
+                    "width": 18.0,
+                    "height": 4.5,
+                    "addPlot": true
+                }
+            },
+            "rCF/EV":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "metric_data","residualCashFlowToEnterpriseValue"
+                ],
+                "measure": "recent",
+                "direction": "biggestIsBest",
+                "lowerBound": 0,
+                "upperBound": null,
+                "weight": 0.5,
+                "plotSettings":
+                {
+                    "threshold": 0.05,
+                    "lowerBound": -0.01,
+                    "upperBound": 0.25,
+                    "logarithmic": false,
+                    "width": 18.0,
+                    "height": 4.5,
+                    "addPlot": true
+                }
+            },
+            "ROIC-CC":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "metric_data","returnOnInvestedCapitalLessCostOfCapital"
+                ],
+                "measure": "recent",
+                "direction": "biggestIsBest",
+                "lowerBound": 0,
+                "upperBound": null,
+                "weight": 0.5,
+                "plotSettings":
+                {
+                    "threshold": 0.15,
+                    "lowerBound": -0.01,
+                    "upperBound": 0.25,
+                    "logarithmic": false,
+                    "width": 18.0,
+                    "height": 4.5,
+                    "addPlot": true
+                }
+            },
+            "Mkt-Cap":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "metric_data","costOfCapital_marketCapitalization"
+                ],
+                "measure": "recent",
+                "direction": "biggestIsBest",
+                "lowerBound": 0,
+                "upperBound": null,
+                "weight": 0.0,
+                "plotSettings":
+                {
+                    "threshold": 50000000,
+                    "lowerBound": 1E-7,
+                    "upperBound": 5.0E+12,
+                    "logarithmic": true,
+                    "width": 18.0,
+                    "height": 4.5,
+                    "addPlot": true
+                }
+            }
+        },
+        "weighting":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data","costOfCapital_marketCapitalization"
+            ]
+        }
+    },
+    "comparison_screener":
+    {
+        "ranking":
+        {
+            "P/DCM-V":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "metric_data","priceToValue"
+                ],
+                "measure": "recent",
+                "direction": "smallestIsBest",
+                "lowerBound": 0,
+                "upperBound": null,
+                "weight": 1.0,
+                "plotSettings":
+                {
+                    "threshold": 0.75,
+                    "lowerBound": 1E-7,
+                    "upperBound": 10.0,
+                    "logarithmic": false,
+                    "width": 18.0,
+                    "height": 4.5,
+                    "addPlot": true
+                }
+            },
+            "rCF/EV":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "metric_data","residualCashFlowToEnterpriseValue"
+                ],
+                "measure": "recent",
+                "direction": "biggestIsBest",
+                "lowerBound": 0,
+                "upperBound": null,
+                "weight": 0.5,
+                "plotSettings":
+                {
+                    "threshold": 0.05,
+                    "lowerBound": -0.01,
+                    "upperBound": 0.25,
+                    "logarithmic": false,
+                    "width": 18.0,
+                    "height": 4.5,
+                    "addPlot": true
+                }
+            },
+            "ROIC-CC":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "metric_data","returnOnInvestedCapitalLessCostOfCapital"
+                ],
+                "measure": "recent",
+                "direction": "biggestIsBest",
+                "lowerBound": 0,
+                "upperBound": null,
+                "weight": 0.5,
+                "plotSettings":
+                {
+                    "threshold": 0.15,
+                    "lowerBound": -0.01,
+                    "upperBound": 0.25,
+                    "logarithmic": false,
+                    "width": 18.0,
+                    "height": 4.5,
+                    "addPlot": true
+                }
+            },
+            "Mkt-Cap":
+            {
+                "folder": "calculateData",
+                "field":
+                [
+                    "metric_data","costOfCapital_marketCapitalization"
+                ],
+                "measure": "recent",
+                "direction": "biggestIsBest",
+                "lowerBound": 0,
+                "upperBound": null,
+                "weight": 0.0,
+                "plotSettings":
+                {
+                    "threshold": 50000000,
+                    "lowerBound": 1E-7,
+                    "upperBound": 5.0E+12,
+                    "logarithmic": true,
+                    "width": 18.0,
+                    "height": 4.5,
+                    "addPlot": true
+                }
+            }
+        }
+    }
+}
