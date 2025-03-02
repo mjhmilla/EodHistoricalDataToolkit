@@ -2726,6 +2726,13 @@ int main (int argc, char* argv[]) {
         ++entryCount;
       }
 
+      nlohmann::ordered_json stringDataReport;
+      stringDataReport["home_country"] = homeRiskTable.CountryISO3;
+      stringDataReport["firm_country"] = riskTable.CountryISO3;
+
+      analysis["country_data"] = stringDataReport;
+
+
       nlohmann::ordered_json annualMilestoneReport;
       annualMilestoneReport["years_since_IPO"] 
         = annualMilestones.yearsSinceIPO;

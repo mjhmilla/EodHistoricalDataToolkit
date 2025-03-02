@@ -1756,6 +1756,7 @@ class FinancialAnalysisToolkit {
         
         termNames.push_back(resultName + "totalCashFromOperatingActivities");
         termNames.push_back(resultName + "interestExpense");
+        termNames.push_back(resultName + "taxRate");
         termNames.push_back(resultName + "taxShieldOnInterestExpense");
         termNames.push_back(resultName + "capitalExpenditures");
         termNames.push_back(resultName + "freeCashFlow");
@@ -1764,6 +1765,7 @@ class FinancialAnalysisToolkit {
 
         termValues.push_back(totalCashFromOperatingActivities);
         termValues.push_back(interestExpense);
+        termValues.push_back(taxRate);
         termValues.push_back(taxShieldOnInterestExpense);
         termValues.push_back(capitalExpenditures);
         termValues.push_back(freeCashFlow);

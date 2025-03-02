@@ -207,6 +207,96 @@ static std::string formatJsonEntry( double entry,
   return ss.str();
 }
 //==============================================================================
+static void appendCashFlowConversionTable(
+                std::ofstream &latexReport, 
+                const std::string &primaryTicker, 
+                const nlohmann::ordered_json &calculateData,
+                const std::string &date,
+                bool verbose)
+{
+    if(calculateData[date].contains("cashFlowConversionRatio")){
+        latexReport << "\\begin{tabular}{l l}" << std::endl;
+        latexReport << "\\hline \\multicolumn{2}{c}{Cash flow conversion ratio} \\\\" 
+                    << std::endl;
+        latexReport << "\\hline " << std::endl;                    
+        latexReport << "$A$. Total cash from Op. Activities & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["cashFlowConversionRatio_freeCashFlow_totalCashFromOperatingActivities"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$B$. Interest Expense & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["cashFlowConversionRatio_freeCashFlow_interestExpense"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$C$. Tax Rate & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["cashFlowConversionRatio_freeCashFlow_taxRate"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$D$. Tax shield on interest exp. & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["cashFlowConversionRatio_freeCashFlow_taxShieldOnInterestExpense"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "\\multicolumn{2}{c}{ $D = B\\,C$} \\\\" 
+                    << std::endl;  
+        latexReport << "$E$. Capital Expenditures & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["cashFlowConversionRatio_freeCashFlow_capitalExpenditures"],true))
+                    << " \\\\" << std::endl;            
+        latexReport << "$F$. Free cash flow (calc) & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["cashFlowConversionRatio_freeCashFlow_freeCashFlow"],true))
+                    << " \\\\" << std::endl;            
+        latexReport << "\\multicolumn{2}{c}{ $F = A+B-D-E$} \\\\" 
+                    << std::endl;           
+        latexReport << "$G$. Free cash flow (EOD) & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["cashFlowConversionRatio_freeCashFlow_freeCashFlowEOD"],true))
+                    << " \\\\" << std::endl;  
+        latexReport << "$H$. Net income & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["cashFlowConversionRatio_netIncome"],true))
+                    << " \\\\" << std::endl;            
+        latexReport << "$I$. Cash flow conversion ratio & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["cashFlowConversionRatio"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "\\multicolumn{2}{c}{ $I = F/H$} \\\\" 
+                    << std::endl;           
+        latexReport << "\\end{tabular}" << std::endl 
+                    << "\\bigskip" << std::endl<< std::endl;  
+    }
+};
+//==============================================================================
+static void appendOperatingMarginTable(
+                std::ofstream &latexReport, 
+                const std::string &primaryTicker, 
+                const nlohmann::ordered_json &calculateData,
+                const std::string &date,
+                bool verbose)
+{
+    if(calculateData[date].contains("operatingMargin")){
+        latexReport << "\\begin{tabular}{l l}" << std::endl;
+        latexReport << "\\hline \\multicolumn{2}{c}{Operating Margin} \\\\" 
+                    << std::endl;
+        latexReport << "\\hline " << std::endl;                    
+        latexReport << "$A$. Operating Income & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["operatingMargin_operatingIncome"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$B$. Total Revenue & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["operatingMargin_totalRevenue"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$C$. Operating Margin & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["operatingMargin"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "\\multicolumn{2}{c}{ $C = A/B$} \\\\" 
+                    << std::endl;  
+        latexReport << "\\end{tabular}" << std::endl 
+                    << "\\bigskip" << std::endl<< std::endl;  
+    }
+};
+//==============================================================================
 static void appendResidualCashflowToEnterpriseValueTable(
                 std::ofstream &latexReport, 
                 const std::string &primaryTicker, 
@@ -569,58 +659,6 @@ static void appendNetIncomeGrowthTable(std::ofstream &latexReport,
 };
 
 //==============================================================================
-/*
-static void appendAverageEmpiricalGrowthTable(std::ofstream &latexReport, 
-                           const std::string &primaryTicker, 
-                           const nlohmann::ordered_json &calculateData,
-                           const std::string &date,
-                           bool verbose){
-
-    if(calculateData[date].contains("empiricalAvgAfterTaxOperatingIncomeGrowth")){
-      latexReport << "\\begin{tabular}{l l}" << std::endl;
-      latexReport << " & \\\\" << std::endl;
-      latexReport << "\\hline \\multicolumn{2}{c}{Empirically Estimated Growth (all data)} \\\\" 
-                  << std::endl;
-      latexReport << "\\hline " << std::endl;   
-      latexReport << "$A$. After-tax op. income growth & "
-                  << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalAvgAfterTaxOperatingIncomeGrowth"],true))
-                  << " \\\\" << std::endl;
-      latexReport << "$B$. After-tax op. income R2 & "
-                  << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalAvgGrowthModelR2"],true))
-                  << " \\\\" << std::endl;
-
-      latexReport << "$C$. Avg. Reinvestment Rate & "
-                  << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalAvgReinvestmentRateMean"],true))
-                  << " \\\\" << std::endl;
-      latexReport << "$D$. Mean(Reinvestment Rate S.D.) & "
-                  << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalAvgReinvestmentRateStandardDeviation"],true))
-                  << " \\\\" << std::endl;
-
-      latexReport << "$E$. Number of years of data & "
-                  << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalAvgDataDuration"],true))
-                  << " \\\\" << std::endl;
-
-      latexReport << "$F$. Return on invested capital & "
-                  << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalAvgReturnOnInvestedCapital"],true))
-                  << " \\\\" << std::endl;                              
-      latexReport << "\\multicolumn{2}{c}{ $E = A/C$} \\\\" 
-              << std::endl;  
-      latexReport << "$G$. Excess return on invested capital & "
-                  << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date]["empiricalAvgReturnOnInvestedCapitalLessCostOfCapital"],true))
-                  << " \\\\" << std::endl;                              
-
-      latexReport << "\\end{tabular}" << std::endl; 
-    }
-};
-*/
-//==============================================================================
 static void appendEmpiricalGrowthTable(std::ofstream &latexReport, 
                            const std::string &primaryTicker, 
                            const nlohmann::ordered_json &calculateData,
@@ -721,10 +759,16 @@ static void appendEmpiricalGrowthTable(std::ofstream &latexReport,
 // tables, and so, each table has a specific number
 static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport, 
                                       const std::string &primaryTicker, 
+                                      const nlohmann::ordered_json &countryData,
                                       const nlohmann::ordered_json &calculateData,
                                       const std::string &date,
                                       bool verbose){
   
+
+  std::string homeCountry;
+  std::string firmCountry;
+  JsonFunctions::getJsonString(countryData["home_country"],homeCountry);
+  JsonFunctions::getJsonString(countryData["firm_country"],firmCountry);
 
   latexReport << "\\begin{tabular}{l l}" << std::endl;
   latexReport << "\\multicolumn{2}{c}{\\textbf{Cost of Capital}} \\\\" 
@@ -803,12 +847,16 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
               <<formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["costOfEquityAsAPercentage_noInflation"],true))
               << " \\\\" << std::endl;
-  latexReport << "\\multicolumn{2}{c}{ $D_1 = A_1 + H_1\\,L_1$} \\\\" << std::endl;
-  latexReport << "$N_1$: Inflation rate (firm country) \\ref{data:risktable}& " 
+  latexReport << "\\multicolumn{2}{c}{ $D_1 = A_1 + H_1\\,L_1$} \\\\" << std::endl;  
+  latexReport << "$N_1$: Inflation rate ("
+              << firmCountry
+              << ") \\ref{data:risktable}& " 
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["costOfEquityAsAPercentage_inflation"],true))
               << " \\\\" << std::endl;
-  latexReport << "$O_1$: Inflation rate (home country) \\ref{data:risktable} & " 
+  latexReport << "$O_1$: Inflation rate ("
+              << homeCountry 
+              << ") \\ref{data:risktable} & " 
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["costOfEquityAsAPercentage_inflationReference"],true))
               << " \\\\" << std::endl;
@@ -986,6 +1034,7 @@ static void appendReinvestmentRateTableForValuation(std::ofstream &latexReport,
                 << "\\bigskip" << std::endl<< std::endl;
 
 };
+//==============================================================================
 static void appendReturnOnInvestedCapitalTableForValuation(std::ofstream &latexReport, 
                            const std::string &primaryTicker, 
                            const nlohmann::ordered_json &calculateData,
@@ -1140,109 +1189,17 @@ static int appendValuationTable(std::ofstream &latexReport,
     }
     --year;
 
-    /*
-    latexReport << "  & \\\\" << std::endl;
-    latexReport << "\\hline \\multicolumn{2}{c}{Part " << tableId << ": Income during growth period} \\\\" 
-                << std::endl; 
-    latexReport << "\\hline " << std::endl;                               
-    latexReport << "$A_{" << tableId << "}^0$. After-tax op. income (year 0) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_afterTaxOperatingIncome_0"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$B_{" << tableId << "}^0$. Reinvestment (year 0) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_reinvestment_0"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$C_{" << tableId << "}^0$. Free cash flow to firm  (year 0) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_freeCashFlowToFirm_0"],true))
-                << " \\\\" << std::endl;
-    latexReport << "\\hline ";
-    latexReport << "$A_{" << tableId << "}^1$. After-tax op. income (year 1) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_afterTaxOperatingIncome_1"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$B_{" << tableId << "}^1$. Reinvestment (year 1) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_reinvestment_1"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$C_{" << tableId << "}^1$. Free cash flow to firm  (year 1) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_freeCashFlowToFirm_1"],true))
-                << " \\\\" << std::endl;
 
-    latexReport << "\\hline ";
-    latexReport << "$A_{" << tableId << "}^2$. After-tax op. income (year 2) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_afterTaxOperatingIncome_2"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$B_{" << tableId << "}^2$. Reinvestment (year 2) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_reinvestment_2"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$C_{" << tableId << "}^2$. Free cash flow to firm  (year 2) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_freeCashFlowToFirm_2"],true))
-                << " \\\\" << std::endl;
-
-    latexReport << "\\hline ";
-    latexReport << "$A_{" << tableId << "}^3$. After-tax op. income (year 3) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_afterTaxOperatingIncome_3"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$B_{" << tableId << "}^3$. Reinvestment (year 3) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_reinvestment_3"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$C_{" << tableId << "}^3$. Free cash flow to firm  (year 3) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_freeCashFlowToFirm_3"],true))
-                << " \\\\" << std::endl;
-
-    latexReport << "\\hline ";
-    latexReport << "$A_{" << tableId << "}^4$. After-tax op. income (year 4) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_afterTaxOperatingIncome_4"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$B_{" << tableId << "}^4$. Reinvestment (year 4) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_reinvestment_4"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$C_{" << tableId << "}^4$. Free cash flow to firm  (year 4) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_freeCashFlowToFirm_4"],true))
-                << " \\\\" << std::endl;
-
-    latexReport << "\\hline ";
-    latexReport << "$A_{" << tableId << "}^5$. After-tax op. income (year 5) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_afterTaxOperatingIncome_5"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$B_{" << tableId << "}^5$. Reinvestment (year 5) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_reinvestment_5"],true))
-                << " \\\\" << std::endl;
-    latexReport << "$C_{" << tableId << "}^5$. Free cash flow to firm  (year 5) & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_freeCashFlowToFirm_5"],true))
-                << " \\\\" << std::endl; 
-    */               
     latexReport << "\\hline ";
     latexReport << "\\multicolumn{2}{c}{ $A_{" << tableId << "}^{i+1} = A_{" << tableId << "}^{i}\\,(1+A_7)$} \\\\" 
                 << std::endl;
     latexReport << "\\multicolumn{2}{c}{ $B_{" << tableId << "}^{i+1} = A_{" << tableId << "}^{i+1}\\,C_5$} \\\\" 
                 << std::endl; 
     latexReport << "\\multicolumn{2}{c}{ $C_{" << tableId << "}^{i+1} = A_{" << tableId << "}^{i+1}-B_{" << tableId << "}^{i+1}$} \\\\" 
-                << std::endl; 
-
-    //latexReport << "\\end{tabular}" << std::endl ;
-    //latexReport << "\\end{table}" << std::endl ;
-    //latexReport << "\\bigskip" << std::endl<< std::endl;                
+                << std::endl;              
 
     ++tableId;
-    
-    //latexReport << "\\begin{table}[h]" << std::endl;
-    //latexReport << "\\begin{tabular}{l l}" << std::endl;
+
     latexReport << "  & \\\\" << std::endl;
     latexReport << "\\hline \\multicolumn{2}{c}{Part "
                 <<tableId<<": Present value of DCM} \\\\" 
@@ -1366,99 +1323,7 @@ static int appendValuationTable(std::ofstream &latexReport,
     latexReport << "\\multicolumn{2}{c}{ $G_{2}= C_{2} / F_{" << tableId << "}$} \\\\" 
                 << std::endl; 
     latexReport << "\\end{tabular}" << std::endl;
-    //latexReport << "\\end{table}" << std::endl; 
-    //latexReport << "\\bigskip" << std::endl;  
-
-    /*
-    latexReport << "\\begin{tabular}{l l}" << std::endl;
-    latexReport << "\\hline \\multicolumn{2}{c}{Part 10: Empirical Growth Check} \\\\" 
-                << std::endl;
-    latexReport << "\\hline" << std::endl;   
-
-    latexReport << "$A_{14}$. Calc. Operating income growth & " 
-                    << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_operatingIncomeGrowth"],true))
-                << " \\\\" << std::endl;  
-
-    latexReport << "$B_{14}$. Current Op. Income & "
-                    << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_reinvestmentRate_operatingIncome"],true))
-                << " \\\\" << std::endl;  
-
-    double opIncome = JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_reinvestmentRate_operatingIncome"]);
-
-    std::string dateBest;
-    double opIncomeTarget = opIncome*0.5;
-    double opIncomeBest = 0.;
-    double opIncomeError = std::numeric_limits<double>::max();
-    //Now go find the date when the operating income was half its present value
-    for(auto &el : calculateData.items()){
-        double opInc = 
-            JsonFunctions::getJsonFloat(
-                el.value()[jsonTableName+"_reinvestmentRate_operatingIncome"],true);
-        double opIncError = std::abs(opInc-opIncomeTarget);
-        if(opIncError < opIncomeError){
-            opIncomeError=opIncError;
-            opIncomeBest=opInc;
-            dateBest=el.key();
-        }               
-    }
-
-    int days = 
-        DateFunctions::calcDifferenceInDaysBetweenTwoDates(
-                date,"%Y-%m-%d",dateBest,"%Y-%m-%d");
-        
-    double yearsToDouble = static_cast<double>(days)/DateFunctions::DAYS_PER_YEAR;
-
-
-    latexReport << "$C_{14}$. Past doubling time (years) & "
-                    << formatJsonEntry(yearsToDouble)
-                << " \\\\" << std::endl;    
-
-    double t0  = std::log10(opIncome/opIncomeBest);
-    double t1  = t0/yearsToDouble;
-    double empiricalGrowthRate = std::pow(10.0,t1)-1;
-
-    double calcGrowthRate = JsonFunctions::getJsonFloat(
-            calculateData[date][jsonTableName+"_operatingIncomeGrowth"]);
-
-    latexReport << "$D_{14}$. Empirical rate of growth & "
-                    << formatJsonEntry(empiricalGrowthRate)
-                << " \\\\" << std::endl;     
-    double rateOfReinvestment = JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_reinvestmentRate"],true);
-
-    latexReport << "$E_{14}$. Rate of reinvestment & "
-                    << formatJsonEntry(rateOfReinvestment)
-                << " \\\\" << std::endl;  
-
-    double roicImp = empiricalGrowthRate / rateOfReinvestment;
-
-    latexReport << "$F_{14}$. Implied ROIC & "
-                    << formatJsonEntry(roicImp)
-                << " \\\\" << std::endl; 
-
-    latexReport << "\\end{tabular}" << std::endl 
-            << "\\bigskip" << std::endl<< std::endl;  
-
-    //latexReport << "\\underline{References}" << std::endl;
-    //latexReport << "\\begin{enumerate}" << std::endl;
-    //latexReport << "\\item The U.S. 10 year bond rate is used to estimate "
-    //            << "the risk-free-rate in all countries across time. This is"
-    //            << " obviously only appropriate if you can actually purchase "
-    //            << " US 10 year treasury bonds. \\\\" 
-    //            << "\\href{https://fred.stlouisfed.org/series/DGS10}{Federal Reserve Bank of St. Louis}" 
-    //            << std::endl;
-    //latexReport << "\\item " 
-    //            << "\\href{https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ratings.html}{Prof. Damodaran's Ratings File}" 
-    //            << std::endl;           
-    //latexReport << "\\item " 
-    //            << "\\href{https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/}{Corporate Tax Rates By Country}" 
-    //            << std::endl;                            
-    //latexReport << "\\end{enumerate}" << std::endl;
-
-    */       
+       
   }
    return tableId;                
 };

@@ -608,15 +608,8 @@ bool generateLaTeXReport(
                 << tickerMetaData.country << " ( \\url{" << webURL << "} )\\\\"
                 << std::endl;
     latexReport << std::endl;
-
-
-
-    latexReport << "\\begin{multicols}{2}" << std::endl;
-
-    latexReport << description << std::endl;
-    latexReport << std::endl;
-    latexReport << "\\end{multicols}" << std::endl;
-
+    latexReport << "\\break"          << std::endl;
+    //latexReport << "\\newpage"        << std::endl;
 
 
     latexReport << "\\includegraphics{" 
@@ -628,11 +621,18 @@ bool generateLaTeXReport(
     latexReport << std::endl;
     
     latexReport << "\\break"          << std::endl;
-    latexReport << "\\newpage"        << std::endl;
+    //latexReport << "\\newpage"        << std::endl;
+
 
     latexReport << "\\begin{multicols}{2}" << std::endl;
 
     //latexReport << "\\begin{center}" << std::endl;
+    latexReport << "\\begin{center}" << std::endl;
+    latexReport << "\\Large{\\underline{I. Preliminaries}} \\\\" << std::endl;
+    latexReport << "\\end{center}" << std::endl;
+
+    latexReport << description << std::endl;
+    latexReport << std::endl;
 
 
     latexReport << "\\bigskip" << std::endl;
@@ -717,8 +717,24 @@ bool generateLaTeXReport(
     latexReport << "\\end{tabular}" << std::endl << std::endl;
     latexReport << "\\bigskip" << std::endl;
 
-    //Append gross margin
-    //Append cash conversion ratio
+    latexReport << "\\begin{center}" << std::endl;
+    latexReport << "\\Large{\\underline{II. Supplementary Tables}} \\\\" << std::endl;
+    latexReport << "\\end{center}" << std::endl;
+
+
+    ReportingFunctions::appendOperatingMarginTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData["metric_data"],
+      date,
+      verbose);
+
+    ReportingFunctions::appendCashFlowConversionTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData["metric_data"],
+      date,
+      verbose);      
 
     ReportingFunctions::appendResidualCashflowToEnterpriseValueTable(
       latexReport,
@@ -727,12 +743,22 @@ bool generateLaTeXReport(
       date,
       verbose);
 
+    //Append gross margin
+    //Append cash conversion ratio
+
+
     latexReport << "\\break" << std::endl;
     latexReport << "\\newpage" << std::endl;
+
+    latexReport << "\\begin{center}" << std::endl;
+    latexReport << "\\Large{\\underline{III. Valuation Tables}} \\\\" << std::endl;
+    latexReport << "\\end{center}" << std::endl;
+
 
     ReportingFunctions::appendCostOfCapitalTableForValuation(
       latexReport,
       tickerMetaData.primaryTicker,
+      calculateData["country_data"],
       calculateData["metric_data"],
       date,
       verbose);
@@ -841,6 +867,7 @@ bool generateLaTeXReport(
 
     latexReport << "\\break"          << std::endl;
     latexReport << "\\newpage"        << std::endl;
+        
   }
 
   latexReport.close();
