@@ -717,6 +717,10 @@ bool generateLaTeXReport(
     latexReport << "\\end{tabular}" << std::endl << std::endl;
     latexReport << "\\bigskip" << std::endl;
 
+    latexReport << "\\break" << std::endl;
+    latexReport << "\\newpage" << std::endl;
+
+
     latexReport << "\\begin{center}" << std::endl;
     latexReport << "\\Large{\\underline{II. Supplementary Tables}} \\\\" << std::endl;
     latexReport << "\\end{center}" << std::endl;
@@ -1158,10 +1162,13 @@ int main (int argc, char* argv[]) {
                                       keywords,
                                       replacements);
 
+        bool isMetricDataNull = calculateData["metric_data"].is_null();
         //
         // Generate and save the pdf
         //
-        if(!isTickerProcessed && tickerMetaData.companyName.length() > 0){
+        if(!isTickerProcessed 
+          && !isMetricDataNull 
+          && tickerMetaData.companyName.length() > 0){
 
           std::filesystem::path outputPlotFilePath = outputFolderPath;                  
           PlottingFunctions::PlotSettings plotSettingsSummary;

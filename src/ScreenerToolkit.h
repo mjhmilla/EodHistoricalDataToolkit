@@ -312,33 +312,55 @@ class ScreenerToolkit {
           std::string folder; 
           JsonFunctions::getJsonString(rankingItem.value()["folder"],folder);
 
+          bool isDateSeries = 
+            JsonFunctions::getJsonBool(rankingItem.value()["isDateSeries"]);
+            
+
           std::vector< std::string > fieldVector, dateFieldVector;
           std::string fieldName("");
           for( auto const &fieldEntry : rankingItem.value()["field"]){
             JsonFunctions::getJsonString(fieldEntry,fieldName);
             fieldVector.push_back(fieldName);
             dateFieldVector.push_back(fieldName);
-          }      
+          }
+          dateFieldVector.pop_back();
+  
 
           //
           // Fetch the target data 
           //
           nlohmann::ordered_json *targetJsonTable;
+          nlohmann::ordered_json *targetJsonTableDateSeries;
 
           std::string fullPathFileName(""); 
           bool jsonTableItemizedByDate=false;  
           if(folder == "fundamentalData"){
+            if(isDateSeries){
+              targetJsonTableDateSeries = JsonFunctions::getTableReference(
+                                  fundamentalData,dateFieldVector);
+              jsonTableItemizedByDate=true; 
+            }
             targetJsonTable =
-              const_cast<nlohmann::ordered_json*>(&fundamentalData);
-            jsonTableItemizedByDate=false;                
+              const_cast<nlohmann::ordered_json*>(&fundamentalData);                                    
+          
           }else if(folder == "historicalData"){
+            if(isDateSeries){
+              targetJsonTableDateSeries = JsonFunctions::getTableReference(
+                                  historicalData,dateFieldVector);
+              jsonTableItemizedByDate=true;
+            }
             targetJsonTable = 
               const_cast<nlohmann::ordered_json*>(&historicalData);
-            jsonTableItemizedByDate=true;                
+            
           }else if(folder == "calculateData"){
+            if(isDateSeries){
+              targetJsonTableDateSeries = JsonFunctions::getTableReference(
+                                  calculateData,dateFieldVector);
+              jsonTableItemizedByDate=true;
+            }
             targetJsonTable = 
-              const_cast<nlohmann::ordered_json*>(&calculateData);
-            jsonTableItemizedByDate=true;                
+              const_cast<nlohmann::ordered_json*>(&calculateData);   
+
           }else{
             std::cerr << "Error: in ranking " << rankingItem.key()
                       << " the folder field is " << folder 
@@ -353,30 +375,37 @@ class ScreenerToolkit {
           // needs its own function to load the data
 
           //Extract the metric data closest to the target date
-          //Go fetch the most recent date and prepend it to the field vector          
-          int smallestDayError=std::numeric_limits<int>::max();
-          std::string closestDate;
-          date::sys_days closestDay;                      
-          smallestDayError = 
-            JsonFunctions::findClosestDate( *targetJsonTable,
-                                            targetDate,
-                                            "%Y-%m-%d",
-                                            closestDate,
-                                            closestDay);
-
-          if(closestDate.length()==0){
-            valueFilter=false;
-            break;
-          } 
-          if(jsonTableItemizedByDate){
-            dateFieldVector.insert(dateFieldVector.begin(),closestDate);
-          }                                         
+          //Go fetch the most recent date and prepend it to the field vector
           
+          std::string closestDate;
+          date::sys_days closestDay;
+          int smallestDayError=std::numeric_limits<int>::max();                
+
+          if(isDateSeries){                                      
+            smallestDayError = 
+              JsonFunctions::findClosestDate( *targetJsonTableDateSeries,
+                                              targetDate,
+                                              "%Y-%m-%d",
+                                              closestDate,
+                                              closestDay);
+
+            if(closestDate.length()==0){
+              valueFilter=false;
+              break;
+            } 
+            //if(jsonTableItemizedByDate){
+            //  dateFieldVector.insert(dateFieldVector.begin(),closestDate);
+            //}
+            std::string finalField = fieldVector.back();
+            fieldVector.pop_back();
+            fieldVector.push_back(closestDate);
+            fieldVector.push_back(finalField);                                      
+          }
           
 
           double metricValue = 
             JsonFunctions::getJsonFloat(
-                *targetJsonTable,dateFieldVector);
+                *targetJsonTable,fieldVector);
 
           bool metricValueValid = JsonFunctions::isJsonFloatValid(metricValue);
 
@@ -391,60 +420,74 @@ class ScreenerToolkit {
           for(size_t i=0; i<fieldVector.size();++i){
             metricAddress.push_back(fieldVector[i]);
           }
-          if(jsonTableItemizedByDate){
-            metricAddress.insert(metricAddress.begin(),"");
+
+          if(isDateSeries){
+            for(auto &metricItem : targetJsonTableDateSeries->items()){
+
+              std::string itemDate(metricItem.key());
+
+              if(jsonTableItemizedByDate){
+                std::string finalField = metricAddress.back();
+                metricAddress.pop_back();
+                metricAddress.pop_back();
+                metricAddress.push_back(itemDate);
+                metricAddress.push_back(finalField);
+              }
+
+              double metricValue = 
+                JsonFunctions::getJsonFloat(
+                    *targetJsonTable,metricAddress);
+
+              bool metricValueValid = JsonFunctions::isJsonFloatValid(metricValue);
+
+              if(metricValueValid){
+                metricData.push_back(metricValue);          
+              }
+            }
+          }else{
+            metricData.push_back(metricValue);
           }
 
-          for(auto &metricItem : targetJsonTable->items()){
+          if(weightFieldExists){
 
-            std::string itemDate(metricItem.key());
+            bool isWeightingADateSeries = 
+              JsonFunctions::getJsonBool(
+                screenReportConfig["weighting"]["isDateSeries"]);
 
-            if(jsonTableItemizedByDate){
-              metricAddress[0]=itemDate;
+            if(closestDate.length() > 0 || !isWeightingADateSeries){
+              std::string folderWeighting; 
+              JsonFunctions::getJsonString( 
+                screenReportConfig["weighting"]["folder"],folderWeighting);
+                
+              if( (folderWeighting.compare("calculateData") != 0) ){
+                std::cout << "Error: weighting:folder in the "
+                          << "screen configuration  file should be calculateData "
+                          << " but is instead " << folderWeighting
+                          << std::endl;
+              }
+
+              std::vector< std::string > fieldAddress;
+              for(auto &el : screenReportConfig["weighting"]["field"]){
+                fieldAddress.push_back(el);
+              }
+
+              if(isWeightingADateSeries){
+                std::string finalField = fieldAddress.back();
+                fieldAddress.pop_back();
+                fieldAddress.push_back(closestDate);
+                fieldAddress.push_back(finalField);
+              }  
+
+              weight = JsonFunctions::getJsonFloat(
+                            *targetJsonTable,fieldAddress);
             }
-
-            double metricValue = 
-              JsonFunctions::getJsonFloat(
-                  *targetJsonTable,metricAddress);
-
-            bool metricValueValid = JsonFunctions::isJsonFloatValid(metricValue);
-
-            if(metricValueValid){
-              metricData.push_back(metricValue);          
-            }
-          }
-
-          if(weightFieldExists && closestDate.length() > 0){
-            std::string folderWeighting; 
-            JsonFunctions::getJsonString( 
-              screenReportConfig["weighting"]["folder"],folderWeighting);
-
-            if( (folderWeighting.compare("calculateData") != 0) ){
-              std::cout << "Error: weighting:folder in the "
-                        << "screen configuration  file should be calculateData "
-                        << " but is instead " << folderWeighting
-                        << std::endl;
-            }
-
-            std::vector< std::string > fieldAddress;
-            for(auto &el : screenReportConfig["weighting"]["field"]){
-              fieldAddress.push_back(el);
-            }
-            if(jsonTableItemizedByDate){
-              fieldAddress.insert(fieldAddress.begin(),closestDate);
-            }  
-
-            weight = JsonFunctions::getJsonFloat(
-                          *targetJsonTable,fieldAddress);
-
-          }
-                                  
+          }                                  
           PlottingFunctions::SummaryStatistics percentileSummary;
           PlottingFunctions::extractSummaryStatistics(metricData,
                                                       percentileSummary); 
           percentileSummary.current = targetMetricValue;                                                    
 
-          if(smallestDayError <= maxTargetDateErrorInDays){
+          if(smallestDayError <= maxTargetDateErrorInDays || !isDateSeries){
             metricVector.push_back(targetMetricValue);
           }else{
             metricVector.push_back(
@@ -496,11 +539,14 @@ class ScreenerToolkit {
           JsonFunctions::getJsonString(el.value()["folder"],folder);
 
           std::vector< std::string > fieldVector;
+          std::vector< std::string > dateFieldVector;
           std::string fieldName("");
           for( auto const &fieldEntry : el.value()["field"]){
             JsonFunctions::getJsonString(fieldEntry,fieldName);
             fieldVector.push_back(fieldName);
+            dateFieldVector.push_back(fieldName);
           }
+          dateFieldVector.pop_back();
 
           std::string conditionName("");
           JsonFunctions::getJsonString(el.value()["condition"],conditionName);
@@ -511,6 +557,9 @@ class ScreenerToolkit {
           std::string valueType("");
           JsonFunctions::getJsonString(el.value()["valueType"],valueType);
 
+
+          bool isDateSeries = 
+            JsonFunctions::getJsonBool(el.value()["isDateSeries"]);
 
           std::vector< std::string > valueStringVector;
           std::string valueStringName;
@@ -534,21 +583,37 @@ class ScreenerToolkit {
           // Fetch the target data and apply the filter
           //
           nlohmann::ordered_json *targetJsonTable;
+          nlohmann::ordered_json *targetJsonTableDateSeries;
 
           std::string fullPathFileName(""); 
           bool jsonTableItemizedByDate=false;     
           if(folder == "fundamentalData"){
+            if(isDateSeries){
+              targetJsonTableDateSeries = JsonFunctions::getTableReference(
+                                  fundamentalData,dateFieldVector);
+              jsonTableItemizedByDate=true; 
+            }            
             targetJsonTable =
               const_cast<nlohmann::ordered_json*>(&fundamentalData);
-            jsonTableItemizedByDate=false;                
+           
           }else if(folder == "historicalData"){
+            if(isDateSeries){
+              targetJsonTableDateSeries = JsonFunctions::getTableReference(
+                                  historicalData,dateFieldVector);
+              jsonTableItemizedByDate=true;
+            }            
             targetJsonTable = 
               const_cast<nlohmann::ordered_json*>(&historicalData);
-            jsonTableItemizedByDate=true;                
+            
           }else if(folder == "calculateData"){
+            if(isDateSeries){
+              targetJsonTableDateSeries = JsonFunctions::getTableReference(
+                                  calculateData,dateFieldVector);
+              jsonTableItemizedByDate=true;
+            }            
             targetJsonTable = 
               const_cast<nlohmann::ordered_json*>(&calculateData);
-            jsonTableItemizedByDate=true;                
+              
           }else{
             std::cerr << "Error: in filter " << filterName 
                       << " the folder field is " << folder 
@@ -559,17 +624,12 @@ class ScreenerToolkit {
           }
 
 
-
-
-
-
-
           //Go fetch the most recent date and prepend it to the field vector
-          if(jsonTableItemizedByDate){
+          if(isDateSeries){
             std::string closestDate;
             date::sys_days closestDay;
             int smallestDayError = 
-              JsonFunctions::findClosestDate( *targetJsonTable,
+              JsonFunctions::findClosestDate( *targetJsonTableDateSeries,
                                               targetDate,
                                               "%Y-%m-%d",
                                               closestDate,
@@ -579,7 +639,10 @@ class ScreenerToolkit {
               valueFilter=false;
               break;
             }else{
-              fieldVector.insert(fieldVector.begin(),closestDate);
+              std::string finalField=fieldVector.back();
+              fieldVector.pop_back();
+              fieldVector.push_back(closestDate);
+              fieldVector.push_back(finalField);
             }                                         
             
           }

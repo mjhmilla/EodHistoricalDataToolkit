@@ -97,7 +97,37 @@ class JsonFunctions {
         return true;
       }
     }
+//==============================================================================
+    static nlohmann::ordered_json* getTableReference(
+                              const nlohmann::ordered_json &jsonTable,
+                               std::vector< std::string > &fields){
 
+      switch( fields.size() ){
+        case 1:{
+            return const_cast<nlohmann::ordered_json*>(&jsonTable[fields[0]]);
+          }
+          break;
+        case 2:{
+          return const_cast<nlohmann::ordered_json*>(
+                &jsonTable[fields[0]][fields[1]]);
+          }
+          break;
+        case 3:{
+          return const_cast<nlohmann::ordered_json*>(
+                &jsonTable[fields[0]][fields[1]][fields[2]]);          
+          }
+          break;
+        case 4:{
+          return const_cast<nlohmann::ordered_json*>(
+                &jsonTable[fields[0]][fields[1]][fields[2]][fields[3]]);
+          }
+          break;
+        default: {
+          return NULL;  
+        }
+      };         
+
+    };
 
 //==============================================================================
     static bool doesFieldExist(const nlohmann::ordered_json &jsonTable,
@@ -188,43 +218,50 @@ class JsonFunctions {
                                std::vector< std::string > &fields,
                                bool setNansToMissingValue=false){
 
-      double value = 0;
-    
-      switch( fields.size() ){
-        case 1:{
-            bool valid = true;
-            value = getJsonFloat(
-                      jsonTable[fields[0]],
-                      setNansToMissingValue);
-          }
-          break;
-        case 2:{
-            value = getJsonFloat(
-                      jsonTable[fields[0]][fields[1]],
-                      setNansToMissingValue);
-          }
-          break;
-        case 3:{
-            value = getJsonFloat(
-                      jsonTable[fields[0]][fields[1]][fields[2]],
-                      setNansToMissingValue);
-          }
-          break;
-        case 4:{
-            value = getJsonFloat(
-                      jsonTable[fields[0]][fields[1]][fields[2]][fields[3]],
-                      setNansToMissingValue);
-          }
-          break;
-        default: {
-          if(setNansToMissingValue){
-            value = MISSING_VALUE;
-          }else{
-            value = std::nan("1");
-          }          
-        }
-      };            
+      double value = std::nan("1");
+      if(setNansToMissingValue){
+        value = MISSING_VALUE;
+      }
 
+      bool fieldsExist = doesFieldExist(jsonTable,fields);
+      
+
+      if(fieldsExist){
+        switch( fields.size() ){
+          case 1:{
+                value = getJsonFloat(
+                          jsonTable[fields[0]],
+                          setNansToMissingValue);
+            }
+            break;
+          case 2:{
+
+              value = getJsonFloat(
+                        jsonTable[fields[0]][fields[1]],
+                        setNansToMissingValue);
+            }
+            break;
+          case 3:{
+              value = getJsonFloat(
+                        jsonTable[fields[0]][fields[1]][fields[2]],
+                        setNansToMissingValue);
+            }
+            break;
+          case 4:{
+              value = getJsonFloat(
+                        jsonTable[fields[0]][fields[1]][fields[2]][fields[3]],
+                        setNansToMissingValue);
+            }
+            break;
+          default: {
+            if(setNansToMissingValue){
+              value = MISSING_VALUE;
+            }else{
+              value = std::nan("1");
+            }          
+          }
+        };            
+      }
       return value;
     };
 
@@ -309,6 +346,7 @@ class JsonFunctions {
 //==============================================================================
     static double getJsonFloat(const nlohmann::ordered_json &jsonEntry,
                                bool setNansToMissingValue=false){
+
       if(  jsonEntry.is_null()){
         if(setNansToMissingValue){
           return MISSING_VALUE;

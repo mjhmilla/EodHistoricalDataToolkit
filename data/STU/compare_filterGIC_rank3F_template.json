@@ -360,6 +360,7 @@
                     "General",
                     "GicSubIndustry"
                 ],
+                "isDateSeries": false,
                 "condition": "==",
                 "operator": "||",
                 "valueType": "string",
@@ -375,6 +376,7 @@
                 [
                     "metric_data","priceToValue"
                 ],
+                "isDateSeries": true,
                 "condition": ">",
                 "operator": "",
                 "valueType": "float",
@@ -393,6 +395,7 @@
                 [
                     "metric_data","priceToValue"
                 ],
+                "isDateSeries": true,
                 "measure": "recent",
                 "direction": "smallestIsBest",
                 "lowerBound": 0,
@@ -416,6 +419,7 @@
                 [
                     "metric_data","residualCashFlowToEnterpriseValue"
                 ],
+                "isDateSeries": true,
                 "measure": "recent",
                 "direction": "biggestIsBest",
                 "lowerBound": 0,
@@ -439,6 +443,7 @@
                 [
                     "metric_data","returnOnInvestedCapitalLessCostOfCapital"
                 ],
+                "isDateSeries": true,
                 "measure": "recent",
                 "direction": "biggestIsBest",
                 "lowerBound": 0,
@@ -462,6 +467,7 @@
                 [
                     "metric_data","costOfCapital_marketCapitalization"
                 ],
+                "isDateSeries": true,
                 "measure": "recent",
                 "direction": "biggestIsBest",
                 "lowerBound": 0,
@@ -485,7 +491,8 @@
             "field":
             [
                 "metric_data","costOfCapital_marketCapitalization"
-            ]
+            ],
+            "isDateSeries": true
         }
     },
     "comparison_screener":
@@ -499,6 +506,7 @@
                 [
                     "metric_data","priceToValue"
                 ],
+                "isDateSeries": true,
                 "measure": "recent",
                 "direction": "smallestIsBest",
                 "lowerBound": 0,
@@ -522,6 +530,7 @@
                 [
                     "metric_data","residualCashFlowToEnterpriseValue"
                 ],
+                "isDateSeries": true,
                 "measure": "recent",
                 "direction": "biggestIsBest",
                 "lowerBound": 0,
@@ -545,6 +554,7 @@
                 [
                     "metric_data","returnOnInvestedCapitalLessCostOfCapital"
                 ],
+                "isDateSeries": true,
                 "measure": "recent",
                 "direction": "biggestIsBest",
                 "lowerBound": 0,
@@ -568,6 +578,7 @@
                 [
                     "metric_data","costOfCapital_marketCapitalization"
                 ],
+                "isDateSeries": true,
                 "measure": "recent",
                 "direction": "biggestIsBest",
                 "lowerBound": 0,

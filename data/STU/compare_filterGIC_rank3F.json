@@ -20,6 +20,7 @@
                         "General",
                         "GicIndustry"
                     ],
+                    "isDateSeries": false,
                     "condition": "==",
                     "operator": "||",
                     "valueType": "string",
