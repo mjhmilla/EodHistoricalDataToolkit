@@ -356,6 +356,7 @@ class FinancialAnalysisToolkit {
 
       while( (indexDate+1) < indexLastCommonDate 
               && indexDate < indexDateMax 
+              && rrV.size() >= 2
               && validDateSet
               && ((calcOneGrowthRateForAllData && indexDate == -1) 
                     || !calcOneGrowthRateForAllData)){

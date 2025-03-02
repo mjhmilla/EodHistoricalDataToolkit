@@ -4,7 +4,7 @@
 
 
 EX="$1"
-HC=$2$
+HC="$2"
 #Note: this calculates trailing twelve month data because the -q flag has been added
 #Note: null values will be propagated through all calculations (-l has been removed)
 #Note: the -q flag has been removed, so the data will be evaluated using annual data 

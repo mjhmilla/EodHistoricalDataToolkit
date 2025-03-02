@@ -22,31 +22,35 @@ class DateFunctions {
 
   //==============================================================================
     static double convertToFractionalYear(const std::string &dateStr){
-      date::year_month_day dateYmd;
-      date::sys_days dateDay, dateDayFirstOfYear;
+      double date = std::nan("1");
 
-      std::istringstream dateStrStreamA(dateStr);
-      dateStrStreamA.exceptions(std::ios::failbit);
-      dateStrStreamA >> date::parse("%Y-%m-%d",dateDay);
+      if(dateStr.size() > 0){
+        date::year_month_day dateYmd;
+        date::sys_days dateDay, dateDayFirstOfYear;
 
-      std::istringstream dateStrStreamB(dateStr);
-      dateStrStreamB.exceptions(std::ios::failbit);
-      dateStrStreamB >> date::parse("%Y-%m-%d",dateYmd);
+        std::istringstream dateStrStreamA(dateStr);
+        dateStrStreamA.exceptions(std::ios::failbit);
+        dateStrStreamA >> date::parse("%Y-%m-%d",dateDay);
 
-      int year = int(dateYmd.year());
-      std::string dateStrFirstOfYear(dateStr.substr(0,4));
-      dateStrFirstOfYear.append("-01-01");
+        std::istringstream dateStrStreamB(dateStr);
+        dateStrStreamB.exceptions(std::ios::failbit);
+        dateStrStreamB >> date::parse("%Y-%m-%d",dateYmd);
 
-      std::istringstream dateStrStreamC(dateStrFirstOfYear);
-      dateStrStreamC.exceptions(std::ios::failbit);      
-      dateStrStreamC >> date::parse("%Y-%m-%d",dateDayFirstOfYear);
+        int year = int(dateYmd.year());
+        std::string dateStrFirstOfYear(dateStr.substr(0,4));
+        dateStrFirstOfYear.append("-01-01");
 
-      double daysInYear = 365.0;
-      if(dateYmd.year().is_leap()){
-        daysInYear=364.0;
+        std::istringstream dateStrStreamC(dateStrFirstOfYear);
+        dateStrStreamC.exceptions(std::ios::failbit);      
+        dateStrStreamC >> date::parse("%Y-%m-%d",dateDayFirstOfYear);
+
+        double daysInYear = 365.0;
+        if(dateYmd.year().is_leap()){
+          daysInYear=364.0;
+        }
+          date = double(year) 
+            + double( (dateDay-dateDayFirstOfYear).count() )/daysInYear;
       }
-      double date = double(year) 
-        + double( (dateDay-dateDayFirstOfYear).count() )/daysInYear;
 
       return date;
     };
