@@ -428,6 +428,7 @@ class FinancialAnalysisToolkit {
             dateSubV[i] -= dateMin;
           }
 
+
           double duration = std::abs(dateSubV.front()-dateSubV.back());
           double g = std::nan("1");
           double R2 = std::nan("1");
@@ -440,6 +441,20 @@ class FinancialAnalysisToolkit {
           for(size_t i=0; i< atoiSubV.size();++i){
             logAtoiSubV[i] = std::log(atoiSubV[i]);
           }
+
+          //Apply the weighting
+          /*
+          std::vector<double> wDateSubV;
+          std::vector<double> wLogAtoiSubV;
+          for(size_t i=0; i<dateSubV.size();++i){
+            double w = dateSubV[i]/dateSubV[0];
+            w *= w;
+            w = std::max(w,0.05);
+            wDateSubV.push_back(w*dateSubV[i]);
+            wLogAtoiSubV.push_back(w*logAtoiSubV[i]);
+          }
+          */
+
           auto [e0, e1, eR2] = 
             boost::math::statistics::simple_ordinary_least_squares_with_R_squared(
                                               dateSubV,logAtoiSubV);
