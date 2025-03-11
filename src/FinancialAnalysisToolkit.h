@@ -51,8 +51,10 @@ class FinancialAnalysisToolkit {
     };
     //============================================================================
     enum EmpiricalGrowthModelTypes{
-      ExponentialGrowthModel=0,
-      ApproximateExponentialModel,
+      ExponentialModel=0,
+      ExponentialCyclicalModel,
+      LinearModel,
+      LinearCyclicalModel,
       NUM_EMPIRICAL_GROWTH_MODELS
     };
     //============================================================================
@@ -60,6 +62,14 @@ class FinancialAnalysisToolkit {
       std::vector< double > years;
       std::vector< double > afterTaxOperatingIncome;
     };
+    //============================================================================
+    struct EmpiricalGrowthModel{
+      int modelType;
+      std::vector< double > parameters;
+      double growth;
+      double R2;
+      bool validFitting;
+    };    
     //============================================================================
     struct EmpiricalGrowthDataSet{
       std::vector< std::string > dates;
@@ -175,6 +185,7 @@ class FinancialAnalysisToolkit {
       termNames.push_back(nameToPrepend+"AfterTaxOperatingIncomeGrowth");
       termValues.push_back(empiricalGrowthData.afterTaxOperatingIncomeGrowth[index]);
 
+
       termNames.push_back(nameToPrepend+"ModelR2");
       termValues.push_back(empiricalGrowthData.growthModelR2[index]); 
 
@@ -204,6 +215,61 @@ class FinancialAnalysisToolkit {
 
       termNames.push_back(nameToPrepend+"OutlierCount");
       termValues.push_back(empiricalGrowthData.outlierCount[index]); 
+
+    };
+    //==========================================================================
+    static void fitExponentialGrowthModel(
+                  std::vector< double > &dateNum,
+                  std::vector< double > &atoi,
+                  double startingDate,
+                  double maxProportionOfNegativeAtoi,
+                  EmpiricalGrowthModel &exponentialModel){
+
+      //Go through and count the atoi entries < 1
+      exponentialModel.validFitting=true;
+      int invalidEntryCount = 0;
+      for(size_t i=0; i< atoi.size();++i){
+        if(atoi[i]<1){
+          atoi[i]=1.0;
+          ++invalidEntryCount;
+        }
+      }
+
+      
+      double invalidEntryProportion = 
+          static_cast<double>(invalidEntryCount)
+        / static_cast<double>(atoi.size());
+
+      if(invalidEntryProportion > maxProportionOfNegativeAtoi){
+        exponentialModel.validFitting=false;
+      }
+
+      if(exponentialModel.validFitting){
+
+        exponentialModel.modelType = 
+          static_cast<int>(
+            EmpiricalGrowthModelTypes::ExponentialModel);
+
+        std::vector<double> logAtoi(atoi.size());
+        for(size_t i=0; i< atoi.size();++i){
+          logAtoi[i] = std::log(atoi[i]);
+        } 
+
+        auto [e0, e1, R2] = 
+          boost::math::statistics::
+            simple_ordinary_least_squares_with_R_squared(dateNum,logAtoi);
+
+        double growth       = std::exp( e1 )-1.0;
+        double initalValue  = std::exp( e0 + e1*dateNum.back());
+        double y0Exp        = std::exp( e0 + e1*dateNum.back());
+        double y1Exp        = std::exp( e0 + e1*dateNum.front());             
+
+        exponentialModel.growth=growth;
+        exponentialModel.parameters.push_back(startingDate);
+        exponentialModel.parameters.push_back(initalValue);
+        exponentialModel.parameters.push_back(growth);
+        exponentialModel.R2=R2;
+      }
 
     };
 
@@ -427,33 +493,27 @@ class FinancialAnalysisToolkit {
           for(size_t i=0; i<dateSubV.size();++i){
             dateSubV[i] -= dateMin;
           }
+          double duration = std::abs(dateSubV.front()-dateSubV.back());
 
-
+          EmpiricalGrowthModel expModel, bestModel;
+          fitExponentialGrowthModel(dateSubV,atoiSubV,dateMin,
+                                    maxProportionOfNegativeOpIncome,expModel);
+          bestModel=expModel;
+          double initialValue = bestModel.parameters[1];
+          /*
           double duration = std::abs(dateSubV.front()-dateSubV.back());
           double g = std::nan("1");
           double R2 = std::nan("1");
 
           int typeOfGrowthModel = 
             static_cast<int>(
-              EmpiricalGrowthModelTypes::ExponentialGrowthModel);
+              EmpiricalGrowthModelTypes::ExponentialModel);
 
           std::vector<double> logAtoiSubV(atoiSubV.size());
           for(size_t i=0; i< atoiSubV.size();++i){
             logAtoiSubV[i] = std::log(atoiSubV[i]);
           }
 
-          //Apply the weighting
-          /*
-          std::vector<double> wDateSubV;
-          std::vector<double> wLogAtoiSubV;
-          for(size_t i=0; i<dateSubV.size();++i){
-            double w = dateSubV[i]/dateSubV[0];
-            w *= w;
-            w = std::max(w,0.05);
-            wDateSubV.push_back(w*dateSubV[i]);
-            wLogAtoiSubV.push_back(w*logAtoiSubV[i]);
-          }
-          */
 
           auto [e0, e1, eR2] = 
             boost::math::statistics::simple_ordinary_least_squares_with_R_squared(
@@ -467,14 +527,13 @@ class FinancialAnalysisToolkit {
           g = gExp;
           typeOfGrowthModel = 
             static_cast<int>(
-                EmpiricalGrowthModelTypes::ExponentialGrowthModel);              
+                EmpiricalGrowthModelTypes::ExponentialModel);              
           R2 = eR2;                    
-          
+          */
 
-
-
-
+          //
           //Evaluate the average rate of reinvestment
+          //
           double count=0.;
           double rrAvg = 0.;
 
@@ -495,18 +554,19 @@ class FinancialAnalysisToolkit {
           rrSd = std::sqrt(rrSd / count);
 
           if(count > 0 && !std::isnan(rrAvg) && !std::isinf(rrAvg)){
-            empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(g);
+            empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(bestModel.growth);
             empiricalGrowthDataUpd.reinvestmentRate.push_back(rrAvg);
             empiricalGrowthDataUpd.reinvestmentRateStandardDeviation.push_back(rrSd);
             empiricalGrowthDataUpd.dates.push_back(dateV[indexDate]);
             empiricalGrowthDataUpd.datesNumerical.push_back(dateNumV[indexDate]); 
-            empiricalGrowthDataUpd.typeOfGrowthModel.push_back(typeOfGrowthModel);    
-            empiricalGrowthDataUpd.growthModelR2.push_back(R2);
+            empiricalGrowthDataUpd.typeOfGrowthModel.push_back(bestModel.modelType);    
+            empiricalGrowthDataUpd.growthModelR2.push_back(bestModel.R2);
             empiricalGrowthDataUpd.durationNumerical.push_back(duration);
             empiricalGrowthDataUpd.outlierCount.push_back(invalidEntryCount);
 
             empiricalGrowthDataUpd.intervalStartDate.push_back(dateMin);
-            empiricalGrowthDataUpd.intervalStartingAfterTaxOperatingIncome.push_back(y0Exp);
+            empiricalGrowthDataUpd.
+              intervalStartingAfterTaxOperatingIncome.push_back(initialValue);
           }  
         }   
       }     
@@ -530,7 +590,7 @@ class FinancialAnalysisToolkit {
 
       if(found){
         if(empiricalGrowthData.typeOfGrowthModel[index] ==
-          static_cast<int>(EmpiricalGrowthModelTypes::ExponentialGrowthModel)){
+          static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel)){
           int n = std::round(empiricalGrowthData.durationNumerical[index]);
                     
           empiricalGrowthSampleUpd.years.resize(n+1);
