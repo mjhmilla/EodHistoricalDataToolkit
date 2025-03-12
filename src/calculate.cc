@@ -17,6 +17,7 @@
 #include <filesystem>
 
 #include "FinancialAnalysisToolkit.h"
+#include "NumericalToolkit.h"
 #include "JsonFunctions.h"
 #include "DateFunctions.h"
 
@@ -1852,7 +1853,7 @@ int main (int argc, char* argv[]) {
       //Evaluate the growth rate data over the same relatively short
       //period of time that is used for the growth period during
       //the valution (5 years)
-      FinancialAnalysisToolkit::EmpiricalGrowthDataSet empiricalGrowthData;
+      NumericalToolkit::EmpiricalGrowthDataSet empiricalGrowthData;
       double growthIntervalInYears = 
         static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
       bool calcOneGrowthRateForAllData=false;
@@ -1872,7 +1873,7 @@ int main (int argc, char* argv[]) {
 
 
       //Evaluate the growth rate using all of the data available
-      FinancialAnalysisToolkit::EmpiricalGrowthDataSet empiricalGrowthDataAll;
+      NumericalToolkit::EmpiricalGrowthDataSet empiricalGrowthDataAll;
 
       growthIntervalInYears = 
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
@@ -2581,7 +2582,7 @@ int main (int argc, char* argv[]) {
 
         if(empiricalGrowthData.dates.size() > 0){
           size_t indexGrowth = 
-          FinancialAnalysisToolkit::getIndexOfEmpiricalGrowthDataSet(
+          NumericalToolkit::getIndexOfEmpiricalGrowthDataSet(
                                 dateDouble,
                                 maxDateErrorInYearsInEmpiricalData,
                                 empiricalGrowthData);
@@ -2644,13 +2645,13 @@ int main (int argc, char* argv[]) {
             std::string nameToPrepend("empiricalAvg");
 
             FinancialAnalysisToolkit::appendEmpiricalGrowthRateData(
-                  0,      
-                  empiricalGrowthDataAll,
-                  dateDouble,
-                  costOfCapitalMature,
-                  nameToPrepend,
-                  termNames,
-                  termValues);
+                                  0,      
+                                  empiricalGrowthDataAll,
+                                  dateDouble,
+                                  costOfCapitalMature,
+                                  nameToPrepend,
+                                  termNames,
+                                  termValues);
           }
 
           if(empiricalGrowthDataAll.datesNumerical.size()==1){
@@ -2750,20 +2751,20 @@ int main (int argc, char* argv[]) {
 
 
       //Evaluate the most recent rate of growth
-      FinancialAnalysisToolkit::EmpiricalGrowthDataSetSample recentGrowthSeries;
+      NumericalToolkit::EmpiricalGrowthDataSetSample recentGrowthSeries;
 
       FinancialAnalysisToolkit::evaluateGrowthModel(
-                                  empiricalGrowthData.dates[0],
-                                  empiricalGrowthData,
-                                  recentGrowthSeries);
+                            empiricalGrowthData.dates[0],
+                            empiricalGrowthData,
+                            recentGrowthSeries);
 
       //Evaluate the most recent rate of growth
-      FinancialAnalysisToolkit::EmpiricalGrowthDataSetSample avgGrowthSeries;
+      NumericalToolkit::EmpiricalGrowthDataSetSample avgGrowthSeries;
 
       FinancialAnalysisToolkit::evaluateGrowthModel(
-                                  empiricalGrowthDataAll.dates[0],
-                                  empiricalGrowthDataAll,
-                                  avgGrowthSeries);
+                          empiricalGrowthDataAll.dates[0],
+                          empiricalGrowthDataAll,
+                          avgGrowthSeries);
 
       nlohmann::ordered_json vectorAnalysis;      
       vectorAnalysis["average_years"] 
