@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <sstream>
+#include <numeric>
 #include <boost/math/statistics/linear_regression.hpp>
 
 #include "FinancialAnalysisFunctions.h"
@@ -38,7 +39,9 @@ class NumericalFunctions {
       double r2;
       bool validFitting;
       int outlierCount;
-      std::vector< double > parameters;      
+      std::vector< double > parameters;  
+      std::vector< double > x;
+      std::vector< double > y;
     };    
     //============================================================================
     struct EmpiricalGrowthDataSet{
@@ -72,16 +75,137 @@ class NumericalFunctions {
       return index;
     };
 
+
+    //Evaluates R2 using the same method as boost's linear_regresssion
+    //function
+    // https://live.boost.org/doc/libs/1_83_0/libs/math/doc/html/math_toolkit/linear_regression.html
+    static double calcR2(const std::vector< double > &y,
+                         const std::vector< double > &yRef){
+
+      
+      if(y.size()!=yRef.size()){
+        std::cout << "Error: calcR2 both vectors must have the same length" 
+                  << std::endl;
+        std::abort();
+      }
+
+      double yRefMean = std::reduce(yRef.begin(), yRef.end());
+      yRefMean /= static_cast<double>(yRef.size());
+
+      double numerator=0.;
+      double denominator=0.;
+
+      for(size_t i=0; i<yRef.size();++i){
+        double t0 = yRef[i]-y[i];
+        numerator += (t0*t0);
+
+        double t1 = yRef[i]-yRefMean;
+        denominator += t1*t1;
+      }
+
+      return (1.0 - (numerator/denominator));
+
+    };
+    //==========================================================================
+    static void fitCyclicalModel(
+                  const std::vector< double > &x,
+                  const std::vector< double > &y,
+                  EmpiricalGrowthModel &modelUpd){
+    };
+    //==========================================================================
+    static void fitCyclicalModelWithLinearBaseline(
+                  const std::vector< double > &x,
+                  const std::vector< double > &y,
+                  EmpiricalGrowthModel &modelUpd){
+      EmpiricalGrowthModel linearModel;
+      fitLinearGrowthModel(x,y,linearModel);
+
+      //Subtract off the base line then call            
+
+      //fitCyclicalModel;
+
+    };
+    //==========================================================================
+    static void fitLinearGrowthModel(
+                  const std::vector< double > &x,
+                  const std::vector< double > &y,
+                  EmpiricalGrowthModel &modelUpd){
+
+      //Remove the bias on x
+      double w0 = *std::min_element(x.begin(),x.end());
+      double w1 = *std::max_element(x.begin(),x.end());      
+      std::vector< double > w;
+      w.resize(x.size());
+      for(size_t i=0; i<x.size();++i){
+        w[i] = x[i]-w0;
+      }      
+
+      modelUpd.duration = 
+        std::abs(x.front()-x.back());
+
+      modelUpd.modelType = 
+        static_cast<int>(
+          EmpiricalGrowthModelTypes::LinearModel);
+
+      auto [y0Mdl, dydwMdl, r2] = 
+        boost::math::statistics::
+          simple_ordinary_least_squares_with_R_squared(w,y);
+
+
+      double y1Mdl        = y0Mdl + dydwMdl*modelUpd.duration;    
+
+      //Here I'm normalizing the slope by the starting and ending values
+      //to get something like a growth rate
+      double growth0      = (dydwMdl/y0Mdl);
+      double growth1      = (dydwMdl/y1Mdl);
+
+      std::vector< double > yMdl(x.size());   
+      for(size_t i=0; i<w.size(); ++i){
+        yMdl[i]= y0Mdl + dydwMdl*w[i];
+      }
+
+      //double r2Test = calcR2(yMdl,y);
+
+
+      modelUpd.growthRate=growth1;
+      modelUpd.parameters.push_back(w0);
+      modelUpd.parameters.push_back(y0Mdl);
+      modelUpd.parameters.push_back(dydwMdl);
+      modelUpd.validFitting=true;
+      modelUpd.r2=r2;
+      modelUpd.x = x;
+      modelUpd.y = yMdl;
+                              
+    };
+    //==========================================================================    
+    static void fitCyclicalModelWithExponentialBaseline(
+                  const std::vector< double > &x,
+                  const std::vector< double > &y,
+                  double maxProportionOfNegativeAtoi,
+                  EmpiricalGrowthModel &modelUpd){
+
+      EmpiricalGrowthModel exponentialModel;
+      fitExponentialGrowthModel(x,y,maxProportionOfNegativeAtoi,
+                                exponentialModel);
+
+      //Subtract off the base line then call            
+
+      //fitCyclicalModel;
+
+
+    };
     //==========================================================================
     static void fitExponentialGrowthModel(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
                   double maxProportionOfNegativeAtoi,
-                  EmpiricalGrowthModel &exponentialModelUpd){
+                  EmpiricalGrowthModel &modelUpd){
 
       //Remove the bias on x
       double w0 = *std::min_element(x.begin(),x.end());
+      double w1 = *std::max_element(x.begin(),x.end());
       std::vector< double > w;
+
       w.resize(x.size());
       for(size_t i=0; i<x.size();++i){
         w[i] = x[i]-w0;
@@ -91,31 +215,30 @@ class NumericalFunctions {
       std::vector< double > z;
       z.resize(y.size());
       
-      exponentialModelUpd.validFitting=true;
-      exponentialModelUpd.outlierCount = 0;
+      modelUpd.validFitting=true;
+      modelUpd.outlierCount = 0;
       for(size_t i=0; i< y.size();++i){
         if(y[i]<1){
-          w[i]=1.0;
-          ++exponentialModelUpd.outlierCount;
+          z[i]=1.0;
+          ++modelUpd.outlierCount;
         }else{
-          w[i]=y[i];
+          z[i]=y[i];
         }
       }
       
       double invalidEntryProportion = 
-          static_cast<double>(exponentialModelUpd.outlierCount)
+          static_cast<double>(modelUpd.outlierCount)
         / static_cast<double>(y.size());
 
       if(invalidEntryProportion > maxProportionOfNegativeAtoi){
-        exponentialModelUpd.validFitting=false;
+        modelUpd.validFitting=false;
       }
 
-      if(exponentialModelUpd.validFitting){
+      if(modelUpd.validFitting){
 
-        exponentialModelUpd.duration = 
-          std::abs(x.front()-x.back());
+        modelUpd.duration = w1-w0;
 
-        exponentialModelUpd.modelType = 
+        modelUpd.modelType = 
           static_cast<int>(
             EmpiricalGrowthModelTypes::ExponentialModel);
 
@@ -124,20 +247,35 @@ class NumericalFunctions {
           logZ[i] = std::log(z[i]);
         } 
 
-        auto [e0, e1, r2] = 
+        auto [z0Mdl, dzdwMdl, logZR2] = 
           boost::math::statistics::
             simple_ordinary_least_squares_with_R_squared(w,logZ);
 
-        double growth       = std::exp( e1 )-1.0;
-        double initalValue  = std::exp( e0 + e1*x.back());
-        double y0Exp        = std::exp( e0 + e1*x.back());
-        double y1Exp        = std::exp( e0 + e1*x.front());             
+        double growth       = std::exp( dzdwMdl )-1.0;
+        double y0Mdl        = std::exp( z0Mdl );
+        double y1Mdl        = std::exp( z0Mdl + dzdwMdl*modelUpd.duration);    
 
-        exponentialModelUpd.growthRate=growth;
-        exponentialModelUpd.parameters.push_back(w0);
-        exponentialModelUpd.parameters.push_back(initalValue);
-        exponentialModelUpd.parameters.push_back(growth);
-        exponentialModelUpd.r2=r2;
+        std::vector< double > yMdl(x.size());   
+        for(size_t i=0; i<w.size(); ++i){
+          yMdl[i]=y0Mdl*pow(1.0+growth,w[i]);
+        }
+
+        double r2 = calcR2(yMdl,y);
+
+        //This matches the R2 returned by boost
+        //std::vector< double > logZMdl(x.size());
+        //for(size_t i=0; i<w.size();++i){
+        //  logZMdl[i] = std::log(zMdl[i]);
+        //}
+        //double r2CalcLog = calcR2(logZMdl,logZ);
+
+        modelUpd.growthRate=growth;
+        modelUpd.parameters.push_back(w0);
+        modelUpd.parameters.push_back(y0Mdl);
+        modelUpd.parameters.push_back(growth);
+        modelUpd.r2=r2;
+        modelUpd.x = x;
+        modelUpd.y = yMdl;
       }
 
     };
@@ -154,7 +292,8 @@ class NumericalFunctions {
           int maxDayErrorTTM,
           double growthIntervalInYears,
           double maxProportionOfNegativeOpIncome,
-          bool calcOneGrowthRateForAllData)
+          bool calcOneGrowthRateForAllData,
+          int empiricalModelType)
     {
 
       int indexDate       = -1;
@@ -352,13 +491,52 @@ class NumericalFunctions {
            && (foundStartDate || calcOneGrowthRateForAllData)){
 
 
-          NumericalFunctions::EmpiricalGrowthModel expModel, bestModel;
+          EmpiricalGrowthModel empModel;
+          
+          if(empiricalModelType==-1){
+            EmpiricalGrowthModel exponentialModel, linearModel;
 
+            fitExponentialGrowthModel(dateSubV,atoiSubV,
+                        maxProportionOfNegativeOpIncome,exponentialModel);
 
-          NumericalFunctions::fitExponentialGrowthModel(dateSubV,atoiSubV,
-                                    maxProportionOfNegativeOpIncome,expModel);
-          bestModel=expModel;
-          double initialValue = bestModel.parameters[1];
+            fitLinearGrowthModel(dateSubV,atoiSubV,linearModel);
+
+            if(exponentialModel.r2 > linearModel.r2){
+              empModel=exponentialModel;
+            }else{
+              empModel=linearModel;
+            }
+          }else{
+            switch(empiricalModelType){
+              case 0:
+              {
+                fitExponentialGrowthModel(dateSubV,atoiSubV,
+                        maxProportionOfNegativeOpIncome,empModel);
+              }break;
+              case 1:
+              {                
+                fitExponentialGrowthModel(dateSubV,atoiSubV,
+                        maxProportionOfNegativeOpIncome,empModel);
+                //Add cyclic fitting to exp baseline
+              }break;
+              case 2:
+              {
+                fitLinearGrowthModel(dateSubV,atoiSubV,empModel);
+              }break;
+              case 3:
+              {
+                fitLinearGrowthModel(dateSubV,atoiSubV,empModel);
+                //Add cyclic fitting to linear baseline
+              }break;
+              default:
+                std::cout <<"Error: empiricalModelType must be [0,1,2,3]"
+                          <<std::endl;
+                std::abort();
+            };
+
+          }
+
+          
 
           //
           //Evaluate the average rate of reinvestment
@@ -382,7 +560,7 @@ class NumericalFunctions {
           }
           rrSd = std::sqrt(rrSd / count);
 
-          double roic = bestModel.growthRate/rrAvg;
+          double roic = empModel.growthRate/rrAvg;
 
           //
           // Store the model results
@@ -390,7 +568,7 @@ class NumericalFunctions {
           if(count > 0 && !std::isnan(rrAvg) && !std::isinf(rrAvg)){
 
             empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(
-                bestModel.growthRate);
+                empModel.growthRate);
 
             empiricalGrowthDataUpd.reinvestmentRate.push_back(rrAvg);
             empiricalGrowthDataUpd.reinvestmentRateSD.push_back(rrSd);
@@ -401,7 +579,7 @@ class NumericalFunctions {
             empiricalGrowthDataUpd.datesNumerical.push_back(
                 dateNumV[indexDate]);
 
-            empiricalGrowthDataUpd.model.push_back(bestModel);     
+            empiricalGrowthDataUpd.model.push_back(empModel);     
 
             //empiricalGrowthDataUpd.intervalStartDate.push_back(dateMin);
 
@@ -424,8 +602,8 @@ class NumericalFunctions {
     //==========================================================================
     static void evaluateGrowthModel(
       const std::string &endDate,
-      const NumericalFunctions::EmpiricalGrowthDataSet &empiricalGrowthData,
-      NumericalFunctions::EmpiricalGrowthDataSetSample &empiricalGrowthSampleUpd)
+      const EmpiricalGrowthDataSet &empiricalGrowthData,
+      EmpiricalGrowthDataSetSample &empiricalGrowthSampleUpd)
     {
       bool found = false;
       size_t index = 0;
@@ -439,7 +617,7 @@ class NumericalFunctions {
 
       if(found){
         if(empiricalGrowthData.model[index].modelType ==
-          static_cast<int>(NumericalFunctions::EmpiricalGrowthModelTypes::ExponentialModel)){
+          static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel)){
           int n = std::round(empiricalGrowthData.model[index].duration);
                     
           empiricalGrowthSampleUpd.years.resize(n+1);
@@ -471,7 +649,7 @@ class NumericalFunctions {
     //==========================================================================
     static void appendEmpiricalGrowthRateData(
         size_t index,      
-        const NumericalFunctions::EmpiricalGrowthDataSet &empiricalGrowthData,
+        const EmpiricalGrowthDataSet &empiricalGrowthData,
         double dateInYears,
         double costOfCapitalMature,
         const std::string nameToPrepend,

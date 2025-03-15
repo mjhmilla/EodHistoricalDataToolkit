@@ -1850,36 +1850,16 @@ int main (int argc, char* argv[]) {
       }
 
 
-      //Evaluate the growth rate data over the same relatively short
-      //period of time that is used for the growth period during
-      //the valution (5 years)
-      NumericalFunctions::EmpiricalGrowthDataSet empiricalGrowthData;
-      double growthIntervalInYears = 
-        static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
-      bool calcOneGrowthRateForAllData=false;
-      NumericalFunctions::extractEmpiricalGrowthRates(
-                                  empiricalGrowthData,            
-                                  fundamentalData,
-                                  taxRateRecord,
-                                  analysisDates,
-                                  timePeriod,
-                                  indexLastCommonDate,
-                                  quarterlyTTMAnalysis,
-                                  maxDayErrorTTM,
-                                  growthIntervalInYears,
-                                  maxProportionOfNegativeOpIncomeInEmpiricalData,
-                                  calcOneGrowthRateForAllData);
-
-
-
       //Evaluate the growth rate using all of the data available
       NumericalFunctions::EmpiricalGrowthDataSet empiricalGrowthDataAll;
 
-      growthIntervalInYears = 
+      double growthIntervalInYears = 
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
       - DateFunctions::convertToFractionalYear(analysisDates.common.back());
       
-      calcOneGrowthRateForAllData=true;
+      bool calcOneGrowthRateForAllData=true;
+      int empiricalModelType = -1; //When this is set to -1 the model
+                                   //that best fits is identified
       NumericalFunctions::extractEmpiricalGrowthRates(
                                   empiricalGrowthDataAll,            
                                   fundamentalData,
@@ -1891,7 +1871,35 @@ int main (int argc, char* argv[]) {
                                   maxDayErrorTTM,
                                   growthIntervalInYears,
                                   maxProportionOfNegativeOpIncomeInEmpiricalData,
-                                  calcOneGrowthRateForAllData);                                  
+                                  calcOneGrowthRateForAllData,
+                                  empiricalModelType);  
+
+      empiricalModelType = empiricalGrowthDataAll.model[0].modelType;
+
+      //Evaluate the growth rate data over the same relatively short
+      //period of time that is used for the growth period during
+      //the valution (5 years)
+      NumericalFunctions::EmpiricalGrowthDataSet empiricalGrowthData;
+      growthIntervalInYears = 
+        static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
+      calcOneGrowthRateForAllData=false;
+      NumericalFunctions::extractEmpiricalGrowthRates(
+                                  empiricalGrowthData,            
+                                  fundamentalData,
+                                  taxRateRecord,
+                                  analysisDates,
+                                  timePeriod,
+                                  indexLastCommonDate,
+                                  quarterlyTTMAnalysis,
+                                  maxDayErrorTTM,
+                                  growthIntervalInYears,
+                                  maxProportionOfNegativeOpIncomeInEmpiricalData,
+                                  calcOneGrowthRateForAllData,
+                                  empiricalModelType);
+
+
+
+                                
 
 
      
