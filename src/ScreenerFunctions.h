@@ -1,8 +1,8 @@
 //SPDX-FileCopyrightText: 2023 Matthew Millard millard.matthew@gmail.com
 //SPDX-License-Identifier: MIT
 
-#ifndef SCREENER_TOOLKIT
-#define SCREENER_TOOLKIT
+#ifndef SCREENER_FUNCTIONS
+#define SCREENER_FUNCTIONS
 
 #include <cmath>
 #include <string>
@@ -15,7 +15,7 @@
 #include "JsonFunctions.h"
 
 
-class ScreenerToolkit {
+class ScreenerFunctions {
 
   public:
 

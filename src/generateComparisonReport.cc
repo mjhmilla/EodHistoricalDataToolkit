@@ -17,12 +17,12 @@
 #include <nlohmann/json.hpp>
 #include <tclap/CmdLine.h>
 
-#include "FinancialAnalysisToolkit.h"
+#include "FinancialAnalysisFunctions.h"
 #include "JsonFunctions.h"
 #include <sciplot/sciplot.hpp>
 #include "PlottingFunctions.h"
 #include "ReportingFunctions.h"
-#include "ScreenerToolkit.h"
+#include "ScreenerFunctions.h"
 
 struct TickerSet{
   std::vector< std::string > filtered;
@@ -31,8 +31,8 @@ struct TickerSet{
 
 
 void appendComparisonData(
-  const std::vector< ScreenerToolkit::MetricSummaryDataSet > &metricSummaryDataSet,
-  ScreenerToolkit::MetricSummaryDataSet &metricComparisonDataSetUpd)
+  const std::vector< ScreenerFunctions::MetricSummaryDataSet > &metricSummaryDataSet,
+  ScreenerFunctions::MetricSummaryDataSet &metricComparisonDataSetUpd)
 {
     
 
@@ -251,7 +251,7 @@ void plotComparisonReportData(
     size_t indexStart,
     size_t indexEnd,
     const nlohmann::ordered_json &comparisonConfig, 
-    const std::vector< ScreenerToolkit::MetricSummaryDataSet > &metricSummaryDataSet,
+    const std::vector< ScreenerFunctions::MetricSummaryDataSet > &metricSummaryDataSet,
     const PlottingFunctions::PlotSettings &settings,
     const std::string &comparisonReportFolder,
     const std::string &comparisonPlotFileName,
@@ -604,7 +604,7 @@ void generateComparisonLaTeXReport(
       size_t indexStart,
       size_t indexEnd,
       const nlohmann::ordered_json &comparisonConfig, 
-      const std::vector< ScreenerToolkit::MetricSummaryDataSet> &metricDataSet,
+      const std::vector< ScreenerFunctions::MetricSummaryDataSet> &metricDataSet,
       const std::vector< std::string > &comparisonSummaryPlots,
       const std::string &tickerReportFolder,
       const std::string &comparisonReportFolder,
@@ -1053,7 +1053,7 @@ int main (int argc, char* argv[]) {
       for(auto &screenItem : comparisonConfig["screens"].items()){  
 
         tickerPassesFilter = 
-          ScreenerToolkit::applyFilter(
+          ScreenerFunctions::applyFilter(
             fileName,
             fundamentalData,
             historicalData,
@@ -1114,7 +1114,7 @@ int main (int argc, char* argv[]) {
 
 
 
-  std::vector< ScreenerToolkit::MetricSummaryDataSet > metricSummaryDataSet;
+  std::vector< ScreenerFunctions::MetricSummaryDataSet > metricSummaryDataSet;
 
 
   int screenCount = 0;
@@ -1126,7 +1126,7 @@ int main (int argc, char* argv[]) {
 
     if(tickerSet[screenCount].filtered.size()>0){
       
-      ScreenerToolkit::MetricSummaryDataSet metricSummaryData;
+      ScreenerFunctions::MetricSummaryDataSet metricSummaryData;
 
       for(size_t i=0; i< tickerSet[screenCount].filtered.size();++i){
         //
@@ -1175,7 +1175,7 @@ int main (int argc, char* argv[]) {
 
         if(validInput){
           bool appendedMetricData = 
-            ScreenerToolkit::appendMetricData(
+            ScreenerFunctions::appendMetricData(
                             tickerSet[screenCount].filtered[i],  
                             fundamentalData,                 
                             historicalData,
@@ -1188,7 +1188,7 @@ int main (int argc, char* argv[]) {
         }
       }
 
-      ScreenerToolkit::rankMetricData(screenItem.value(),
+      ScreenerFunctions::rankMetricData(screenItem.value(),
                                       metricSummaryData,
                                       verbose);
 
@@ -1221,18 +1221,18 @@ int main (int argc, char* argv[]) {
   //
   // Evaluate the average metric data of each screen
   //
-  ScreenerToolkit::MetricSummaryDataSet screenerSummarySet;
+  ScreenerFunctions::MetricSummaryDataSet screenerSummarySet;
   appendComparisonData( metricSummaryDataSet,
                         screenerSummarySet);
 
-  ScreenerToolkit::rankMetricData(comparisonConfig["comparison_screener"],
+  ScreenerFunctions::rankMetricData(comparisonConfig["comparison_screener"],
                                   screenerSummarySet,
                                   verbose);                        
 
   //
   // Re-order the metric summary data set
   //
-  std::vector< ScreenerToolkit::MetricSummaryDataSet > metricSummaryDataSetSorted;
+  std::vector< ScreenerFunctions::MetricSummaryDataSet > metricSummaryDataSetSorted;
   for(size_t indexScreen = 0; 
       indexScreen < metricSummaryDataSet.size(); ++indexScreen){
     size_t indexSorted = screenerSummarySet.sortedIndex[indexScreen];

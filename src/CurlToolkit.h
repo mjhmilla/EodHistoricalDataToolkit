@@ -10,7 +10,7 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
-#include "StringToolkit.h"
+#include "StringFunctions.h"
 
 
 
@@ -49,7 +49,7 @@ class CurlToolkit {
       //ss << outputFolder << outputFileName;
       //std::string outputFilePathName = ss.str();
       //std::string removeStr("\"");
-      //StringToolkit::removeFromString(outputFilePathName,removeStr); 
+      //StringFunctions::removeFromString(outputFilePathName,removeStr); 
 
       //bool fileExists=false;
       //if(skipIfFileExists){

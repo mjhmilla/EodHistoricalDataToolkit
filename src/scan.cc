@@ -11,7 +11,7 @@
 #include <filesystem>
 
 #include "JsonFunctions.h"
-#include "FinancialAnalysisToolkit.h"
+#include "FinancialAnalysisFunctions.h"
 
 struct CountryExchangeData {
   std::vector< std::string > exchanges;
@@ -193,7 +193,7 @@ int main (int argc, char* argv[]) {
         std::string isinCountryISO2("");
         std::string isinCountryISO3("");
 
-        FinancialAnalysisToolkit::
+        FinancialAnalysisFunctions::
           getIsinCountryCodes(isin, exchangeList,isinCountryISO2,isinCountryISO3);
 
         bool countryCodeFound=false;

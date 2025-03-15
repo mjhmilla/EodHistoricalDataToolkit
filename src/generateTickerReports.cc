@@ -19,7 +19,7 @@
 
 #include <sciplot/sciplot.hpp>
 
-#include "FinancialAnalysisToolkit.h"
+#include "FinancialAnalysisFunctions.h"
 #include "JsonFunctions.h"
 #include "ReportingFunctions.h"
 #include "PlottingFunctions.h"

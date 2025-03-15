@@ -1,8 +1,8 @@
 //SPDX-FileCopyrightText: 2023 Matthew Millard millard.matthew@gmail.com
 //SPDX-License-Identifier: MIT
 
-#ifndef FINANCIAL_ANALYSIS_TOOLKIT
-#define FINANCIAL_ANALYSIS_TOOLKIT
+#ifndef FINANCIAL_ANALYSIS_FUNCTIONS
+#define FINANCIAL_ANALYSIS_FUNCTIONS
 
 #include <cmath>
 #include <string>
@@ -14,7 +14,7 @@
 #include <nlohmann/json.hpp>
 #include "JsonFunctions.h"
 #include "DateFunctions.h"
-#include "NumericalToolkit.h"
+
 
 const char *GEN = "General";
 const char *TECH= "Technicals";
@@ -29,7 +29,7 @@ const char *A = "annual"; //EOD uses annual in the outstandingShares list.
 const char *Q = "quarterly";
 
 
-class FinancialAnalysisToolkit {
+class FinancialAnalysisFunctions {
 
   public:
     //============================================================================
@@ -130,397 +130,7 @@ class FinancialAnalysisToolkit {
 
     };
 
-    //==========================================================================
-    static void extractEmpiricalGrowthRates(
-          NumericalToolkit::EmpiricalGrowthDataSet &empiricalGrowthDataUpd,
-          const nlohmann::ordered_json &fundamentalData,
-          const std::vector< double > &taxRateRecord,
-          const AnalysisDates &analysisDates,
-          std::string &timePeriod,
-          int indexLastCommonDate,
-          bool quarterlyTTMAnalysis,
-          int maxDayErrorTTM,
-          double growthIntervalInYears,
-          double maxProportionOfNegativeOpIncome,
-          bool calcOneGrowthRateForAllData)
-    {
 
-      int indexDate       = -1;
-      bool validDateSet    = true;
-
-      std::vector < double > dateNumV;    //Fractional year
-      std::vector < std::string > dateV;  //string yer
-      std::vector < double > atoiV;       //after tax operating income 
-      std::vector < double > rrV;         //reinvestment rate
-
-      std::string previousTimePeriod("");
-      std::vector< std::string > previousDateSet;
-      std::vector< double > previousDateSetWeight;
-
-      double maxYearErrorTTM = maxDayErrorTTM / DateFunctions::DAYS_PER_YEAR;
-
-      //
-      // For all time periods with sufficient data evaluate: after-tax operating
-      // income and the reinvestment rate
-      //
-      while( (indexDate+1) < indexLastCommonDate && validDateSet){
-        ++indexDate;
-
-        //The set of dates used for the TTM analysis
-        std::vector < std::string > dateSetTTM;
-        std::vector < double > dateSetTTMWeight;
-
-        if(quarterlyTTMAnalysis){
-          validDateSet = extractTTM(indexDate,
-                                    analysisDates.common,
-                                    "%Y-%m-%d",
-                                    dateSetTTM,                                    
-                                    dateSetTTMWeight,
-                                    maxDayErrorTTM); 
-          if(!validDateSet){
-            break;
-          }     
-        }else{
-          dateSetTTM.push_back(analysisDates.common[indexDate]);
-        }                     
-
-        //Check if we have enough data to get the previous time period
-        int indexPrevious = indexDate+static_cast<int>(dateSetTTM.size());        
-
-        //
-        //Fetch the previous TTM
-        //
-        previousTimePeriod = analysisDates.common[indexPrevious];
-        previousDateSet.resize(0);
-
-        if(quarterlyTTMAnalysis){
-          validDateSet = extractTTM(indexPrevious,
-                                    analysisDates.common,
-                                    "%Y-%m-%d",
-                                    previousDateSet,
-                                    previousDateSetWeight,
-                                    maxDayErrorTTM); 
-          if(!validDateSet){
-            break;
-          }     
-        }else{
-          previousDateSet.push_back(previousTimePeriod);
-        } 
-
-        if(validDateSet){
-          double operatingIncome = 
-            FinancialAnalysisToolkit::sumFundamentalDataOverDates(
-                fundamentalData,FIN,IS,timePeriod.c_str(),dateSetTTM,
-                "operatingIncome",true);
-          
-          if(JsonFunctions::isJsonFloatValid(operatingIncome)){
-
-          
-            double dateEntry = 
-              DateFunctions::convertToFractionalYear(
-                            analysisDates.common[indexDate]); 
-
-            double taxRate = taxRateRecord[indexDate];
-            double atoiEntry = operatingIncome*(1-taxRate);
-
-
-            bool appendTermRecord=false;
-            bool setNansToMissingValue=true;
-            std::vector< std::string > termNames;
-            std::vector< double > termValues;
-
-            std::string parentName("");
-
-            double netCapitalExpenditures = 
-            FinancialAnalysisToolkit::
-              calcNetCapitalExpenditures( fundamentalData, 
-                                          dateSetTTM,
-                                          previousDateSet,
-                                          timePeriod.c_str(),
-                                          appendTermRecord,
-                                          parentName,
-                                          setNansToMissingValue,
-                                          termNames,
-                                          termValues);
-
-            double changeInNonCashWorkingCapital = 
-              FinancialAnalysisToolkit::
-                calcChangeInNonCashWorkingCapital(  fundamentalData, 
-                                                    dateSetTTM,
-                                                    previousDateSet,
-                                                    timePeriod.c_str(),
-                                                    appendTermRecord,
-                                                    parentName,
-                                                    setNansToMissingValue,
-                                                    termNames,
-                                                    termValues); 
-            double rrEntry = (netCapitalExpenditures
-                        +changeInNonCashWorkingCapital)
-                        /atoiEntry;
-
-            bool rrEntryValid   = JsonFunctions::isJsonFloatValid(rrEntry);
-            bool dateEntryValid = JsonFunctions::isJsonFloatValid(dateEntry);
-            bool atoiEntryValid = JsonFunctions::isJsonFloatValid(atoiEntry);
-
-            if(rrEntryValid && dateEntryValid && atoiEntryValid && atoiEntry > 0.){
-              dateV.push_back(analysisDates.common[indexDate]);
-              dateNumV.push_back(dateEntry);
-              atoiV.push_back(atoiEntry);
-              rrV.push_back(rrEntry);              
-            }
-          }
-        }
-      }
-      
-      //
-      //Extract the growth values for an interval with 
-      //growthIntervalInYears in it
-      //
-      indexDate = -1;
-      validDateSet=true;
-      int indexDateMax = static_cast<int>(rrV.size());
-
-      while( (indexDate+1) < indexLastCommonDate 
-              && indexDate < indexDateMax 
-              && rrV.size() >= 2
-              && validDateSet
-              && ((calcOneGrowthRateForAllData && indexDate == -1) 
-                    || !calcOneGrowthRateForAllData)){
-
-        ++indexDate;
-
-        std::vector< double > dateSubV; //date sub vector
-        std::vector< double > atoiSubV; // after-tax operating income sub vector
-        std::vector< double > rrSubV; //rate of return sub vector
-
-        //
-        //Extract the sub interval
-        //
-        dateSubV.push_back(dateNumV[indexDate]);
-        atoiSubV.push_back(atoiV[indexDate]);
-        rrSubV.push_back(rrV[indexDate]);
-
-        int indexDateStart=indexDate+1;
-        bool foundStartDate=false;
-   
-
-        while(  !foundStartDate 
-              && indexDateStart < indexLastCommonDate 
-              && indexDateStart < indexDateMax){
-            
-            double timeSpan      = dateSubV[0] - dateNumV[indexDateStart]; 
-            double timeSpanError = timeSpan-growthIntervalInYears;
-            //timeSpan <= growthIntervalInYears
-            if( timeSpanError < maxYearErrorTTM ){
-              dateSubV.push_back(dateNumV[indexDateStart]);
-              atoiSubV.push_back(atoiV[indexDateStart]);
-              rrSubV.push_back(rrV[indexDateStart]); 
-            }else{
-              foundStartDate = true;
-            }       
-            ++indexDateStart;
-
-        }
-
-        //
-        // Check the data for negative entries
-        //
-        bool sufficientValidEntries=true;
-        int invalidEntryCount = 0;
-        for(size_t i=0; i< atoiSubV.size();++i){
-          if(atoiSubV[i]<1){
-            atoiSubV[i]=1.0;
-            ++invalidEntryCount;
-          }
-        }
-        double invalidEntryProportion = 
-            static_cast<double>(invalidEntryCount)
-          / static_cast<double>(atoiSubV.size());
-
-        if(invalidEntryProportion > maxProportionOfNegativeOpIncome){
-          sufficientValidEntries=false;
-        }
-
-        //
-        //Fit a line to the data 
-        //
-        if(    dateSubV.size() >= 2 
-           && (dateSubV.size()==atoiSubV.size())
-           && sufficientValidEntries 
-           && (foundStartDate || calcOneGrowthRateForAllData)){
-          //Update the date to start at 0.
-
-          double dateMin = *std::min_element(dateSubV.begin(),dateSubV.end());
-          //for(size_t i=0; i<dateSubV.size();++i){
-          //  dateSubV[i] -= dateMin;
-          //}
-          double duration = std::abs(dateSubV.front()-dateSubV.back());
-
-          NumericalToolkit::EmpiricalGrowthModel expModel, bestModel;
-          NumericalToolkit::fitExponentialGrowthModel(dateSubV,atoiSubV,
-                                    maxProportionOfNegativeOpIncome,expModel);
-          bestModel=expModel;
-          double initialValue = bestModel.parameters[1];
-
-          //
-          //Evaluate the average rate of reinvestment
-          //
-          double count=0.;
-          double rrAvg = 0.;
-
-          for(size_t i=0; i < rrSubV.size();++i){
-            if(JsonFunctions::isJsonFloatValid(rrSubV[i])){
-              rrAvg += rrSubV[i];
-              count += 1.0;
-            }
-          }
-
-          rrAvg = rrAvg/count;
-
-          double rrSd = 0;
-          for(size_t i=0; i<rrSubV.size();++i){
-            double rrError = (rrSubV[i]-rrAvg);
-            rrSd += rrError*rrError;
-          }
-          rrSd = std::sqrt(rrSd / count);
-
-          double roic = bestModel.growthRate/rrAvg;
-
-          //
-          // Store the model results
-          //
-          if(count > 0 && !std::isnan(rrAvg) && !std::isinf(rrAvg)){
-
-            empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(
-                bestModel.growthRate);
-
-            empiricalGrowthDataUpd.reinvestmentRate.push_back(rrAvg);
-            empiricalGrowthDataUpd.reinvestmentRateSD.push_back(rrSd);
-            empiricalGrowthDataUpd.returnOnInvestedCapital.push_back(roic);
-
-            empiricalGrowthDataUpd.dates.push_back(
-                dateV[indexDate]);
-            empiricalGrowthDataUpd.datesNumerical.push_back(
-                dateNumV[indexDate]);
-            empiricalGrowthDataUpd.durationNumerical.push_back(
-                duration);            
-
-            empiricalGrowthDataUpd.empiricalModel.push_back(bestModel);     
-
-            //empiricalGrowthDataUpd.intervalStartDate.push_back(dateMin);
-
-            //empiricalGrowthDataUpd.durationNumerical.push_back(
-            //    duration);
-            //empiricalGrowthDataUpd.typeOfGrowthModel.push_back(
-            //    bestModel.modelType);    
-            //empiricalGrowthDataUpd.growthModelR2.push_back(
-            //    bestModel.R2);
-            //empiricalGrowthDataUpd.outlierCount.push_back(
-            //    invalidEntryCount);
-            
-            //empiricalGrowthDataUpd.
-            //intervalStartingAfterTaxOperatingIncome.push_back(initialValue);
-          }  
-        }   
-      }     
-
-    };
-    //==========================================================================
-    static void evaluateGrowthModel(
-      const std::string &endDate,
-      const NumericalToolkit::EmpiricalGrowthDataSet &empiricalGrowthData,
-      NumericalToolkit::EmpiricalGrowthDataSetSample &empiricalGrowthSampleUpd)
-    {
-      bool found = false;
-      size_t index = 0;
-      while(!found && index < empiricalGrowthData.dates.size()){
-        if(endDate.compare(empiricalGrowthData.dates[index])==0){
-          found =true;          
-        }else{
-          ++index;
-        }
-      }
-
-      if(found){
-        if(empiricalGrowthData.empiricalModel[index].modelType ==
-          static_cast<int>(NumericalToolkit::EmpiricalGrowthModelTypes::ExponentialModel)){
-          int n = std::round(empiricalGrowthData.durationNumerical[index]);
-                    
-          empiricalGrowthSampleUpd.years.resize(n+1);
-          empiricalGrowthSampleUpd.afterTaxOperatingIncome.resize(n+1);
-          
-          double y0 = 
-            empiricalGrowthData.empiricalModel[index].parameters[1];
-          double t0 = 
-            empiricalGrowthData.empiricalModel[index].parameters[0];
-          double r = 
-            empiricalGrowthData.empiricalModel[index].parameters[2];
-
-          for(int i=0; i<=n;++i){
-            empiricalGrowthSampleUpd.years[i] 
-              = t0 + static_cast<double>(i);
-            empiricalGrowthSampleUpd.afterTaxOperatingIncome[i] 
-              = y0*std::pow(1.0+r,static_cast<double>(i));
-          }
-
-        }else{
-          std::cerr << "Error: this function can only "
-                    <<  "evaluate ExponentialGrowthModels"
-                    << std::endl;
-          std::abort();
-        }
-      }
-    };
-
-    //==========================================================================
-    static void appendEmpiricalGrowthRateData(
-        size_t index,      
-        const NumericalToolkit::EmpiricalGrowthDataSet &empiricalGrowthData,
-        double dateInYears,
-        double costOfCapitalMature,
-        const std::string nameToPrepend,
-        std::vector< std::string > &termNames,
-        std::vector< double > &termValues)
-    {
-
-
-
-      termNames.push_back(nameToPrepend+"AfterTaxOperatingIncomeGrowth");
-      termValues.push_back(empiricalGrowthData.afterTaxOperatingIncomeGrowth[index]);
-
-
-      termNames.push_back(nameToPrepend+"ModelR2");
-      termValues.push_back(empiricalGrowthData.empiricalModel[index].r2); 
-
-      termNames.push_back(nameToPrepend+"ModelType");
-      termValues.push_back(empiricalGrowthData.empiricalModel[index].modelType); 
-
-      termNames.push_back(nameToPrepend+"ReinvestmentRateMean");
-      termValues.push_back(empiricalGrowthData.reinvestmentRate[index]);
-
-      termNames.push_back(nameToPrepend+"ReinvestmentRateStandardDeviation");
-      termValues.push_back(empiricalGrowthData.reinvestmentRateSD[index]);
-
-      termNames.push_back(nameToPrepend+"ReturnOnInvestedCapital");
-      termValues.push_back(empiricalGrowthData.returnOnInvestedCapital[index]);
-
-      termNames.push_back(nameToPrepend+"ReturnOnInvestedCapitalLessCostOfCapital");
-      double roicEmpLCC = empiricalGrowthData.returnOnInvestedCapital[index]
-                          -costOfCapitalMature;          
-      termValues.push_back(roicEmpLCC);
-
-      termNames.push_back(nameToPrepend+"DataDuration");
-      termValues.push_back(empiricalGrowthData.durationNumerical[index]); 
-
-      termNames.push_back(nameToPrepend+"ModelDateError");
-      double dateError = 
-        dateInYears - empiricalGrowthData.datesNumerical[index];
-      termValues.push_back(dateError); 
-
-      //termNames.push_back(nameToPrepend+"OutlierCount");
-      //termValues.push_back(empiricalGrowthData.outlierCount[index]); 
-
-    };   
 
     //==========================================================================
     static double sumFundamentalDataOverDates(
@@ -746,7 +356,7 @@ class FinancialAnalysisToolkit {
         setNansToMissingValue);
 
       double operatingIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);      
 
@@ -846,7 +456,7 @@ class FinancialAnalysisToolkit {
                       ["otherAssets"], true);                      
 
       double operatingIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
         
@@ -1001,7 +611,7 @@ class FinancialAnalysisToolkit {
                       ["cash"], true);
 
       double operatingIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
         
@@ -1011,7 +621,7 @@ class FinancialAnalysisToolkit {
       //the effect of increasing the ROIC for a misleading reason.
 
       //double dividendsPaid = 
-      //  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+      //  FinancialAnalysisFunctions::sumFundamentalDataOverDates(
       //    jsonData,FIN,CF,timeUnit,dateSet,"dividendsPaid",
       //    true);   
 
@@ -1077,7 +687,7 @@ class FinancialAnalysisToolkit {
                       ["totalStockholderEquity"], setNansToMissingValue);
       
       double netIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
@@ -1123,7 +733,7 @@ class FinancialAnalysisToolkit {
       // https://www.investopedia.com/terms/r/returnoninvestmentcapital.asp
 
       double netIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
@@ -1134,7 +744,7 @@ class FinancialAnalysisToolkit {
       //                ["dividendsPaid"], setNansToMissingValue);
     
       double dividendsPaid = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"dividendsPaid",
           true);
 
@@ -1178,7 +788,7 @@ class FinancialAnalysisToolkit {
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
 
-      double netIncome =  FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+      double netIncome =  FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
@@ -1231,12 +841,12 @@ class FinancialAnalysisToolkit {
                                      std::vector< double > &termValues){
       
       double totalRevenue = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "totalRevenue", setNansToMissingValue);
 
       double costOfRevenue = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "costOfRevenue", setNansToMissingValue);
 
@@ -1278,12 +888,12 @@ class FinancialAnalysisToolkit {
                                      std::vector< double > &termValues){
 
       double operatingIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "operatingIncome", setNansToMissingValue);
 
       double totalRevenue = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "totalRevenue", setNansToMissingValue);
 
@@ -1398,7 +1008,7 @@ class FinancialAnalysisToolkit {
                                                 termValues);
 
       double netIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "netIncome", setNansToMissingValue);
 
@@ -1540,7 +1150,7 @@ class FinancialAnalysisToolkit {
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
 
-        double interestCover = FinancialAnalysisToolkit::
+        double interestCover = FinancialAnalysisFunctions::
           calcInterestCover(jsonData,
                             dateSet,
                             meanInterestCover,
@@ -1659,13 +1269,13 @@ class FinancialAnalysisToolkit {
       //https://www.investopedia.com/terms/f/freecashflow.asp
 
       double totalCashFromOperatingActivities = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,
             "totalCashFromOperatingActivities", setNansToMissingValue);                    
 
       //Sometimes this is not reported. I would rather this get computed
       double interestExpense = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "interestExpense", true);  
 
@@ -1675,7 +1285,7 @@ class FinancialAnalysisToolkit {
       double taxShieldOnInterestExpense = interestExpense*taxRate;
 
       double capitalExpenditures = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,
             "capitalExpenditures", setNansToMissingValue);    
 
@@ -1686,7 +1296,7 @@ class FinancialAnalysisToolkit {
           - capitalExpenditures;
 
       double freeCashFlowEOD = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,
             "freeCashFlow", setNansToMissingValue); 
 
@@ -1768,7 +1378,7 @@ class FinancialAnalysisToolkit {
 
 
       double capitalExpenditures = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"capitalExpenditures",
           setNansToMissingValue);
 
@@ -1818,7 +1428,7 @@ class FinancialAnalysisToolkit {
 
 
       double depreciation = 
-          FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+          FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,"depreciation",
             setNansToMissingValue);
 
@@ -2011,12 +1621,12 @@ class FinancialAnalysisToolkit {
       std::string parentName = "freeCashFlowToEquity_";
       
       double netIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
       double depreciation = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"depreciation",
           setNansToMissingValue);
 
@@ -2167,7 +1777,7 @@ class FinancialAnalysisToolkit {
       //Damodaran (2011). The little book of valuation    
 
       double netIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
@@ -2240,7 +1850,7 @@ class FinancialAnalysisToolkit {
       //Damodaran definition (page 40/172 22%)     
       
       double operatingIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
 
@@ -2322,7 +1932,7 @@ class FinancialAnalysisToolkit {
 
 
       double operatingIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "operatingIncome",true);
 
@@ -2399,13 +2009,13 @@ class FinancialAnalysisToolkit {
         std::vector< double > &termValues){
 
       double totalCashFromOperatingActivities = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"totalCashFromOperatingActivities",
           setNansToMissingValue);
 
       //Not all firms actually have a research and development entry
       double researchDevelopment = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"researchDevelopment",
           true);  
       
@@ -2416,7 +2026,7 @@ class FinancialAnalysisToolkit {
 
       for(size_t i =0; i < datesToAverageCapitalExpenditures.size(); ++i){
         capitalExpenditure = 
-          FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+          FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,datesToAverageCapitalExpenditures[i],
             "capitalExpenditures",setNansToMissingValue);
 
@@ -2633,7 +2243,7 @@ class FinancialAnalysisToolkit {
                               1+numberOfYearsForTerminalValuation);
 
       double operatingIncome = 
-        FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
 

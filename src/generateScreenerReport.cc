@@ -15,19 +15,19 @@
 #include <nlohmann/json.hpp>
 #include <tclap/CmdLine.h>
 
-#include "FinancialAnalysisToolkit.h"
+#include "FinancialAnalysisFunctions.h"
 #include "JsonFunctions.h"
 #include <sciplot/sciplot.hpp>
 #include "PlottingFunctions.h"
 #include "ReportingFunctions.h"
-#include "ScreenerToolkit.h"
+#include "ScreenerFunctions.h"
 
 //==============================================================================
 void plotScreenerReportData(
                     size_t indexTickerStart,
                     size_t indexTickerEnd,
                     const nlohmann::ordered_json &screenReportConfig, 
-                    const ScreenerToolkit::MetricSummaryDataSet &metricDataSet,
+                    const ScreenerFunctions::MetricSummaryDataSet &metricDataSet,
                     const PlottingFunctions::PlotSettings &settings,
                     const std::string &screenerReportFolder,
                     const std::string &summaryPlotFileName,
@@ -368,7 +368,7 @@ void generateScreenerLaTeXReport(
                     size_t indexTickerStart,
                     size_t indexTickerEnd,
                     const nlohmann::ordered_json &screenReportConfig, 
-                    const ScreenerToolkit::MetricSummaryDataSet &metricDataSet,
+                    const ScreenerFunctions::MetricSummaryDataSet &metricDataSet,
                     const std::vector< std::string > &screenSummaryPlots,
                     const std::string &tickerReportFolder,
                     const std::string &screenerReportFolder,
@@ -765,7 +765,7 @@ int main (int argc, char* argv[]) {
 
       if(validInput){        
         tickerPassesFilter = 
-          ScreenerToolkit::applyFilter(
+          ScreenerFunctions::applyFilter(
             fileName,  
             fundamentalData,
             historicalData,
@@ -816,7 +816,7 @@ int main (int argc, char* argv[]) {
     // Collect all of the metrics used for ranking
     //
 
-    ScreenerToolkit::MetricSummaryDataSet metricDataSet;    
+    ScreenerFunctions::MetricSummaryDataSet metricDataSet;    
     if(filteredTickers.size() > 0){
       if(verbose){
         std::cout << "Appending metric data ..."  << std::endl << std::endl;
@@ -891,7 +891,7 @@ int main (int argc, char* argv[]) {
          || (useHistoricalData  && loadedHistoricalData));
 
         bool appendedMetricData = 
-            ScreenerToolkit::appendMetricData(
+            ScreenerFunctions::appendMetricData(
                         filteredTickers[i],  
                         fundamentalData,                 
                         historicalData,
@@ -910,7 +910,7 @@ int main (int argc, char* argv[]) {
         }                        
       }
 
-      ScreenerToolkit::rankMetricData(screenReportConfig,metricDataSet,verbose);
+      ScreenerFunctions::rankMetricData(screenReportConfig,metricDataSet,verbose);
 
     }
 

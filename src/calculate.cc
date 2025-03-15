@@ -16,8 +16,8 @@
 #include <tclap/CmdLine.h>
 #include <filesystem>
 
-#include "FinancialAnalysisToolkit.h"
-#include "NumericalToolkit.h"
+#include "FinancialAnalysisFunctions.h"
+#include "NumericalFunctions.h"
 #include "JsonFunctions.h"
 #include "DateFunctions.h"
 
@@ -193,7 +193,7 @@ bool extractDatesOfClosestMatch(
 //============================================================================
 
 bool extractAnalysisDates(
-      FinancialAnalysisToolkit::AnalysisDates &analysisDates,
+      FinancialAnalysisFunctions::AnalysisDates &analysisDates,
       const nlohmann::ordered_json &fundamentalData,
       const nlohmann::ordered_json &historicalData,
       const nlohmann::ordered_json &bondData,
@@ -610,7 +610,7 @@ double getTaxRateFromTable(
 
 };
 //============================================================================
-double calcAverageTaxRate(  const FinancialAnalysisToolkit::AnalysisDates &analysisDates,
+double calcAverageTaxRate(  const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
                             const std::string& countryISO2, 
                             const TaxFoundationDataSet &corpWorldTaxTable,
                             double defaultTaxRate,                            
@@ -638,7 +638,7 @@ double calcAverageTaxRate(  const FinancialAnalysisToolkit::AnalysisDates &analy
         std::vector < double > dateSetWeight;
         if(quarterlyTTMAnalysis){
           bool validDateSet = 
-            FinancialAnalysisToolkit::extractTTM(indexDate,
+            FinancialAnalysisFunctions::extractTTM(indexDate,
                                     analysisDates.common,
                                     "%Y-%m-%d",
                                     dateSet,
@@ -820,7 +820,7 @@ bool loadTaxFoundationDataSet(std::string &fileName,
 };
 //============================================================================
 double calcAverageInterestCover(  
-          const FinancialAnalysisToolkit::AnalysisDates &analysisDates,
+          const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
           const nlohmann::ordered_json &fundamentalData,
           double defaultInterestCover,
           const std::string &timePeriod,
@@ -851,7 +851,7 @@ double calcAverageInterestCover(
     std::vector < double > dateSetWeight;
     if(quarterlyTTMAnalysis){
       validDateSet = 
-        FinancialAnalysisToolkit::extractTTM( indexDate,
+        FinancialAnalysisFunctions::extractTTM( indexDate,
                                               analysisDates.common,
                                               "%Y-%m-%d",
                                               dateSet,
@@ -869,7 +869,7 @@ double calcAverageInterestCover(
     std::vector<std::string> localTermNames;
     std::vector<double> localTermValues;
 
-    double interestCover = FinancialAnalysisToolkit::
+    double interestCover = FinancialAnalysisFunctions::
         calcInterestCover(fundamentalData,
                           dateSet,
                           defaultInterestCover,
@@ -891,7 +891,7 @@ double calcAverageInterestCover(
 };
 //============================================================================
 double calcLastValidDateIndex(
-          const FinancialAnalysisToolkit::AnalysisDates &analysisDates,
+          const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
           bool quarterlyTTMAnalysis,
           int maxDayErrorTTM)
 {
@@ -912,7 +912,7 @@ double calcLastValidDateIndex(
     std::vector < double > dateSetWeight;
     if(quarterlyTTMAnalysis){
       validDateSet = 
-        FinancialAnalysisToolkit::extractTTM(indexDate,
+        FinancialAnalysisFunctions::extractTTM(indexDate,
                                              analysisDates.common,
                                              "%Y-%m-%d",
                                              dateSet,
@@ -1663,7 +1663,7 @@ int main (int argc, char* argv[]) {
 
     std::vector< std::string > datesBondYields;
     
-    FinancialAnalysisToolkit::AnalysisDates analysisDates;
+    FinancialAnalysisFunctions::AnalysisDates analysisDates;
     bool allowRepeatedDates=false;
 
     if(validInput){   
@@ -1853,11 +1853,11 @@ int main (int argc, char* argv[]) {
       //Evaluate the growth rate data over the same relatively short
       //period of time that is used for the growth period during
       //the valution (5 years)
-      NumericalToolkit::EmpiricalGrowthDataSet empiricalGrowthData;
+      NumericalFunctions::EmpiricalGrowthDataSet empiricalGrowthData;
       double growthIntervalInYears = 
         static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
       bool calcOneGrowthRateForAllData=false;
-      FinancialAnalysisToolkit::extractEmpiricalGrowthRates(
+      NumericalFunctions::extractEmpiricalGrowthRates(
                                   empiricalGrowthData,            
                                   fundamentalData,
                                   taxRateRecord,
@@ -1873,14 +1873,14 @@ int main (int argc, char* argv[]) {
 
 
       //Evaluate the growth rate using all of the data available
-      NumericalToolkit::EmpiricalGrowthDataSet empiricalGrowthDataAll;
+      NumericalFunctions::EmpiricalGrowthDataSet empiricalGrowthDataAll;
 
       growthIntervalInYears = 
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
       - DateFunctions::convertToFractionalYear(analysisDates.common.back());
       
       calcOneGrowthRateForAllData=true;
-      FinancialAnalysisToolkit::extractEmpiricalGrowthRates(
+      NumericalFunctions::extractEmpiricalGrowthRates(
                                   empiricalGrowthDataAll,            
                                   fundamentalData,
                                   taxRateRecord,
@@ -1947,7 +1947,7 @@ int main (int argc, char* argv[]) {
       
         if(quarterlyTTMAnalysis){
           validDateSet = 
-            FinancialAnalysisToolkit::extractTTM( indexDate,
+            FinancialAnalysisFunctions::extractTTM( indexDate,
                                                   analysisDates.common,
                                                   "%Y-%m-%d",
                                                   dateSet,                                    
@@ -1972,7 +1972,7 @@ int main (int argc, char* argv[]) {
         previousDateSet.resize(0);
 
         if(quarterlyTTMAnalysis){
-          validDateSet = FinancialAnalysisToolkit::extractTTM(indexPrevious,
+          validDateSet = FinancialAnalysisFunctions::extractTTM(indexPrevious,
                                                         analysisDates.common,
                                                         "%Y-%m-%d",
                                                         previousDateSet,
@@ -2011,7 +2011,7 @@ int main (int argc, char* argv[]) {
           if(validPreviousDateSet){
             if(quarterlyTTMAnalysis){
               validPreviousDateSet = 
-                FinancialAnalysisToolkit::extractTTM(indexPastPeriods,
+                FinancialAnalysisFunctions::extractTTM(indexPastPeriods,
                                                     analysisDates.common,
                                                     "%Y-%m-%d",
                                                     pastDateSet,
@@ -2093,7 +2093,7 @@ int main (int argc, char* argv[]) {
         //Evaluate the cost of debt
         //======================================================================
         double interestCover = 
-          FinancialAnalysisToolkit::calcInterestCover(
+          FinancialAnalysisFunctions::calcInterestCover(
                                         fundamentalData,
                                         dateSet,
                                         defaultInterestCover,
@@ -2103,7 +2103,7 @@ int main (int argc, char* argv[]) {
                                         termNames,
                                         termValues);
 
-        double defaultSpread = FinancialAnalysisToolkit::
+        double defaultSpread = FinancialAnalysisFunctions::
             calcDefaultSpread(fundamentalData,
                               dateSet,
                               timePeriod.c_str(),
@@ -2328,11 +2328,11 @@ int main (int argc, char* argv[]) {
         std::string emptyParentName("");
 
         double totalStockHolderEquity =  
-          FinancialAnalysisToolkit::sumFundamentalDataOverDates(
+          FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             fundamentalData,FIN,BAL,timePeriod.c_str(),dateSet,
             "totalStockholderEquity", setNansToMissingValue);
 
-        double roicOp = FinancialAnalysisToolkit::
+        double roicOp = FinancialAnalysisFunctions::
           calcReturnOnInvestedOperatingCapital(fundamentalData,
                                       dateSet,
                                       timePeriod.c_str(),
@@ -2349,7 +2349,7 @@ int main (int argc, char* argv[]) {
 
 
 
-        double roce = FinancialAnalysisToolkit::
+        double roce = FinancialAnalysisFunctions::
           calcReturnOnCapitalDeployed(  fundamentalData,
                                         dateSet,
                                         timePeriod.c_str(), 
@@ -2359,7 +2359,7 @@ int main (int argc, char* argv[]) {
                                         termNames, 
                                         termValues);
 
-        double grossMargin = FinancialAnalysisToolkit::
+        double grossMargin = FinancialAnalysisFunctions::
           calcGrossMargin(  fundamentalData,
                             dateSet,
                             timePeriod.c_str(),
@@ -2368,7 +2368,7 @@ int main (int argc, char* argv[]) {
                             termNames,
                             termValues);
 
-        double operatingMargin = FinancialAnalysisToolkit::
+        double operatingMargin = FinancialAnalysisFunctions::
           calcOperatingMargin(  fundamentalData,
                                 dateSet,
                                 timePeriod.c_str(), 
@@ -2377,7 +2377,7 @@ int main (int argc, char* argv[]) {
                                 termNames,
                                 termValues);          
 
-        double cashConversion = FinancialAnalysisToolkit::
+        double cashConversion = FinancialAnalysisFunctions::
           calcCashConversionRatio(  fundamentalData,
                                     dateSet,
                                     timePeriod.c_str(), 
@@ -2387,7 +2387,7 @@ int main (int argc, char* argv[]) {
                                     termNames,
                                     termValues);
 
-        double debtToCapital = FinancialAnalysisToolkit::
+        double debtToCapital = FinancialAnalysisFunctions::
           calcDebtToCapitalizationRatio(  fundamentalData,
                                           dateSet,
                                           timePeriod.c_str(),
@@ -2396,7 +2396,7 @@ int main (int argc, char* argv[]) {
                                           termNames,
                                           termValues);
 
-        double ownersEarnings = FinancialAnalysisToolkit::
+        double ownersEarnings = FinancialAnalysisFunctions::
           calcOwnersEarnings( fundamentalData, 
                               dateSet, 
                               previousDateSet,
@@ -2410,7 +2410,7 @@ int main (int argc, char* argv[]) {
 
         if(trailingPastPeriods.size() > 0){
 
-          residualCashFlow = FinancialAnalysisToolkit::
+          residualCashFlow = FinancialAnalysisFunctions::
             calcResidualCashFlow( fundamentalData,
                                   dateSet,
                                   timePeriod.c_str(),
@@ -2424,7 +2424,7 @@ int main (int argc, char* argv[]) {
         //
         //Residual cash flow to enterprise value
         //
-        double enterpriseValue = FinancialAnalysisToolkit::
+        double enterpriseValue = FinancialAnalysisFunctions::
             calcEnterpriseValue(fundamentalData, 
                                 marketCapitalization, 
                                 dateSet,
@@ -2454,7 +2454,7 @@ int main (int argc, char* argv[]) {
 
         double freeCashFlowToEquity=std::nan("1");
         if(previousTimePeriod.length()>0){
-          freeCashFlowToEquity = FinancialAnalysisToolkit::
+          freeCashFlowToEquity = FinancialAnalysisFunctions::
             calcFreeCashFlowToEquity(fundamentalData, 
                                      dateSet,
                                      previousDateSet,
@@ -2466,7 +2466,7 @@ int main (int argc, char* argv[]) {
         }
 
         double freeCashFlowToFirm=std::nan("1");
-        freeCashFlowToFirm = FinancialAnalysisToolkit::
+        freeCashFlowToFirm = FinancialAnalysisFunctions::
           calcFreeCashFlowToFirm(fundamentalData, 
                                  dateSet, 
                                  previousDateSet, 
@@ -2479,7 +2479,7 @@ int main (int argc, char* argv[]) {
 
 
         double retentionRatio = 
-          FinancialAnalysisToolkit::calcRetentionRatio(
+          FinancialAnalysisFunctions::calcRetentionRatio(
                                  fundamentalData, 
                                  dateSet, 
                                  timePeriod.c_str(),
@@ -2490,7 +2490,7 @@ int main (int argc, char* argv[]) {
                                  termValues);
         
         double returnOnEquity = 
-          FinancialAnalysisToolkit::calcReturnOnEquity(
+          FinancialAnalysisFunctions::calcReturnOnEquity(
                                 fundamentalData, 
                                 dateSet, 
                                 timePeriod.c_str(),
@@ -2513,7 +2513,7 @@ int main (int argc, char* argv[]) {
 
         
         double returnOnInvestedCapitalFinanical 
-                = FinancialAnalysisToolkit::
+                = FinancialAnalysisFunctions::
                           calcReturnOnInvestedFinancialCapital(
                             fundamentalData,
                             dateSet,
@@ -2532,7 +2532,7 @@ int main (int argc, char* argv[]) {
         termValues.push_back(roicFinLessCostOfCapital);                                    
 
         double reinvestmentRate = 
-                FinancialAnalysisToolkit::
+                FinancialAnalysisFunctions::
                       calcReinvestmentRate( fundamentalData,
                                             dateSet,
                                             previousDateSet,
@@ -2555,7 +2555,7 @@ int main (int argc, char* argv[]) {
         parentName="priceToValue_";
 
         //Valuation (discounted cash flow)
-        double presentValue = FinancialAnalysisToolkit::
+        double presentValue = FinancialAnalysisFunctions::
             calcPriceToValueUsingDiscountedCashflowModel(  
               fundamentalData,
               dateSet,
@@ -2582,7 +2582,7 @@ int main (int argc, char* argv[]) {
 
         if(empiricalGrowthData.dates.size() > 0){
           size_t indexGrowth = 
-          NumericalToolkit::getIndexOfEmpiricalGrowthDataSet(
+          NumericalFunctions::getIndexOfEmpiricalGrowthDataSet(
                                 dateDouble,
                                 maxDateErrorInYearsInEmpiricalData,
                                 empiricalGrowthData);
@@ -2591,7 +2591,7 @@ int main (int argc, char* argv[]) {
             && indexGrowth < empiricalGrowthData.datesNumerical.size()){
             std::string nameToPrepend("empirical");
 
-            FinancialAnalysisToolkit::appendEmpiricalGrowthRateData(
+            NumericalFunctions::appendEmpiricalGrowthRateData(
                   indexGrowth,      
                   empiricalGrowthData,
                   dateDouble,
@@ -2611,7 +2611,7 @@ int main (int argc, char* argv[]) {
 
             //Valuation (discounted cash flow) using empirical growth
             double presentValueEmpirical = 
-            FinancialAnalysisToolkit::
+            FinancialAnalysisFunctions::
                 calcPriceToValueUsingDiscountedCashflowModel(  
                   fundamentalData,
                   dateSet,
@@ -2644,7 +2644,7 @@ int main (int argc, char* argv[]) {
               && empiricalGrowthDataAll.datesNumerical.size()==1){
             std::string nameToPrepend("empiricalAvg");
 
-            FinancialAnalysisToolkit::appendEmpiricalGrowthRateData(
+            NumericalFunctions::appendEmpiricalGrowthRateData(
                                   0,      
                                   empiricalGrowthDataAll,
                                   dateDouble,
@@ -2663,7 +2663,7 @@ int main (int argc, char* argv[]) {
 
             //Valuation (discounted cash flow) using empirical growth
             double presentValueEmpiricalAvg = 
-              FinancialAnalysisToolkit::
+              FinancialAnalysisFunctions::
                 calcPriceToValueUsingDiscountedCashflowModel(  
                   fundamentalData,
                   dateSet,
@@ -2751,17 +2751,17 @@ int main (int argc, char* argv[]) {
 
 
       //Evaluate the most recent rate of growth
-      NumericalToolkit::EmpiricalGrowthDataSetSample recentGrowthSeries;
+      NumericalFunctions::EmpiricalGrowthDataSetSample recentGrowthSeries;
 
-      FinancialAnalysisToolkit::evaluateGrowthModel(
+      NumericalFunctions::evaluateGrowthModel(
                             empiricalGrowthData.dates[0],
                             empiricalGrowthData,
                             recentGrowthSeries);
 
       //Evaluate the most recent rate of growth
-      NumericalToolkit::EmpiricalGrowthDataSetSample avgGrowthSeries;
+      NumericalFunctions::EmpiricalGrowthDataSetSample avgGrowthSeries;
 
-      FinancialAnalysisToolkit::evaluateGrowthModel(
+      NumericalFunctions::evaluateGrowthModel(
                           empiricalGrowthDataAll.dates[0],
                           empiricalGrowthDataAll,
                           avgGrowthSeries);

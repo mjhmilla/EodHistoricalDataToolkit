@@ -10,7 +10,7 @@
 #include <tclap/CmdLine.h>
 
 
-#include "FinancialAnalysisToolkit.h"
+#include "FinancialAnalysisFunctions.h"
 #include "JsonFunctions.h"
 #include "CurlToolkit.h"
 
@@ -272,9 +272,9 @@ int main (int argc, char* argv[]) {
       std::string tickerCode = ticker.substr(0,idx);          
       std::string tickerExchange = ticker.substr(idx+1,ticker.length()-1);      
 
-      StringToolkit::findAndReplaceString(eodUrl,"{TICKER_CODE}",tickerCode);
-      StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-      StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",tickerExchange);
+      StringFunctions::findAndReplaceString(eodUrl,"{TICKER_CODE}",tickerCode);
+      StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+      StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",tickerExchange);
 
       std::string fileName = ticker;
       fileName.append(".json");
@@ -283,7 +283,7 @@ int main (int argc, char* argv[]) {
       ss << outputFolder << fileName;
       std::string outputFilePath = ss.str();
       std::string removeStr("\"");
-      StringToolkit::removeFromString(outputFilePath,removeStr); 
+      StringFunctions::removeFromString(outputFilePath,removeStr); 
 
       bool success = 
         CurlToolkit::downloadJsonFile(eodUrl,outputFilePath,verbose);
@@ -330,16 +330,16 @@ int main (int argc, char* argv[]) {
       if(processEntry){
         std::string eodUrl = eodUrlTemplate;
         std::string ticker = it["Code"];
-        StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-        StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
-        StringToolkit::findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
+        StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+        StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
+        StringFunctions::findAndReplaceString(eodUrl,"{TICKER_CODE}",ticker);
 
         std::string eodFileName;
-        FinancialAnalysisToolkit::
+        FinancialAnalysisFunctions::
           createEodJsonFileName(ticker,exchangeCode,eodFileName);
 
         std::string jsonFilePath;
-        StringToolkit::
+        StringFunctions::
           createFilePath(outputFolder,eodFileName,jsonFilePath);
 
         bool fileExists=false;
@@ -404,22 +404,22 @@ int main (int argc, char* argv[]) {
 
             std::string eodUrlPrimary = eodUrlTemplate;        
             
-            StringToolkit::findAndReplaceString(
+            StringFunctions::findAndReplaceString(
                 eodUrlPrimary,"{YOUR_API_TOKEN}",apiKey);  
-            StringToolkit::findAndReplaceString(
+            StringFunctions::findAndReplaceString(
                 eodUrlPrimary,"{EXCHANGE_CODE}",exchangeCodePrimary);
-            StringToolkit::findAndReplaceString(
+            StringFunctions::findAndReplaceString(
                 eodUrlPrimary,"{TICKER_CODE}",tickerPrimaryCode);
 
             //std::string fileNamePrimary = primaryEodTickerName; //This will include the exchange code
             //fileNamePrimary.append(".json");
             std::string fileNamePrimary;
-            FinancialAnalysisToolkit::createEodJsonFileName(tickerPrimaryCode,
+            FinancialAnalysisFunctions::createEodJsonFileName(tickerPrimaryCode,
                                         exchangeCodePrimary,fileNamePrimary);
 
             bool filePrimaryExists=false;
             std::string primaryFilePath;
-            StringToolkit::createFilePath(outputFolder,fileNamePrimary,
+            StringFunctions::createFilePath(outputFolder,fileNamePrimary,
                                               primaryFilePath);            
             if(gapFillPartialDownload == true){
               //Check if the file has been downloaded already.
@@ -485,8 +485,8 @@ int main (int argc, char* argv[]) {
       if(processEntry){
         std::string eodUrl = eodUrlTemplate;
         std::string exchangeCode = it["Code"];
-        StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-        StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
+        StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+        StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
         std::string exchangeFileName = exchangeCode;
         exchangeFileName.append(".json");

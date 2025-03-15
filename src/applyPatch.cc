@@ -10,9 +10,9 @@
 #include <tclap/CmdLine.h>
 
 #include <filesystem>
-#include "StringToolkit.h"
+#include "StringFunctions.h"
 #include "CurlToolkit.h"
-#include "FinancialAnalysisToolkit.h"
+#include "FinancialAnalysisFunctions.h"
 
 unsigned int COLUMN_WIDTH=30;
 
@@ -190,16 +190,16 @@ int main (int argc, char* argv[]) {
 
 
 
-    StringToolkit::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-    StringToolkit::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",eodExchange);
-    StringToolkit::findAndReplaceString(eodUrl,"{TICKER_CODE}",eodTicker);
+    StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+    StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",eodExchange);
+    StringFunctions::findAndReplaceString(eodUrl,"{TICKER_CODE}",eodTicker);
 
     std::string primaryFileName;
-    FinancialAnalysisToolkit::
+    FinancialAnalysisFunctions::
       createEodJsonFileName(eodTicker,eodExchange,primaryFileName);
 
     std::string jsonFilePath;
-    StringToolkit::
+    StringFunctions::
       createFilePath(fundamentalFolder,primaryFileName,jsonFilePath);
 
     bool fileExists=false;

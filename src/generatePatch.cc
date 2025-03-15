@@ -12,9 +12,9 @@
 #include <filesystem>
 
 #include "JsonFunctions.h"
-#include "StringToolkit.h"
+#include "StringFunctions.h"
 #include "CurlToolkit.h"
-#include "FinancialAnalysisToolkit.h"
+#include "FinancialAnalysisFunctions.h"
 
 
 const char TRADING_VIEW_URL[] = "https://www.tradingview.com/symbols/";
@@ -280,7 +280,7 @@ int main (int argc, char* argv[]) {
                     primaryTicker.substr(idx+1, primaryTicker.length()-idx);
 
       bool exchangeIsinConsistent= 
-        FinancialAnalysisToolkit::
+        FinancialAnalysisFunctions::
           isExchangeAndIsinConsistent(primaryExchange,isin,exchangeList);
 
       //If the PrimaryTicker exchange is not consistent with the ISIN code
@@ -462,7 +462,7 @@ int main (int argc, char* argv[]) {
       bool isinExists=false;
       if(isin.length()>0){
         isinExchangeExists = 
-          FinancialAnalysisToolkit::
+          FinancialAnalysisFunctions::
             doesIsinHaveMatchingExchange(isin,exchangeList,
                                           exchangeSymbolListFolder);
         isinExists=true;
@@ -505,7 +505,7 @@ int main (int argc, char* argv[]) {
       std::string isinCountryISO3("");
 
       if(isinExists && isinExchangeExists){
-        FinancialAnalysisToolkit::
+        FinancialAnalysisFunctions::
           getIsinCountryCodes(isin,exchangeList,isinCountryISO2,isinCountryISO3);
 
         bool appendCountryData=true;
@@ -644,7 +644,7 @@ int main (int argc, char* argv[]) {
         //If the ISIN search failed, try to find a company that exists with
         //a similar name
         if(!isinMatchFound){
-          StringToolkit::WordData wordA(nameARaw);
+          StringFunctions::WordData wordA(nameARaw);
 
           //Calculate the minimum acceptable score
           bool candidateFound = false;
@@ -659,16 +659,16 @@ int main (int argc, char* argv[]) {
 
             std::string nameBRaw;
             JsonFunctions::getJsonString(iterSymbol["Name"],nameBRaw);
-            StringToolkit::TextData textB(nameBRaw);
+            StringFunctions::TextData textB(nameBRaw);
 
-            StringToolkit::TextSimilarity simAB;
+            StringFunctions::TextSimilarity simAB;
 
             simAB.score=0;
             simAB.firstWordsMatch=false;
             simAB.allWordsFound=false;
             simAB.exactMatch=false;
 
-            StringToolkit::evaluateSimilarity(wordA,textB,simAB);
+            StringFunctions::evaluateSimilarity(wordA,textB,simAB);
 
             if( ( simAB.score > bestScore &&
                   simAB.score > MIN_MATCHING_WORD_FRACTION)  ||

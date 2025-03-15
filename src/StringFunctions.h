@@ -1,8 +1,8 @@
 //SPDX-FileCopyrightText: 2023 Matthew Millard millard.matthew@gmail.com
 //SPDX-License-Identifier: MIT
 
-#ifndef STRING_TOOLKIT
-#define STRING_TOOLKIT
+#ifndef STRING_FUNCTIONS
+#define STRING_FUNCTIONS
 
 #include <string>
 #include <stdlib.h>
@@ -13,7 +13,7 @@
 #include <boost/algorithm/string.hpp> // Include for boost::iequals
 
 
-class StringToolkit {
+class StringFunctions {
 
   public:
 
@@ -38,7 +38,7 @@ class StringToolkit {
 
       updFilePath=folderPath;
       updFilePath.append(fileName);
-      StringToolkit::removeFromString(updFilePath,std::string("\""));      
+      StringFunctions::removeFromString(updFilePath,std::string("\""));      
 
     };
 
@@ -97,7 +97,7 @@ class StringToolkit {
         lowercase = std::regex_replace(lowercase, 
                                 std::regex("[^a-zA-Z\\d\\s:]"), "");
         //Trim leading and following whitespace
-        StringToolkit::trim(lowercase," ");        
+        StringFunctions::trim(lowercase," ");        
 
         //Break the company name into an std::vector of words
         boost::split(words, lowercase, boost::is_any_of(" "), 
