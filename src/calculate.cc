@@ -2756,33 +2756,42 @@ int main (int argc, char* argv[]) {
 
       analysis["annual_milestones"] = annualMilestoneReport;
 
-
+      //Evaluate the most recent rate of growth
+      //NumericalFunctions::EmpiricalGrowthDataSetSample recentGrowthSeries;
+      //NumericalFunctions::evaluateGrowthModel(
+      //                      empiricalGrowthData.model[0],
+      //                      recentGrowthSeries);
 
       //Evaluate the most recent rate of growth
-      NumericalFunctions::EmpiricalGrowthDataSetSample recentGrowthSeries;
+      //NumericalFunctions::EmpiricalGrowthDataSetSample avgGrowthSeries;
+      //NumericalFunctions::evaluateGrowthModel(
+      //                    empiricalGrowthDataAll.model[0],
+      //                    avgGrowthSeries);
 
-      NumericalFunctions::evaluateGrowthModel(
-                            empiricalGrowthData.dates[0],
-                            empiricalGrowthData,
-                            recentGrowthSeries);
+      int indexRecentDate = 0;
+      double dateRange= empiricalGrowthData.datesNumerical.front()
+                       -empiricalGrowthData.datesNumerical.back(); 
+      if(dateRange < 0){
+        indexRecentDate = empiricalGrowthData.datesNumerical.size()-1;
+      }
 
-      //Evaluate the most recent rate of growth
-      NumericalFunctions::EmpiricalGrowthDataSetSample avgGrowthSeries;
+      int indexRecentDateAll = 0;
+      dateRange= empiricalGrowthDataAll.datesNumerical.front()
+                -empiricalGrowthDataAll.datesNumerical.back(); 
+      if(dateRange < 0){
+        indexRecentDateAll = empiricalGrowthDataAll.datesNumerical.size()-1;
+      }
 
-      NumericalFunctions::evaluateGrowthModel(
-                          empiricalGrowthDataAll.dates[0],
-                          empiricalGrowthDataAll,
-                          avgGrowthSeries);
 
       nlohmann::ordered_json vectorAnalysis;      
       vectorAnalysis["average_years"] 
-        = avgGrowthSeries.years;
+        = empiricalGrowthDataAll.model[indexRecentDateAll].x;
       vectorAnalysis["average_afterTaxOperatingIncome"] 
-        = avgGrowthSeries.afterTaxOperatingIncome;
+        = empiricalGrowthDataAll.model[indexRecentDateAll].y;
       vectorAnalysis["recent_years"] 
-        = recentGrowthSeries.years;
+        = empiricalGrowthData.model[indexRecentDate].x;
       vectorAnalysis["recent_afterTaxOperatingIncome"] 
-        = recentGrowthSeries.afterTaxOperatingIncome;
+        = empiricalGrowthData.model[indexRecentDate].y;
 
       analysis["growth_model"] =vectorAnalysis;
 

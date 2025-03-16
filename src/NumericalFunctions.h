@@ -24,6 +24,7 @@ class NumericalFunctions {
       ExponentialCyclicalModel,
       LinearModel,
       LinearCyclicalModel,
+      CyclicalModel,
       NUM_EMPIRICAL_GROWTH_MODELS
     };
     //============================================================================
@@ -110,7 +111,94 @@ class NumericalFunctions {
     static void fitCyclicalModel(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
+                  double minTimeResolutionInYears,
                   EmpiricalGrowthModel &modelUpd){
+
+      if(x.size()!=y.size()){
+        std::cout << "Error: x and y must the same size"
+                  << std::endl;
+        std::abort();
+      }
+
+      std::vector< double > xN(x.size());
+      std::vector< double > yM(y.size());
+
+      double xSpan = x.back()-x.front();
+      if(xSpan < 0){
+        std::cout << "Error: data must be ordered from earlierst to most recent"
+                  << std::endl;
+        std::abort();
+      }
+
+      modelUpd.x.resize(x.size());
+      modelUpd.y.resize(x.size());
+      //Normalize time to 0-1
+      for(size_t i=0; i<x.size();++i){
+        xN[i] = (x[i]-x.front())/xSpan;
+        modelUpd.x[i] = x[i];
+      }
+
+      int n = static_cast<int>(std::round(xSpan/minTimeResolutionInYears));
+
+      //index into parameters
+      modelUpd.parameters.resize(2*n);
+      int indexParameters=0;
+
+      for(int i=0; i<n; ++i){
+        double w = static_cast<double>(i+1);
+        
+        std::vector< double > yDotSin(x.size());
+        std::vector< double > yDotCos(x.size());
+
+        //Evaluate the dot product between 
+        // y and 
+        // sin(xN*2*pi*2) and 
+        // cos(xN*2*pi*2)
+
+        for(int j=0; j<xN.size();++j){
+          double sinTerm = std::sin(xN[j]*2*M_PI*w);
+          double cosTerm = std::cos(xN[j]*2*M_PI*w);
+          yDotSin[j] = y[i]*sinTerm;
+          yDotCos[j] = y[i]*cosTerm;
+        }
+
+        //Evaluate the integral of the dot products. Here I'm just going to 
+        //use the trapezoidal method
+        double intYDotSin=0;
+        double intYDotCos=0;
+        for(int j=1; j<xN.size();++j){
+          double dx = x[j]-x[j-1];
+          intYDotSin += 0.5*(yDotSin[j]+yDotSin[j-1])*dx;
+          intYDotCos += 0.5*(yDotCos[j]+yDotCos[j-1])*dx;
+        }
+        double cYSin = (2.0/xSpan)*intYDotSin;
+        double cYCos = (2.0/xSpan)*intYDotCos;
+        
+        modelUpd.parameters[indexParameters] = cYSin;
+        ++indexParameters;
+        modelUpd.parameters[indexParameters] = cYCos;
+        ++indexParameters;
+
+        //Update the residual and fitting vector
+        for(int j=0; j<yM.size();++j){
+          yM[j]         = yM[j] - cYSin*yDotSin[j] - cYCos*yDotCos[j];
+          modelUpd.y[j] = y[j]  + cYSin*yDotSin[j] + cYCos*yDotCos[j];
+        }
+
+      }
+
+      double r2 = calcR2(y,modelUpd.y);
+
+      modelUpd.duration=xSpan;
+      modelUpd.outlierCount=0;
+      modelUpd.growthRate=0;
+      modelUpd.r2=r2;
+      modelUpd.validFitting=true;
+      modelUpd.modelType = 
+        static_cast<int>(EmpiricalGrowthModelTypes::CyclicalModel);
+
+
+
     };
     //==========================================================================
     static void fitCyclicalModelWithLinearBaseline(
@@ -262,17 +350,12 @@ class NumericalFunctions {
 
         double r2 = calcR2(yMdl,y);
 
-        //This matches the R2 returned by boost
-        //std::vector< double > logZMdl(x.size());
-        //for(size_t i=0; i<w.size();++i){
-        //  logZMdl[i] = std::log(zMdl[i]);
-        //}
-        //double r2CalcLog = calcR2(logZMdl,logZ);
-
         modelUpd.growthRate=growth;
         modelUpd.parameters.push_back(w0);
         modelUpd.parameters.push_back(y0Mdl);
         modelUpd.parameters.push_back(growth);
+
+
         modelUpd.r2=r2;
         modelUpd.x = x;
         modelUpd.y = yMdl;
@@ -490,6 +573,13 @@ class NumericalFunctions {
            && (dateSubV.size()==atoiSubV.size())
            && (foundStartDate || calcOneGrowthRateForAllData)){
 
+          //Order dateSubV so that it proceeds from the earliest date to the 
+          //latest date
+          if(dateSubV.front() > dateSubV.back()){
+            std::reverse(dateSubV.begin(),dateSubV.end());
+            std::reverse(atoiSubV.begin(),atoiSubV.end());
+          }
+
 
           EmpiricalGrowthModel empModel;
           
@@ -599,52 +689,7 @@ class NumericalFunctions {
       }     
 
     };
-    //==========================================================================
-    static void evaluateGrowthModel(
-      const std::string &endDate,
-      const EmpiricalGrowthDataSet &empiricalGrowthData,
-      EmpiricalGrowthDataSetSample &empiricalGrowthSampleUpd)
-    {
-      bool found = false;
-      size_t index = 0;
-      while(!found && index < empiricalGrowthData.dates.size()){
-        if(endDate.compare(empiricalGrowthData.dates[index])==0){
-          found =true;          
-        }else{
-          ++index;
-        }
-      }
 
-      if(found){
-        if(empiricalGrowthData.model[index].modelType ==
-          static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel)){
-          int n = std::round(empiricalGrowthData.model[index].duration);
-                    
-          empiricalGrowthSampleUpd.years.resize(n+1);
-          empiricalGrowthSampleUpd.afterTaxOperatingIncome.resize(n+1);
-          
-          double y0 = 
-            empiricalGrowthData.model[index].parameters[1];
-          double t0 = 
-            empiricalGrowthData.model[index].parameters[0];
-          double r = 
-            empiricalGrowthData.model[index].parameters[2];
-
-          for(int i=0; i<=n;++i){
-            empiricalGrowthSampleUpd.years[i] 
-              = t0 + static_cast<double>(i);
-            empiricalGrowthSampleUpd.afterTaxOperatingIncome[i] 
-              = y0*std::pow(1.0+r,static_cast<double>(i));
-          }
-
-        }else{
-          std::cerr << "Error: this function can only "
-                    <<  "evaluate ExponentialGrowthModels"
-                    << std::endl;
-          std::abort();
-        }
-      }
-    };
 
     //==========================================================================
     static void appendEmpiricalGrowthRateData(
