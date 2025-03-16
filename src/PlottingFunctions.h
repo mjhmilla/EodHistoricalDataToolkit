@@ -429,27 +429,27 @@ public:
       int currentLineType=1;
 
       if(!std::isnan(axisSettingsUpd.xMin)){
-        if(xRange[0] > axisSettingsUpd.xMin){
+        //if(xRange[0] > axisSettingsUpd.xMin){
           xRange[0]=axisSettingsUpd.xMin;
-        }
+        //}
       }
 
       if(!std::isnan(axisSettingsUpd.xMax)){
-        if(xRange[1]<axisSettingsUpd.xMax){
+        //if(xRange[1]<axisSettingsUpd.xMax){
           xRange[1]=axisSettingsUpd.xMax;
-        }
+        //}
       }
 
       if(!std::isnan(axisSettingsUpd.yMin)){
-        if(yRange[0]>axisSettingsUpd.yMin){
+        //if(yRange[0]>axisSettingsUpd.yMin){
           yRange[0]=axisSettingsUpd.yMin;
-        }
+        //}
       }
 
       if(!std::isnan(axisSettingsUpd.yMax)){
-        if(yRange[1]<axisSettingsUpd.yMax){
+        //if(yRange[1]<axisSettingsUpd.yMax){
           yRange[1]=axisSettingsUpd.yMax;
-        }
+        //}
       }
 
       plotMetricUpd.legend().atTopLeft();   

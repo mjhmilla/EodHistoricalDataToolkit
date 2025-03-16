@@ -1,0 +1,363 @@
+{
+    "settings":
+    {
+        "rows": 3,
+        "columns": 2,
+        "plotWidthCm": 7.0,
+        "plotHeightCm": 7.0,
+        "fileName": "fig_@PrimaryTicker_summary.pdf",
+        "title": "@CompanyNameLaTeX Summary Plot",
+        "caption": "@PrimaryTickerLaTeX (@URL) summary"
+    },
+    "plots":
+    {
+        "historicalData":
+        {
+            "row": 0,
+            "column": 0,
+            "jsonData": "historicalData",
+            "address":
+            [],
+            "fieldName": "adjusted_close",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "@PrimaryTickerLaTeX",
+            "lineColor": "grey20",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Adjusted Close (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey20",
+            "boxWhiskerPosition": -0.75
+        },
+        "priceToValue":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "priceToValue",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Fin",
+            "lineColor": "grey20",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "P/DCM-V",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": 4.0,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey20",
+            "boxWhiskerPosition": -0.75
+        },
+        "priceToValueEmpirical":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "priceToValueEmpirical",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Emp",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "P/DCM-V",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": 4.0,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.75
+        },
+        "priceToValueEmpiricalAvg":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "priceToValueEmpiricalAvg",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "P/DCM-V",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": 4.0,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.75
+        },
+        "residualCashFlowToEnterpriseValue":
+        {
+            "row": 1,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "residualCashFlowToEnterpriseValue",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Fin",
+            "lineColor": "grey20",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "rCF/EV",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey20",
+            "boxWhiskerPosition": -0.75
+        },
+        "returnOnInvestedFinancialCapitalLessCostOfCapital":
+        {
+            "row": 1,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "returnOnInvestedFinancialCapitalLessCostOfCapital",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Fin",
+            "lineColor": "grey20",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "ROIC-CC",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": 2.0,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey20",
+            "boxWhiskerPosition": -0.75
+        },
+        "returnOnInvestedOperatingCapitalLessCostOfCapital":
+        {
+            "row": 1,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "returnOnInvestedOperatingCapitalLessCostOfCapital",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Op",
+            "lineColor": "web-blue",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "ROIC-CC",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": 2.0,
+            "useLogScale": false,
+            "boxWhiskerColor": "web-blue",
+            "boxWhiskerPosition": -0.75
+        },
+        "returnOnInvestedCapitalLessCostOfCapitalEmpirical":
+        {
+            "row": 1,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalReturnOnInvestedCapitalLessCostOfCapital",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Emp",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "ROIC-CC",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": 2.0,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.75
+        },
+        "returnOnInvestedCapitalLessCostOfCapitalEmpiricalAvg":
+        {
+            "row": 1,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalAvgReturnOnInvestedCapitalLessCostOfCapital",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "ROIC-CC",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": 2.0,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.75
+        },
+        "atoiGrowth":
+        {
+            "row": 2,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "priceToValue_afterTaxOperatingIncomeGrowth",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Fin",
+            "lineColor": "grey20",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "After-tax operating income (ATOI) growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey20",
+            "boxWhiskerPosition": -0.75
+        },          
+        "empiricalAvgAtoiGrowth":
+        {
+            "row": 2,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalAvgAfterTaxOperatingIncomeGrowth",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "After-tax operating income (ATOI) growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.75
+        },        
+        "empiricalAtoiGrowth":
+        {
+            "row": 2,
+            "column": 0,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalAfterTaxOperatingIncomeGrowth",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Emp Avg",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "After-tax operating income (ATOI) growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.75
+        },  
+        "empiricalAvgR2":
+        {
+            "row": 2,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalAvgModelR2",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "R^2 of ATOI-to-Empirical Model",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.75
+        },        
+        "empiricalR2":
+        {
+            "row": 2,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "metric_data"
+            ],
+            "fieldName": "empiricalModelR2",
+            "dateName": "date",
+            "isArray": false,
+            "legendEntry": "Emp",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "R^2 of ATOI-to-Empirical Model",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.75
+        }        
+    }
+}

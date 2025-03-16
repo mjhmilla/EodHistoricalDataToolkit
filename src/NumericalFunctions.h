@@ -691,8 +691,8 @@ class NumericalFunctions {
         dateInYears - empiricalGrowthData.datesNumerical[index];
       termValues.push_back(dateError); 
 
-      //termNames.push_back(nameToPrepend+"OutlierCount");
-      //termValues.push_back(empiricalGrowthData.outlierCount[index]); 
+      termNames.push_back(nameToPrepend+"OutlierCount");
+      termValues.push_back(empiricalGrowthData.model[index].outlierCount); 
 
     };   
 

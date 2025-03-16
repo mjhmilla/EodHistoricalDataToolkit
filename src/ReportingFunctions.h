@@ -770,6 +770,15 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
   JsonFunctions::getJsonString(countryData["home_country"],homeCountry);
   JsonFunctions::getJsonString(countryData["firm_country"],firmCountry);
 
+  double inflation=JsonFunctions::getJsonFloat(
+       calculateData[date]["costOfEquityAsAPercentage_inflation"],true);
+  std::string inflationStr = formatJsonEntry(inflation);
+
+  double inflationReference = JsonFunctions::getJsonFloat(
+       calculateData[date]["costOfEquityAsAPercentage_inflationReference"],true);
+  std::string inflationReferenceStr = formatJsonEntry(inflationReference);
+
+
   latexReport << "\\begin{tabular}{l l}" << std::endl;
   latexReport << "\\multicolumn{2}{c}{\\textbf{Cost of Capital}} \\\\" 
               << std::endl;
@@ -1304,10 +1313,10 @@ static int appendValuationTable(std::ofstream &latexReport,
                 << " \\\\" << std::endl; 
     latexReport << "$G_{" << tableId << "}$. Present value approx.  & "
                     << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_presentValueOfFutureCashFlows"],true))
+                    calculateData[date][jsonTableName+"_presentValue"],true))
                 << " \\\\" << std::endl; 
     latexReport << "\\multicolumn{2}{c}{ $G_{" << tableId 
-                  << "}= D_{" << tableId << "}+A_{" << tableId 
+                  << "}= D_{" << (tableId-1) << "}+A_{" << tableId 
                   << "}-B_{" << tableId << "}-C_{" << tableId 
                   << "}-D_{" << tableId << "}-E_{" << tableId 
                   << "}-F_{" << tableId << "}$} \\\\" 
