@@ -123,7 +123,12 @@ class NumericalFunctions {
       std::vector< double > xN(x.size());
       std::vector< double > yM(y.size());
 
-      double xSpan = x.back()-x.front();
+      //copy over y
+      for(size_t i=0; i<y.size();++i){
+        yM[i]=y[i];
+      }
+
+      double xSpan = std::abs(x.back()-x.front());
       if(xSpan < 0){
         std::cout << "Error: data must be ordered from earlierst to most recent"
                   << std::endl;
@@ -136,6 +141,7 @@ class NumericalFunctions {
       for(size_t i=0; i<x.size();++i){
         xN[i] = (x[i]-x.front())/xSpan;
         modelUpd.x[i] = x[i];
+        modelUpd.y[i] = 0.;
       }
 
       int n = static_cast<int>(std::round(xSpan/minTimeResolutionInYears));
@@ -145,7 +151,7 @@ class NumericalFunctions {
       int indexParameters=0;
 
       for(int i=0; i<n; ++i){
-        double w = static_cast<double>(i+1);
+        double w = static_cast<double>(i+1.0);
         
         std::vector< double > yDotSin(x.size());
         std::vector< double > yDotCos(x.size());
@@ -156,10 +162,10 @@ class NumericalFunctions {
         // cos(xN*2*pi*2)
 
         for(int j=0; j<xN.size();++j){
-          double sinTerm = std::sin(xN[j]*2*M_PI*w);
-          double cosTerm = std::cos(xN[j]*2*M_PI*w);
-          yDotSin[j] = y[i]*sinTerm;
-          yDotCos[j] = y[i]*cosTerm;
+          double sinTerm = std::sin(xN[j]*2.0*M_PI*w);
+          double cosTerm = std::cos(xN[j]*2.0*M_PI*w);
+          yDotSin[j] = y[j]*sinTerm;
+          yDotCos[j] = y[j]*cosTerm;
         }
 
         //Evaluate the integral of the dot products. Here I'm just going to 
@@ -181,8 +187,10 @@ class NumericalFunctions {
 
         //Update the residual and fitting vector
         for(int j=0; j<yM.size();++j){
-          yM[j]         = yM[j] - cYSin*yDotSin[j] - cYCos*yDotCos[j];
-          modelUpd.y[j] = y[j]  + cYSin*yDotSin[j] + cYCos*yDotCos[j];
+          double sinTerm = std::sin(xN[j]*2.0*M_PI*w);
+          double cosTerm = std::cos(xN[j]*2.0*M_PI*w);
+          yM[j]         = yM[j] - cYSin*sinTerm - cYCos*cosTerm;
+          modelUpd.y[j] = y[j]  + cYSin*sinTerm + cYCos*cosTerm;
         }
 
       }
@@ -204,13 +212,47 @@ class NumericalFunctions {
     static void fitCyclicalModelWithLinearBaseline(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
+                  double minTimeResolutionInYears,
+                  bool generateBaseLineCurve,
                   EmpiricalGrowthModel &modelUpd){
+
       EmpiricalGrowthModel linearModel;
       fitLinearGrowthModel(x,y,linearModel);
 
       //Subtract off the base line then call            
+      std::vector<double> yC(y.size());
+      for(size_t i=0; i<yC.size();++i){
+        yC[i] = y[i] - linearModel.y[i];
+      }
 
-      //fitCyclicalModel;
+      EmpiricalGrowthModel cyclicalModel;
+      fitCyclicalModel(x,yC,minTimeResolutionInYears,cyclicalModel);
+
+      //Form and evaluate the linear+cyclical model
+      std::vector<double> yM(y.size());
+      for(size_t i=0; i<yM.size();++i){
+        yM[i] = linearModel.y[i] + cyclicalModel.y[i];
+      }
+
+      double r2LC = calcR2(yM,y);
+
+      modelUpd.duration     = std::abs(x.back()-x.front());
+      modelUpd.growthRate   = linearModel.growthRate;
+      modelUpd.modelType = 
+        static_cast<int>(EmpiricalGrowthModelTypes::LinearCyclicalModel);
+      modelUpd.outlierCount = 0;
+      modelUpd.parameters   = linearModel.parameters;
+      for(size_t i=0; i<cyclicalModel.parameters.size();++i){
+        modelUpd.parameters.push_back(cyclicalModel.parameters[i]);
+      }
+      modelUpd.r2           = r2LC;
+      modelUpd.validFitting = true;
+      modelUpd.x            = x;
+      if(generateBaseLineCurve){
+        modelUpd.y  = linearModel.y;
+      }else{
+        modelUpd.y  = yM;
+      }
 
     };
     //==========================================================================
@@ -269,7 +311,9 @@ class NumericalFunctions {
     static void fitCyclicalModelWithExponentialBaseline(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
+                  double minTimeResolutionInYears,
                   double maxProportionOfNegativeAtoi,
+                  bool generateBaseLineCurve,
                   EmpiricalGrowthModel &modelUpd){
 
       EmpiricalGrowthModel exponentialModel;
@@ -277,8 +321,43 @@ class NumericalFunctions {
                                 exponentialModel);
 
       //Subtract off the base line then call            
+      std::vector<double> yC(y.size());
+      for(size_t i=0; i<yC.size();++i){
+        yC[i] = y[i] - exponentialModel.y[i];
+      }
 
-      //fitCyclicalModel;
+      EmpiricalGrowthModel cyclicalModel;
+      fitCyclicalModel(x,yC,minTimeResolutionInYears,cyclicalModel);
+
+      //Form and evaluate the linear+cyclical model
+      std::vector<double> yM(y.size());
+      for(size_t i=0; i<yM.size();++i){
+        yM[i] = exponentialModel.y[i] + cyclicalModel.y[i];
+      }
+
+      double r2LC = calcR2(yM,y);
+
+
+      modelUpd.duration   = std::abs(x.back()-x.front());
+      modelUpd.growthRate = exponentialModel.growthRate;
+      modelUpd.modelType  = 
+        static_cast<int>(EmpiricalGrowthModelTypes::ExponentialCyclicalModel);
+      modelUpd.outlierCount = 0;
+      modelUpd.parameters   = exponentialModel.parameters;
+      for(size_t i=0; i<cyclicalModel.parameters.size();++i){
+        modelUpd.parameters.push_back(cyclicalModel.parameters[i]);
+      }
+      modelUpd.r2           = r2LC;
+      modelUpd.validFitting = true;
+      modelUpd.x            = x;
+
+      if(generateBaseLineCurve){
+        modelUpd.y = exponentialModel.y;
+      }else{
+        modelUpd.y = yM;
+      }
+
+    
 
 
     };
@@ -374,8 +453,11 @@ class NumericalFunctions {
           bool quarterlyTTMAnalysis,
           int maxDayErrorTTM,
           double growthIntervalInYears,
-          double maxProportionOfNegativeOpIncome,
+          double maxPropOfOutliersInExpModel,
+          double minCycleTimeInYears,
+          double minR2ImprovementOfCyclicalModel,
           bool calcOneGrowthRateForAllData,
+          bool generateBaseLineCurve,
           int empiricalModelType)
     {
 
@@ -587,27 +669,76 @@ class NumericalFunctions {
             EmpiricalGrowthModel exponentialModel, linearModel;
 
             fitExponentialGrowthModel(dateSubV,atoiSubV,
-                        maxProportionOfNegativeOpIncome,exponentialModel);
+                        maxPropOfOutliersInExpModel,
+                        exponentialModel);
 
             fitLinearGrowthModel(dateSubV,atoiSubV,linearModel);
 
             if(exponentialModel.r2 > linearModel.r2){
-              empModel=exponentialModel;
+
+              EmpiricalGrowthModel exponentialCyclicalModel;
+              fitCyclicalModelWithExponentialBaseline(
+                dateSubV,
+                atoiSubV,
+                minCycleTimeInYears,
+                maxPropOfOutliersInExpModel,
+                false,
+                exponentialCyclicalModel);
+              
+              double r2ExpAdj = exponentialModel.r2 
+                  + minR2ImprovementOfCyclicalModel;
+
+              if(exponentialCyclicalModel.r2 >= r2ExpAdj){
+                empModel = exponentialCyclicalModel;
+              }else{
+                empModel=exponentialModel;
+              }
+
+              if(generateBaseLineCurve){
+                empModel.y=exponentialModel.y;
+              }
+
+
             }else{
-              empModel=linearModel;
+
+              EmpiricalGrowthModel linearCyclicalModel;
+              fitCyclicalModelWithLinearBaseline(
+                dateSubV,
+                atoiSubV,
+                minCycleTimeInYears,
+                false,                
+                linearCyclicalModel);
+
+              double r2LinAdj = linearModel.r2 
+                  + minR2ImprovementOfCyclicalModel;
+
+              if(linearCyclicalModel.r2 >= r2LinAdj){
+                empModel = linearCyclicalModel;
+              }else{
+                empModel=linearModel;
+              }
+
+              if(generateBaseLineCurve){
+                empModel.y=linearModel.y;
+              }
+
             }
           }else{
             switch(empiricalModelType){
               case 0:
               {
                 fitExponentialGrowthModel(dateSubV,atoiSubV,
-                        maxProportionOfNegativeOpIncome,empModel);
+                        maxPropOfOutliersInExpModel,empModel);
               }break;
               case 1:
               {                
-                fitExponentialGrowthModel(dateSubV,atoiSubV,
-                        maxProportionOfNegativeOpIncome,empModel);
-                //Add cyclic fitting to exp baseline
+                fitCyclicalModelWithExponentialBaseline(
+                  dateSubV,
+                  atoiSubV,
+                  minCycleTimeInYears,
+                  maxPropOfOutliersInExpModel,
+                  generateBaseLineCurve,
+                  empModel);
               }break;
               case 2:
               {
@@ -615,8 +746,12 @@ class NumericalFunctions {
               }break;
               case 3:
               {
-                fitLinearGrowthModel(dateSubV,atoiSubV,empModel);
-                //Add cyclic fitting to linear baseline
+                fitCyclicalModelWithLinearBaseline(
+                  dateSubV,
+                  atoiSubV,
+                  minCycleTimeInYears,
+                  generateBaseLineCurve,
+                  empModel);
               }break;
               default:
                 std::cout <<"Error: empiricalModelType must be [0,1,2,3]"

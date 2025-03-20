@@ -674,6 +674,7 @@ void generateComparisonLaTeXReport(
 
   // Add the list of screens
   latexReport << "\\begin{multicols}{2}" << std::endl;
+  latexReport << "\\raggedcolumns" << std::endl;
   latexReport << "\\begin{enumerate}" << std::endl;
   latexReport << "\\setcounter{enumi}{" << indexStart <<"}" << std::endl;  
   latexReport << "\\itemsep0pt" << std::endl;

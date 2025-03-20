@@ -625,6 +625,7 @@ bool generateLaTeXReport(
 
 
     latexReport << "\\begin{multicols}{2}" << std::endl;
+    latexReport << "\\raggedcolumns" << std::endl;
 
     //latexReport << "\\begin{center}" << std::endl;
     latexReport << "\\begin{center}" << std::endl;

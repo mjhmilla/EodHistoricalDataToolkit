@@ -704,20 +704,45 @@ static void appendEmpiricalGrowthTable(std::ofstream &latexReport,
               JsonFunctions::getJsonFloat(calculateData[date][name+"ModelType"]));
       switch(type){
         case 0:
-        {
+        { //Exponential model        
+          latexReport << "\\multicolumn{2}{c}{ Exponential } \\\\" 
+              << std::endl;      
           latexReport << "\\multicolumn{2}{c}{ $y = f(1+g)^n$ (LSQ)} \\\\" 
               << std::endl;      
         }; 
         break;
         case 1:
-        {
+        { //Exponential cyclical model
+          latexReport << "\\multicolumn{2}{c}{ Exponential-cyclical (exp. part plotted)} \\\\" 
+              << std::endl;      
+          latexReport << "\\multicolumn{2}{c}{ $y = f(1+g)^n"
+                " + \\sum_i^\\mathrm{M} ("
+                " A_i \\sin(2 \\pi i \\, (t/t_{span}))$} \\\\" 
+              << std::endl;     
+          latexReport << "\\multicolumn{2}{c}{"
+                "$+B_i \\cos(2 \\pi i \\, (t/t_{span}))) $"
+                " (LSQ)} \\\\" 
+              << std::endl;                    
+        }; 
+        break;
+        case 2:
+        { //Linear model
+          latexReport << "\\multicolumn{2}{c}{ Linear } \\\\" 
+              << std::endl;      
           latexReport << "\\multicolumn{2}{c}{ $y = A x + b$ (LSQ) } \\\\" 
               << std::endl;      
-          latexReport << "\\multicolumn{2}{c}{ $y_0 = A x_0$} \\\\" 
+        }; 
+        case 3:
+        { //Linear cyclical model model
+          latexReport << "\\multicolumn{2}{c}{ Linear-cyclical (linear part plotted) } \\\\" 
               << std::endl;      
-          latexReport << "\\multicolumn{2}{c}{ $y_1 = A x_1$} \\\\" 
-              << std::endl;      
-          latexReport << "\\multicolumn{2}{c}{ $g = \\exp(\\log(y_1/y_0)/N-1) } \\\\" 
+          latexReport << "\\multicolumn{2}{c}{ $y = A x + b "
+                "+ \\sum_i^\\mathrm{M} ("
+                " A_i \\sin(2 \\pi i \\, (t/t_{span}))$} \\\\" 
+              << std::endl;
+          latexReport << "\\multicolumn{2}{c}{ "
+                "$+B_i \\cos(2 \\pi i \\, (t/t_{span}))) $"
+                " (LSQ)} \\\\" 
               << std::endl;      
         }; 
         break;

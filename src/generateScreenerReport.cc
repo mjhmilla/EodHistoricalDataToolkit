@@ -437,6 +437,7 @@ void generateScreenerLaTeXReport(
 
   // Add the list of companies
   latexReport << "\\begin{multicols}{3}" << std::endl;
+  latexReport << "\\raggedcolumns" << std::endl;
   latexReport << "\\begin{enumerate}" << std::endl;
   latexReport << "\\setcounter{enumi}{" << indexTickerStart <<"}" << std::endl;  
   latexReport << "\\itemsep0pt" << std::endl;

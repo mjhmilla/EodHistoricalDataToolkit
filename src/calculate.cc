@@ -1336,7 +1336,15 @@ int main (int argc, char* argv[]) {
   // in this case) must be greater than 1. Here a certain proportion of the
   // data is allowed to be less than 1. These values are set to 1, so that
   // the low values (approximately) still influence the fit.
-  double maxProportionOfNegativeOpIncomeInEmpiricalData = 0.10;
+  double maxProportionOfOutliersInExpModel = 0.10;
+
+  // When fitting cyclic models, the period of smallest allowable cycle is 
+  // defined by this term
+  double minCycleTimeInYears = 5.0;
+
+  // In order to accept a more complex cyclic model, it should provide at least
+  // this amount of improvement in R2
+  double minR2ImprovementOfCyclicalModel=0.1;
 
   //This date error is over 1 year to accomodate for firms that only
   //report financial data on an annual basis
@@ -1857,9 +1865,14 @@ int main (int argc, char* argv[]) {
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
       - DateFunctions::convertToFractionalYear(analysisDates.common.back());
       
+      bool generateBaseLineCurve = true; 
+      //When its set to false the full cyclic curve will be plotted, which
+      //generally is not so helpful: it will nearly exactly follow the data.
+      
       bool calcOneGrowthRateForAllData=true;
       int empiricalModelType = -1; //When this is set to -1 the model
                                    //that best fits is identified
+
       NumericalFunctions::extractEmpiricalGrowthRates(
                                   empiricalGrowthDataAll,            
                                   fundamentalData,
@@ -1870,8 +1883,11 @@ int main (int argc, char* argv[]) {
                                   quarterlyTTMAnalysis,
                                   maxDayErrorTTM,
                                   growthIntervalInYears,
-                                  maxProportionOfNegativeOpIncomeInEmpiricalData,
+                                  maxProportionOfOutliersInExpModel,
+                                  minCycleTimeInYears,
+                                  minR2ImprovementOfCyclicalModel,
                                   calcOneGrowthRateForAllData,
+                                  generateBaseLineCurve,
                                   empiricalModelType);  
 
       empiricalModelType = empiricalGrowthDataAll.model[0].modelType;
@@ -1893,8 +1909,11 @@ int main (int argc, char* argv[]) {
                                   quarterlyTTMAnalysis,
                                   maxDayErrorTTM,
                                   growthIntervalInYears,
-                                  maxProportionOfNegativeOpIncomeInEmpiricalData,
+                                  maxProportionOfOutliersInExpModel,
+                                  minCycleTimeInYears,
+                                  minR2ImprovementOfCyclicalModel,
                                   calcOneGrowthRateForAllData,
+                                  generateBaseLineCurve,
                                   empiricalModelType);
 
 
