@@ -1864,11 +1864,7 @@ int main (int argc, char* argv[]) {
       double growthIntervalInYears = 
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
       - DateFunctions::convertToFractionalYear(analysisDates.common.back());
-      
-      bool generateBaseLineCurve = true; 
-      //When its set to false the full cyclic curve will be plotted, which
-      //generally is not so helpful: it will nearly exactly follow the data.
-      
+            
       bool calcOneGrowthRateForAllData=true;
       int empiricalModelType = -1; //When this is set to -1 the model
                                    //that best fits is identified
@@ -1887,7 +1883,6 @@ int main (int argc, char* argv[]) {
                                   minCycleTimeInYears,
                                   minR2ImprovementOfCyclicalModel,
                                   calcOneGrowthRateForAllData,
-                                  generateBaseLineCurve,
                                   empiricalModelType);  
 
       empiricalModelType = empiricalGrowthDataAll.model[0].modelType;
@@ -1913,15 +1908,7 @@ int main (int argc, char* argv[]) {
                                   minCycleTimeInYears,
                                   minR2ImprovementOfCyclicalModel,
                                   calcOneGrowthRateForAllData,
-                                  generateBaseLineCurve,
                                   empiricalModelType);
-
-
-
-                                
-
-
-     
 
       //
       // Create and set the first values in annualMilesontes
@@ -2616,7 +2603,7 @@ int main (int argc, char* argv[]) {
 
           if(appendTermRecord 
             && indexGrowth < empiricalGrowthData.datesNumerical.size()){
-            std::string nameToPrepend("empirical");
+            std::string nameToPrepend("empirical_");
 
             NumericalFunctions::appendEmpiricalGrowthRateData(
                   indexGrowth,      
@@ -2669,7 +2656,7 @@ int main (int argc, char* argv[]) {
 
           if(appendTermRecord 
               && empiricalGrowthDataAll.datesNumerical.size()==1){
-            std::string nameToPrepend("empiricalAvg");
+            std::string nameToPrepend("empiricalAvg_");
 
             NumericalFunctions::appendEmpiricalGrowthRateData(
                                   0,      
@@ -2803,18 +2790,26 @@ int main (int argc, char* argv[]) {
 
 
       nlohmann::ordered_json vectorAnalysis;      
+
       vectorAnalysis["average_years"] 
         = empiricalGrowthDataAll.model[indexRecentDateAll].x;
       vectorAnalysis["average_afterTaxOperatingIncome"] 
         = empiricalGrowthDataAll.model[indexRecentDateAll].y;
+      vectorAnalysis["average_afterTaxOperatingIncomeTrendline"] 
+        = empiricalGrowthDataAll.model[indexRecentDateAll].yTrendline;
+      vectorAnalysis["average_afterTaxOperatingIncomeCyclic"] 
+        = empiricalGrowthDataAll.model[indexRecentDateAll].yCyclic;
+
       vectorAnalysis["recent_years"] 
         = empiricalGrowthData.model[indexRecentDate].x;
       vectorAnalysis["recent_afterTaxOperatingIncome"] 
         = empiricalGrowthData.model[indexRecentDate].y;
+      vectorAnalysis["recent_afterTaxOperatingIncomeTrendline"] 
+        = empiricalGrowthData.model[indexRecentDate].yTrendline;
+      vectorAnalysis["recent_afterTaxOperatingIncomeCyclic"] 
+        = empiricalGrowthData.model[indexRecentDate].yCyclic;
 
       analysis["growth_model"] =vectorAnalysis;
-
-
       analysis["metric_data"] = metricAnalysis;
 
       std::string outputFilePath(analyseFolder);

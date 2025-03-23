@@ -193,7 +193,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalReturnOnInvestedCapitalLessCostOfCapital",
+            "fieldName": "empirical_ReturnOnInvestedCapitalLessCostOfCapital",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp",
@@ -218,7 +218,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvgReturnOnInvestedCapitalLessCostOfCapital",
+            "fieldName": "empiricalAvg_ReturnOnInvestedCapitalLessCostOfCapital",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -254,7 +254,7 @@
             "xMin": null,
             "xMax": null,
             "yMin": 0,
-            "yMax": null,
+            "yMax": 0.3,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
             "boxWhiskerPosition": -0.75
@@ -268,7 +268,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvgAfterTaxOperatingIncomeGrowth",
+            "fieldName": "empiricalAvg_AfterTaxOperatingIncomeGrowth",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -279,7 +279,7 @@
             "xMin": null,
             "xMax": null,
             "yMin": 0,
-            "yMax": null,
+            "yMax": 0.3,
             "useLogScale": false,
             "boxWhiskerColor": "orange",
             "boxWhiskerPosition": -0.75
@@ -293,7 +293,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAfterTaxOperatingIncomeGrowth",
+            "fieldName": "empirical_AfterTaxOperatingIncomeGrowth",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -304,7 +304,7 @@
             "xMin": null,
             "xMax": null,
             "yMin": 0,
-            "yMax": null,
+            "yMax": 0.3,
             "useLogScale": false,
             "boxWhiskerColor": "red",
             "boxWhiskerPosition": -0.75
@@ -318,14 +318,14 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvgModelR2",
+            "fieldName": "empiricalAvg_r2Trendline",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
             "lineColor": "orange",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
-            "yAxisLabel": "R^2 of ATOI-to-Empirical Model",
+            "yAxisLabel": "R^2 of ATOI-to-Empirical Trendline",
             "xMin": null,
             "xMax": null,
             "yMin": 0,
@@ -343,14 +343,14 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalModelR2",
+            "fieldName": "empirical_r2Trendline",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp",
             "lineColor": "red",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
-            "yAxisLabel": "R^2 of ATOI-to-Empirical Model",
+            "yAxisLabel": "R^2 of ATOI-to-Empirical Trendline",
             "xMin": null,
             "xMax": null,
             "yMin": 0,

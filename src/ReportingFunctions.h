@@ -680,11 +680,20 @@ static void appendEmpiricalGrowthTable(std::ofstream &latexReport,
                   << " \\\\" << std::endl;
       latexReport << "$B$. Lsq. After-tax op. income R2 & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date][name+"ModelR2"],true))
+                      calculateData[date][name+"r2"],true))
                   << " \\\\" << std::endl;
+      latexReport << "$B$. Lsq. After-tax op. income trendline R2 & "
+                  << formatJsonEntry(JsonFunctions::getJsonFloat(
+                      calculateData[date][name+"r2Trendline"],true))
+                  << " \\\\" << std::endl;
+      latexReport << "$B$. Lsq. After-tax op. income cyclic R2 & "
+                  << formatJsonEntry(JsonFunctions::getJsonFloat(
+                      calculateData[date][name+"r2Cyclic"],true))
+                  << " \\\\" << std::endl;
+
       latexReport << "$C$. Years of data used in fit & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
-                      calculateData[date][name+"DataDuration"],true))
+                      calculateData[date][name+"Duration"],true))
                   << " \\\\" << std::endl;
       latexReport << "$D$. Age of estimate & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(

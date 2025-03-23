@@ -45,7 +45,7 @@
             [
                 "growth_model"
             ],
-            "fieldName": "average_afterTaxOperatingIncome",
+            "fieldName": "average_afterTaxOperatingIncomeTrendline",
             "dateName": "average_years",
             "isArray": true,
             "legendEntry": "Emp Avg",
@@ -70,7 +70,7 @@
             [
                 "growth_model"
             ],
-            "fieldName": "recent_afterTaxOperatingIncome",
+            "fieldName": "recent_afterTaxOperatingIncomeTrendline",
             "dateName": "recent_years",
             "isArray": true,
             "legendEntry": "Emp",
@@ -106,7 +106,7 @@
             "xMin": null,
             "xMax": null,
             "yMin": null,
-            "yMax": null,
+            "yMax": 0.3,
             "useLogScale": false,
             "boxWhiskerColor": "grey40",
             "boxWhiskerPosition": -0.75
@@ -120,7 +120,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvgAfterTaxOperatingIncomeGrowth",
+            "fieldName": "empiricalAvg_AfterTaxOperatingIncomeGrowth",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -131,7 +131,7 @@
             "xMin": null,
             "xMax": null,
             "yMin": null,
-            "yMax": null,
+            "yMax": 0.3,
             "useLogScale": false,
             "boxWhiskerColor": "orange",
             "boxWhiskerPosition": -0.75
@@ -145,7 +145,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAfterTaxOperatingIncomeGrowth",
+            "fieldName": "empirical_AfterTaxOperatingIncomeGrowth",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp",
@@ -156,7 +156,7 @@
             "xMin": null,
             "xMax": null,
             "yMin": null,
-            "yMax": null,
+            "yMax": 0.3,
             "useLogScale": false,
             "boxWhiskerColor": "red",
             "boxWhiskerPosition": -0.75
@@ -220,7 +220,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalReturnOnInvestedCapital",
+            "fieldName": "empirical_ReturnOnInvestedCapital",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp",
@@ -245,7 +245,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvgReturnOnInvestedCapital",
+            "fieldName": "empiricalAvg_ReturnOnInvestedCapital",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -295,7 +295,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvgReinvestmentRateMean",
+            "fieldName": "empiricalAvg_ReinvestmentRateMean",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -320,7 +320,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalReinvestmentRateMean",
+            "fieldName": "empirical_ReinvestmentRateMean",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp",

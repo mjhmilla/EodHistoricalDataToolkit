@@ -18,7 +18,17 @@
 class NumericalFunctions {
 
   public:
-
+    //
+    // If this enum is changed note that there are 
+    // switch statements in this header file that 
+    // assume the following order
+    //
+    // 0. ExponentialModel
+    // 1. ExponentialCyclicalModel
+    // 2. LinearModel
+    // 3. LinearCyclicalModel
+    // 4. CyclicalModel
+    //
     enum EmpiricalGrowthModelTypes{
       ExponentialModel=0,
       ExponentialCyclicalModel,
@@ -36,13 +46,17 @@ class NumericalFunctions {
     struct EmpiricalGrowthModel{
       int modelType;
       double duration;
-      double growthRate;
+      double annualGrowthRateOfTrendline;
       double r2;
+      double r2Trendline;
+      double r2Cyclic;            
       bool validFitting;
       int outlierCount;
       std::vector< double > parameters;  
       std::vector< double > x;
       std::vector< double > y;
+      std::vector< double > yTrendline;
+      std::vector< double > yCyclic;
     };    
     //============================================================================
     struct EmpiricalGrowthDataSet{
@@ -189,8 +203,10 @@ class NumericalFunctions {
         for(int j=0; j<yM.size();++j){
           double sinTerm = std::sin(xN[j]*2.0*M_PI*w);
           double cosTerm = std::cos(xN[j]*2.0*M_PI*w);
-          yM[j]         = yM[j] - cYSin*sinTerm - cYCos*cosTerm;
-          modelUpd.y[j] = y[j]  + cYSin*sinTerm + cYCos*cosTerm;
+          yM[j]         = yM[j] 
+                          - cYSin*sinTerm - cYCos*cosTerm;
+          modelUpd.y[j] = modelUpd.y[j]  
+                          + cYSin*sinTerm + cYCos*cosTerm;
         }
 
       }
@@ -199,7 +215,7 @@ class NumericalFunctions {
 
       modelUpd.duration=xSpan;
       modelUpd.outlierCount=0;
-      modelUpd.growthRate=0;
+      modelUpd.annualGrowthRateOfTrendline=0;
       modelUpd.r2=r2;
       modelUpd.validFitting=true;
       modelUpd.modelType = 
@@ -213,7 +229,6 @@ class NumericalFunctions {
                   const std::vector< double > &x,
                   const std::vector< double > &y,
                   double minTimeResolutionInYears,
-                  bool generateBaseLineCurve,
                   EmpiricalGrowthModel &modelUpd){
 
       EmpiricalGrowthModel linearModel;
@@ -237,22 +252,23 @@ class NumericalFunctions {
       double r2LC = calcR2(yM,y);
 
       modelUpd.duration     = std::abs(x.back()-x.front());
-      modelUpd.growthRate   = linearModel.growthRate;
+      modelUpd.annualGrowthRateOfTrendline   = linearModel.annualGrowthRateOfTrendline;
       modelUpd.modelType = 
         static_cast<int>(EmpiricalGrowthModelTypes::LinearCyclicalModel);
-      modelUpd.outlierCount = 0;
       modelUpd.parameters   = linearModel.parameters;
       for(size_t i=0; i<cyclicalModel.parameters.size();++i){
         modelUpd.parameters.push_back(cyclicalModel.parameters[i]);
       }
       modelUpd.r2           = r2LC;
+      modelUpd.r2Trendline   = linearModel.r2;
+      modelUpd.r2Cyclic     = cyclicalModel.r2;
       modelUpd.validFitting = true;
+      modelUpd.outlierCount =   linearModel.outlierCount 
+                             +cyclicalModel.outlierCount;
       modelUpd.x            = x;
-      if(generateBaseLineCurve){
-        modelUpd.y  = linearModel.y;
-      }else{
-        modelUpd.y  = yM;
-      }
+      modelUpd.y            = yM;
+      modelUpd.yTrendline   = linearModel.y;
+      modelUpd.yCyclic      = cyclicalModel.y;
 
     };
     //==========================================================================
@@ -297,11 +313,12 @@ class NumericalFunctions {
       //double r2Test = calcR2(yMdl,y);
 
 
-      modelUpd.growthRate=growth1;
+      modelUpd.annualGrowthRateOfTrendline=growth1;
       modelUpd.parameters.push_back(w0);
       modelUpd.parameters.push_back(y0Mdl);
       modelUpd.parameters.push_back(dydwMdl);
       modelUpd.validFitting=true;
+      modelUpd.outlierCount=0;
       modelUpd.r2=r2;
       modelUpd.x = x;
       modelUpd.y = yMdl;
@@ -313,7 +330,6 @@ class NumericalFunctions {
                   const std::vector< double > &y,
                   double minTimeResolutionInYears,
                   double maxProportionOfNegativeAtoi,
-                  bool generateBaseLineCurve,
                   EmpiricalGrowthModel &modelUpd){
 
       EmpiricalGrowthModel exponentialModel;
@@ -339,27 +355,24 @@ class NumericalFunctions {
 
 
       modelUpd.duration   = std::abs(x.back()-x.front());
-      modelUpd.growthRate = exponentialModel.growthRate;
+      modelUpd.annualGrowthRateOfTrendline = exponentialModel.annualGrowthRateOfTrendline;
       modelUpd.modelType  = 
         static_cast<int>(EmpiricalGrowthModelTypes::ExponentialCyclicalModel);
-      modelUpd.outlierCount = 0;
+      modelUpd.outlierCount = exponentialModel.outlierCount
+                             +cyclicalModel.outlierCount;
       modelUpd.parameters   = exponentialModel.parameters;
       for(size_t i=0; i<cyclicalModel.parameters.size();++i){
         modelUpd.parameters.push_back(cyclicalModel.parameters[i]);
       }
       modelUpd.r2           = r2LC;
+      modelUpd.r2Trendline  = exponentialModel.r2;
+      modelUpd.r2Cyclic     = cyclicalModel.r2;
       modelUpd.validFitting = true;
       modelUpd.x            = x;
-
-      if(generateBaseLineCurve){
-        modelUpd.y = exponentialModel.y;
-      }else{
-        modelUpd.y = yM;
-      }
-
+      modelUpd.y            = yM;
+      modelUpd.yTrendline   = exponentialModel.y;
+      modelUpd.yCyclic      = cyclicalModel.y;
     
-
-
     };
     //==========================================================================
     static void fitExponentialGrowthModel(
@@ -383,7 +396,7 @@ class NumericalFunctions {
       z.resize(y.size());
       
       modelUpd.validFitting=true;
-      modelUpd.outlierCount = 0;
+      modelUpd.outlierCount=0;
       for(size_t i=0; i< y.size();++i){
         if(y[i]<1){
           z[i]=1.0;
@@ -429,7 +442,8 @@ class NumericalFunctions {
 
         double r2 = calcR2(yMdl,y);
 
-        modelUpd.growthRate=growth;
+        modelUpd.outlierCount=0;
+        modelUpd.annualGrowthRateOfTrendline=growth;
         modelUpd.parameters.push_back(w0);
         modelUpd.parameters.push_back(y0Mdl);
         modelUpd.parameters.push_back(growth);
@@ -457,7 +471,6 @@ class NumericalFunctions {
           double minCycleTimeInYears,
           double minR2ImprovementOfCyclicalModel,
           bool calcOneGrowthRateForAllData,
-          bool generateBaseLineCurve,
           int empiricalModelType)
     {
 
@@ -674,53 +687,44 @@ class NumericalFunctions {
 
             fitLinearGrowthModel(dateSubV,atoiSubV,linearModel);
 
-            if(exponentialModel.r2 > linearModel.r2){
+            int modelType = 
+              static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
+            int linearModelType = 
+              static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
+            int exponentialModelType = 
+              static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel);
 
-              EmpiricalGrowthModel exponentialCyclicalModel;
+            if(linearModel.validFitting==false){
+              std::cout << "Error: a linear fit should always be valid"
+                        << std::endl;
+              std::abort();
+            }
+
+            //A linear model is used unless the exponential model
+            //is both valid and has a higher R2
+            if(exponentialModel.validFitting==true){
+              if(exponentialModel.r2 > linearModel.r2){
+                modelType=static_cast<int>(
+                    EmpiricalGrowthModelTypes::ExponentialModel);
+              }
+            }
+
+            if(modelType == exponentialModelType){
+
               fitCyclicalModelWithExponentialBaseline(
                 dateSubV,
                 atoiSubV,
                 minCycleTimeInYears,
                 maxPropOfOutliersInExpModel,
-                false,
-                exponentialCyclicalModel);
-              
-              double r2ExpAdj = exponentialModel.r2 
-                  + minR2ImprovementOfCyclicalModel;
-
-              if(exponentialCyclicalModel.r2 >= r2ExpAdj){
-                empModel = exponentialCyclicalModel;
-              }else{
-                empModel=exponentialModel;
-              }
-
-              if(generateBaseLineCurve){
-                empModel.y=exponentialModel.y;
-              }
-
-
+                empModel);
+                            
             }else{
 
-              EmpiricalGrowthModel linearCyclicalModel;
               fitCyclicalModelWithLinearBaseline(
                 dateSubV,
                 atoiSubV,
                 minCycleTimeInYears,
-                false,                
-                linearCyclicalModel);
-
-              double r2LinAdj = linearModel.r2 
-                  + minR2ImprovementOfCyclicalModel;
-
-              if(linearCyclicalModel.r2 >= r2LinAdj){
-                empModel = linearCyclicalModel;
-              }else{
-                empModel=linearModel;
-              }
-
-              if(generateBaseLineCurve){
-                empModel.y=linearModel.y;
-              }
+                empModel);
 
             }
           }else{
@@ -737,7 +741,6 @@ class NumericalFunctions {
                   atoiSubV,
                   minCycleTimeInYears,
                   maxPropOfOutliersInExpModel,
-                  generateBaseLineCurve,
                   empModel);
               }break;
               case 2:
@@ -750,7 +753,6 @@ class NumericalFunctions {
                   dateSubV,
                   atoiSubV,
                   minCycleTimeInYears,
-                  generateBaseLineCurve,
                   empModel);
               }break;
               default:
@@ -785,7 +787,7 @@ class NumericalFunctions {
           }
           rrSd = std::sqrt(rrSd / count);
 
-          double roic = empModel.growthRate/rrAvg;
+          double roic = empModel.annualGrowthRateOfTrendline/rrAvg;
 
           //
           // Store the model results
@@ -793,7 +795,7 @@ class NumericalFunctions {
           if(count > 0 && !std::isnan(rrAvg) && !std::isinf(rrAvg)){
 
             empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(
-                empModel.growthRate);
+                empModel.annualGrowthRateOfTrendline);
 
             empiricalGrowthDataUpd.reinvestmentRate.push_back(rrAvg);
             empiricalGrowthDataUpd.reinvestmentRateSD.push_back(rrSd);
@@ -806,19 +808,6 @@ class NumericalFunctions {
 
             empiricalGrowthDataUpd.model.push_back(empModel);     
 
-            //empiricalGrowthDataUpd.intervalStartDate.push_back(dateMin);
-
-            //empiricalGrowthDataUpd.durationNumerical.push_back(
-            //    duration);
-            //empiricalGrowthDataUpd.typeOfGrowthModel.push_back(
-            //    bestModel.modelType);    
-            //empiricalGrowthDataUpd.growthModelR2.push_back(
-            //    bestModel.R2);
-            //empiricalGrowthDataUpd.outlierCount.push_back(
-            //    invalidEntryCount);
-            
-            //empiricalGrowthDataUpd.
-            //intervalStartingAfterTaxOperatingIncome.push_back(initialValue);
           }  
         }   
       }     
@@ -842,9 +831,14 @@ class NumericalFunctions {
       termNames.push_back(nameToPrepend+"AfterTaxOperatingIncomeGrowth");
       termValues.push_back(empiricalGrowthData.afterTaxOperatingIncomeGrowth[index]);
 
-
-      termNames.push_back(nameToPrepend+"ModelR2");
+      termNames.push_back(nameToPrepend+"r2");
       termValues.push_back(empiricalGrowthData.model[index].r2); 
+
+      termNames.push_back(nameToPrepend+"r2Trendline");
+      termValues.push_back(empiricalGrowthData.model[index].r2Trendline); 
+
+      termNames.push_back(nameToPrepend+"r2Cyclic");
+      termValues.push_back(empiricalGrowthData.model[index].r2Cyclic); 
 
       termNames.push_back(nameToPrepend+"ModelType");
       termValues.push_back(empiricalGrowthData.model[index].modelType); 
@@ -863,7 +857,7 @@ class NumericalFunctions {
                           -costOfCapitalMature;          
       termValues.push_back(roicEmpLCC);
 
-      termNames.push_back(nameToPrepend+"DataDuration");
+      termNames.push_back(nameToPrepend+"Duration");
       termValues.push_back(empiricalGrowthData.model[index].duration); 
 
       termNames.push_back(nameToPrepend+"ModelDateError");

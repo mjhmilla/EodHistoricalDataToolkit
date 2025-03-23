@@ -824,7 +824,7 @@ bool generateLaTeXReport(
                                       jsonTableName,
                                       verbose);
 
-      std::string nameToPrepend("empirical");
+      std::string nameToPrepend("empirical_");
       std::string empTableTitle="Empirically Estimated Growth (recent)";
       ReportingFunctions::appendEmpiricalGrowthTable(
                                   latexReport,
@@ -857,7 +857,7 @@ bool generateLaTeXReport(
                                     jsonTableName,
                                     verbose);
 
-      std::string nameToPrepend="empiricalAvg";
+      std::string nameToPrepend="empiricalAvg_";
       std::string empTableTitle="Empirically Estimated Growth (avg. of all)";      
       ReportingFunctions::appendEmpiricalGrowthTable(
                             latexReport,
