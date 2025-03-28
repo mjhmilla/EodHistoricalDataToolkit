@@ -2801,6 +2801,10 @@ int main (int argc, char* argv[]) {
         = empiricalGrowthDataAll.model[indexRecentDateAll].yCyclic;
       vectorAnalysis["average_afterTaxOperatingIncomeCyclicData"] 
         = empiricalGrowthDataAll.model[indexRecentDateAll].yCyclicData;
+      vectorAnalysis["average_afterTaxOperatingIncomeCyclicNorm"] 
+        = empiricalGrowthDataAll.model[indexRecentDateAll].yCyclicNorm;
+      vectorAnalysis["average_afterTaxOperatingIncomeCyclicNormData"] 
+        = empiricalGrowthDataAll.model[indexRecentDateAll].yCyclicNormData;
 
       vectorAnalysis["recent_years"] 
         = empiricalGrowthData.model[indexRecentDate].x;
@@ -2812,6 +2816,10 @@ int main (int argc, char* argv[]) {
         = empiricalGrowthData.model[indexRecentDate].yCyclic;
       vectorAnalysis["recent_afterTaxOperatingIncomeCyclicData"] 
         = empiricalGrowthData.model[indexRecentDate].yCyclicData;
+      vectorAnalysis["recent_afterTaxOperatingIncomeCyclicNorm"] 
+        = empiricalGrowthData.model[indexRecentDate].yCyclicNorm;
+      vectorAnalysis["recent_afterTaxOperatingIncomeCyclicNormData"] 
+        = empiricalGrowthData.model[indexRecentDate].yCyclicNormData;
 
       analysis["growth_model"] =vectorAnalysis;
       analysis["metric_data"] = metricAnalysis;

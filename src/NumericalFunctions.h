@@ -58,6 +58,9 @@ class NumericalFunctions {
       std::vector< double > yTrendline;
       std::vector< double > yCyclic;
       std::vector< double > yCyclicData;
+      std::vector< double > yCyclicNorm;
+      std::vector< double > yCyclicNormData;
+
     };    
     //============================================================================
     struct EmpiricalGrowthDataSet{
@@ -273,6 +276,14 @@ class NumericalFunctions {
       modelUpd.yCyclic      = cyclicalModel.y;
       modelUpd.yCyclicData  = cyclicalModel.yCyclicData;
 
+      modelUpd.yCyclicNorm.resize(modelUpd.y.size());
+      modelUpd.yCyclicNormData.resize(modelUpd.y.size());
+      for(size_t i=0; i<modelUpd.y.size();++i){
+        modelUpd.yCyclicNorm[i] = 
+          modelUpd.yCyclic[i]/modelUpd.yTrendline[i]; 
+        modelUpd.yCyclicNormData[i] = 
+          modelUpd.yCyclicData[i]/modelUpd.yTrendline[i];        
+      }
     };
     //==========================================================================
     static void fitLinearGrowthModel(
@@ -376,7 +387,17 @@ class NumericalFunctions {
       modelUpd.yTrendline   = exponentialModel.y;
       modelUpd.yCyclic      = cyclicalModel.y;
       modelUpd.yCyclicData  = cyclicalModel.yCyclicData;
-    
+
+      modelUpd.yCyclicNorm.resize(modelUpd.y.size());
+      modelUpd.yCyclicNormData.resize(modelUpd.y.size());
+      for(size_t i=0; i<modelUpd.y.size();++i){
+        modelUpd.yCyclicNorm[i] = 
+          modelUpd.yCyclic[i]/modelUpd.yTrendline[i]; 
+        modelUpd.yCyclicNormData[i] = 
+          modelUpd.yCyclicData[i]/modelUpd.yTrendline[i];        
+      }
+
+
     };
     //==========================================================================
     static void fitExponentialGrowthModel(

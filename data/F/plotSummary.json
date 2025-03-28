@@ -128,7 +128,7 @@
             "yAxisLabel": "rCF/EV",
             "xMin": null,
             "xMax": null,
-            "yMin": 0.0,
+            "yMin": null,
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
@@ -153,8 +153,8 @@
             "yAxisLabel": "ROIC-CC",
             "xMin": null,
             "xMax": null,
-            "yMin": 0,
-            "yMax": 2.0,
+            "yMin": null,
+            "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
             "boxWhiskerPosition": -0.75
@@ -178,35 +178,10 @@
             "yAxisLabel": "ROIC-CC",
             "xMin": null,
             "xMax": null,
-            "yMin": 0,
-            "yMax": 2.0,
+            "yMin": null,
+            "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "web-blue",
-            "boxWhiskerPosition": -0.75
-        },
-        "returnOnInvestedCapitalLessCostOfCapitalEmpirical":
-        {
-            "row": 1,
-            "column": 1,
-            "jsonData": "calculateData",
-            "address":
-            [
-                "metric_data"
-            ],
-            "fieldName": "empirical_ReturnOnInvestedCapitalLessCostOfCapital",
-            "dateName": "date",
-            "isArray": false,
-            "legendEntry": "Emp",
-            "lineColor": "red",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "ROIC-CC",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0,
-            "yMax": 2.0,
-            "useLogScale": false,
-            "boxWhiskerColor": "red",
             "boxWhiskerPosition": -0.75
         },
         "returnOnInvestedCapitalLessCostOfCapitalEmpiricalAvg":
@@ -228,8 +203,8 @@
             "yAxisLabel": "ROIC-CC",
             "xMin": null,
             "xMax": null,
-            "yMin": 0,
-            "yMax": 2.0,
+            "yMin": null,
+            "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "orange",
             "boxWhiskerPosition": -0.75
@@ -253,8 +228,8 @@
             "yAxisLabel": "After-tax operating income (ATOI) growth",
             "xMin": null,
             "xMax": null,
-            "yMin": 0,
-            "yMax": 0.3,
+            "yMin": null,
+            "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
             "boxWhiskerPosition": -0.75
@@ -278,8 +253,8 @@
             "yAxisLabel": "After-tax operating income (ATOI) growth",
             "xMin": null,
             "xMax": null,
-            "yMin": 0,
-            "yMax": 0.3,
+            "yMin": null,
+            "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "orange",
             "boxWhiskerPosition": -0.75
@@ -303,8 +278,8 @@
             "yAxisLabel": "After-tax operating income (ATOI) growth",
             "xMin": null,
             "xMax": null,
-            "yMin": 0,
-            "yMax": 0.3,
+            "yMin": null,
+            "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "red",
             "boxWhiskerPosition": -0.75

@@ -21,44 +21,51 @@ class PlottingFunctions {
 public:
 
   struct LineSettings{
-  std::string colour;
-  std::string name;
-  double lineWidth;
+    std::string colour;
+    std::string name;
+    double lineWidth;
   };
 
   struct BoxAndWhiskerSettings{
-  double xOffsetFromStart;
-  double xOffsetFromEnd;
-  std::string boxWhiskerColour;
-  std::string currentValueColour;
-  BoxAndWhiskerSettings():
-    xOffsetFromStart(std::nan("1")),
-    xOffsetFromEnd(std::nan("1")),  
-    boxWhiskerColour("blue"),
-    currentValueColour("black"){};
+    double xOffsetFromStart;
+    double xOffsetFromEnd;
+    std::string boxWhiskerColour;
+    std::string currentValueColour;
+    BoxAndWhiskerSettings():
+      xOffsetFromStart(std::nan("1")),
+      xOffsetFromEnd(std::nan("1")),  
+      boxWhiskerColour("blue"),
+      currentValueColour("black"){};
   };
 
 
   struct AxisSettings{
-  std::string xAxisName;
-  std::string yAxisName;
-  double xMin;
-  double xMax;  
-  double yMin;
-  double yMax;
-  AxisSettings():
-    xAxisName(""),
-    yAxisName(""),
-    xMin(std::nan("1")),
-    xMax(std::nan("1")),
-    yMin(std::nan("1")),
-    yMax(std::nan("1")){};
-
+    std::string xAxisName;
+    std::string yAxisName;
+    double xMin;
+    double xMax;  
+    double yMin;
+    double yMax;
+    bool isXMinFixed;
+    bool isXMaxFixed;  
+    bool isYMinFixed;
+    bool isYMaxFixed;
+    AxisSettings():
+      xAxisName(""),
+      yAxisName(""),
+      xMin(std::nan("1")),
+      xMax(std::nan("1")),
+      yMin(std::nan("1")),
+      yMax(std::nan("1")),
+      isXMinFixed(false),
+      isXMaxFixed(false),
+      isYMinFixed(false),
+      isYMaxFixed(false){};
   };
 
   struct SubplotSettings{
-  size_t indexRow;
-  size_t indexColumn;
+    size_t indexRow;
+    size_t indexColumn;
   };
 
   struct PlotSettings{

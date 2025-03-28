@@ -345,26 +345,16 @@ void updatePlotArray(
 
     //Only update the axis if the values have not been already set
     if( std::isnan(axisSettings[indexRow][indexColumn].xMin) ){
-      axisSettings[indexRow][indexColumn].xMin = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["xMin"],false);
+      double xMin = JsonFunctions::getJsonFloat(plotConfig.value()["xMin"],false);
+      axisSettings[indexRow][indexColumn].xMin = xMin;
+
+      if(std::isnan(xMin)){
+        axisSettings[indexRow][indexColumn].isXMinFixed=false;  
+      }else{
+        axisSettings[indexRow][indexColumn].isXMinFixed=true;  
+      }
+        
     }
-
-    if( std::isnan(axisSettings[indexRow][indexColumn].xMax) ){
-      axisSettings[indexRow][indexColumn].xMax = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["xMax"], false);
-    }
-
-    if( std::isnan(axisSettings[indexRow][indexColumn].yMin) ){
-      axisSettings[indexRow][indexColumn].yMin = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["yMin"],false);
-    }
-
-    if( std::isnan(axisSettings[indexRow][indexColumn].yMax) ){
-      axisSettings[indexRow][indexColumn].yMax = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["yMax"], false);
-    }
-
-
 
 
 
@@ -394,6 +384,76 @@ void updatePlotArray(
         xTmp,
         yTmp); 
 
+
+    //
+    // update the axes as necessary
+    //
+    double xMaxData = *std::max_element(xTmp.begin(),xTmp.end());
+    double xMinData = *std::min_element(xTmp.begin(),xTmp.end());
+    double yMaxData = *std::max_element(yTmp.begin(),yTmp.end());
+    double yMinData = *std::min_element(yTmp.begin(),yTmp.end());
+
+
+    double xMaxConfig = 
+      JsonFunctions::getJsonFloat(plotConfig.value()["xMax"], false);
+    double xMinConfig = 
+      JsonFunctions::getJsonFloat(plotConfig.value()["xMin"], false);
+    double yMaxConfig = 
+      JsonFunctions::getJsonFloat(plotConfig.value()["yMax"], false);
+    double yMinConfig = 
+      JsonFunctions::getJsonFloat(plotConfig.value()["yMin"], false);
+
+    if(std::isnan(xMaxConfig)){
+      axisSettings[indexRow][indexColumn].isXMaxFixed=false;
+      if(std::isnan(axisSettings[indexRow][indexColumn].xMax)){
+        axisSettings[indexRow][indexColumn].xMax = xMaxData;
+      }else{
+        axisSettings[indexRow][indexColumn].xMax = 
+          std::max(axisSettings[indexRow][indexColumn].xMax,xMaxData);
+      }
+    }else{
+      axisSettings[indexRow][indexColumn].isXMaxFixed=true;  
+      axisSettings[indexRow][indexColumn].xMax = xMaxConfig;
+    }
+
+    if(std::isnan(xMinConfig)){
+      axisSettings[indexRow][indexColumn].isXMinFixed=false;
+      if(std::isnan(axisSettings[indexRow][indexColumn].xMin)){
+        axisSettings[indexRow][indexColumn].xMin = xMinData;
+      }else{
+        axisSettings[indexRow][indexColumn].xMin = 
+          std::min(axisSettings[indexRow][indexColumn].xMin,xMinData);
+      }
+    }else{
+      axisSettings[indexRow][indexColumn].isXMinFixed=true;  
+      axisSettings[indexRow][indexColumn].xMin =xMinConfig;
+    }
+
+    if(std::isnan(yMaxConfig)){
+      axisSettings[indexRow][indexColumn].isYMaxFixed=false;
+      if(std::isnan(axisSettings[indexRow][indexColumn].yMax)){
+        axisSettings[indexRow][indexColumn].yMax = yMaxData;
+      }else{
+        axisSettings[indexRow][indexColumn].yMax = 
+          std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData);
+      }
+    }else{
+      axisSettings[indexRow][indexColumn].isYMaxFixed=true;  
+      axisSettings[indexRow][indexColumn].yMax = yMaxConfig;
+    }
+
+    if(std::isnan(yMinConfig)){
+      axisSettings[indexRow][indexColumn].isYMinFixed=false;
+      if(std::isnan(axisSettings[indexRow][indexColumn].yMin)){
+        axisSettings[indexRow][indexColumn].yMin = yMinData;
+      }else{
+        axisSettings[indexRow][indexColumn].yMin = 
+          std::min(axisSettings[indexRow][indexColumn].yMin,yMinData);
+      }
+    }else{
+      axisSettings[indexRow][indexColumn].isYMinFixed=true;  
+      axisSettings[indexRow][indexColumn].yMin =yMinConfig;
+    }
 
 
 
