@@ -1911,6 +1911,53 @@ int main (int argc, char* argv[]) {
                                   empiricalModelType);
 
       //
+      // Fit an empirical model to the price history
+      //
+      std::vector<double> datesHistorical;
+      std::vector<double> priceHistorical;
+
+      for(auto &el : historicalData){
+        std::string dateStr;
+        JsonFunctions::getJsonString(el["date"],dateStr);
+        std::string dayStr = dateStr.substr(dateStr.size()-2,2);
+        if(dayStr.compare("01")==0){
+          double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);
+          double price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);
+          datesHistorical.push_back(dateNumerical);
+          priceHistorical.push_back(price);
+        }
+      }
+
+      NumericalFunctions::EmpiricalGrowthModel linearPriceModel;
+      NumericalFunctions::EmpiricalGrowthModel exponentialPriceModel;
+      NumericalFunctions::EmpiricalGrowthModel priceModel;
+
+      NumericalFunctions::fitLinearGrowthModel(
+          datesHistorical,priceHistorical,linearPriceModel);
+
+      NumericalFunctions::fitExponentialGrowthModel(
+                            datesHistorical,
+                            priceHistorical,
+                            maxProportionOfOutliersInExpModel, 
+                            exponentialPriceModel);
+
+      if(exponentialPriceModel.r2 > linearPriceModel.r2){
+        NumericalFunctions::fitCyclicalModelWithExponentialBaseline(
+                              datesHistorical, 
+                              priceHistorical,
+                              minCycleTimeInYears,
+                              maxProportionOfOutliersInExpModel,
+                              priceModel);
+        
+      }else{
+        NumericalFunctions::fitCyclicalModelWithLinearBaseline(
+                             datesHistorical,
+                             priceHistorical,
+                             minCycleTimeInYears,
+                             priceModel);
+      }
+
+      //
       // Create and set the first values in annualMilesontes
       //
       AnnualMilestoneDataSet annualMilestones;
@@ -2821,8 +2868,20 @@ int main (int argc, char* argv[]) {
       vectorAnalysis["recent_afterTaxOperatingIncomeCyclicNormData"] 
         = empiricalGrowthData.model[indexRecentDate].yCyclicNormData;
 
+
+
+      nlohmann::ordered_json priceAnalysis;
+      priceAnalysis["years"] = priceModel.x;
+      priceAnalysis["priceTrendline"] = priceModel.yTrendline;
+      priceAnalysis["priceCyclicData"] = priceModel.yCyclicData;
+      priceAnalysis["priceCyclicNormData"] = priceModel.yCyclicNormData;
+      priceAnalysis["growthOfTrendline"]=priceModel.annualGrowthRateOfTrendline;
+
+
+
       analysis["growth_model"] =vectorAnalysis;
       analysis["metric_data"] = metricAnalysis;
+      analysis["price_model"] = priceAnalysis;
 
       std::string outputFilePath(analyseFolder);
       std::string outputFileName(fileName.c_str());    

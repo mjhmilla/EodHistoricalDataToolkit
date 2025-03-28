@@ -577,6 +577,16 @@ bool generateLaTeXReport(
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fieldNames.push_back("Highlights");
+  metric.fieldNames.push_back("DividendYield");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
   metric.fieldNames.push_back("SharesStats");
   metric.fieldNames.push_back("PercentInsiders");
   metric.type = JSON_FIELD_TYPE::FLOAT;
@@ -586,6 +596,10 @@ bool generateLaTeXReport(
   metric.fieldNames.push_back("SharesStats");
   metric.fieldNames.push_back("PercentInstitutions");
   metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
@@ -705,11 +719,17 @@ bool generateLaTeXReport(
               ++indexTabularMetrics)
     {
       JsonFieldAddress entryMetric = tabularMetrics[indexTabularMetrics];
-      std::string labelMetric = entryMetric.fieldNames.back();
-      ReportingFunctions::convertCamelCaseToSpacedText(labelMetric);
+      std::string labelMetric("");
+      if(entryMetric.fieldNames.size()>0){
+        labelMetric = entryMetric.fieldNames.back();
+        ReportingFunctions::convertCamelCaseToSpacedText(labelMetric);
+      }
 
-      bool fieldExists = JsonFunctions::doesFieldExist(fundamentalData, 
+      bool fieldExists = true;
+      if(labelMetric.length()>0){
+        fieldExists = JsonFunctions::doesFieldExist(fundamentalData, 
                                                 entryMetric.fieldNames);
+      }
 
       if(fieldExists){
         switch(entryMetric.type){
@@ -736,6 +756,10 @@ bool generateLaTeXReport(
                               value);
 
             latexReport << labelMetric << " & " << value << "\\\\" << std::endl;                          
+          }
+          break;
+          case JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE :{
+            latexReport  << " & \\\\" << std::endl;
           }
           break;
         };
