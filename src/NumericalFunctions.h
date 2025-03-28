@@ -57,6 +57,7 @@ class NumericalFunctions {
       std::vector< double > y;
       std::vector< double > yTrendline;
       std::vector< double > yCyclic;
+      std::vector< double > yCyclicData;
     };    
     //============================================================================
     struct EmpiricalGrowthDataSet{
@@ -220,6 +221,7 @@ class NumericalFunctions {
       modelUpd.validFitting=true;
       modelUpd.modelType = 
         static_cast<int>(EmpiricalGrowthModelTypes::CyclicalModel);
+      modelUpd.yCyclicData = y;
 
 
 
@@ -260,7 +262,7 @@ class NumericalFunctions {
         modelUpd.parameters.push_back(cyclicalModel.parameters[i]);
       }
       modelUpd.r2           = r2LC;
-      modelUpd.r2Trendline   = linearModel.r2;
+      modelUpd.r2Trendline  = linearModel.r2;
       modelUpd.r2Cyclic     = cyclicalModel.r2;
       modelUpd.validFitting = true;
       modelUpd.outlierCount =   linearModel.outlierCount 
@@ -269,6 +271,7 @@ class NumericalFunctions {
       modelUpd.y            = yM;
       modelUpd.yTrendline   = linearModel.y;
       modelUpd.yCyclic      = cyclicalModel.y;
+      modelUpd.yCyclicData  = cyclicalModel.yCyclicData;
 
     };
     //==========================================================================
@@ -372,6 +375,7 @@ class NumericalFunctions {
       modelUpd.y            = yM;
       modelUpd.yTrendline   = exponentialModel.y;
       modelUpd.yCyclic      = cyclicalModel.y;
+      modelUpd.yCyclicData  = cyclicalModel.yCyclicData;
     
     };
     //==========================================================================

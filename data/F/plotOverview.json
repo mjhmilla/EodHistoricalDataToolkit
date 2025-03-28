@@ -336,31 +336,106 @@
             "boxWhiskerColor": "red",
             "boxWhiskerPosition": -0.75
         },
-        "value":
+        "afterTaxOperatingIncomeCyclic":
         {
             "row": 0,
             "column": 1,
             "jsonData": "calculateData",
             "address":
             [
-                "metric_data"
+                "growth_model"
             ],
-            "fieldName": "priceToValue_presentValueOfFutureCashFlows",
-            "dateName": "date",
-            "isArray": false,
-            "legendEntry": "Fin",
+            "fieldName": "average_afterTaxOperatingIncomeCyclicData",
+            "dateName": "average_years",
+            "isArray": true,
+            "legendEntry": "ATOI-Emp Avg Trend",
             "lineColor": "black",
             "lineWidth": 0.5,
             "xAxisLabel": "Years",
-            "yAxisLabel": "Present Value (DCM)",
+            "yAxisLabel": "Cyclic ATOI (@CurrencyCodeLaTeX)",
             "xMin": null,
             "xMax": null,
             "yMin": null,
             "yMax": null,
             "useLogScale": false,
-            "boxWhiskerColor": "grey70",
+            "boxWhiskerColor": "black",
             "boxWhiskerPosition": -0.75
         },
+        "afterTaxOperatingIncomeCyclicAvg":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "growth_model"
+            ],
+            "fieldName": "average_afterTaxOperatingIncomeCyclic",
+            "dateName": "average_years",
+            "isArray": true,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Cyclic ATOI (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.75
+        },
+        "afterTaxOperatingIncomeCyclicRecentData":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "growth_model"
+            ],
+            "fieldName": "recent_afterTaxOperatingIncomeCyclicData",
+            "dateName": "recent_years",
+            "isArray": true,
+            "legendEntry": "ATOI-Emp Trend",
+            "lineColor": "grey50",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Cyclic ATOI (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey50",
+            "boxWhiskerPosition": -0.75
+        },
+        "afterTaxOperatingIncomeCyclicRecent":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData": "calculateData",
+            "address":
+            [
+                "growth_model"
+            ],
+            "fieldName": "recent_afterTaxOperatingIncomeCyclic",
+            "dateName": "recent_years",
+            "isArray": true,
+            "legendEntry": "ATOI-Emp Trend",
+            "lineColor": "red",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Cyclic ATOI (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.75
+        },        
         "costOfCapital":
         {
             "row": 1,

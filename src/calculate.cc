@@ -1340,7 +1340,7 @@ int main (int argc, char* argv[]) {
 
   // When fitting cyclic models, the period of smallest allowable cycle is 
   // defined by this term
-  double minCycleTimeInYears = 5.0;
+  double minCycleTimeInYears = 1.0;
 
   // In order to accept a more complex cyclic model, it should provide at least
   // this amount of improvement in R2
@@ -2799,6 +2799,8 @@ int main (int argc, char* argv[]) {
         = empiricalGrowthDataAll.model[indexRecentDateAll].yTrendline;
       vectorAnalysis["average_afterTaxOperatingIncomeCyclic"] 
         = empiricalGrowthDataAll.model[indexRecentDateAll].yCyclic;
+      vectorAnalysis["average_afterTaxOperatingIncomeCyclicData"] 
+        = empiricalGrowthDataAll.model[indexRecentDateAll].yCyclicData;
 
       vectorAnalysis["recent_years"] 
         = empiricalGrowthData.model[indexRecentDate].x;
@@ -2808,6 +2810,8 @@ int main (int argc, char* argv[]) {
         = empiricalGrowthData.model[indexRecentDate].yTrendline;
       vectorAnalysis["recent_afterTaxOperatingIncomeCyclic"] 
         = empiricalGrowthData.model[indexRecentDate].yCyclic;
+      vectorAnalysis["recent_afterTaxOperatingIncomeCyclicData"] 
+        = empiricalGrowthData.model[indexRecentDate].yCyclicData;
 
       analysis["growth_model"] =vectorAnalysis;
       analysis["metric_data"] = metricAnalysis;
