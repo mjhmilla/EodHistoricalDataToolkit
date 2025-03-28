@@ -28,7 +28,7 @@ class ScreenerFunctions {
       std::vector< double > metricRankSum;
       std::vector< size_t > rank;
       std::vector< size_t > sortedIndex;
-      std::vector < std::vector < PlottingFunctions::SummaryStatistics > > summaryStatistics;
+      std::vector < std::vector < NumericalFunctions::SummaryStatistics > > summaryStatistics;
       std::vector < double > weight;
     };
     
@@ -299,7 +299,7 @@ class ScreenerFunctions {
 
         std::vector< double > metricVector;
         std::vector< date::sys_days > dateVector;
-        std::vector< PlottingFunctions::SummaryStatistics> percentileVector;
+        std::vector< NumericalFunctions::SummaryStatistics> percentileVector;
         double weight=1.0;
 
         nlohmann::ordered_json targetJsonTable;
@@ -482,8 +482,8 @@ class ScreenerFunctions {
                             *targetJsonTable,fieldAddress);
             }
           }                                  
-          PlottingFunctions::SummaryStatistics percentileSummary;
-          PlottingFunctions::extractSummaryStatistics(metricData,
+          NumericalFunctions::SummaryStatistics percentileSummary;
+          NumericalFunctions::extractSummaryStatistics(metricData,
                                                       percentileSummary); 
           percentileSummary.current = targetMetricValue;                                                    
 

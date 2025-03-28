@@ -10,11 +10,10 @@
 #include <sstream>
 
 #include "JsonFunctions.h"
-
+#include "NumericalFunctions.h"
 
 const double PointsPerInch    = 72;
 const double InchesPerCentimeter  = 1.0/2.54;
-const double Percentiles[5]     ={0.05, 0.25, 0.5, 0.75, 0.95};
 
 class PlottingFunctions {
 
@@ -144,30 +143,7 @@ public:
            settings.plotHeightInPoints);
 
     };  
-  //==========================================================================
-  enum PercentileIndices{
-  P05=0,
-  P25,
-  P50,
-  P75,
-  P95,
-  NUM_PERCENTILES
-  };
 
-  //==========================================================================
-  struct SummaryStatistics{
-  std::vector< double > percentiles;
-  double min;
-  double max;
-  double current;
-  std::string name;
-  SummaryStatistics():
-    min(0),
-    max(0),
-    current(0),
-    name(""){
-    };
-  };
 
   //==========================================================================
   static void getDataRange(   const std::vector< double > &data, 
@@ -196,56 +172,13 @@ public:
     dataRange.push_back(ymax);
   }
 
-  //==========================================================================
-  // Note: These summary statistics are interpolated so that this method
-  //     will give a sensible response with 1 data point or many.
-  static bool extractSummaryStatistics(const std::vector< double > &data, 
-                     SummaryStatistics &summary){
 
-    bool validSummaryStatistics = true;                      
-
-    if(data.size() > 0){
-    std::vector<double> dataCopy;
-    for(size_t i=0; i<data.size();++i){
-      dataCopy.push_back(data[i]);
-    }
-
-    summary.current = std::nan("-1");
-
-    std::sort(dataCopy.begin(),dataCopy.end());
-
-    summary.min = dataCopy[0];
-    summary.max = dataCopy[dataCopy.size()-1];
-
-    if(dataCopy.size() > 1){
-      for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
-      double idx = Percentiles[i]*(dataCopy.size()-1);
-      int indexA = std::floor(idx);
-      int indexB = std::ceil(idx);
-      double weightB = idx - static_cast<double>(indexA);
-      double weightA = 1.0-weightB;
-      double valueA = dataCopy[indexA];
-      double valueB = dataCopy[indexB];
-      double value = valueA*weightA + valueB*weightB;
-      summary.percentiles.push_back(value);
-      }
-    }else{
-      for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
-        summary.percentiles.push_back(dataCopy[0]);
-      }
-      validSummaryStatistics=false;
-    }
-    }else{
-    validSummaryStatistics=false;
-    }
-    return validSummaryStatistics;
-  };
 
   //==========================================================================
   static void drawBoxAndWhisker(  sciplot::Plot2D &plotUpd,
                   double x,   
                   double xWidth,   
-                  const SummaryStatistics &summary,
+                  const NumericalFunctions::SummaryStatistics &summary,
                   const char* boxColor,
                   const char* currentColor,
                   const int currentLineType,
@@ -260,11 +193,11 @@ public:
   xBox[3]= x-xWidth*0.5;
   xBox[4]= x-xWidth*0.5;
 
-  yBox[0]= summary.percentiles[P25];
-  yBox[1]= summary.percentiles[P25];
-  yBox[2]= summary.percentiles[P75];
-  yBox[3]= summary.percentiles[P75];
-  yBox[4]= summary.percentiles[P25];
+  yBox[0]= summary.percentiles[NumericalFunctions::PercentileIndices::P25];
+  yBox[1]= summary.percentiles[NumericalFunctions::PercentileIndices::P25];
+  yBox[2]= summary.percentiles[NumericalFunctions::PercentileIndices::P75];
+  yBox[3]= summary.percentiles[NumericalFunctions::PercentileIndices::P75];
+  yBox[4]= summary.percentiles[NumericalFunctions::PercentileIndices::P25];
 
   plotUpd.drawCurveFilled(xBox,yBox)
       .fillColor(boxColor)
@@ -276,7 +209,7 @@ public:
 
   xLine[0] = x;
   xLine[1] = x;
-  yLine[0] = summary.percentiles[P75];
+  yLine[0] = summary.percentiles[NumericalFunctions::PercentileIndices::P75];
   yLine[1] = summary.max;
 
   plotUpd.drawCurve(xLine,yLine)
@@ -287,8 +220,8 @@ public:
 
   xLine[0] = x;
   xLine[1] = x;
-  yLine[0] = summary.percentiles[P75];
-  yLine[1] = summary.percentiles[P95];
+  yLine[0] = summary.percentiles[NumericalFunctions::PercentileIndices::P75];
+  yLine[1] = summary.percentiles[NumericalFunctions::PercentileIndices::P95];
 
   plotUpd.drawCurve(xLine,yLine)
       .lineColor(boxColor)
@@ -297,8 +230,8 @@ public:
 
   xLine[0] = x-xWidth*0.5;
   xLine[1] = x+xWidth*0.5;
-  yLine[0] = summary.percentiles[P95];
-  yLine[1] = summary.percentiles[P95];
+  yLine[0] = summary.percentiles[NumericalFunctions::PercentileIndices::P95];
+  yLine[1] = summary.percentiles[NumericalFunctions::PercentileIndices::P95];
 
   plotUpd.drawCurve(xLine,yLine)
       .lineColor(boxColor)
@@ -307,7 +240,7 @@ public:
 
   xLine[0] = x;
   xLine[1] = x;
-  yLine[0] = summary.percentiles[P25];
+  yLine[0] = summary.percentiles[NumericalFunctions::PercentileIndices::P25];
   yLine[1] = summary.min;
 
   plotUpd.drawCurve(xLine,yLine)
@@ -318,8 +251,8 @@ public:
 
   xLine[0] = x;
   xLine[1] = x;
-  yLine[0] = summary.percentiles[P25];
-  yLine[1] = summary.percentiles[P05];
+  yLine[0] = summary.percentiles[NumericalFunctions::PercentileIndices::P25];
+  yLine[1] = summary.percentiles[NumericalFunctions::PercentileIndices::P05];
 
   plotUpd.drawCurve(xLine,yLine)
       .lineColor(boxColor)
@@ -328,8 +261,8 @@ public:
 
   xLine[0] = x-xWidth*0.5;
   xLine[1] = x+xWidth*0.5;
-  yLine[0] = summary.percentiles[P05];
-  yLine[1] = summary.percentiles[P05];
+  yLine[0] = summary.percentiles[NumericalFunctions::PercentileIndices::P05];
+  yLine[1] = summary.percentiles[NumericalFunctions::PercentileIndices::P05];
 
   plotUpd.drawCurve(xLine,yLine)
       .lineColor(boxColor)
@@ -338,8 +271,8 @@ public:
 
   xLine[0] = x-xWidth;
   xLine[1] = x+xWidth;
-  yLine[0] = summary.percentiles[P50];
-  yLine[1] = summary.percentiles[P50];
+  yLine[0] = summary.percentiles[NumericalFunctions::PercentileIndices::P50];
+  yLine[1] = summary.percentiles[NumericalFunctions::PercentileIndices::P50];
 
   plotUpd.drawCurve(xLine,yLine)
       .lineColor("white")
@@ -407,10 +340,10 @@ public:
       }
 
 
-      PlottingFunctions::SummaryStatistics metricSummaryStatistics;
+      NumericalFunctions::SummaryStatistics metricSummaryStatistics;
       metricSummaryStatistics.name=dataName;
       bool validSummaryStats = 
-        PlottingFunctions::extractSummaryStatistics(yV,
+        NumericalFunctions::extractSummaryStatistics(yV,
                   metricSummaryStatistics);
       metricSummaryStatistics.current = yV[yV.size()-1];
 

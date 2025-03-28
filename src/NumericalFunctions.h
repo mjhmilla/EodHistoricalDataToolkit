@@ -15,6 +15,9 @@
 #include "FinancialAnalysisFunctions.h"
 
 
+const double Percentiles[5]     ={0.05, 0.25, 0.5, 0.75, 0.95};
+
+
 class NumericalFunctions {
 
   public:
@@ -73,6 +76,74 @@ class NumericalFunctions {
       std::vector< EmpiricalGrowthModel > model;
 
     };
+
+  //==========================================================================
+  enum PercentileIndices{
+    P05=0,
+    P25,
+    P50,
+    P75,
+    P95,
+    NUM_PERCENTILES
+  };
+  //==========================================================================
+  struct SummaryStatistics{
+    std::vector< double > percentiles;
+    double min;
+    double max;
+    double current;
+    std::string name;
+    SummaryStatistics():
+      min(0),
+      max(0),
+      current(0),
+      name(""){
+      };
+  };
+  //==========================================================================
+  // Note: These summary statistics are interpolated so that this method
+  //     will give a sensible response with 1 data point or many.
+  static bool extractSummaryStatistics(const std::vector< double > &data, 
+                     SummaryStatistics &summary){
+
+    bool validSummaryStatistics = true;                      
+
+    if(data.size() > 0){
+    std::vector<double> dataCopy;
+    for(size_t i=0; i<data.size();++i){
+      dataCopy.push_back(data[i]);
+    }
+
+    summary.current = std::nan("-1");
+
+    std::sort(dataCopy.begin(),dataCopy.end());
+
+    summary.min = dataCopy[0];
+    summary.max = dataCopy[dataCopy.size()-1];
+
+    if(dataCopy.size() > 1){
+      for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
+      double idx = Percentiles[i]*(dataCopy.size()-1);
+      int indexA = std::floor(idx);
+      int indexB = std::ceil(idx);
+      double weightB = idx - static_cast<double>(indexA);
+      double weightA = 1.0-weightB;
+      double valueA = dataCopy[indexA];
+      double valueB = dataCopy[indexB];
+      double value = valueA*weightA + valueB*weightB;
+      summary.percentiles.push_back(value);
+      }
+    }else{
+      for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
+        summary.percentiles.push_back(dataCopy[0]);
+      }
+      validSummaryStatistics=false;
+    }
+    }else{
+    validSummaryStatistics=false;
+    }
+    return validSummaryStatistics;
+  };
 
     //==============================================================================
     static size_t getIndexOfEmpiricalGrowthDataSet(
@@ -894,6 +965,8 @@ class NumericalFunctions {
       termValues.push_back(empiricalGrowthData.model[index].outlierCount); 
 
     };   
+
+
 
 };
 

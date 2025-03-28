@@ -80,15 +80,15 @@ void plotScreenerReportData(
         PlottingFunctions::PlotSettings subplotSettings = settings;
         subplotSettings.lineWidth = 0.5;
 
-        PlottingFunctions::SummaryStatistics groupSummary;   
+        NumericalFunctions::SummaryStatistics groupSummary;   
         groupSummary.percentiles.resize(
-            PlottingFunctions::PercentileIndices::NUM_PERCENTILES,0.);
+            NumericalFunctions::PercentileIndices::NUM_PERCENTILES,0.);
 
         double groupWeight = 0; //Tickers between indexTickerStart-indexTickerEnd
 
-        PlottingFunctions::SummaryStatistics screenSummary;   
+        NumericalFunctions::SummaryStatistics screenSummary;   
         screenSummary.percentiles.resize(
-            PlottingFunctions::PercentileIndices::NUM_PERCENTILES,0.);
+            NumericalFunctions::PercentileIndices::NUM_PERCENTILES,0.);
 
         double screenWeight= 0; //All tickers in screenDataSet
 
