@@ -43,7 +43,7 @@
             [
                 "price_model"
             ],
-            "fieldName": "priceTrendline",
+            "fieldName": "trendline",
             "dateName": "years",
             "isArray": true,
             "legendEntry": "@PrimaryTickerLaTeX",
@@ -68,7 +68,7 @@
             [
                 "price_model"
             ],
-            "fieldName": "priceCyclicNormData",
+            "fieldName": "cyclicNormData",
             "dateName": "years",
             "isArray": true,
             "legendEntry": "@PrimaryTickerLaTeX",

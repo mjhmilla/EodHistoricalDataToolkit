@@ -1916,17 +1916,43 @@ int main (int argc, char* argv[]) {
       std::vector<double> datesHistorical;
       std::vector<double> priceHistorical;
 
+      std::string dateStr;
+      double price;
       for(auto &el : historicalData){
-        std::string dateStr;
         JsonFunctions::getJsonString(el["date"],dateStr);
+        price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);        
+        double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);          
+        datesHistorical.push_back(dateNumerical);
+        priceHistorical.push_back(price);
+      }
+
+      /*
+      std::string dateStr;
+      std::string previousDateStr;
+      double price;
+      int monthPrevious=0;
+      for(auto &el : historicalData){
+        JsonFunctions::getJsonString(el["date"],dateStr);
+        price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);        
         std::string dayStr = dateStr.substr(dateStr.size()-2,2);
-        if(dayStr.compare("01")==0){
-          double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);
-          double price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);
+        std::string monthStr = dateStr.substr(5,2);
+        int month = std::stoi(monthStr);
+        if(month != monthPrevious){
+          double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);          
           datesHistorical.push_back(dateNumerical);
           priceHistorical.push_back(price);
+          previousDateStr = dateStr;
         }
+        monthPrevious=month;
       }
+      //Append the most recent date
+      std::string dayStr = dateStr.substr(dateStr.size()-2,2);
+      if(dayStr.compare(previousDateStr) != 0){
+        double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);
+        datesHistorical.push_back(dateNumerical);
+        priceHistorical.push_back(price);
+      }
+      */
 
       NumericalFunctions::EmpiricalGrowthModel linearPriceModel;
       NumericalFunctions::EmpiricalGrowthModel exponentialPriceModel;
@@ -1956,6 +1982,8 @@ int main (int argc, char* argv[]) {
                              minCycleTimeInYears,
                              priceModel);
       }
+
+
 
       //
       // Create and set the first values in annualMilesontes
@@ -2809,17 +2837,6 @@ int main (int argc, char* argv[]) {
 
       analysis["annual_milestones"] = annualMilestoneReport;
 
-      //Evaluate the most recent rate of growth
-      //NumericalFunctions::EmpiricalGrowthDataSetSample recentGrowthSeries;
-      //NumericalFunctions::evaluateGrowthModel(
-      //                      empiricalGrowthData.model[0],
-      //                      recentGrowthSeries);
-
-      //Evaluate the most recent rate of growth
-      //NumericalFunctions::EmpiricalGrowthDataSetSample avgGrowthSeries;
-      //NumericalFunctions::evaluateGrowthModel(
-      //                    empiricalGrowthDataAll.model[0],
-      //                    avgGrowthSeries);
 
       int indexRecentDate = 0;
       double dateRange= empiricalGrowthData.datesNumerical.front()
@@ -2838,6 +2855,27 @@ int main (int argc, char* argv[]) {
 
       nlohmann::ordered_json vectorAnalysis;      
 
+      //
+      // Avg empirical model
+      //
+      size_t indexRecentEntry = 0;
+      if(empiricalGrowthDataAll.model[indexRecentDateAll].x.front() 
+         < empiricalGrowthDataAll.model[indexRecentDateAll].x.back()){
+          indexRecentEntry = 
+            empiricalGrowthDataAll.model[indexRecentDateAll].x.size()-1;
+      }
+
+      std::vector<double> atoiAvgCyclicNormPercentiles;
+      NumericalFunctions::mapToPercentiles(
+        empiricalGrowthDataAll.model[indexRecentDateAll].yCyclicNormData,
+        atoiAvgCyclicNormPercentiles);
+
+      vectorAnalysis["average_afterTaxOperatingIncomeTrendlineGrowth"]
+        = empiricalGrowthDataAll.model[indexRecentDateAll].annualGrowthRateOfTrendline;
+
+      vectorAnalysis["average_afterTaxOperatingIncomeCyclicNormDataPercentilesRecent"]
+        = atoiAvgCyclicNormPercentiles[indexRecentEntry];
+
       vectorAnalysis["average_years"] 
         = empiricalGrowthDataAll.model[indexRecentDateAll].x;
       vectorAnalysis["average_afterTaxOperatingIncome"] 
@@ -2852,6 +2890,31 @@ int main (int argc, char* argv[]) {
         = empiricalGrowthDataAll.model[indexRecentDateAll].yCyclicNorm;
       vectorAnalysis["average_afterTaxOperatingIncomeCyclicNormData"] 
         = empiricalGrowthDataAll.model[indexRecentDateAll].yCyclicNormData;
+
+      
+      vectorAnalysis["average_afterTaxOperatingIncomeCyclicNormDataPercentiles"]
+        = atoiAvgCyclicNormPercentiles; 
+
+      //
+      // Recent empirical data
+      //
+      indexRecentEntry=0;
+      if(empiricalGrowthData.model[indexRecentDate].x.front() 
+         < empiricalGrowthData.model[indexRecentDate].x.back()){
+          indexRecentEntry = 
+            empiricalGrowthData.model[indexRecentDate].x.size()-1;
+      }
+
+      std::vector<double> atoiCyclicNormPercentiles;
+      NumericalFunctions::mapToPercentiles(
+        empiricalGrowthData.model[indexRecentDate].yCyclicNormData,
+        atoiCyclicNormPercentiles);
+
+      vectorAnalysis["recent_afterTaxOperatingIncomeTrendlineGrowth"]
+        = empiricalGrowthData.model[indexRecentDate].annualGrowthRateOfTrendline;
+
+      vectorAnalysis["recent_afterTaxOperatingIncomeCyclicNormDataPercentilesRecent"]
+        = atoiCyclicNormPercentiles[indexRecentEntry];
 
       vectorAnalysis["recent_years"] 
         = empiricalGrowthData.model[indexRecentDate].x;
@@ -2868,19 +2931,79 @@ int main (int argc, char* argv[]) {
       vectorAnalysis["recent_afterTaxOperatingIncomeCyclicNormData"] 
         = empiricalGrowthData.model[indexRecentDate].yCyclicNormData;
 
+      
+      vectorAnalysis["recent_afterTaxOperatingIncomeCyclicNormDataPercentiles"]
+        = atoiCyclicNormPercentiles; 
 
 
+      //
+      // Pricing model
+      //
       nlohmann::ordered_json priceAnalysis;
-      priceAnalysis["years"] = priceModel.x;
-      priceAnalysis["priceTrendline"] = priceModel.yTrendline;
-      priceAnalysis["priceCyclicData"] = priceModel.yCyclicData;
-      priceAnalysis["priceCyclicNormData"] = priceModel.yCyclicNormData;
-      priceAnalysis["growthOfTrendline"]=priceModel.annualGrowthRateOfTrendline;
+
+      indexRecentEntry=0;
+      if(priceModel.x.front() < priceModel.x.back()){
+          indexRecentEntry = priceModel.x.size()-1;
+      }
+
+      std::vector<double> priceCyclicNormPercentiles;
+      NumericalFunctions::mapToPercentiles(
+        priceModel.yCyclicNormData,
+        priceCyclicNormPercentiles);
+
+    
+      priceAnalysis["trendlineGrowth"] = priceModel.annualGrowthRateOfTrendline;
+
+      priceAnalysis["cyclicNormDataPercentilesRecent"]
+        = priceCyclicNormPercentiles[indexRecentEntry];
+        
+      //Downsample all outgoing data.
+      //Each year gets 12 data points + the last entry gets added
+      NumericalFunctions::EmpiricalGrowthModel priceModelDS;
+      std::vector<double> priceCyclicNormPercentilesDS;
+      int month=0;
+      int previousMonth=0;
+      double previousDate=0.;
+      for(size_t i=0; i<priceModel.x.size();++i){
+        int month = std::floor( (            priceModel.x[i]
+                                 -std::floor(priceModel.x[i]))*12.0);
+        if(month != previousMonth){
+          priceModelDS.x.push_back(priceModel.x[i]);
+          priceModelDS.y.push_back(priceModel.y[i]);
+          priceModelDS.yTrendline.push_back(priceModel.yTrendline[i]);
+          priceModelDS.yCyclicData.push_back(priceModel.yCyclicData[i]);
+          priceModelDS.yCyclicNormData.push_back(priceModel.yCyclicNormData[i]);
+          priceCyclicNormPercentilesDS.push_back(priceCyclicNormPercentiles[i]);
+          previousDate = priceModel.x[i];
+        }  
+        previousMonth=month;                               
+      }
+
+      if(priceModel.x.back() !=  previousDate){
+          priceModelDS.x.push_back(priceModel.x.back());
+          priceModelDS.y.push_back(priceModel.y.back());
+          priceModelDS.yTrendline.push_back(priceModel.yTrendline.back());
+          priceModelDS.yCyclicData.push_back(priceModel.yCyclicData.back());
+          priceModelDS.yCyclicNormData.push_back(priceModel.yCyclicNormData.back());
+          priceCyclicNormPercentilesDS.push_back(priceCyclicNormPercentiles.back());
+
+      }
 
 
 
-      analysis["growth_model"] =vectorAnalysis;
+      priceAnalysis["years"]           = priceModelDS.x;
+      priceAnalysis["trendline"]       = priceModelDS.yTrendline;
+      priceAnalysis["cyclicData"]      = priceModelDS.yCyclicData;
+      priceAnalysis["cyclicNormData"]  = priceModelDS.yCyclicNormData;      
+      priceAnalysis["cyclicNormDataPercentiles"]
+        = priceCyclicNormPercentilesDS;
+
+      //
+      // Package all three into a single json object
+      //
+
       analysis["metric_data"] = metricAnalysis;
+      analysis["growth_model"] =vectorAnalysis;
       analysis["price_model"] = priceAnalysis;
 
       std::string outputFilePath(analyseFolder);
