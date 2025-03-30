@@ -63,6 +63,7 @@ class NumericalFunctions {
       std::vector< double > yCyclicData;
       std::vector< double > yCyclicNorm;
       std::vector< double > yCyclicNormData;
+      std::vector< double > yCyclicNormDataPercentiles;
 
     };    
     //============================================================================
@@ -395,6 +396,8 @@ class NumericalFunctions {
         modelUpd.yCyclicNormData[i] = 
           modelUpd.yCyclicData[i]/modelUpd.yTrendline[i];        
       }
+      mapToPercentiles(modelUpd.yCyclicNormData,
+                       modelUpd.yCyclicNormDataPercentiles);
     };
     //==========================================================================
     static void fitLinearGrowthModel(
@@ -508,6 +511,8 @@ class NumericalFunctions {
           modelUpd.yCyclicData[i]/modelUpd.yTrendline[i];        
       }
 
+      mapToPercentiles(modelUpd.yCyclicNormData,
+                       modelUpd.yCyclicNormDataPercentiles);
 
     };
     //==========================================================================
@@ -950,9 +955,82 @@ class NumericalFunctions {
 
     };
 
+    //==========================================================================
+    static void appendEmpiricalGrowthModel(
+        nlohmann::ordered_json &jsonStruct,
+        const EmpiricalGrowthModel &empiricalGrowthModel,
+        const std::string nameToPrepend)
+    {
+      if(empiricalGrowthModel.validFitting){
+
+        size_t indexRecentEntry = 0;
+        if(empiricalGrowthModel.x.front() 
+          < empiricalGrowthModel.x.back()){
+            indexRecentEntry = 
+              empiricalGrowthModel.x.size()-1;
+        }
+
+
+        std::string fieldName = nameToPrepend+"modelType";
+        jsonStruct[fieldName] = empiricalGrowthModel.modelType;
+
+        fieldName = nameToPrepend+"duration";
+        jsonStruct[fieldName] = empiricalGrowthModel.duration;
+
+        fieldName = nameToPrepend+"annualGrowthRateOfTrendline";
+        jsonStruct[fieldName] = empiricalGrowthModel.annualGrowthRateOfTrendline;
+
+        fieldName = nameToPrepend+"r2";
+        jsonStruct[fieldName] = empiricalGrowthModel.r2;
+
+        fieldName = nameToPrepend+"r2Trendline";
+        jsonStruct[fieldName] = empiricalGrowthModel.r2Cyclic;
+
+        fieldName = nameToPrepend+"r2Cyclic";
+        jsonStruct[fieldName] = empiricalGrowthModel.r2Trendline;
+
+        fieldName = nameToPrepend+"validFitting";
+        jsonStruct[fieldName] = empiricalGrowthModel.validFitting;
+
+        fieldName = nameToPrepend+"outlierCount";
+        jsonStruct[fieldName] = empiricalGrowthModel.outlierCount;
+
+        fieldName = nameToPrepend+"yCyclicNormDataPercentilesRecent";
+        jsonStruct[fieldName] = 
+          empiricalGrowthModel.yCyclicNormDataPercentiles[indexRecentEntry];
+
+        fieldName = nameToPrepend+"parameters";  
+        jsonStruct[fieldName] = empiricalGrowthModel.parameters;
+
+        fieldName = nameToPrepend+"x";
+        jsonStruct[fieldName] = empiricalGrowthModel.x;
+        
+        fieldName = nameToPrepend+"y";
+        jsonStruct[fieldName] = empiricalGrowthModel.y;
+
+        fieldName = nameToPrepend+"yTrendline";
+        jsonStruct[fieldName] = empiricalGrowthModel.yTrendline;
+
+        fieldName = nameToPrepend+"yCyclic";
+        jsonStruct[fieldName] = empiricalGrowthModel.yCyclic;
+
+        fieldName = nameToPrepend+"yCyclicData";
+        jsonStruct[fieldName] = empiricalGrowthModel.yCyclicData;
+
+        fieldName = nameToPrepend+"yCyclicNorm";
+        jsonStruct[fieldName] = empiricalGrowthModel.yCyclicNorm;
+
+        fieldName = nameToPrepend+"yCyclicNormData";
+        jsonStruct[fieldName] = empiricalGrowthModel.yCyclicNormData;
+
+        fieldName = nameToPrepend+"yCyclicNormDataPercentiles";
+        jsonStruct[fieldName] = empiricalGrowthModel.yCyclicNormDataPercentiles;
+      }
+
+    };
 
     //==========================================================================
-    static void appendEmpiricalGrowthRateData(
+    static void appendEmpiricalGrowthDataSet(
         size_t index,      
         const EmpiricalGrowthDataSet &empiricalGrowthData,
         double dateInYears,

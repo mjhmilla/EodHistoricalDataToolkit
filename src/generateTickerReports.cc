@@ -63,7 +63,10 @@ enum JSON_FIELD_TYPE{
 };
 
 struct JsonFieldAddress{
+
+  std::string fileName;
   std::vector< std::string > fieldNames;
+  std::string label;
   JSON_FIELD_TYPE type;
   JsonFieldAddress():fieldNames(),type(FLOAT){};
 };
@@ -541,98 +544,200 @@ bool generateLaTeXReport(
   std::vector< JsonFieldAddress > tabularMetrics;
   JsonFieldAddress metric;
 
+  metric.fileName = "fundamentalData";
+  metric.label="ISIN";
   metric.fieldNames.push_back("General");
   metric.fieldNames.push_back("ISIN");
   metric.type = JSON_FIELD_TYPE::STRING;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label="Currency Code";
   metric.fieldNames.push_back("General");
   metric.fieldNames.push_back("CurrencyCode");
   metric.type = JSON_FIELD_TYPE::STRING;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";  
+  metric.label="IPO Date";
   metric.fieldNames.push_back("General");
   metric.fieldNames.push_back("IPODate");
   metric.type = JSON_FIELD_TYPE::STRING;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label="Market Cap (Mln)";
   metric.fieldNames.push_back("Highlights");
   metric.fieldNames.push_back("MarketCapitalizationMln");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
-  
+
   metric.fieldNames.clear();
+  metric.label.clear();
+  metric.fileName.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label="Beta";
   metric.fieldNames.push_back("Technicals");
   metric.fieldNames.push_back("Beta");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label="EV/EBITA";
   metric.fieldNames.push_back("Valuation");
   metric.fieldNames.push_back("EnterpriseValueEbitda");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.label.clear();
+  metric.fileName.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label="Dividend Yield";
   metric.fieldNames.push_back("Highlights");
   metric.fieldNames.push_back("DividendYield");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Avg. ATOI Growth";
+  metric.fieldNames.push_back("growth_model");
+  metric.fieldNames.push_back("average_afterTaxOperatingIncomeTrendlineGrowth");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Cyclic ATOI Percentile";
+  metric.fieldNames.push_back("growth_model");
+  metric.fieldNames.push_back("average_afterTaxOperatingIncomeCyclicNormDataPercentilesRecent");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  
+  metric.fieldNames.clear();
+  metric.fileName.clear();
+  metric.label.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Avg. Price Growth";
+  metric.fieldNames.push_back("price_model");
+  metric.fieldNames.push_back("trendlineGrowth");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Cyclic Price Percentile";
+  metric.fieldNames.push_back("price_model");
+  metric.fieldNames.push_back("cyclicNormDataPercentilesRecent");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
+  metric.fileName.clear();
+  metric.label.clear();
   metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Percent Insiders";
   metric.fieldNames.push_back("SharesStats");
   metric.fieldNames.push_back("PercentInsiders");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Percent Institutions";
   metric.fieldNames.push_back("SharesStats");
   metric.fieldNames.push_back("PercentInstitutions");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName.clear();
+  metric.label.clear();
   metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "historicalData";
+  metric.label = "Price (adj. close)";
+  metric.fieldNames.push_back("adjusted_close");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Target Price";
   metric.fieldNames.push_back("AnalystRatings");
   metric.fieldNames.push_back("TargetPrice");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName.clear();
+  metric.label.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
   metric.fieldNames.push_back("AnalystRatings");
+  metric.label = "Strong Buy";
   metric.fieldNames.push_back("StrongBuy");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Buy";  
   metric.fieldNames.push_back("AnalystRatings");
   metric.fieldNames.push_back("Buy");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Hold";
   metric.fieldNames.push_back("AnalystRatings");
   metric.fieldNames.push_back("Hold");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Sell";
   metric.fieldNames.push_back("AnalystRatings");
   metric.fieldNames.push_back("Sell");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Strong Sell";
   metric.fieldNames.push_back("AnalystRatings");
   metric.fieldNames.push_back("StrongSell");
   metric.type = JSON_FIELD_TYPE::FLOAT;
@@ -719,53 +824,133 @@ bool generateLaTeXReport(
               ++indexTabularMetrics)
     {
       JsonFieldAddress entryMetric = tabularMetrics[indexTabularMetrics];
-      std::string labelMetric("");
+      std::string lastFieldName("");
+
       if(entryMetric.fieldNames.size()>0){
-        labelMetric = entryMetric.fieldNames.back();
-        ReportingFunctions::convertCamelCaseToSpacedText(labelMetric);
+        lastFieldName = entryMetric.fieldNames.back();
+        ReportingFunctions::convertCamelCaseToSpacedText(lastFieldName);
       }
 
-      bool fieldExists = true;
-      if(labelMetric.length()>0){
-        fieldExists = JsonFunctions::doesFieldExist(fundamentalData, 
-                                                entryMetric.fieldNames);
+
+      bool fieldExists = false;
+      if(entryMetric.fileName.compare("calculateData")==0){
+        double value = JsonFunctions::getJsonFloat(calculateData,
+                          entryMetric.fieldNames,false);
+
+        latexReport << entryMetric.label  
+                    << " & " << value << "\\\\" << std::endl;  
+
+        fieldExists=true;
       }
 
-      if(fieldExists){
-        switch(entryMetric.type){
-          case JSON_FIELD_TYPE::BOOL : {
-            bool value = JsonFunctions::getJsonBool(fundamentalData,
+      if(entryMetric.fileName.compare("historicalData")==0){
+        double value=-1;
+        std::string todaysDate;
+        DateFunctions::getTodaysDate(todaysDate);
+
+        int closestDifferenceDays=std::numeric_limits<int>::infinity();
+        int indexStart=0;
+        int indexNext = 1;
+        int indexEnd = historicalData.size()-1;
+
+        std::string dateStart("");
+        JsonFunctions::getJsonString(historicalData.front()["date"],dateStart);
+        std::string dateEnd("");
+        JsonFunctions::getJsonString(historicalData.back()["date"],dateEnd);
+      
+        int differenceStart = 
+          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+              todaysDate,"%Y-%m-%d",dateStart,"%Y-%m-%d");
+
+        int differenceEnd = 
+          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+              todaysDate,"%Y-%m-%d",dateEnd,"%Y-%m-%d");
+
+        if(std::abs(differenceEnd) < std::abs(differenceStart)){
+          indexStart = historicalData.size()-1;
+          indexNext = -1;
+          indexEnd = 0;
+        }
+
+        int differenceBest = std::numeric_limits<int>::max();
+        std::string dateBest("");
+        int previousDifference = -1;
+
+        for(int index=indexStart; index != indexEnd;index=index+indexNext){
+          
+          std::string dateString("");
+          JsonFunctions::getJsonString(historicalData.at(index)["date"],dateString);
+          int differenceDays = 
+          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+              todaysDate,"%Y-%m-%d",dateString,"%Y-%m-%d");
+
+          if(differenceDays >= 0 && differenceDays < differenceBest){
+            differenceBest = differenceDays;
+            dateBest=dateString;
+            value = JsonFunctions::getJsonFloat(
+                      historicalData.at(index)[entryMetric.fieldNames[0]],false);
+          }
+          if(previousDifference > -1 
+              && std::abs(previousDifference) < std::abs(differenceDays)){
+            break;
+          }
+          previousDifference = std::abs(differenceDays);
+
+        }  
+
+        latexReport << "Price (" << dateBest << ")" 
+                    << " & " << value << "\\\\" << std::endl;  
+        fieldExists=true;                        
+              
+      }
+
+      if(entryMetric.fileName.compare("fundamentalData")==0 
+        && lastFieldName.length()>0){
+
+        if(lastFieldName.length()>0){
+          fieldExists = JsonFunctions::doesFieldExist(fundamentalData, 
+                                                  entryMetric.fieldNames);
+        }
+
+        if(fieldExists){
+          switch(entryMetric.type){
+            case JSON_FIELD_TYPE::BOOL : {
+              bool value = JsonFunctions::getJsonBool(fundamentalData,
+                                entryMetric.fieldNames, 
+                                replaceNansWithMissingData);
+
+              latexReport << entryMetric.label << " & " << value  << "\\\\" << std::endl;                          
+            }
+            break;
+            case JSON_FIELD_TYPE::FLOAT : {
+              double value = JsonFunctions::getJsonFloat(fundamentalData,
                               entryMetric.fieldNames, 
                               replaceNansWithMissingData);
 
-            latexReport << labelMetric << " & " << value  << "\\\\" << std::endl;                          
-          }
-          break;
-          case JSON_FIELD_TYPE::FLOAT : {
-            double value = JsonFunctions::getJsonFloat(fundamentalData,
-                            entryMetric.fieldNames, 
-                            replaceNansWithMissingData);
+              latexReport << entryMetric.label << " & " << value << "\\\\" << std::endl;                          
+            }
+            break;
+            case JSON_FIELD_TYPE::STRING : {
+              std::string value;
+              JsonFunctions::getJsonString(fundamentalData,
+                                entryMetric.fieldNames, 
+                                value);
 
-            latexReport << labelMetric << " & " << value << "\\\\" << std::endl;                          
-          }
-          break;
-          case JSON_FIELD_TYPE::STRING : {
-            std::string value;
-            JsonFunctions::getJsonString(fundamentalData,
-                              entryMetric.fieldNames, 
-                              value);
-
-            latexReport << labelMetric << " & " << value << "\\\\" << std::endl;                          
-          }
-          break;
-          case JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE :{
-            latexReport  << " & \\\\" << std::endl;
-          }
-          break;
-        };
-      }else{
-        latexReport << labelMetric << " & " << " - "  << "\\\\" << std::endl;
+              latexReport << entryMetric.label << " & " << value << "\\\\" << std::endl;                          
+            }
+            break;
+            case JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE :{
+              latexReport  << " & \\\\" << std::endl;
+            }
+            break;
+          };
+        }
       }
+
+      if(!fieldExists){
+        latexReport << lastFieldName << " & "  << "\\\\" << std::endl;
+      }
+
     }
     latexReport << "\\end{tabular}" << std::endl << std::endl;
     latexReport << "\\bigskip" << std::endl;

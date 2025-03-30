@@ -66,7 +66,17 @@ class DateFunctions {
       return convertToFractionalYear(dateStr);
 
     }
+    //==========================================================================
+    static void getTodaysDate(std::string &todaysDateUpd){
 
+      auto date = date::floor<date::days>(std::chrono::system_clock::now());  
+      auto ymd = date::year_month_day{date};
+            
+      std::stringstream ss;
+      ss << ymd;
+      todaysDateUpd = ss.str();
+
+    }
     //==========================================================================
     static int calcDifferenceInDaysBetweenTwoDates(const std::string &dateA,
                                             const char* dateAFormat,
