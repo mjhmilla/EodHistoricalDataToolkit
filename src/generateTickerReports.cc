@@ -615,19 +615,18 @@ bool generateLaTeXReport(
   metric.fieldNames.clear();
   metric.fileName = "calculateData";
   metric.label="Avg. ATOI Growth";
-  metric.fieldNames.push_back("growth_model");
-  metric.fieldNames.push_back("average_afterTaxOperatingIncomeTrendlineGrowth");
+  metric.fieldNames.push_back("atoi_growth_model_avg");
+  metric.fieldNames.push_back("annualGrowthRateOfTrendline");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
   metric.fileName = "calculateData";
   metric.label="Cyclic ATOI Percentile";
-  metric.fieldNames.push_back("growth_model");
-  metric.fieldNames.push_back("average_afterTaxOperatingIncomeCyclicNormDataPercentilesRecent");
+  metric.fieldNames.push_back("atoi_growth_model_avg");
+  metric.fieldNames.push_back("yCyclicNormDataPercentilesRecent");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
-
   
   metric.fieldNames.clear();
   metric.fileName.clear();
@@ -639,16 +638,16 @@ bool generateLaTeXReport(
   metric.fieldNames.clear();
   metric.fileName = "calculateData";
   metric.label="Avg. Price Growth";
-  metric.fieldNames.push_back("price_model");
-  metric.fieldNames.push_back("trendlineGrowth");
+  metric.fieldNames.push_back("price_growth_model");
+  metric.fieldNames.push_back("annualGrowthRateOfTrendline");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
   metric.fileName = "calculateData";
   metric.label="Cyclic Price Percentile";
-  metric.fieldNames.push_back("price_model");
-  metric.fieldNames.push_back("cyclicNormDataPercentilesRecent");
+  metric.fieldNames.push_back("price_growth_model");
+  metric.fieldNames.push_back("yCyclicNormDataPercentilesRecent");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 

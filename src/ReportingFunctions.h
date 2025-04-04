@@ -714,44 +714,48 @@ static void appendEmpiricalGrowthTable(std::ofstream &latexReport,
       switch(type){
         case 0:
         { //Exponential model        
-          latexReport << "\\multicolumn{2}{c}{ Exponential } \\\\" 
+          latexReport << "\\multicolumn{2}{c}{ Exponential LSQ } \\\\" 
               << std::endl;      
-          latexReport << "\\multicolumn{2}{c}{ $y = f(1+g)^n$ (LSQ)} \\\\" 
+          latexReport << "\\multicolumn{2}{c}{ $y = f(1+g)^n$} \\\\" 
               << std::endl;      
         }; 
         break;
         case 1:
         { //Exponential cyclical model
-          latexReport << "\\multicolumn{2}{c}{ Exponential-cyclical (exp. part plotted)} \\\\" 
+          latexReport << "\\multicolumn{2}{c}{ Exponential-cyclical LSQ (exp. part plotted)} \\\\" 
               << std::endl;      
-          latexReport << "\\multicolumn{2}{c}{ $y = f(1+g)^n"
-                " + \\sum_i^\\mathrm{M} ("
-                " A_i \\sin(2 \\pi i \\, (t/t_{span}))$} \\\\" 
+          latexReport << "\\multicolumn{2}{l}{ $y = f(1+g)^n $}\\\\"
               << std::endl;     
-          latexReport << "\\multicolumn{2}{c}{"
-                "$+B_i \\cos(2 \\pi i \\, (t/t_{span}))) $"
-                " (LSQ)} \\\\" 
+          latexReport << "\\multicolumn{2}{l}{"
+                "$\\,\\,+\\sum_i^\\mathrm{M} ("
+                " A_i \\sin(2 \\pi i \\, (t/t_{span}))$"
+                "} \\\\" <<std::endl;
+          latexReport << "\\multicolumn{2}{l}{"
+                "$\\,\\,+B_i \\cos(2 \\pi i \\, (t/t_{span}))) $"
+                "} \\\\" 
               << std::endl;                    
         }; 
         break;
         case 2:
         { //Linear model
-          latexReport << "\\multicolumn{2}{c}{ Linear } \\\\" 
+          latexReport << "\\multicolumn{2}{c}{ Linear LSQ } \\\\" 
               << std::endl;      
-          latexReport << "\\multicolumn{2}{c}{ $y = A x + b$ (LSQ) } \\\\" 
+          latexReport << "\\multicolumn{2}{c}{ $y = A x + b$ } \\\\" 
               << std::endl;      
         }; 
         case 3:
         { //Linear cyclical model model
-          latexReport << "\\multicolumn{2}{c}{ Linear-cyclical (linear part plotted) } \\\\" 
+          latexReport << "\\multicolumn{2}{c}{ Linear-cyclical LSQ (linear part plotted) } \\\\" 
               << std::endl;      
-          latexReport << "\\multicolumn{2}{c}{ $y = A x + b "
-                "+ \\sum_i^\\mathrm{M} ("
+          latexReport << "\\multicolumn{2}{l}{ $y = A x + b $}\\\\"
+              << std::endl;
+          latexReport << "\\multicolumn{2}{l}{ $"              
+                "\\,\\,+ \\sum_i^\\mathrm{M} ("
                 " A_i \\sin(2 \\pi i \\, (t/t_{span}))$} \\\\" 
               << std::endl;
-          latexReport << "\\multicolumn{2}{c}{ "
-                "$+B_i \\cos(2 \\pi i \\, (t/t_{span}))) $"
-                " (LSQ)} \\\\" 
+          latexReport << "\\multicolumn{2}{l}{ "
+                "$\\,\\,+B_i \\cos(2 \\pi i \\, (t/t_{span}))) $"
+                " } \\\\" 
               << std::endl;      
         }; 
         break;
@@ -845,7 +849,7 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["interestCover"],true))
               << " \\\\" << std::endl;
-  latexReport << "\\multicolumn{2}{c}{ $G_1 = E_1/F_1$} \\\\" << std::endl;
+  latexReport << "\\multicolumn{2}{c}{ $D_1 = B_1/C_1$} \\\\" << std::endl;
   latexReport << "$E_1$. Default spread (\\ref{data:risktable},"
                  "\\ref{data:defaultSpread}) & "
               << formatJsonEntry(JsonFunctions::getJsonFloat(
@@ -860,7 +864,7 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
               << formatJsonEntry(JsonFunctions::getJsonFloat(
                   calculateData[date]["afterTaxCostOfDebt"],true))
               << " \\\\" << std::endl;
-  latexReport << "\\multicolumn{2}{c}{ $K_1 = (A_1+E_1)\\,(1.0-G_1)$} \\\\" 
+  latexReport << "\\multicolumn{2}{c}{ $K_1 = (A_1+E_1)\\,(1.0-F_1)$} \\\\" 
               << std::endl;    
   latexReport << " & \\\\" << std::endl;
   latexReport << "\\multicolumn{2}{c}{ Cost of equity } \\\\" << std::endl;
@@ -951,8 +955,7 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
               << " \\\\" << std::endl;   
   latexReport << "\\multicolumn{2}{c}{ $G_2 = D_1\\,(1-F_2)+K_1\\,F_2 $} \\\\" 
               << std::endl;              
-  latexReport << "\\end{tabular}" << std::endl 
-              << "\\bigskip" << std::endl<< std::endl;  
+  latexReport << "\\end{tabular}" << std::endl;
 
   latexReport << "\\center{Data sources (update annually)}" << std::endl;
   latexReport << "\\hrule" << std::endl;
@@ -978,7 +981,7 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
   latexReport << "\\item \\href{https://taxfoundation.org/data/all/global/"
                  "corporate-tax-rates-by-country-2023/}"
               << "{taxfoundation.org tax table)} \\\\ Historical comporate tax "
-                 "rates by country (1980-2023 \\label{data:taxfoundation}"
+                 "rates by country (1980-2023) \\label{data:taxfoundation}"
               << std::endl;
   latexReport << "\\end{enumerate}" 
               << std::endl;
@@ -1094,11 +1097,11 @@ static void appendReturnOnInvestedCapitalTableForValuation(std::ofstream &latexR
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["returnOnInvestedFinancialCapital_debtBookValue"],true))
                 << " \\\\" << std::endl; 
-    latexReport << "\\qquad short-long term debt & "
+    latexReport << "\\qquad short-long term debt entry & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["returnOnInvestedFinancialCapital_shortLongTermDebt"],true))
                 << " \\\\" << std::endl; 
-    latexReport << "\\qquad long term debt & "
+    latexReport << "\\qquad long term debt entry & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["returnOnInvestedFinancialCapital_longTermDebt"],true))
                 << " \\\\" << std::endl; 

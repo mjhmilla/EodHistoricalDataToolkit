@@ -41,10 +41,10 @@
             "jsonData": "calculateData",
             "address":
             [
-                "price_model"
+                "price_growth_model"
             ],
-            "fieldName": "trendline",
-            "dateName": "years",
+            "fieldName": "yTrendline",
+            "dateName": "x",
             "isArray": true,
             "legendEntry": "@PrimaryTickerLaTeX",
             "lineColor": "magenta",
@@ -66,10 +66,10 @@
             "jsonData": "calculateData",
             "address":
             [
-                "price_model"
+                "price_growth_model"
             ],
-            "fieldName": "cyclicNormData",
-            "dateName": "years",
+            "fieldName": "yCyclicNormData",
+            "dateName": "x",
             "isArray": true,
             "legendEntry": "@PrimaryTickerLaTeX",
             "lineColor": "magenta",
@@ -116,12 +116,12 @@
             "jsonData": "calculateData",
             "address":
             [
-                "growth_model"
+                "atoi_growth_model_avg"
             ],
-            "fieldName": "average_afterTaxOperatingIncomeTrendline",
-            "dateName": "average_years",
+            "fieldName": "yTrendline",
+            "dateName": "x",
             "isArray": true,
-            "legendEntry": "Emp Avg",
+            "legendEntry": "Trendline (avg)",
             "lineColor": "orange",
             "lineWidth": 0.5,
             "xAxisLabel": "Years",
@@ -141,12 +141,12 @@
             "jsonData": "calculateData",
             "address":
             [
-                "growth_model"
+                "atoi_growth_model_recent"
             ],
-            "fieldName": "recent_afterTaxOperatingIncomeTrendline",
-            "dateName": "recent_years",
+            "fieldName": "yTrendline",
+            "dateName": "x",
             "isArray": true,
-            "legendEntry": "Emp",
+            "legendEntry": "Trendline (recent)",
             "lineColor": "red",
             "lineWidth": 0.5,
             "xAxisLabel": "Years",
@@ -166,10 +166,10 @@
             "jsonData": "calculateData",
             "address":
             [
-                "growth_model"
+                "atoi_growth_model_avg"
             ],
-            "fieldName": "average_afterTaxOperatingIncomeCyclicNormData",
-            "dateName": "average_years",
+            "fieldName": "yCyclicNormData",
+            "dateName": "x",
             "isArray": true,
             "legendEntry": "Data Avg",
             "lineColor": "orange",
@@ -191,10 +191,10 @@
             "jsonData": "calculateData",
             "address":
             [
-                "growth_model"
+                "atoi_growth_model_recent"
             ],
-            "fieldName": "recent_afterTaxOperatingIncomeCyclicNormData",
-            "dateName": "recent_years",
+            "fieldName": "yCyclicNormData",
+            "dateName": "x",
             "isArray": true,
             "legendEntry": "Data",
             "lineColor": "red",
