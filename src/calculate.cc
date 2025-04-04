@@ -1885,8 +1885,9 @@ int main (int argc, char* argv[]) {
                                   calcOneGrowthRateForAllData,
                                   empiricalModelType);  
 
-      empiricalModelType = empiricalGrowthDataAll.model[0].modelType;
-
+      if(empiricalGrowthDataAll.model.size()>0){
+        empiricalModelType = empiricalGrowthDataAll.model[0].modelType;
+      }
       //Evaluate the growth rate data over the same relatively short
       //period of time that is used for the growth period during
       //the valution (5 years)
@@ -1958,6 +1959,10 @@ int main (int argc, char* argv[]) {
       NumericalFunctions::EmpiricalGrowthModel exponentialPriceModel;
       NumericalFunctions::EmpiricalGrowthModel priceModel;
 
+      if(fileName.compare("BAN.MI.json")==0){
+        bool here=true;
+      }
+
       NumericalFunctions::fitLinearGrowthModel(
           datesHistorical,priceHistorical,linearPriceModel);
 
@@ -1967,20 +1972,37 @@ int main (int argc, char* argv[]) {
                             maxProportionOfOutliersInExpModel, 
                             exponentialPriceModel);
 
-      if(exponentialPriceModel.r2 > linearPriceModel.r2){
-        NumericalFunctions::fitCyclicalModelWithExponentialBaseline(
-                              datesHistorical, 
-                              priceHistorical,
-                              minCycleTimeInYears,
-                              maxProportionOfOutliersInExpModel,
-                              priceModel);
-        
+      if(exponentialPriceModel.validFitting && linearPriceModel.validFitting){
+        if(exponentialPriceModel.r2 > linearPriceModel.r2){
+          NumericalFunctions::fitCyclicalModelWithExponentialBaseline(
+                                datesHistorical, 
+                                priceHistorical,
+                                minCycleTimeInYears,
+                                maxProportionOfOutliersInExpModel,
+                                priceModel);        
+        }else{
+          NumericalFunctions::fitCyclicalModelWithLinearBaseline(
+                               datesHistorical,
+                               priceHistorical,
+                               minCycleTimeInYears,
+                               priceModel);
+        }
       }else{
-        NumericalFunctions::fitCyclicalModelWithLinearBaseline(
-                             datesHistorical,
-                             priceHistorical,
-                             minCycleTimeInYears,
-                             priceModel);
+        if(exponentialPriceModel.validFitting){
+          NumericalFunctions::fitCyclicalModelWithExponentialBaseline(
+                                datesHistorical, 
+                                priceHistorical,
+                                minCycleTimeInYears,
+                                maxProportionOfOutliersInExpModel,
+                                priceModel);
+
+        }else if(linearPriceModel.validFitting){
+          NumericalFunctions::fitCyclicalModelWithLinearBaseline(
+                               datesHistorical,
+                               priceHistorical,
+                               minCycleTimeInYears,
+                               priceModel);
+        }
       }
 
 
@@ -2839,17 +2861,19 @@ int main (int argc, char* argv[]) {
 
 
       int indexRecentDate = 0;
-      double dateRange= empiricalGrowthData.datesNumerical.front()
-                       -empiricalGrowthData.datesNumerical.back(); 
-      if(dateRange < 0){
-        indexRecentDate = empiricalGrowthData.datesNumerical.size()-1;
-      }
-
-      int indexRecentDateAll = 0;
-      dateRange= empiricalGrowthDataAll.datesNumerical.front()
-                -empiricalGrowthDataAll.datesNumerical.back(); 
-      if(dateRange < 0){
-        indexRecentDateAll = empiricalGrowthDataAll.datesNumerical.size()-1;
+      int indexRecentDateAll = 0;      
+      if(empiricalGrowthData.datesNumerical.size()>0){
+        double dateRange= empiricalGrowthData.datesNumerical.front()
+                        -empiricalGrowthData.datesNumerical.back(); 
+        if(dateRange < 0){
+          indexRecentDate = empiricalGrowthData.datesNumerical.size()-1;
+        }
+        
+        dateRange= empiricalGrowthDataAll.datesNumerical.front()
+                  -empiricalGrowthDataAll.datesNumerical.back(); 
+        if(dateRange < 0){
+          indexRecentDateAll = empiricalGrowthDataAll.datesNumerical.size()-1;
+        }
       }
 
 
@@ -2858,18 +2882,21 @@ int main (int argc, char* argv[]) {
       // Avg empirical model
       //
       nlohmann::ordered_json atoiGrowthModelAverage;
-      NumericalFunctions::appendEmpiricalGrowthModel(
-          atoiGrowthModelAverage,
-          empiricalGrowthDataAll.model[indexRecentDateAll],"");
-
+      if(empiricalGrowthData.datesNumerical.size() > 0){
+        NumericalFunctions::appendEmpiricalGrowthModel(
+            atoiGrowthModelAverage,
+            empiricalGrowthDataAll.model[indexRecentDateAll],"");
+      }
 
       //
       // Recent empirical data
       //
       nlohmann::ordered_json atoiGrowthModelRecent;      
-      NumericalFunctions::appendEmpiricalGrowthModel(
-          atoiGrowthModelRecent,
-          empiricalGrowthData.model[indexRecentDate],"");
+      if(empiricalGrowthData.datesNumerical.size()>0){
+        NumericalFunctions::appendEmpiricalGrowthModel(
+            atoiGrowthModelRecent,
+            empiricalGrowthData.model[indexRecentDate],"");
+      }
 
       //
       // Pricing model
@@ -2877,72 +2904,73 @@ int main (int argc, char* argv[]) {
             
       //Downsample all outgoing data.
       //Each year gets 12 data points + the last entry gets added
-      NumericalFunctions::EmpiricalGrowthModel priceModelDS;
-      int previousMonth=0;
-      double previousDate=0.;
-
-      //Copy over all the model meta-data
-      priceModelDS.modelType                   = priceModel.modelType                  ;  
-      priceModelDS.duration                    = priceModel.duration                   ;   
-      priceModelDS.annualGrowthRateOfTrendline = priceModel.annualGrowthRateOfTrendline;   
-      priceModelDS.r2                          = priceModel.r2                         ;   
-      priceModelDS.r2Trendline                 = priceModel.r2Trendline                ;  
-      priceModelDS.r2Cyclic                    = priceModel.r2Cyclic                   ;  
-      priceModelDS.validFitting                = priceModel.validFitting               ;     
-      priceModelDS.outlierCount                = priceModel.outlierCount               ; 
-      priceModelDS.parameters                  = priceModel.parameters                 ;   
-
-
-      for(size_t i=0; i<priceModel.x.size();++i){
-        int month = std::floor( (            priceModel.x[i]
-                                 -std::floor(priceModel.x[i]))*12.0);
-        if(month != previousMonth){
-          priceModelDS.x.push_back(
-              priceModel.x[i]);
-          priceModelDS.y.push_back(
-              priceModel.y[i]);
-          priceModelDS.yTrendline.push_back(
-              priceModel.yTrendline[i]);
-          priceModelDS.yCyclic.push_back(
-              priceModel.yCyclic[i]);
-          priceModelDS.yCyclicData.push_back(
-              priceModel.yCyclicData[i]);
-          priceModelDS.yCyclicNorm.push_back(
-              priceModel.yCyclicNorm[i]);
-          priceModelDS.yCyclicNormData.push_back(
-              priceModel.yCyclicNormData[i]);
-          priceModelDS.yCyclicNormDataPercentiles.push_back(
-              priceModel.yCyclicNormDataPercentiles[i]);
-          previousDate = priceModel.x[i];
-        }  
-        previousMonth=month;                               
-      }
-
-      if(priceModel.x.back() !=  previousDate){
-          priceModelDS.x.push_back(
-              priceModel.x.back());
-          priceModelDS.y.push_back(
-              priceModel.y.back());
-          priceModelDS.yTrendline.push_back(
-              priceModel.yTrendline.back());
-          priceModelDS.yCyclic.push_back(
-              priceModel.yCyclic.back());    
-          priceModelDS.yCyclicData.push_back(
-              priceModel.yCyclicData.back());
-          priceModelDS.yCyclicNorm.push_back(
-              priceModel.yCyclicNorm.back());
-          priceModelDS.yCyclicNormData.push_back(
-              priceModel.yCyclicNormData.back());
-          priceModelDS.yCyclicNormDataPercentiles.push_back(
-              priceModel.yCyclicNormDataPercentiles.back());
-      }
-
-
       nlohmann::ordered_json priceGrowthModel;      
-      NumericalFunctions::appendEmpiricalGrowthModel(
-          priceGrowthModel,
-          priceModelDS,"");
+      if(priceModel.x.size()>0){
+        NumericalFunctions::EmpiricalGrowthModel priceModelDS;
+        int previousMonth=0;
+        double previousDate=0.;
 
+        //Copy over all the model meta-data
+        priceModelDS.modelType                   = priceModel.modelType                  ;  
+        priceModelDS.duration                    = priceModel.duration                   ;   
+        priceModelDS.annualGrowthRateOfTrendline = priceModel.annualGrowthRateOfTrendline;   
+        priceModelDS.r2                          = priceModel.r2                         ;   
+        priceModelDS.r2Trendline                 = priceModel.r2Trendline                ;  
+        priceModelDS.r2Cyclic                    = priceModel.r2Cyclic                   ;  
+        priceModelDS.validFitting                = priceModel.validFitting               ;     
+        priceModelDS.outlierCount                = priceModel.outlierCount               ; 
+        priceModelDS.parameters                  = priceModel.parameters                 ;   
+
+
+        for(size_t i=0; i<priceModel.x.size();++i){
+          int month = std::floor( (            priceModel.x[i]
+                                  -std::floor(priceModel.x[i]))*12.0);
+          if(month != previousMonth){
+            priceModelDS.x.push_back(
+                priceModel.x[i]);
+            priceModelDS.y.push_back(
+                priceModel.y[i]);
+            priceModelDS.yTrendline.push_back(
+                priceModel.yTrendline[i]);
+            priceModelDS.yCyclic.push_back(
+                priceModel.yCyclic[i]);
+            priceModelDS.yCyclicData.push_back(
+                priceModel.yCyclicData[i]);
+            priceModelDS.yCyclicNorm.push_back(
+                priceModel.yCyclicNorm[i]);
+            priceModelDS.yCyclicNormData.push_back(
+                priceModel.yCyclicNormData[i]);
+            priceModelDS.yCyclicNormDataPercentiles.push_back(
+                priceModel.yCyclicNormDataPercentiles[i]);
+            previousDate = priceModel.x[i];
+          }  
+          previousMonth=month;                               
+        }
+
+        if(priceModel.x.back() !=  previousDate){
+            priceModelDS.x.push_back(
+                priceModel.x.back());
+            priceModelDS.y.push_back(
+                priceModel.y.back());
+            priceModelDS.yTrendline.push_back(
+                priceModel.yTrendline.back());
+            priceModelDS.yCyclic.push_back(
+                priceModel.yCyclic.back());    
+            priceModelDS.yCyclicData.push_back(
+                priceModel.yCyclicData.back());
+            priceModelDS.yCyclicNorm.push_back(
+                priceModel.yCyclicNorm.back());
+            priceModelDS.yCyclicNormData.push_back(
+                priceModel.yCyclicNormData.back());
+            priceModelDS.yCyclicNormDataPercentiles.push_back(
+                priceModel.yCyclicNormDataPercentiles.back());
+        }
+
+
+        NumericalFunctions::appendEmpiricalGrowthModel(
+            priceGrowthModel,
+            priceModelDS,"");
+      }
       //
       // Package all three into a single json object
       //
