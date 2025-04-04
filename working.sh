@@ -16,9 +16,9 @@
 #./generateScreenerReport.sh STU screen_filter_rank5F.json
 
 #./calculate.sh F DEU
-#./generateTickerReports.sh F plotSummary.json plotOverview.json
-./generateScreenerReport.sh F screen_filter_rank5F.json
-./generateComparisonReport.sh F compare_filterGIC_rank3F_template.json
+./generateTickerReports.sh F plotSummary.json plotOverview.json
+#./generateScreenerReport.sh F screen_filter_rank5F.json
+#./generateComparisonReport.sh F compare_filterGIC_rank3F_template.json
 
 #./generateDataPatch.sh STU F SWB
 #./applyDataPatch.sh STU STU.patch.matching_isin.json

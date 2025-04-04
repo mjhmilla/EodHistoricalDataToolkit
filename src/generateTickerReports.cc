@@ -388,90 +388,97 @@ void updatePlotArray(
         yTmp); 
 
 
-    //
-    // update the axes as necessary
-    //
-    double xMaxData = *std::max_element(xTmp.begin(),xTmp.end());
-    double xMinData = *std::min_element(xTmp.begin(),xTmp.end());
-    double yMaxData = *std::max_element(yTmp.begin(),yTmp.end());
-    double yMinData = *std::min_element(yTmp.begin(),yTmp.end());
+    if(xTmp.size()>0 && yTmp.size()>0){
+      //
+      // update the axes as necessary
+      //
+      double xMaxData = *std::max_element(xTmp.begin(),xTmp.end());
+      double xMinData = *std::min_element(xTmp.begin(),xTmp.end());
+      double yMaxData = *std::max_element(yTmp.begin(),yTmp.end());
+      double yMinData = *std::min_element(yTmp.begin(),yTmp.end());
 
 
-    double xMaxConfig = 
-      JsonFunctions::getJsonFloat(plotConfig.value()["xMax"], false);
-    double xMinConfig = 
-      JsonFunctions::getJsonFloat(plotConfig.value()["xMin"], false);
-    double yMaxConfig = 
-      JsonFunctions::getJsonFloat(plotConfig.value()["yMax"], false);
-    double yMinConfig = 
-      JsonFunctions::getJsonFloat(plotConfig.value()["yMin"], false);
+      double xMaxConfig = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["xMax"], false);
+      double xMinConfig = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["xMin"], false);
+      double yMaxConfig = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["yMax"], false);
+      double yMinConfig = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["yMin"], false);
 
-    if(std::isnan(xMaxConfig)){
-      axisSettings[indexRow][indexColumn].isXMaxFixed=false;
-      if(std::isnan(axisSettings[indexRow][indexColumn].xMax)){
-        axisSettings[indexRow][indexColumn].xMax = xMaxData;
+      if(std::isnan(xMaxConfig)){
+        axisSettings[indexRow][indexColumn].isXMaxFixed=false;
+        if(std::isnan(axisSettings[indexRow][indexColumn].xMax)){
+          axisSettings[indexRow][indexColumn].xMax = xMaxData;
+        }else{
+          axisSettings[indexRow][indexColumn].xMax = 
+            std::max(axisSettings[indexRow][indexColumn].xMax,xMaxData);
+        }
       }else{
-        axisSettings[indexRow][indexColumn].xMax = 
-          std::max(axisSettings[indexRow][indexColumn].xMax,xMaxData);
+        axisSettings[indexRow][indexColumn].isXMaxFixed=true;  
+        axisSettings[indexRow][indexColumn].xMax = xMaxConfig;
       }
-    }else{
-      axisSettings[indexRow][indexColumn].isXMaxFixed=true;  
-      axisSettings[indexRow][indexColumn].xMax = xMaxConfig;
-    }
 
-    if(std::isnan(xMinConfig)){
-      axisSettings[indexRow][indexColumn].isXMinFixed=false;
-      if(std::isnan(axisSettings[indexRow][indexColumn].xMin)){
-        axisSettings[indexRow][indexColumn].xMin = xMinData;
+      if(std::isnan(xMinConfig)){
+        axisSettings[indexRow][indexColumn].isXMinFixed=false;
+        if(std::isnan(axisSettings[indexRow][indexColumn].xMin)){
+          axisSettings[indexRow][indexColumn].xMin = xMinData;
+        }else{
+          axisSettings[indexRow][indexColumn].xMin = 
+            std::min(axisSettings[indexRow][indexColumn].xMin,xMinData);
+        }
       }else{
-        axisSettings[indexRow][indexColumn].xMin = 
-          std::min(axisSettings[indexRow][indexColumn].xMin,xMinData);
+        axisSettings[indexRow][indexColumn].isXMinFixed=true;  
+        axisSettings[indexRow][indexColumn].xMin =xMinConfig;
       }
-    }else{
-      axisSettings[indexRow][indexColumn].isXMinFixed=true;  
-      axisSettings[indexRow][indexColumn].xMin =xMinConfig;
-    }
 
-    if(std::isnan(yMaxConfig)){
-      axisSettings[indexRow][indexColumn].isYMaxFixed=false;
-      if(std::isnan(axisSettings[indexRow][indexColumn].yMax)){
-        axisSettings[indexRow][indexColumn].yMax = yMaxData;
+      if(std::isnan(yMaxConfig)){
+        axisSettings[indexRow][indexColumn].isYMaxFixed=false;
+        if(std::isnan(axisSettings[indexRow][indexColumn].yMax)){
+          axisSettings[indexRow][indexColumn].yMax = yMaxData;
+        }else{
+          axisSettings[indexRow][indexColumn].yMax = 
+            std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData);
+        }
       }else{
-        axisSettings[indexRow][indexColumn].yMax = 
-          std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData);
+        axisSettings[indexRow][indexColumn].isYMaxFixed=true;  
+        axisSettings[indexRow][indexColumn].yMax = yMaxConfig;
       }
-    }else{
-      axisSettings[indexRow][indexColumn].isYMaxFixed=true;  
-      axisSettings[indexRow][indexColumn].yMax = yMaxConfig;
-    }
 
-    if(std::isnan(yMinConfig)){
-      axisSettings[indexRow][indexColumn].isYMinFixed=false;
-      if(std::isnan(axisSettings[indexRow][indexColumn].yMin)){
-        axisSettings[indexRow][indexColumn].yMin = yMinData;
+      if(std::isnan(yMinConfig)){
+        axisSettings[indexRow][indexColumn].isYMinFixed=false;
+        if(std::isnan(axisSettings[indexRow][indexColumn].yMin)){
+          axisSettings[indexRow][indexColumn].yMin = yMinData;
+        }else{
+          axisSettings[indexRow][indexColumn].yMin = 
+            std::min(axisSettings[indexRow][indexColumn].yMin,yMinData);
+        }
       }else{
-        axisSettings[indexRow][indexColumn].yMin = 
-          std::min(axisSettings[indexRow][indexColumn].yMin,yMinData);
+        axisSettings[indexRow][indexColumn].isYMinFixed=true;  
+        axisSettings[indexRow][indexColumn].yMin =yMinConfig;
       }
-    }else{
-      axisSettings[indexRow][indexColumn].isYMinFixed=true;  
-      axisSettings[indexRow][indexColumn].yMin =yMinConfig;
-    }
 
+      bool here=false;
+      if(fieldName.compare("yCyclicNormData")==0){
+        here=true;
+      }
 
+      PlottingFunctions::updatePlot(
+          xTmp,
+          yTmp,
+          jsonMetaDataVector[indexEnd].fieldName,
+          plotSettingsUpd,
+          lineSettings,
+          axisSettings[indexRow][indexColumn],
+          boxWhiskerSettings,
+          matrixOfPlots[subplotSettings.indexRow][subplotSettings.indexColumn],
+          true,
+          verbose);
 
-    PlottingFunctions::updatePlot(
-        xTmp,
-        yTmp,
-        jsonMetaDataVector[indexEnd].fieldName,
-        plotSettingsUpd,
-        lineSettings,
-        axisSettings[indexRow][indexColumn],
-        boxWhiskerSettings,
-        matrixOfPlots[subplotSettings.indexRow][subplotSettings.indexColumn],
-        true,
-        verbose);
+      here=false;
   
+    }
   }
 
 };

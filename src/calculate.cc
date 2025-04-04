@@ -1336,7 +1336,13 @@ int main (int argc, char* argv[]) {
   // in this case) must be greater than 1. Here a certain proportion of the
   // data is allowed to be less than 1. These values are set to 1, so that
   // the low values (approximately) still influence the fit.
-  double maxProportionOfOutliersInExpModel = 0.10;
+  //
+  // 4/4/2025 As the decision of which model to choose is based on the R2
+  //          between the model and the original data, it does not really
+  //          make sense to set an upper limit on maxProportionOfOutliersInExpModel
+  double maxProportionOfOutliersInExpModel = 1.0;
+
+  double minPriceAllowedInPriceModel=2.0;
 
   // When fitting cyclic models, the period of smallest allowable cycle is 
   // defined by this term
@@ -1917,63 +1923,39 @@ int main (int argc, char* argv[]) {
       std::vector<double> datesHistorical;
       std::vector<double> priceHistorical;
 
-      std::string dateStr;
-      double price;
-      for(auto &el : historicalData){
-        JsonFunctions::getJsonString(el["date"],dateStr);
-        price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);        
-        double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);          
-        datesHistorical.push_back(dateNumerical);
-        priceHistorical.push_back(price);
-      }
 
-      /*
       std::string dateStr;
-      std::string previousDateStr;
       double price;
-      int monthPrevious=0;
       for(auto &el : historicalData){
         JsonFunctions::getJsonString(el["date"],dateStr);
-        price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);        
-        std::string dayStr = dateStr.substr(dateStr.size()-2,2);
-        std::string monthStr = dateStr.substr(5,2);
-        int month = std::stoi(monthStr);
-        if(month != monthPrevious){
+        price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);  
+        if(price > minPriceAllowedInPriceModel){      
           double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);          
           datesHistorical.push_back(dateNumerical);
           priceHistorical.push_back(price);
-          previousDateStr = dateStr;
         }
-        monthPrevious=month;
       }
-      //Append the most recent date
-      std::string dayStr = dateStr.substr(dateStr.size()-2,2);
-      if(dayStr.compare(previousDateStr) != 0){
-        double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);
-        datesHistorical.push_back(dateNumerical);
-        priceHistorical.push_back(price);
-      }
-      */
+
+
 
       NumericalFunctions::EmpiricalGrowthModel linearPriceModel;
       NumericalFunctions::EmpiricalGrowthModel exponentialPriceModel;
       NumericalFunctions::EmpiricalGrowthModel priceModel;
 
-      if(fileName.compare("BAN.MI.json")==0){
-        bool here=true;
-      }
-
+      bool forceZeroSlope=false;
       NumericalFunctions::fitLinearGrowthModel(
-          datesHistorical,priceHistorical,linearPriceModel);
+          datesHistorical,priceHistorical,forceZeroSlope,linearPriceModel);
 
-      NumericalFunctions::fitExponentialGrowthModel(
-                            datesHistorical,
-                            priceHistorical,
-                            maxProportionOfOutliersInExpModel, 
-                            exponentialPriceModel);
+      NumericalFunctions::fitCyclicalModelWithExponentialBaseline(
+                                datesHistorical, 
+                                priceHistorical,
+                                minCycleTimeInYears,
+                                maxProportionOfOutliersInExpModel,
+                                exponentialPriceModel);
+
 
       if(exponentialPriceModel.validFitting && linearPriceModel.validFitting){
-        if(exponentialPriceModel.r2 > linearPriceModel.r2){
+       if(exponentialPriceModel.r2 > linearPriceModel.r2){
           NumericalFunctions::fitCyclicalModelWithExponentialBaseline(
                                 datesHistorical, 
                                 priceHistorical,
@@ -1985,6 +1967,7 @@ int main (int argc, char* argv[]) {
                                datesHistorical,
                                priceHistorical,
                                minCycleTimeInYears,
+                               forceZeroSlope,
                                priceModel);
         }
       }else{
@@ -2001,10 +1984,11 @@ int main (int argc, char* argv[]) {
                                datesHistorical,
                                priceHistorical,
                                minCycleTimeInYears,
+                               forceZeroSlope,
                                priceModel);
         }
       }
-
+      
 
 
       //
@@ -2882,7 +2866,7 @@ int main (int argc, char* argv[]) {
       // Avg empirical model
       //
       nlohmann::ordered_json atoiGrowthModelAverage;
-      if(empiricalGrowthData.datesNumerical.size() > 0){
+      if(empiricalGrowthDataAll.datesNumerical.size() > 0){
         NumericalFunctions::appendEmpiricalGrowthModel(
             atoiGrowthModelAverage,
             empiricalGrowthDataAll.model[indexRecentDateAll],"");

@@ -33,7 +33,7 @@
             "field":
             [
                 "metric_data",
-                "priceToValue"
+                "priceToValueEmpiricalAvg"
             ],
             "isDateSeries": true,
             "measure": "recent",
@@ -61,7 +61,7 @@
                 "residualCashFlowToEnterpriseValue"
             ],
             "isDateSeries": true,
-            "measure": "p25",
+            "measure": "recent",
             "direction": "biggestIsBest",
             "lowerBound": 0,
             "upperBound": null,
@@ -141,7 +141,7 @@
     "report":
     {
         "number_of_tickers_per_report": 50,
-        "number_of_reports": 3,
+        "number_of_reports": 1,
         "title": "The Magnificient Seven"
     }
 }

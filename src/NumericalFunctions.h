@@ -346,10 +346,11 @@ class NumericalFunctions {
                   const std::vector< double > &x,
                   const std::vector< double > &y,
                   double minTimeResolutionInYears,
+                  bool forceZeroSlope,
                   EmpiricalGrowthModel &modelUpd){
 
       EmpiricalGrowthModel linearModel;
-      fitLinearGrowthModel(x,y,linearModel);
+      fitLinearGrowthModel(x,y,forceZeroSlope,linearModel);
 
       //Subtract off the base line then call            
       std::vector<double> yC(y.size());
@@ -403,6 +404,7 @@ class NumericalFunctions {
     static void fitLinearGrowthModel(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
+                  bool forceZeroSlope,
                   EmpiricalGrowthModel &modelUpd){
 
       //Remove the bias on x
@@ -421,24 +423,40 @@ class NumericalFunctions {
         static_cast<int>(
           EmpiricalGrowthModelTypes::LinearModel);
 
-      auto [y0Mdl, dydwMdl, r2] = 
-        boost::math::statistics::
-          simple_ordinary_least_squares_with_R_squared(w,y);
+      
+      double y1Mdl, y0Mdl, dydwMdl;
+
+      if(forceZeroSlope){
+        y0Mdl = std::reduce(y.cbegin(),y.cend());
+        y0Mdl = y0Mdl / static_cast<double>(y.size());
+        y1Mdl = y0Mdl;
+        dydwMdl = 0.;
 
 
-      double y1Mdl        = y0Mdl + dydwMdl*modelUpd.duration;    
+      }else{
+        auto [y0Fit, dydwFit, r2Fit] = 
+          boost::math::statistics::
+          simple_ordinary_least_squares_with_R_squared(w,y);        
+
+        y0Mdl     = static_cast<double>(y0Fit);
+        dydwMdl   = static_cast<double>(dydwFit);
+        y1Mdl     = y0Mdl + dydwMdl*modelUpd.duration;
+
+      }
+          
 
       //Here I'm normalizing the slope by the starting and ending values
       //to get something like a growth rate
       double growth0      = (dydwMdl/y0Mdl);
       double growth1      = (dydwMdl/y1Mdl);
 
+
       std::vector< double > yMdl(x.size());   
       for(size_t i=0; i<w.size(); ++i){
         yMdl[i]= y0Mdl + dydwMdl*w[i];
       }
 
-      //double r2Test = calcR2(yMdl,y);
+      double r2 = calcR2(yMdl,y);
 
 
       modelUpd.annualGrowthRateOfTrendline=growth1;
@@ -539,7 +557,7 @@ class NumericalFunctions {
       modelUpd.validFitting=true;
       modelUpd.outlierCount=0;
       for(size_t i=0; i< y.size();++i){
-        if(y[i]<1){
+        if(y[i]<1.0){
           z[i]=1.0;
           ++modelUpd.outlierCount;
         }else{
@@ -617,6 +635,7 @@ class NumericalFunctions {
 
       int indexDate       = -1;
       bool validDateSet    = true;
+      bool forceZeroSlopeOnLinearModel =false;      
 
       std::vector < double > dateNumV;    //Fractional year
       std::vector < std::string > dateV;  //string yer
@@ -826,7 +845,8 @@ class NumericalFunctions {
                         maxPropOfOutliersInExpModel,
                         exponentialModel);
 
-            fitLinearGrowthModel(dateSubV,atoiSubV,linearModel);
+            fitLinearGrowthModel(dateSubV,atoiSubV,forceZeroSlopeOnLinearModel,
+                                linearModel);
 
             int modelType = 
               static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
@@ -865,6 +885,7 @@ class NumericalFunctions {
                 dateSubV,
                 atoiSubV,
                 minCycleTimeInYears,
+                forceZeroSlopeOnLinearModel,
                 empModel);
 
             }
@@ -886,7 +907,8 @@ class NumericalFunctions {
               }break;
               case 2:
               {
-                fitLinearGrowthModel(dateSubV,atoiSubV,empModel);
+                fitLinearGrowthModel(dateSubV,atoiSubV,
+                    forceZeroSlopeOnLinearModel, empModel);
               }break;
               case 3:
               {
@@ -894,6 +916,7 @@ class NumericalFunctions {
                   dateSubV,
                   atoiSubV,
                   minCycleTimeInYears,
+                  forceZeroSlopeOnLinearModel,
                   empModel);
               }break;
               default:
