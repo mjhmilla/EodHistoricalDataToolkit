@@ -571,14 +571,22 @@ class ScreenerFunctions {
           }
 
           std::vector< double > valueFloatVector;
-          double valueFloatName;
+          double valueFloat;
           if(valueType == "float"){
             for( auto const &fieldEntry : el.value()["values"]){
-              valueFloatName = JsonFunctions::getJsonFloat(fieldEntry);
-              valueFloatVector.push_back(valueFloatName);
+              valueFloat = JsonFunctions::getJsonFloat(fieldEntry);
+              valueFloatVector.push_back(valueFloat);
             }  
           }
 
+          std::vector< bool > valueBoolVectorInput;
+          bool valueBool;
+          if(valueType == "bool"){
+            for( auto const &fieldEntry : el.value()["values"]){
+              valueBool = JsonFunctions::getJsonBool(fieldEntry);
+              valueBoolVectorInput.push_back(valueBool);
+            }  
+          }
           //
           // Fetch the target data and apply the filter
           //
@@ -648,7 +656,6 @@ class ScreenerFunctions {
           }
 
           std::string valueString;
-          double valueFloat;
           std::vector < bool > valueBoolVector;
 
           if(valueType == "string"){
@@ -703,6 +710,41 @@ class ScreenerFunctions {
                 std::cerr << "Error: in filter " << filterName 
                       << " the condition field should be one of" 
                       << " (==, !=, >, <, >=, <=) for a float"
+                      << " but is instead " << conditionName  
+                      << std::endl;
+                std::abort();   
+              }        
+            }
+
+
+          }else if(valueType == "bool"){
+            valueBool = JsonFunctions::getJsonBool(*targetJsonTable, 
+                                                  fieldVector);
+
+            //Evaluate all of the individual values against the target
+            for(size_t i = 0; i <  valueBoolVectorInput.size(); ++i){
+              if(conditionName == "=="){
+                bool equalityTest = (valueBool == valueBoolVectorInput[i]);
+                valueBoolVector.push_back(equalityTest);
+              }else if (conditionName == "!="){
+                bool equalityTest = (valueBool != valueBoolVectorInput[i]);
+                valueBoolVector.push_back(equalityTest);
+              }else if (conditionName == ">"){
+                bool equalityTest = (valueBool > valueBoolVectorInput[i]);
+                valueBoolVector.push_back(equalityTest);
+              }else if (conditionName == "<"){
+                bool equalityTest = (valueBool < valueBoolVectorInput[i]);
+                valueBoolVector.push_back(equalityTest);
+              }else if (conditionName == ">="){
+                bool equalityTest = (valueBool >= valueBoolVectorInput[i]);
+                valueBoolVector.push_back(equalityTest);
+              }else if (conditionName == "<="){
+                bool equalityTest = (valueBool <= valueBoolVectorInput[i]);
+                valueBoolVector.push_back(equalityTest);
+              }else{
+                std::cerr << "Error: in filter " << filterName 
+                      << " the condition field should be one of" 
+                      << " (==, !=, >, <, >=, <=) for a bool"
                       << " but is instead " << conditionName  
                       << std::endl;
                 std::abort();   

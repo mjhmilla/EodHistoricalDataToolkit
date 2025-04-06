@@ -64,7 +64,15 @@ class NumericalFunctions {
       std::vector< double > yCyclicNorm;
       std::vector< double > yCyclicNormData;
       std::vector< double > yCyclicNormDataPercentiles;
-
+      EmpiricalGrowthModel():
+        modelType(-1),
+        duration(-1),
+        annualGrowthRateOfTrendline(-1),
+        r2(-1),
+        r2Trendline(-1),
+        r2Cyclic(-1),
+        validFitting(false),
+        outlierCount(0){};
     };    
     //============================================================================
     struct EmpiricalGrowthDataSet{
@@ -244,100 +252,98 @@ class NumericalFunctions {
                   double minTimeResolutionInYears,
                   EmpiricalGrowthModel &modelUpd){
 
-      if(x.size()!=y.size()){
-        std::cout << "Error: x and y must the same size"
-                  << std::endl;
-        std::abort();
-      }
 
-      std::vector< double > xN(x.size());
-      std::vector< double > yM(y.size());
+      if(x.size()==y.size() && x.size()>2){
+        std::vector< double > xN(x.size());
+        std::vector< double > yM(y.size());
 
-      //copy over y
-      for(size_t i=0; i<y.size();++i){
-        yM[i]=y[i];
-      }
-
-      double xSpan = std::abs(x.back()-x.front());
-      if(xSpan < 0){
-        std::cout << "Error: data must be ordered from earlierst to most recent"
-                  << std::endl;
-        std::abort();
-      }
-
-      modelUpd.x.resize(x.size());
-      modelUpd.y.resize(x.size());
-      //Normalize time to 0-1
-      for(size_t i=0; i<x.size();++i){
-        xN[i] = (x[i]-x.front())/xSpan;
-        modelUpd.x[i] = x[i];
-        modelUpd.y[i] = 0.;
-      }
-
-      int n = static_cast<int>(std::round(xSpan/minTimeResolutionInYears));
-
-      //index into parameters
-      modelUpd.parameters.resize(2*n);
-      int indexParameters=0;
-
-      for(int i=0; i<n; ++i){
-        double w = static_cast<double>(i+1.0);
-        
-        std::vector< double > yDotSin(x.size());
-        std::vector< double > yDotCos(x.size());
-
-        //Evaluate the dot product between 
-        // y and 
-        // sin(xN*2*pi*2) and 
-        // cos(xN*2*pi*2)
-
-        for(int j=0; j<xN.size();++j){
-          double sinTerm = std::sin(xN[j]*2.0*M_PI*w);
-          double cosTerm = std::cos(xN[j]*2.0*M_PI*w);
-          yDotSin[j] = y[j]*sinTerm;
-          yDotCos[j] = y[j]*cosTerm;
+        //copy over y
+        for(size_t i=0; i<y.size();++i){
+          yM[i]=y[i];
         }
 
-        //Evaluate the integral of the dot products. Here I'm just going to 
-        //use the trapezoidal method
-        double intYDotSin=0;
-        double intYDotCos=0;
-        for(int j=1; j<xN.size();++j){
-          double dx = x[j]-x[j-1];
-          intYDotSin += 0.5*(yDotSin[j]+yDotSin[j-1])*dx;
-          intYDotCos += 0.5*(yDotCos[j]+yDotCos[j-1])*dx;
-        }
-        double cYSin = (2.0/xSpan)*intYDotSin;
-        double cYCos = (2.0/xSpan)*intYDotCos;
-        
-        modelUpd.parameters[indexParameters] = cYSin;
-        ++indexParameters;
-        modelUpd.parameters[indexParameters] = cYCos;
-        ++indexParameters;
-
-        //Update the residual and fitting vector
-        for(int j=0; j<yM.size();++j){
-          double sinTerm = std::sin(xN[j]*2.0*M_PI*w);
-          double cosTerm = std::cos(xN[j]*2.0*M_PI*w);
-          yM[j]         = yM[j] 
-                          - cYSin*sinTerm - cYCos*cosTerm;
-          modelUpd.y[j] = modelUpd.y[j]  
-                          + cYSin*sinTerm + cYCos*cosTerm;
+        double xSpan = std::abs(x.back()-x.front());
+        if(xSpan < 0){
+          std::cout << "Error: data must be ordered from earlierst to most recent"
+                    << std::endl;
+          std::abort();
         }
 
+        modelUpd.x.resize(x.size());
+        modelUpd.y.resize(x.size());
+        //Normalize time to 0-1
+        for(size_t i=0; i<x.size();++i){
+          xN[i] = (x[i]-x.front())/xSpan;
+          modelUpd.x[i] = x[i];
+          modelUpd.y[i] = 0.;
+        }
+
+        int n = static_cast<int>(std::round(xSpan/minTimeResolutionInYears));
+
+        //index into parameters
+        modelUpd.parameters.resize(2*n);
+        int indexParameters=0;
+
+        for(int i=0; i<n; ++i){
+          double w = static_cast<double>(i+1.0);
+          
+          std::vector< double > yDotSin(x.size());
+          std::vector< double > yDotCos(x.size());
+
+          //Evaluate the dot product between 
+          // y and 
+          // sin(xN*2*pi*2) and 
+          // cos(xN*2*pi*2)
+
+          for(int j=0; j<xN.size();++j){
+            double sinTerm = std::sin(xN[j]*2.0*M_PI*w);
+            double cosTerm = std::cos(xN[j]*2.0*M_PI*w);
+            yDotSin[j] = y[j]*sinTerm;
+            yDotCos[j] = y[j]*cosTerm;
+          }
+
+          //Evaluate the integral of the dot products. Here I'm just going to 
+          //use the trapezoidal method
+          double intYDotSin=0;
+          double intYDotCos=0;
+          for(int j=1; j<xN.size();++j){
+            double dx = x[j]-x[j-1];
+            intYDotSin += 0.5*(yDotSin[j]+yDotSin[j-1])*dx;
+            intYDotCos += 0.5*(yDotCos[j]+yDotCos[j-1])*dx;
+          }
+          double cYSin = (2.0/xSpan)*intYDotSin;
+          double cYCos = (2.0/xSpan)*intYDotCos;
+          
+          modelUpd.parameters[indexParameters] = cYSin;
+          ++indexParameters;
+          modelUpd.parameters[indexParameters] = cYCos;
+          ++indexParameters;
+
+          //Update the residual and fitting vector
+          for(int j=0; j<yM.size();++j){
+            double sinTerm = std::sin(xN[j]*2.0*M_PI*w);
+            double cosTerm = std::cos(xN[j]*2.0*M_PI*w);
+            yM[j]         = yM[j] 
+                            - cYSin*sinTerm - cYCos*cosTerm;
+            modelUpd.y[j] = modelUpd.y[j]  
+                            + cYSin*sinTerm + cYCos*cosTerm;
+          }
+
+        }
+
+        double r2 = calcR2(y,modelUpd.y);
+
+        modelUpd.duration=xSpan;
+        modelUpd.outlierCount=0;
+        modelUpd.annualGrowthRateOfTrendline=0;
+        modelUpd.r2=r2;
+        modelUpd.validFitting=true;
+        modelUpd.modelType = 
+          static_cast<int>(EmpiricalGrowthModelTypes::CyclicalModel);
+        modelUpd.yCyclicData = y;
+      }else{
+        modelUpd.validFitting=false;
       }
-
-      double r2 = calcR2(y,modelUpd.y);
-
-      modelUpd.duration=xSpan;
-      modelUpd.outlierCount=0;
-      modelUpd.annualGrowthRateOfTrendline=0;
-      modelUpd.r2=r2;
-      modelUpd.validFitting=true;
-      modelUpd.modelType = 
-        static_cast<int>(EmpiricalGrowthModelTypes::CyclicalModel);
-      modelUpd.yCyclicData = y;
-
 
 
     };
@@ -349,56 +355,60 @@ class NumericalFunctions {
                   bool forceZeroSlope,
                   EmpiricalGrowthModel &modelUpd){
 
-      EmpiricalGrowthModel linearModel;
-      fitLinearGrowthModel(x,y,forceZeroSlope,linearModel);
+      if(x.size() == y.size() && x.size() > 2){
+        EmpiricalGrowthModel linearModel;
+        fitLinearGrowthModel(x,y,forceZeroSlope,linearModel);
 
-      //Subtract off the base line then call            
-      std::vector<double> yC(y.size());
-      for(size_t i=0; i<yC.size();++i){
-        yC[i] = y[i] - linearModel.y[i];
+        //Subtract off the base line then call            
+        std::vector<double> yC(y.size());
+        for(size_t i=0; i<yC.size();++i){
+          yC[i] = y[i] - linearModel.y[i];
+        }
+
+        EmpiricalGrowthModel cyclicalModel;
+        fitCyclicalModel(x,yC,minTimeResolutionInYears,cyclicalModel);
+
+        //Form and evaluate the linear+cyclical model
+        std::vector<double> yM(y.size());
+        for(size_t i=0; i<yM.size();++i){
+          yM[i] = linearModel.y[i] + cyclicalModel.y[i];
+        }
+
+        double r2LC = calcR2(yM,y);
+
+        modelUpd.duration     = std::abs(x.back()-x.front());
+        modelUpd.annualGrowthRateOfTrendline   = linearModel.annualGrowthRateOfTrendline;
+        modelUpd.modelType = 
+          static_cast<int>(EmpiricalGrowthModelTypes::LinearCyclicalModel);
+        modelUpd.parameters   = linearModel.parameters;
+        for(size_t i=0; i<cyclicalModel.parameters.size();++i){
+          modelUpd.parameters.push_back(cyclicalModel.parameters[i]);
+        }
+        modelUpd.r2           = r2LC;
+        modelUpd.r2Trendline  = linearModel.r2;
+        modelUpd.r2Cyclic     = cyclicalModel.r2;
+        modelUpd.validFitting = true;
+        modelUpd.outlierCount =   linearModel.outlierCount 
+                              +cyclicalModel.outlierCount;
+        modelUpd.x            = x;
+        modelUpd.y            = yM;
+        modelUpd.yTrendline   = linearModel.y;
+        modelUpd.yCyclic      = cyclicalModel.y;
+        modelUpd.yCyclicData  = cyclicalModel.yCyclicData;
+
+        modelUpd.yCyclicNorm.resize(modelUpd.y.size());
+        modelUpd.yCyclicNormData.resize(modelUpd.y.size());
+        for(size_t i=0; i<modelUpd.y.size();++i){
+          modelUpd.yCyclicNorm[i] = 
+            modelUpd.yCyclic[i]/modelUpd.yTrendline[i]; 
+          modelUpd.yCyclicNormData[i] = 
+            modelUpd.yCyclicData[i]/modelUpd.yTrendline[i];        
+        }
+        mapToPercentiles(modelUpd.yCyclicNormData,
+                        modelUpd.yCyclicNormDataPercentiles);
+      }else{
+        modelUpd.validFitting=false;
       }
-
-      EmpiricalGrowthModel cyclicalModel;
-      fitCyclicalModel(x,yC,minTimeResolutionInYears,cyclicalModel);
-
-      //Form and evaluate the linear+cyclical model
-      std::vector<double> yM(y.size());
-      for(size_t i=0; i<yM.size();++i){
-        yM[i] = linearModel.y[i] + cyclicalModel.y[i];
-      }
-
-      double r2LC = calcR2(yM,y);
-
-      modelUpd.duration     = std::abs(x.back()-x.front());
-      modelUpd.annualGrowthRateOfTrendline   = linearModel.annualGrowthRateOfTrendline;
-      modelUpd.modelType = 
-        static_cast<int>(EmpiricalGrowthModelTypes::LinearCyclicalModel);
-      modelUpd.parameters   = linearModel.parameters;
-      for(size_t i=0; i<cyclicalModel.parameters.size();++i){
-        modelUpd.parameters.push_back(cyclicalModel.parameters[i]);
-      }
-      modelUpd.r2           = r2LC;
-      modelUpd.r2Trendline  = linearModel.r2;
-      modelUpd.r2Cyclic     = cyclicalModel.r2;
-      modelUpd.validFitting = true;
-      modelUpd.outlierCount =   linearModel.outlierCount 
-                             +cyclicalModel.outlierCount;
-      modelUpd.x            = x;
-      modelUpd.y            = yM;
-      modelUpd.yTrendline   = linearModel.y;
-      modelUpd.yCyclic      = cyclicalModel.y;
-      modelUpd.yCyclicData  = cyclicalModel.yCyclicData;
-
-      modelUpd.yCyclicNorm.resize(modelUpd.y.size());
-      modelUpd.yCyclicNormData.resize(modelUpd.y.size());
-      for(size_t i=0; i<modelUpd.y.size();++i){
-        modelUpd.yCyclicNorm[i] = 
-          modelUpd.yCyclic[i]/modelUpd.yTrendline[i]; 
-        modelUpd.yCyclicNormData[i] = 
-          modelUpd.yCyclicData[i]/modelUpd.yTrendline[i];        
-      }
-      mapToPercentiles(modelUpd.yCyclicNormData,
-                       modelUpd.yCyclicNormDataPercentiles);
     };
     //==========================================================================
     static void fitLinearGrowthModel(
@@ -407,67 +417,71 @@ class NumericalFunctions {
                   bool forceZeroSlope,
                   EmpiricalGrowthModel &modelUpd){
 
-      //Remove the bias on x
-      double w0 = *std::min_element(x.begin(),x.end());
-      double w1 = *std::max_element(x.begin(),x.end());      
-      std::vector< double > w;
-      w.resize(x.size());
-      for(size_t i=0; i<x.size();++i){
-        w[i] = x[i]-w0;
-      }      
+      if(x.size() == y.size() && x.size() > 2){
+        //Remove the bias on x
+        double w0 = *std::min_element(x.begin(),x.end());
+        double w1 = *std::max_element(x.begin(),x.end());      
+        std::vector< double > w;
+        w.resize(x.size());
+        for(size_t i=0; i<x.size();++i){
+          w[i] = x[i]-w0;
+        }      
 
-      modelUpd.duration = 
-        std::abs(x.front()-x.back());
+        modelUpd.duration = 
+          std::abs(x.front()-x.back());
 
-      modelUpd.modelType = 
-        static_cast<int>(
-          EmpiricalGrowthModelTypes::LinearModel);
+        modelUpd.modelType = 
+          static_cast<int>(
+            EmpiricalGrowthModelTypes::LinearModel);
 
-      
-      double y1Mdl, y0Mdl, dydwMdl;
+        
+        double y1Mdl, y0Mdl, dydwMdl;
 
-      if(forceZeroSlope){
-        y0Mdl = std::reduce(y.cbegin(),y.cend());
-        y0Mdl = y0Mdl / static_cast<double>(y.size());
-        y1Mdl = y0Mdl;
-        dydwMdl = 0.;
+        if(forceZeroSlope){
+          y0Mdl = std::reduce(y.cbegin(),y.cend());
+          y0Mdl = y0Mdl / static_cast<double>(y.size());
+          y1Mdl = y0Mdl;
+          dydwMdl = 0.;
 
 
+        }else{
+          auto [y0Fit, dydwFit, r2Fit] = 
+            boost::math::statistics::
+            simple_ordinary_least_squares_with_R_squared(w,y);        
+
+          y0Mdl     = static_cast<double>(y0Fit);
+          dydwMdl   = static_cast<double>(dydwFit);
+          y1Mdl     = y0Mdl + dydwMdl*modelUpd.duration;
+
+        }
+            
+
+        //Here I'm normalizing the slope by the starting and ending values
+        //to get something like a growth rate
+        double growth0      = (dydwMdl/y0Mdl);
+        double growth1      = (dydwMdl/y1Mdl);
+
+
+        std::vector< double > yMdl(x.size());   
+        for(size_t i=0; i<w.size(); ++i){
+          yMdl[i]= y0Mdl + dydwMdl*w[i];
+        }
+
+        double r2 = calcR2(yMdl,y);
+
+
+        modelUpd.annualGrowthRateOfTrendline=growth1;
+        modelUpd.parameters.push_back(w0);
+        modelUpd.parameters.push_back(y0Mdl);
+        modelUpd.parameters.push_back(dydwMdl);
+        modelUpd.validFitting=true;
+        modelUpd.outlierCount=0;
+        modelUpd.r2=r2;
+        modelUpd.x = x;
+        modelUpd.y = yMdl;
       }else{
-        auto [y0Fit, dydwFit, r2Fit] = 
-          boost::math::statistics::
-          simple_ordinary_least_squares_with_R_squared(w,y);        
-
-        y0Mdl     = static_cast<double>(y0Fit);
-        dydwMdl   = static_cast<double>(dydwFit);
-        y1Mdl     = y0Mdl + dydwMdl*modelUpd.duration;
-
+        modelUpd.validFitting=false;
       }
-          
-
-      //Here I'm normalizing the slope by the starting and ending values
-      //to get something like a growth rate
-      double growth0      = (dydwMdl/y0Mdl);
-      double growth1      = (dydwMdl/y1Mdl);
-
-
-      std::vector< double > yMdl(x.size());   
-      for(size_t i=0; i<w.size(); ++i){
-        yMdl[i]= y0Mdl + dydwMdl*w[i];
-      }
-
-      double r2 = calcR2(yMdl,y);
-
-
-      modelUpd.annualGrowthRateOfTrendline=growth1;
-      modelUpd.parameters.push_back(w0);
-      modelUpd.parameters.push_back(y0Mdl);
-      modelUpd.parameters.push_back(dydwMdl);
-      modelUpd.validFitting=true;
-      modelUpd.outlierCount=0;
-      modelUpd.r2=r2;
-      modelUpd.x = x;
-      modelUpd.y = yMdl;
                               
     };
     //==========================================================================    
@@ -478,60 +492,63 @@ class NumericalFunctions {
                   double maxProportionOfNegativeAtoi,
                   EmpiricalGrowthModel &modelUpd){
 
-      EmpiricalGrowthModel exponentialModel;
-      fitExponentialGrowthModel(x,y,maxProportionOfNegativeAtoi,
-                                exponentialModel);
+      if(x.size() == y.size() && x.size() > 2){
+        EmpiricalGrowthModel exponentialModel;
+        fitExponentialGrowthModel(x,y,maxProportionOfNegativeAtoi,
+                                  exponentialModel);
 
-      //Subtract off the base line then call            
-      std::vector<double> yC(y.size());
-      for(size_t i=0; i<yC.size();++i){
-        yC[i] = y[i] - exponentialModel.y[i];
+        //Subtract off the base line then call            
+        std::vector<double> yC(y.size());
+        for(size_t i=0; i<yC.size();++i){
+          yC[i] = y[i] - exponentialModel.y[i];
+        }
+
+        EmpiricalGrowthModel cyclicalModel;
+        fitCyclicalModel(x,yC,minTimeResolutionInYears,cyclicalModel);
+
+        //Form and evaluate the linear+cyclical model
+        std::vector<double> yM(y.size());
+        for(size_t i=0; i<yM.size();++i){
+          yM[i] = exponentialModel.y[i] + cyclicalModel.y[i];
+        }
+
+        double r2LC = calcR2(yM,y);
+
+
+        modelUpd.duration   = std::abs(x.back()-x.front());
+        modelUpd.annualGrowthRateOfTrendline = exponentialModel.annualGrowthRateOfTrendline;
+        modelUpd.modelType  = 
+          static_cast<int>(EmpiricalGrowthModelTypes::ExponentialCyclicalModel);
+        modelUpd.outlierCount = exponentialModel.outlierCount
+                              +cyclicalModel.outlierCount;
+        modelUpd.parameters   = exponentialModel.parameters;
+        for(size_t i=0; i<cyclicalModel.parameters.size();++i){
+          modelUpd.parameters.push_back(cyclicalModel.parameters[i]);
+        }
+        modelUpd.r2           = r2LC;
+        modelUpd.r2Trendline  = exponentialModel.r2;
+        modelUpd.r2Cyclic     = cyclicalModel.r2;
+        modelUpd.validFitting = true;
+        modelUpd.x            = x;
+        modelUpd.y            = yM;
+        modelUpd.yTrendline   = exponentialModel.y;
+        modelUpd.yCyclic      = cyclicalModel.y;
+        modelUpd.yCyclicData  = cyclicalModel.yCyclicData;
+
+        modelUpd.yCyclicNorm.resize(modelUpd.y.size());
+        modelUpd.yCyclicNormData.resize(modelUpd.y.size());
+        for(size_t i=0; i<modelUpd.y.size();++i){
+          modelUpd.yCyclicNorm[i] = 
+            modelUpd.yCyclic[i]/modelUpd.yTrendline[i]; 
+          modelUpd.yCyclicNormData[i] = 
+            modelUpd.yCyclicData[i]/modelUpd.yTrendline[i];        
+        }
+
+        mapToPercentiles(modelUpd.yCyclicNormData,
+                        modelUpd.yCyclicNormDataPercentiles);
+      }else{
+        modelUpd.validFitting=false;
       }
-
-      EmpiricalGrowthModel cyclicalModel;
-      fitCyclicalModel(x,yC,minTimeResolutionInYears,cyclicalModel);
-
-      //Form and evaluate the linear+cyclical model
-      std::vector<double> yM(y.size());
-      for(size_t i=0; i<yM.size();++i){
-        yM[i] = exponentialModel.y[i] + cyclicalModel.y[i];
-      }
-
-      double r2LC = calcR2(yM,y);
-
-
-      modelUpd.duration   = std::abs(x.back()-x.front());
-      modelUpd.annualGrowthRateOfTrendline = exponentialModel.annualGrowthRateOfTrendline;
-      modelUpd.modelType  = 
-        static_cast<int>(EmpiricalGrowthModelTypes::ExponentialCyclicalModel);
-      modelUpd.outlierCount = exponentialModel.outlierCount
-                             +cyclicalModel.outlierCount;
-      modelUpd.parameters   = exponentialModel.parameters;
-      for(size_t i=0; i<cyclicalModel.parameters.size();++i){
-        modelUpd.parameters.push_back(cyclicalModel.parameters[i]);
-      }
-      modelUpd.r2           = r2LC;
-      modelUpd.r2Trendline  = exponentialModel.r2;
-      modelUpd.r2Cyclic     = cyclicalModel.r2;
-      modelUpd.validFitting = true;
-      modelUpd.x            = x;
-      modelUpd.y            = yM;
-      modelUpd.yTrendline   = exponentialModel.y;
-      modelUpd.yCyclic      = cyclicalModel.y;
-      modelUpd.yCyclicData  = cyclicalModel.yCyclicData;
-
-      modelUpd.yCyclicNorm.resize(modelUpd.y.size());
-      modelUpd.yCyclicNormData.resize(modelUpd.y.size());
-      for(size_t i=0; i<modelUpd.y.size();++i){
-        modelUpd.yCyclicNorm[i] = 
-          modelUpd.yCyclic[i]/modelUpd.yTrendline[i]; 
-        modelUpd.yCyclicNormData[i] = 
-          modelUpd.yCyclicData[i]/modelUpd.yTrendline[i];        
-      }
-
-      mapToPercentiles(modelUpd.yCyclicNormData,
-                       modelUpd.yCyclicNormDataPercentiles);
-
     };
     //==========================================================================
     static void fitExponentialGrowthModel(
@@ -541,76 +558,80 @@ class NumericalFunctions {
                   EmpiricalGrowthModel &modelUpd){
 
       //Remove the bias on x
-      double w0 = *std::min_element(x.begin(),x.end());
-      double w1 = *std::max_element(x.begin(),x.end());
-      std::vector< double > w;
+      if(x.size()==y.size() && x.size() > 2){
+        double w0 = *std::min_element(x.begin(),x.end());
+        double w1 = *std::max_element(x.begin(),x.end());
+        std::vector< double > w;
 
-      w.resize(x.size());
-      for(size_t i=0; i<x.size();++i){
-        w[i] = x[i]-w0;
-      }      
+        w.resize(x.size());
+        for(size_t i=0; i<x.size();++i){
+          w[i] = x[i]-w0;
+        }      
 
-      //Go through and count the y entries < 1
-      std::vector< double > z;
-      z.resize(y.size());
-      
-      modelUpd.validFitting=true;
-      modelUpd.outlierCount=0;
-      for(size_t i=0; i< y.size();++i){
-        if(y[i]<1.0){
-          z[i]=1.0;
-          ++modelUpd.outlierCount;
-        }else{
-          z[i]=y[i];
-        }
-      }
-      
-      double invalidEntryProportion = 
-          static_cast<double>(modelUpd.outlierCount)
-        / static_cast<double>(y.size());
-
-      if(invalidEntryProportion > maxProportionOfNegativeAtoi){
-        modelUpd.validFitting=false;
-      }
-
-      if(modelUpd.validFitting){
-
-        modelUpd.duration = w1-w0;
-
-        modelUpd.modelType = 
-          static_cast<int>(
-            EmpiricalGrowthModelTypes::ExponentialModel);
-
-        std::vector<double> logZ(y.size());
-        for(size_t i=0; i< z.size();++i){
-          logZ[i] = std::log(z[i]);
-        } 
-
-        auto [z0Mdl, dzdwMdl, logZR2] = 
-          boost::math::statistics::
-            simple_ordinary_least_squares_with_R_squared(w,logZ);
-
-        double growth       = std::exp( dzdwMdl )-1.0;
-        double y0Mdl        = std::exp( z0Mdl );
-        double y1Mdl        = std::exp( z0Mdl + dzdwMdl*modelUpd.duration);    
-
-        std::vector< double > yMdl(x.size());   
-        for(size_t i=0; i<w.size(); ++i){
-          yMdl[i]=y0Mdl*pow(1.0+growth,w[i]);
-        }
-
-        double r2 = calcR2(yMdl,y);
-
+        //Go through and count the y entries < 1
+        std::vector< double > z;
+        z.resize(y.size());
+        
+        modelUpd.validFitting=true;
         modelUpd.outlierCount=0;
-        modelUpd.annualGrowthRateOfTrendline=growth;
-        modelUpd.parameters.push_back(w0);
-        modelUpd.parameters.push_back(y0Mdl);
-        modelUpd.parameters.push_back(growth);
+        for(size_t i=0; i< y.size();++i){
+          if(y[i]<1.0){
+            z[i]=1.0;
+            ++modelUpd.outlierCount;
+          }else{
+            z[i]=y[i];
+          }
+        }
+        
+        double invalidEntryProportion = 
+            static_cast<double>(modelUpd.outlierCount)
+          / static_cast<double>(y.size());
+
+        if(invalidEntryProportion > maxProportionOfNegativeAtoi){
+          modelUpd.validFitting=false;
+        }
+
+        if(modelUpd.validFitting){
+
+          modelUpd.duration = w1-w0;
+
+          modelUpd.modelType = 
+            static_cast<int>(
+              EmpiricalGrowthModelTypes::ExponentialModel);
+
+          std::vector<double> logZ(y.size());
+          for(size_t i=0; i< z.size();++i){
+            logZ[i] = std::log(z[i]);
+          } 
+
+          auto [z0Mdl, dzdwMdl, logZR2] = 
+            boost::math::statistics::
+              simple_ordinary_least_squares_with_R_squared(w,logZ);
+
+          double growth       = std::exp( dzdwMdl )-1.0;
+          double y0Mdl        = std::exp( z0Mdl );
+          double y1Mdl        = std::exp( z0Mdl + dzdwMdl*modelUpd.duration);    
+
+          std::vector< double > yMdl(x.size());   
+          for(size_t i=0; i<w.size(); ++i){
+            yMdl[i]=y0Mdl*pow(1.0+growth,w[i]);
+          }
+
+          double r2 = calcR2(yMdl,y);
+
+          modelUpd.outlierCount=0;
+          modelUpd.annualGrowthRateOfTrendline=growth;
+          modelUpd.parameters.push_back(w0);
+          modelUpd.parameters.push_back(y0Mdl);
+          modelUpd.parameters.push_back(growth);
 
 
-        modelUpd.r2=r2;
-        modelUpd.x = x;
-        modelUpd.y = yMdl;
+          modelUpd.r2=r2;
+          modelUpd.x = x;
+          modelUpd.y = yMdl;
+        }
+      }else{
+        modelUpd.validFitting=false;
       }
 
     };
@@ -836,7 +857,9 @@ class NumericalFunctions {
           }
 
 
+
           EmpiricalGrowthModel empModel;
+          bool validFitting = false;;          
           
           if(empiricalModelType==-1){
             EmpiricalGrowthModel exponentialModel, linearModel;
@@ -848,53 +871,55 @@ class NumericalFunctions {
             fitLinearGrowthModel(dateSubV,atoiSubV,forceZeroSlopeOnLinearModel,
                                 linearModel);
 
-            int modelType = 
-              static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
+            validFitting = 
+              (exponentialModel.validFitting || linearModel.validFitting);
+
+            int modelType = -1;
             int linearModelType = 
               static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
             int exponentialModelType = 
               static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel);
-
-            if(linearModel.validFitting==false){
-              std::cout << "Error: a linear fit should always be valid"
-                        << std::endl;
-              std::abort();
-            }
+            
 
             //A linear model is used unless the exponential model
             //is both valid and has a higher R2
             if(exponentialModel.validFitting==true){
-              if(exponentialModel.r2 > linearModel.r2){
+              if(exponentialModel.r2 > linearModel.r2 
+                  || !linearModel.validFitting){
                 modelType=static_cast<int>(
                     EmpiricalGrowthModelTypes::ExponentialModel);
               }
+            }else if(linearModel.validFitting){
+              modelType = 
+                static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
             }
 
-            if(modelType == exponentialModelType){
+            switch(modelType){
+              case static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel):{
+                fitCyclicalModelWithExponentialBaseline(
+                  dateSubV,
+                  atoiSubV,
+                  minCycleTimeInYears,
+                  maxPropOfOutliersInExpModel,
+                  empModel);                
+              } break;
+              case static_cast<int>(EmpiricalGrowthModelTypes::LinearModel):{
+                fitCyclicalModelWithLinearBaseline(
+                  dateSubV,
+                  atoiSubV,
+                  minCycleTimeInYears,
+                  forceZeroSlopeOnLinearModel,
+                  empModel);
+              } break;
+            };
 
-              fitCyclicalModelWithExponentialBaseline(
-                dateSubV,
-                atoiSubV,
-                minCycleTimeInYears,
-                maxPropOfOutliersInExpModel,
-                empModel);
-                            
-            }else{
-
-              fitCyclicalModelWithLinearBaseline(
-                dateSubV,
-                atoiSubV,
-                minCycleTimeInYears,
-                forceZeroSlopeOnLinearModel,
-                empModel);
-
-            }
           }else{
             switch(empiricalModelType){
               case 0:
               {
                 fitExponentialGrowthModel(dateSubV,atoiSubV,
                         maxPropOfOutliersInExpModel,empModel);
+                validFitting=empModel.validFitting;
               }break;
               case 1:
               {                
@@ -904,11 +929,13 @@ class NumericalFunctions {
                   minCycleTimeInYears,
                   maxPropOfOutliersInExpModel,
                   empModel);
+                validFitting=empModel.validFitting;
               }break;
               case 2:
               {
                 fitLinearGrowthModel(dateSubV,atoiSubV,
                     forceZeroSlopeOnLinearModel, empModel);
+                validFitting=empModel.validFitting;
               }break;
               case 3:
               {
@@ -918,6 +945,7 @@ class NumericalFunctions {
                   minCycleTimeInYears,
                   forceZeroSlopeOnLinearModel,
                   empModel);
+                  validFitting=empModel.validFitting;
               }break;
               default:
                 std::cout <<"Error: empiricalModelType must be [0,1,2,3]"
@@ -929,50 +957,52 @@ class NumericalFunctions {
 
           
 
-          //
-          //Evaluate the average rate of reinvestment
-          //
-          double count=0.;
-          double rrAvg = 0.;
+          if(validFitting){
+            //
+            //Evaluate the average rate of reinvestment
+            //
+            double count=0.;
+            double rrAvg = 0.;
 
-          for(size_t i=0; i < rrSubV.size();++i){
-            if(JsonFunctions::isJsonFloatValid(rrSubV[i])){
-              rrAvg += rrSubV[i];
-              count += 1.0;
+            for(size_t i=0; i < rrSubV.size();++i){
+              if(JsonFunctions::isJsonFloatValid(rrSubV[i])){
+                rrAvg += rrSubV[i];
+                count += 1.0;
+              }
             }
-          }
 
-          rrAvg = rrAvg/count;
+            rrAvg = rrAvg/count;
 
-          double rrSd = 0;
-          for(size_t i=0; i<rrSubV.size();++i){
-            double rrError = (rrSubV[i]-rrAvg);
-            rrSd += rrError*rrError;
-          }
-          rrSd = std::sqrt(rrSd / count);
+            double rrSd = 0;
+            for(size_t i=0; i<rrSubV.size();++i){
+              double rrError = (rrSubV[i]-rrAvg);
+              rrSd += rrError*rrError;
+            }
+            rrSd = std::sqrt(rrSd / count);
 
-          double roic = empModel.annualGrowthRateOfTrendline/rrAvg;
+            double roic = empModel.annualGrowthRateOfTrendline/rrAvg;
 
-          //
-          // Store the model results
-          //
-          if(count > 0 && !std::isnan(rrAvg) && !std::isinf(rrAvg)){
+            //
+            // Store the model results
+            //
+            if(count > 0 && !std::isnan(rrAvg) && !std::isinf(rrAvg)){
 
-            empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(
-                empModel.annualGrowthRateOfTrendline);
+              empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(
+                  empModel.annualGrowthRateOfTrendline);
 
-            empiricalGrowthDataUpd.reinvestmentRate.push_back(rrAvg);
-            empiricalGrowthDataUpd.reinvestmentRateSD.push_back(rrSd);
-            empiricalGrowthDataUpd.returnOnInvestedCapital.push_back(roic);
+              empiricalGrowthDataUpd.reinvestmentRate.push_back(rrAvg);
+              empiricalGrowthDataUpd.reinvestmentRateSD.push_back(rrSd);
+              empiricalGrowthDataUpd.returnOnInvestedCapital.push_back(roic);
 
-            empiricalGrowthDataUpd.dates.push_back(
-                dateV[indexDate]);
-            empiricalGrowthDataUpd.datesNumerical.push_back(
-                dateNumV[indexDate]);
+              empiricalGrowthDataUpd.dates.push_back(
+                  dateV[indexDate]);
+              empiricalGrowthDataUpd.datesNumerical.push_back(
+                  dateNumV[indexDate]);
 
-            empiricalGrowthDataUpd.model.push_back(empModel);     
+              empiricalGrowthDataUpd.model.push_back(empModel);     
 
-          }  
+            } 
+          } 
         }   
       }     
 

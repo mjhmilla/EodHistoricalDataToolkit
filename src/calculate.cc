@@ -1892,7 +1892,9 @@ int main (int argc, char* argv[]) {
                                   empiricalModelType);  
 
       if(empiricalGrowthDataAll.model.size()>0){
-        empiricalModelType = empiricalGrowthDataAll.model[0].modelType;
+        if(empiricalGrowthDataAll.model[0].validFitting){
+          empiricalModelType = empiricalGrowthDataAll.model[0].modelType;
+        }
       }
       //Evaluate the growth rate data over the same relatively short
       //period of time that is used for the growth period during

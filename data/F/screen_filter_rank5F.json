@@ -17,7 +17,41 @@
             [
                 0.001
             ]
-        }
+        },
+        "empFittingValidAvg":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "atoi_growth_model_avg",
+                "validFitting"
+            ],
+            "isDateSeries": false,
+            "condition": "==",
+            "operator": "",
+            "valueType": "bool",
+            "values":
+            [
+                true
+            ]
+        },
+        "empFittingValidRecent":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "atoi_growth_model_recent",
+                "validFitting"
+            ],
+            "isDateSeries": false,
+            "condition": "==",
+            "operator": "",
+            "valueType": "bool",
+            "values":
+            [
+                true
+            ]
+        }        
     },
     "ranking":
     {

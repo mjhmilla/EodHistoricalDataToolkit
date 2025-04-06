@@ -304,7 +304,7 @@ void updatePlotArray(
     jsonMetaDataVector[indexEnd].dateName = dateName;
     
     jsonMetaDataVector[indexEnd].isArray = 
-      JsonFunctions::getJsonBool(plotConfig.value()["isArray"],false);
+      JsonFunctions::getJsonBool(plotConfig.value()["isArray"]);
 
 
     //Get the LineSettings
@@ -922,8 +922,7 @@ bool generateLaTeXReport(
           switch(entryMetric.type){
             case JSON_FIELD_TYPE::BOOL : {
               bool value = JsonFunctions::getJsonBool(fundamentalData,
-                                entryMetric.fieldNames, 
-                                replaceNansWithMissingData);
+                                entryMetric.fieldNames);
 
               latexReport << entryMetric.label << " & " << value  << "\\\\" << std::endl;                          
             }

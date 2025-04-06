@@ -598,7 +598,7 @@ int main (int argc, char* argv[]) {
     fundamentalFolder         = fundamentalFolderInput.getValue();
     historicalFolder          = historicalFolderInput.getValue();    
     tickerReportFolder        = tickerReportFolderOutput.getValue();
-    screenerReportFolder        = screenerReportFolderOutput.getValue();    
+    screenerReportFolder      = screenerReportFolderOutput.getValue();    
     dateOfTable               = dateOfTableInput.getValue();
     verbose                   = verboseInput.getValue();
 
@@ -642,6 +642,26 @@ int main (int argc, char* argv[]) {
   auto today = date::floor<date::days>(std::chrono::system_clock::now());
   date::year_month_day targetDate(today);
   int maxTargetDateErrorInDays = 365;
+
+  //Get the name of the configuration 
+  std::string screenName = 
+    std::filesystem::path(screenReportConfigurationFilePath).filename();
+  size_t i = screenName.find_last_of('.');
+  screenName = screenName.substr(0,i);
+
+  std::filesystem::path screenReportPath(screenerReportFolder);
+  screenReportPath.append(screenName);
+
+  if(!std::filesystem::create_directory(screenReportPath)){
+    for (auto& path: std::filesystem::directory_iterator(screenReportPath)) {
+        std::filesystem::remove_all(path);
+    }
+  }
+
+  screenerReportFolder = screenReportPath.string();
+  screenerReportFolder = screenerReportFolder 
+        + std::filesystem::path::preferred_separator;
+
 
   //Load the report configuration file
   nlohmann::ordered_json screenReportConfig;

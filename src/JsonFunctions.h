@@ -170,45 +170,41 @@ class JsonFunctions {
 
 //==============================================================================
     static bool getJsonBool(const nlohmann::ordered_json &jsonTable,
-                               std::vector< std::string > &fields,
-                               bool setNansToMissingValue=false){
+                               std::vector< std::string > &fields){
 
-      bool value = 0;
-    
-      switch( fields.size() ){
-        case 1:{
-            value = getJsonBool(
-                      jsonTable[fields[0]],
-                      setNansToMissingValue);
-          }
-          break;
-        case 2:{
-            value = getJsonBool(
-                      jsonTable[fields[0]][fields[1]],
-                      setNansToMissingValue);
-          }
-          break;
-        case 3:{
-            value = getJsonBool(
-                      jsonTable[fields[0]][fields[1]][fields[2]],
-                      setNansToMissingValue);
-          }
-          break;
-        case 4:{
-            value = getJsonBool(
-                      jsonTable[fields[0]][fields[1]][fields[2]][fields[3]],
-                      setNansToMissingValue);
-          }
-          break;
-        default: {
-          if(setNansToMissingValue){
-            value = false;
-          }else{
-            value = std::nan("1");
-          }          
-        }
-      };            
+      bool value = false;
 
+      bool fieldsExist = doesFieldExist(jsonTable,fields);
+      
+
+      if(fieldsExist){
+        switch( fields.size() ){
+          case 1:{
+                value = getJsonBool(
+                          jsonTable[fields[0]]);
+            }
+            break;
+          case 2:{
+
+              value = getJsonBool(
+                        jsonTable[fields[0]][fields[1]]);
+            }
+            break;
+          case 3:{
+              value = getJsonBool(
+                        jsonTable[fields[0]][fields[1]][fields[2]]);
+            }
+            break;
+          case 4:{
+              value = getJsonBool(
+                        jsonTable[fields[0]][fields[1]][fields[2]][fields[3]]);
+            }
+            break;
+          default: {
+            value=false;
+          }
+        };            
+      }
       return value;
     };
 
@@ -370,14 +366,9 @@ class JsonFunctions {
     };
 
 //==============================================================================
-    static bool getJsonBool(const nlohmann::ordered_json &jsonEntry,
-                            bool replaceNanWithFalse=false){
+    static bool getJsonBool(const nlohmann::ordered_json &jsonEntry){
       if(  jsonEntry.is_null()){
-        if(replaceNanWithFalse){
-          return false;
-        }else{
-          return std::nan("1");
-        }
+          return false;        
       }else{
         if(  jsonEntry.is_boolean()){
           return jsonEntry.get<bool>();

@@ -760,9 +760,11 @@ static void appendEmpiricalGrowthTable(std::ofstream &latexReport,
         }; 
         break;
         default:{
-          std::cout << "Error: unrecognized empiricalModelType. Must be 0 or 1."
-                    << std::endl;
-          std::abort();            
+            latexReport << "\\multicolumn{2}{l}{ Invalid model } \\\\" 
+              << std::endl;
+          //std::cout << "Error: unrecognized empiricalModelType. Must be 0 or 1."
+          //          << std::endl;
+          //std::abort();            
         };
       };
 
