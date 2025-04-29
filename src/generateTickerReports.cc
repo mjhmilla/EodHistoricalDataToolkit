@@ -417,6 +417,9 @@ void updatePlotArray(
     if(xTmp.size()==0 && yTmp.size()==0){
       xTmp=xEmpty;
       yTmp=yEmpty;
+    }else{
+      xEmpty[0]=*std::min_element(xTmp.begin(),xTmp.end());
+      xEmpty[1]=*std::max_element(xTmp.begin(),xTmp.end());
     } 
 
 
@@ -471,7 +474,8 @@ void updatePlotArray(
           axisSettings[indexRow][indexColumn].yMax = yMaxData+yDelta;
         }else{
           axisSettings[indexRow][indexColumn].yMax = 
-            std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData);
+            std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData)
+            +yDelta;
         }
       }else{
         axisSettings[indexRow][indexColumn].isYMaxFixed=true;  
@@ -484,7 +488,8 @@ void updatePlotArray(
           axisSettings[indexRow][indexColumn].yMin = yMinData-yDelta;
         }else{
           axisSettings[indexRow][indexColumn].yMin = 
-            std::min(axisSettings[indexRow][indexColumn].yMin,yMinData);
+            std::min(axisSettings[indexRow][indexColumn].yMin,yMinData)
+            -yDelta;
         }
       }else{
         axisSettings[indexRow][indexColumn].isYMinFixed=true;  

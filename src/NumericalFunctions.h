@@ -651,12 +651,18 @@ class NumericalFunctions {
           double minCycleTimeInYears,
           double minR2ImprovementOfCyclicalModel,
           bool calcOneGrowthRateForAllData,
-          int empiricalModelType)
+          int empiricalModelType,
+          bool approximateReinvestmentRate)
     {
 
       int indexDate       = -1;
       bool validDateSet    = true;
-      bool forceZeroSlopeOnLinearModel =false;      
+      bool forceZeroSlopeOnLinearModel =false;    
+
+      //A value of 0.1 means a 10% preference for an exponential model
+      //over a linear model. In this case the exponential model will still
+      //be chosen even if its R2 value is 0.1 lower than the linear model.
+      double preferenceForAnExponentialModel = 0.1;  
 
       std::vector < double > dateNumV;    //Fractional year
       std::vector < std::string > dateV;  //string yer
@@ -743,6 +749,21 @@ class NumericalFunctions {
 
             std::string parentName("");
 
+            bool ignoreDepreciation=true;
+            double capitalExpenditures =
+              FinancialAnalysisFunctions::
+                calcNetCapitalExpenditures( fundamentalData, 
+                                            dateSetTTM,
+                                            previousDateSet,
+                                            timePeriod.c_str(),
+                                            appendTermRecord,
+                                            parentName,
+                                            setNansToMissingValue,
+                                            ignoreDepreciation,
+                                            termNames,
+                                            termValues);            
+
+            ignoreDepreciation=false;
             double netCapitalExpenditures = 
             FinancialAnalysisFunctions::
               calcNetCapitalExpenditures( fundamentalData, 
@@ -752,6 +773,7 @@ class NumericalFunctions {
                                           appendTermRecord,
                                           parentName,
                                           setNansToMissingValue,
+                                          ignoreDepreciation,
                                           termNames,
                                           termValues);
 
@@ -769,6 +791,10 @@ class NumericalFunctions {
             double rrEntry = (netCapitalExpenditures
                         +changeInNonCashWorkingCapital)
                         /atoiEntry;
+            if(approximateReinvestmentRate){
+              rrEntry = (capitalExpenditures)
+                        /atoiEntry;
+            }
 
             bool rrEntryValid   = JsonFunctions::isJsonFloatValid(rrEntry);
             bool dateEntryValid = JsonFunctions::isJsonFloatValid(dateEntry);
@@ -884,7 +910,10 @@ class NumericalFunctions {
             //A linear model is used unless the exponential model
             //is both valid and has a higher R2
             if(exponentialModel.validFitting==true){
-              if(exponentialModel.r2 > linearModel.r2 
+              double exponentialModelR2Upd = 
+                exponentialModel.r2
+                + preferenceForAnExponentialModel;
+              if(exponentialModelR2Upd > linearModel.r2 
                   || !linearModel.validFitting){
                 modelType=static_cast<int>(
                     EmpiricalGrowthModelTypes::ExponentialModel);

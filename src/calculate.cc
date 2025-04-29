@@ -1874,6 +1874,8 @@ int main (int argc, char* argv[]) {
       bool calcOneGrowthRateForAllData=true;
       int empiricalModelType = -1; //When this is set to -1 the model
                                    //that best fits is identified
+      bool approximateReinvestmentRate=true;
+
 
       NumericalFunctions::extractEmpiricalGrowthRates(
                                   empiricalGrowthDataAll,            
@@ -1889,7 +1891,8 @@ int main (int argc, char* argv[]) {
                                   minCycleTimeInYears,
                                   minR2ImprovementOfCyclicalModel,
                                   calcOneGrowthRateForAllData,
-                                  empiricalModelType);  
+                                  empiricalModelType,
+                                  approximateReinvestmentRate);  
 
       if(empiricalGrowthDataAll.model.size()>0){
         if(empiricalGrowthDataAll.model[0].validFitting){
@@ -1903,6 +1906,7 @@ int main (int argc, char* argv[]) {
       growthIntervalInYears = 
         static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
       calcOneGrowthRateForAllData=false;
+
       NumericalFunctions::extractEmpiricalGrowthRates(
                                   empiricalGrowthData,            
                                   fundamentalData,
@@ -1917,7 +1921,8 @@ int main (int argc, char* argv[]) {
                                   minCycleTimeInYears,
                                   minR2ImprovementOfCyclicalModel,
                                   calcOneGrowthRateForAllData,
-                                  empiricalModelType);
+                                  empiricalModelType,
+                                  approximateReinvestmentRate);
 
       //
       // Fit an empirical model to the price history

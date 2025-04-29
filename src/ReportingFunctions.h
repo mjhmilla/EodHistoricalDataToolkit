@@ -1070,7 +1070,7 @@ static void appendReinvestmentRateTableForValuation(std::ofstream &latexReport,
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["reinvestmentRate_afterTaxOperatingIncome"],true))
                 << " \\\\" << std::endl;                  
-    latexReport << "\\multicolumn{2}{c}{ $B_5 = A_5\\,(1.0-J_1)$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $B_5 = A_5\\,(1.0-F_1)$} \\\\" 
                 << std::endl;                
     latexReport << "$C_5$. Reinvestment rate & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
@@ -1237,13 +1237,17 @@ static int appendValuationTable(std::ofstream &latexReport,
     }
     --year;
 
+    int tableIdPrevious = tableId-1;
 
-    latexReport << "\\hline ";
-    latexReport << "\\multicolumn{2}{c}{ $A_{" << tableId << "}^{i+1} = A_{" << tableId << "}^{i}\\,(1+A_7)$} \\\\" 
+    latexReport << "\\hline ";    
+    latexReport << "\\multicolumn{2}{c}{ $A_{" << tableId << "}^{i+1} = A_{" 
+                << tableId << "}^{i}\\,(1+A_{" << (tableIdPrevious) << "}^{0})$} \\\\" 
                 << std::endl;
-    latexReport << "\\multicolumn{2}{c}{ $B_{" << tableId << "}^{i+1} = A_{" << tableId << "}^{i+1}\\,C_5$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $B_{" << tableId << "}^{i+1} = A_{" 
+                << tableId << "}^{i+1}\\,C_{" << (tableIdPrevious) << "}^{0}$} \\\\" 
                 << std::endl; 
-    latexReport << "\\multicolumn{2}{c}{ $C_{" << tableId << "}^{i+1} = A_{" << tableId << "}^{i+1}-B_{" << tableId << "}^{i+1}$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $C_{" << tableId << "}^{i+1} = A_{" 
+                << tableId << "}^{i+1}-B_{" << tableId << "}^{i+1}$} \\\\" 
                 << std::endl;              
 
     ++tableId;

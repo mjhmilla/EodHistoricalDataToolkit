@@ -1357,6 +1357,7 @@ class FinancialAnalysisFunctions {
                                      bool appendTermRecord,
                                      const std::string &parentCategoryName,
                                      bool setNansToMissingValue,
+                                     bool ignoreDepreciation,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
       /*
@@ -1431,6 +1432,10 @@ class FinancialAnalysisFunctions {
           FinancialAnalysisFunctions::sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,"depreciation",
             setNansToMissingValue);
+
+      if(ignoreDepreciation){
+        depreciation=0.;
+      }
 
       double netCapitalExpenditures = capitalExpenditures - depreciation;  
 
@@ -1630,6 +1635,7 @@ class FinancialAnalysisFunctions {
           jsonData,FIN,CF,timeUnit,dateSet,"depreciation",
           setNansToMissingValue);
 
+      bool ignoreDepreciation=false;
       double netCapitalExpenditures = 
         calcNetCapitalExpenditures( jsonData, 
                                     dateSet,
@@ -1638,6 +1644,7 @@ class FinancialAnalysisFunctions {
                                     appendTermRecord,
                                     parentName,
                                     setNansToMissingValue,
+                                    ignoreDepreciation,
                                     termNames,
                                     termValues);
 
@@ -1783,6 +1790,7 @@ class FinancialAnalysisFunctions {
 
       std::string parentName = "ownersEarnings_";
 
+      bool ignoreDepreciation=false;
       double netCapitalExpenditures = 
         calcNetCapitalExpenditures( jsonData, 
                                     dateSet,
@@ -1791,6 +1799,7 @@ class FinancialAnalysisFunctions {
                                     appendTermRecord,
                                     parentName,
                                     setNansToMissingValue,
+                                    ignoreDepreciation,
                                     termNames,
                                     termValues);
 
@@ -1861,6 +1870,7 @@ class FinancialAnalysisFunctions {
       double afterTaxOperatingIncome = 
         operatingIncome*(1.0-taxRate);
 
+      bool ignoreDepreciation=false;
       double netCapitalExpenditures = 
         calcNetCapitalExpenditures( jsonData, 
                                     dateSet,
@@ -1869,6 +1879,7 @@ class FinancialAnalysisFunctions {
                                     appendTermRecord,
                                     parentName,
                                     setNansToMissingValue,
+                                    ignoreDepreciation,
                                     termNames,
                                     termValues);
 
