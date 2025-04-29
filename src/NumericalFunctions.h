@@ -66,11 +66,11 @@ class NumericalFunctions {
       std::vector< double > yCyclicNormDataPercentiles;
       EmpiricalGrowthModel():
         modelType(-1),
-        duration(-1),
-        annualGrowthRateOfTrendline(-1),
-        r2(-1),
-        r2Trendline(-1),
-        r2Cyclic(-1),
+        duration(std::numeric_limits<double>::signaling_NaN()),
+        annualGrowthRateOfTrendline(std::numeric_limits<double>::signaling_NaN()),
+        r2(std::numeric_limits<double>::signaling_NaN()),
+        r2Trendline(std::numeric_limits<double>::signaling_NaN()),
+        r2Cyclic(std::numeric_limits<double>::signaling_NaN()),
         validFitting(false),
         outlierCount(0){};
     };    

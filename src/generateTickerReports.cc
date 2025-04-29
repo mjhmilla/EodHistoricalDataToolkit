@@ -238,6 +238,29 @@ void updatePlotArray(
     }
   }
 
+  //When data in the record is nan, I'll plot a flat line. This is
+  //to prevent the case of an empty Plot2D structure from being plotted,
+  //which causes sciplot to plot a blank.
+  std::vector< double > xEmpty;
+  std::vector< double > yEmpty;
+  double xDelta=0.01;
+  double yDelta=0.01;
+
+  xEmpty.push_back(std::numeric_limits<double>::infinity());
+  xEmpty.push_back(-std::numeric_limits<double>::infinity());
+  for(auto& el : fundamentalData[FIN][BAL][Y].items()){
+    std::string dateString; 
+    JsonFunctions::getJsonString(el.value()["date"],dateString);
+    double date = DateFunctions::convertToFractionalYear(dateString);
+    if(date < xEmpty[0]){
+      xEmpty[0] = date;
+    }
+    if(date > xEmpty[1]){
+      xEmpty[1] = date;
+    }
+  }
+  yEmpty.push_back(0);
+  yEmpty.push_back(0);    
 
 
   double plotWidthCm = 
@@ -332,6 +355,10 @@ void updatePlotArray(
     subplotSettings.indexColumn = static_cast<size_t>(tmp);
     size_t indexColumn = subplotSettings.indexColumn;
 
+    if(indexRow == 0 && indexColumn ==1){
+      bool here=true;
+    }
+
     //Get the AxisSettings
     std::string xAxisLabel, yAxisLabel;
     JsonFunctions::getJsonString(plotConfig.value()["xAxisLabel"],
@@ -385,7 +412,12 @@ void updatePlotArray(
         jsonMetaDataVector[indexEnd].fieldName.c_str(),
         jsonMetaDataVector[indexEnd].isArray,
         xTmp,
-        yTmp); 
+        yTmp);
+
+    if(xTmp.size()==0 && yTmp.size()==0){
+      xTmp=xEmpty;
+      yTmp=yEmpty;
+    } 
 
 
     if(xTmp.size()>0 && yTmp.size()>0){
@@ -410,7 +442,7 @@ void updatePlotArray(
       if(std::isnan(xMaxConfig)){
         axisSettings[indexRow][indexColumn].isXMaxFixed=false;
         if(std::isnan(axisSettings[indexRow][indexColumn].xMax)){
-          axisSettings[indexRow][indexColumn].xMax = xMaxData;
+          axisSettings[indexRow][indexColumn].xMax = xMaxData+xDelta;
         }else{
           axisSettings[indexRow][indexColumn].xMax = 
             std::max(axisSettings[indexRow][indexColumn].xMax,xMaxData);
@@ -423,7 +455,7 @@ void updatePlotArray(
       if(std::isnan(xMinConfig)){
         axisSettings[indexRow][indexColumn].isXMinFixed=false;
         if(std::isnan(axisSettings[indexRow][indexColumn].xMin)){
-          axisSettings[indexRow][indexColumn].xMin = xMinData;
+          axisSettings[indexRow][indexColumn].xMin = xMinData-xDelta;
         }else{
           axisSettings[indexRow][indexColumn].xMin = 
             std::min(axisSettings[indexRow][indexColumn].xMin,xMinData);
@@ -436,7 +468,7 @@ void updatePlotArray(
       if(std::isnan(yMaxConfig)){
         axisSettings[indexRow][indexColumn].isYMaxFixed=false;
         if(std::isnan(axisSettings[indexRow][indexColumn].yMax)){
-          axisSettings[indexRow][indexColumn].yMax = yMaxData;
+          axisSettings[indexRow][indexColumn].yMax = yMaxData+yDelta;
         }else{
           axisSettings[indexRow][indexColumn].yMax = 
             std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData);
@@ -449,7 +481,7 @@ void updatePlotArray(
       if(std::isnan(yMinConfig)){
         axisSettings[indexRow][indexColumn].isYMinFixed=false;
         if(std::isnan(axisSettings[indexRow][indexColumn].yMin)){
-          axisSettings[indexRow][indexColumn].yMin = yMinData;
+          axisSettings[indexRow][indexColumn].yMin = yMinData-yDelta;
         }else{
           axisSettings[indexRow][indexColumn].yMin = 
             std::min(axisSettings[indexRow][indexColumn].yMin,yMinData);

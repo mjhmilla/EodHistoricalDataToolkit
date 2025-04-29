@@ -462,6 +462,8 @@ public:
                         axisSettingsUpd.xAxisName,
                         axisSettingsUpd.yAxisName,
                         plotSettings);
+      
+      
 
     }
 
@@ -483,8 +485,9 @@ public:
 
     for(size_t indexRow=0; indexRow < nrows; ++indexRow){
       std::vector< sciplot::PlotVariant > rowOfPlotVariants;  
-      for(size_t indexCol=0; indexCol < ncols; ++indexCol){
-      rowOfPlotVariants.push_back(matrixOfPlots[indexRow][indexCol]);
+
+      for(size_t indexCol=0; indexCol < ncols; ++indexCol){ 
+        rowOfPlotVariants.push_back(matrixOfPlots[indexRow][indexCol]);
       }
       arrayOfPlotVariants.push_back(rowOfPlotVariants);
     }
