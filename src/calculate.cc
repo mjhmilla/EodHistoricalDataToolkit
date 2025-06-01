@@ -1331,7 +1331,7 @@ int main (int argc, char* argv[]) {
 
   int maxDayErrorOutstandingShareData = 365; 
 
-  //In extractEmpiricalGrowthRates an exponential growth model is fit to
+  //In extractEmpiricalAfterTaxOperatingIncomeGrowthRates an exponential growth model is fit to
   //data. Such a model requires that the input data (after tax operating income
   // in this case) must be greater than 1. Here a certain proportion of the
   // data is allowed to be less than 1. These values are set to 1, so that
@@ -1599,9 +1599,11 @@ int main (int argc, char* argv[]) {
 
     if( foundExtension != std::string::npos ){
         std::string primaryTickerName("");
+        
         JsonFunctions::getPrimaryTickerName(fundamentalFolder, 
                                             fileName,
                                             primaryTickerName);
+
         ++validFileCount;                                            
         if(verbose){
           std::cout << validFileCount << "." << '\t' << fileName << std::endl;
@@ -1658,11 +1660,17 @@ int main (int argc, char* argv[]) {
     //Extract the countryName and ISO
     std::string countryName;
     std::string countryISO2;
+    std::string companyName("");
     if(validInput){
       JsonFunctions::getJsonString(fundamentalData[GEN]["CountryName"],
                                    countryName);
       JsonFunctions::getJsonString(fundamentalData[GEN]["CountryISO"],
                                    countryISO2);
+      JsonFunctions::getJsonString(fundamentalData[GEN]["Name"],
+                                   companyName);  
+      if(verbose){
+        std::cout << '\t' << companyName << std::endl;
+      }                                
 
     }
 
@@ -1877,7 +1885,7 @@ int main (int argc, char* argv[]) {
       bool approximateReinvestmentRate=true;
 
 
-      NumericalFunctions::extractEmpiricalGrowthRates(
+      NumericalFunctions::extractEmpiricalAfterTaxOperatingIncomeGrowthRates(
                                   empiricalGrowthDataAll,            
                                   fundamentalData,
                                   taxRateRecord,
@@ -1907,7 +1915,7 @@ int main (int argc, char* argv[]) {
         static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
       calcOneGrowthRateForAllData=false;
 
-      NumericalFunctions::extractEmpiricalGrowthRates(
+      NumericalFunctions::extractEmpiricalAfterTaxOperatingIncomeGrowthRates(
                                   empiricalGrowthData,            
                                   fundamentalData,
                                   taxRateRecord,
@@ -1924,9 +1932,12 @@ int main (int argc, char* argv[]) {
                                   empiricalModelType,
                                   approximateReinvestmentRate);
 
+      //======================================================================= 
       //
       // Fit an empirical model to the price history
       //
+      //=======================================================================
+      
       std::vector<double> datesHistorical;
       std::vector<double> priceHistorical;
 
@@ -1996,11 +2007,207 @@ int main (int argc, char* argv[]) {
         }
       }
       
+      //=======================================================================
+      /*
+        Extract the growth rates for the Rule Number 1 investing Big 5 criteria
+        from Phil Town's book Rule #1: The simple strategy for successful 
+        investing 
+        
+        1.* roic
+              I have a function for this and this is recorded. I do not need to
+              do anything
+        2.  equity
+             eod: Financials:Balance_Sheet:time:totalStockholderEquity
+        3.  earnings per share
+              Earnings:Annual:epsActual
+        4.  sales/gross profit
+              Income_Statement:grossProfit
+        5.  cash flow
+              Cash_Flow:time:freeCashFlow
+        
+        *Do not need to compute the growth rate of the roic
+      */
+      //=======================================================================
+      growthIntervalInYears = 
+        static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
+      calcOneGrowthRateForAllData=false;
+      empiricalModelType=-1;
 
 
+      NumericalFunctions::MetricGrowthDataSet equityGrowthModel, 
+                                              equityGrowthModelAvg;
+      bool includeTimeUnitInAddress = true;
+      calcOneGrowthRateForAllData = false;
+
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
+        BAL,
+        Y,
+        "totalStockholderEquity",
+        equityGrowthModel,
+        analysisDates,
+        indexLastCommonDate,
+        maxDayErrorTTM,
+        growthIntervalInYears,
+        maxProportionOfOutliersInExpModel,
+        minCycleTimeInYears,
+        minR2ImprovementOfCyclicalModel,
+        calcOneGrowthRateForAllData,
+        includeTimeUnitInAddress,
+        empiricalModelType);
+
+      calcOneGrowthRateForAllData=true;
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
+        BAL,
+        Y,
+        "totalStockholderEquity",
+        equityGrowthModelAvg,
+        analysisDates,
+        indexLastCommonDate,
+        maxDayErrorTTM,
+        growthIntervalInYears,
+        maxProportionOfOutliersInExpModel,
+        minCycleTimeInYears,
+        minR2ImprovementOfCyclicalModel,
+        calcOneGrowthRateForAllData,
+        includeTimeUnitInAddress,
+        empiricalModelType);        
+
+
+      NumericalFunctions::MetricGrowthDataSet epsGrowthModel, 
+                                              epsGrowthModelAvg;
+      includeTimeUnitInAddress=false;
+      calcOneGrowthRateForAllData=false;      
+
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        EARN,
+        HIST,
+        Y,
+        "epsActual",
+        epsGrowthModel,
+        analysisDates,
+        indexLastCommonDate,
+        maxDayErrorTTM,
+        growthIntervalInYears,
+        maxProportionOfOutliersInExpModel,
+        minCycleTimeInYears,
+        minR2ImprovementOfCyclicalModel,
+        calcOneGrowthRateForAllData,
+        includeTimeUnitInAddress,
+        empiricalModelType);
+
+      calcOneGrowthRateForAllData=true;      
+
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        EARN,
+        HIST,
+        Y,
+        "epsActual",
+        epsGrowthModelAvg,
+        analysisDates,
+        indexLastCommonDate,
+        maxDayErrorTTM,
+        growthIntervalInYears,
+        maxProportionOfOutliersInExpModel,
+        minCycleTimeInYears,
+        minR2ImprovementOfCyclicalModel,
+        calcOneGrowthRateForAllData,
+        includeTimeUnitInAddress,
+        empiricalModelType);
+
+
+      NumericalFunctions::MetricGrowthDataSet grossProfitGrowthModel,
+                                              grossProfitGrowthModelAvg;
+      includeTimeUnitInAddress=true;
+      calcOneGrowthRateForAllData=false;      
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
+        IS,
+        Y,
+        "grossProfit",
+        grossProfitGrowthModel,
+        analysisDates,
+        indexLastCommonDate,
+        maxDayErrorTTM,
+        growthIntervalInYears,
+        maxProportionOfOutliersInExpModel,
+        minCycleTimeInYears,
+        minR2ImprovementOfCyclicalModel,
+        calcOneGrowthRateForAllData,
+        includeTimeUnitInAddress,
+        empiricalModelType);
+
+      calcOneGrowthRateForAllData=true;      
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
+        IS,
+        Y,
+        "grossProfit",
+        grossProfitGrowthModelAvg,
+        analysisDates,
+        indexLastCommonDate,
+        maxDayErrorTTM,
+        growthIntervalInYears,
+        maxProportionOfOutliersInExpModel,
+        minCycleTimeInYears,
+        minR2ImprovementOfCyclicalModel,
+        calcOneGrowthRateForAllData,
+        includeTimeUnitInAddress,
+        empiricalModelType);
+
+      NumericalFunctions::MetricGrowthDataSet fcfGrowthModel, fcfGrowthModelAvg;
+      includeTimeUnitInAddress=true;
+
+      calcOneGrowthRateForAllData=false;      
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
+        IS,
+        Y,
+        "grossProfit",
+        fcfGrowthModel,
+        analysisDates,
+        indexLastCommonDate,
+        maxDayErrorTTM,
+        growthIntervalInYears,
+        maxProportionOfOutliersInExpModel,
+        minCycleTimeInYears,
+        minR2ImprovementOfCyclicalModel,
+        calcOneGrowthRateForAllData,
+        includeTimeUnitInAddress,
+        empiricalModelType);
+
+      calcOneGrowthRateForAllData=true;      
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
+        IS,
+        Y,
+        "grossProfit",
+        fcfGrowthModelAvg,
+        analysisDates,
+        indexLastCommonDate,
+        maxDayErrorTTM,
+        growthIntervalInYears,
+        maxProportionOfOutliersInExpModel,
+        minCycleTimeInYears,
+        minR2ImprovementOfCyclicalModel,
+        calcOneGrowthRateForAllData,
+        includeTimeUnitInAddress,
+        empiricalModelType);
+      //=======================================================================
       //
-      // Create and set the first values in annualMilesontes
+      // Create and set the first values in annualMilestones
       //
+      //=======================================================================
+      
       AnnualMilestoneDataSet annualMilestones;
 
       std::string ipoDate;
@@ -2693,7 +2900,7 @@ int main (int argc, char* argv[]) {
             && indexGrowth < empiricalGrowthData.datesNumerical.size()){
             std::string nameToPrepend("empirical_");
 
-            NumericalFunctions::appendEmpiricalGrowthDataSet(
+            NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthDataSet(
                   indexGrowth,      
                   empiricalGrowthData,
                   dateDouble,
@@ -2746,7 +2953,7 @@ int main (int argc, char* argv[]) {
               && empiricalGrowthDataAll.datesNumerical.size()==1){
             std::string nameToPrepend("empiricalAvg_");
 
-            NumericalFunctions::appendEmpiricalGrowthDataSet(
+            NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthDataSet(
                                   0,      
                                   empiricalGrowthDataAll,
                                   dateDouble,
@@ -2874,7 +3081,7 @@ int main (int argc, char* argv[]) {
       //
       nlohmann::ordered_json atoiGrowthModelAverage;
       if(empiricalGrowthDataAll.datesNumerical.size() > 0){
-        NumericalFunctions::appendEmpiricalGrowthModel(
+        NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthModel(
             atoiGrowthModelAverage,
             empiricalGrowthDataAll.model[indexRecentDateAll],"");
       }
@@ -2884,7 +3091,7 @@ int main (int argc, char* argv[]) {
       //
       nlohmann::ordered_json atoiGrowthModelRecent;      
       if(empiricalGrowthData.datesNumerical.size()>0){
-        NumericalFunctions::appendEmpiricalGrowthModel(
+        NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthModel(
             atoiGrowthModelRecent,
             empiricalGrowthData.model[indexRecentDate],"");
       }
@@ -2958,7 +3165,7 @@ int main (int argc, char* argv[]) {
         }
 
 
-        NumericalFunctions::appendEmpiricalGrowthModel(
+        NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthModel(
             priceGrowthModel,
             priceModelDS,"");
       }

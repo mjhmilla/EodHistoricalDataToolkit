@@ -17,6 +17,8 @@
 
 
 const char *GEN = "General";
+const char *EARN = "Earnings";
+const char *HIST = "History";
 const char *TECH= "Technicals";
 const char *FIN = "Financials";
 const char *BAL = "Balance_Sheet";
@@ -26,6 +28,7 @@ const char *OS  = "outstandingShares";
 
 const char *Y = "yearly";
 const char *A = "annual"; //EOD uses annual in the outstandingShares list.
+const char *ANNUAL = "Annual";
 const char *Q = "quarterly";
 
 
@@ -140,7 +143,8 @@ class FinancialAnalysisFunctions {
         const char* timeUnit,
         const std::vector< std::string > &dates,
         const char* fieldName,        
-        bool setNansToMissingValue){
+        bool setNansToMissingValue,
+        bool includeTimeUnitInAddress=true){
 
       double value        = 0;
       double sumOfValues  = 0;
@@ -149,9 +153,15 @@ class FinancialAnalysisFunctions {
 
       for(auto &ele : dates){
 
-        value = JsonFunctions::getJsonFloat( 
-          fundamentalData[reportChapter][reportSection][timeUnit][ele.c_str()]
-            [fieldName],false);
+        if(includeTimeUnitInAddress){
+          value = JsonFunctions::getJsonFloat( 
+            fundamentalData[reportChapter][reportSection][timeUnit][ele.c_str()]
+                           [fieldName],false);
+        }else{
+          value = JsonFunctions::getJsonFloat( 
+            fundamentalData[reportChapter][reportSection][ele.c_str()]
+                           [fieldName],false);
+        }
 
         if(!std::isnan(value)){
           sumOfValues += value;

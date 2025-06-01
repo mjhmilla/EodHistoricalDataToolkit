@@ -83,7 +83,15 @@ class NumericalFunctions {
       std::vector< double > reinvestmentRateSD;
       std::vector< double > returnOnInvestedCapital;
       std::vector< EmpiricalGrowthModel > model;
+    };
 
+    //============================================================================
+    struct MetricGrowthDataSet{
+      std::vector< std::string > dates;
+      std::vector< double > datesNumerical;
+      std::vector< double > metricValue;
+      std::vector< double > metricGrowthRate;
+      std::vector< EmpiricalGrowthModel > model;
     };
 
     //==========================================================================
@@ -637,7 +645,313 @@ class NumericalFunctions {
     };
 
     //==========================================================================
-    static void extractEmpiricalGrowthRates(
+    static void extractFundamentalDataMetricGrowthRates(                  
+                  const nlohmann::ordered_json &fundamentalData,
+                  const char* reportChapter,
+                  const char* reportSection,
+                  const char* timePeriod,
+                  const char* fieldName,
+                  MetricGrowthDataSet &metricGrowthRateUpd,
+                  const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
+                  int indexLastCommonDate,
+                  int maxDayError,
+                  double growthIntervalInYears,
+                  double maxPropOfOutliersInExpModel,
+                  double minCycleTimeInYears,
+                  double minR2ImprovementOfCyclicalModel,
+                  bool calcOneGrowthRateForAllData,
+                  bool includeTimeUnitInAddress,
+                  int empiricalModelType)
+    {
+
+      int indexDate       = -1;
+      bool validDate    = true;
+      bool forceZeroSlopeOnLinearModel =false;    
+
+
+
+      //A value of 0.1 means a 10% preference for an exponential model
+      //over a linear model. In this case the exponential model will still
+      //be chosen even if its R2 value is 0.1 lower than the linear model.
+      double preferenceForAnExponentialModel = 0.1;  
+
+      std::vector < double > dateNumV;    //Fractional year
+      std::vector < std::string > dateV;  //string yer
+      std::vector < double > valueV;       //after tax operating income 
+
+      double maxYearError = maxDayError / DateFunctions::DAYS_PER_YEAR;
+
+      std::vector < std::string > metricDatesV;
+      std::vector < double > metricDatesNumV;
+
+      if(includeTimeUnitInAddress){
+        for(auto &el : fundamentalData[reportChapter][reportSection][timePeriod]){
+          std::string date;
+          JsonFunctions::getJsonString(el["date"],date);
+          double dateNum = DateFunctions::convertToFractionalYear(date);
+
+          metricDatesV.push_back(date);
+          metricDatesNumV.push_back(dateNum);
+        }
+      }else{
+        for(auto &el : fundamentalData[reportChapter][reportSection]){
+          std::string date;
+          JsonFunctions::getJsonString(el["date"],date);
+          double dateNum = DateFunctions::convertToFractionalYear(date);
+
+          metricDatesV.push_back(date);
+          metricDatesNumV.push_back(dateNum);
+        }
+      }
+
+
+
+      //Extract only the valid data in the desired format: Q, Y, or TTM
+      while( (indexDate+1) < indexLastCommonDate){
+        ++indexDate;
+        validDate=true;
+
+
+        std::string dateCommon = analysisDates.common[indexDate];
+        double dateCommonNum = 
+          DateFunctions::convertToFractionalYear(dateCommon);
+        
+        //Check to see if this date is in the list of metric dates
+        std::string date("");
+        double dateNum=0.;
+        bool found=false;
+        size_t i=0;
+        while(i<metricDatesNumV.size() && !found){
+          if(std::abs(metricDatesNumV[i]-dateCommonNum) <= maxYearError){
+            date = metricDatesV[i];
+            dateNum=metricDatesNumV[i];
+            found=true;
+          }
+          ++i;
+        }
+        if(!found){
+          validDate=false;
+        }
+
+        //
+        //Eliminate dates in dateSetTTM that are not in the metric date set
+        //
+
+
+        if(validDate){         
+          bool setNansToMissingValue=true;
+          double value = std::nan("1");
+          if(includeTimeUnitInAddress){
+            value = 
+              JsonFunctions::getJsonFloat(fundamentalData[reportChapter]
+                  [reportSection][timePeriod][date][fieldName],
+                  setNansToMissingValue);
+          }else{
+            value = 
+              JsonFunctions::getJsonFloat(fundamentalData[reportChapter]
+                  [reportSection][date][fieldName],
+                  setNansToMissingValue);
+
+          }
+
+          if(JsonFunctions::isJsonFloatValid(value)){
+            bool dateEntryValid = JsonFunctions::isJsonFloatValid(dateNum);
+            if(dateEntryValid){          
+              dateV.push_back(date);
+              dateNumV.push_back(dateNum);
+              valueV.push_back(value);
+            }
+          }                                                       
+        }
+
+      }
+
+      //
+      // Extract the growth values for an interval of length 
+      // growthIntervalInYears
+      //
+      indexDate = -1;
+      validDate=true;
+      int indexDateMax = static_cast<int>(dateV.size());
+
+      while( (indexDate+1) < indexLastCommonDate 
+              && indexDate < indexDateMax 
+              && dateV.size() >= 2
+              && validDate
+              && ((calcOneGrowthRateForAllData && indexDate == -1) 
+                    || !calcOneGrowthRateForAllData)){
+
+        ++indexDate;
+
+        std::vector< double > dateSubV; //date sub vector
+        std::vector< double > valueSubV; // after-tax operating income sub vector
+
+        //
+        // Extract the sub interval
+        //
+        dateSubV.push_back(dateNumV[indexDate]);
+        valueSubV.push_back(valueV[indexDate]);
+
+        int indexDateStart=indexDate+1;
+        bool foundStartDate=false;
+
+        while(  !foundStartDate 
+              && indexDateStart < indexLastCommonDate 
+              && indexDateStart < indexDateMax){
+            
+            double timeSpan      = dateSubV[0] - dateNumV[indexDateStart]; 
+            double timeSpanError = timeSpan-growthIntervalInYears;
+
+            if( timeSpanError < maxYearError ){
+              dateSubV.push_back(dateNumV[indexDateStart]);
+              valueSubV.push_back(valueV[indexDateStart]);
+            }else{
+              foundStartDate = true;
+            }       
+            ++indexDateStart;
+        }
+
+        //
+        // Fit each of the models to the data and choose the most appropriate
+        // model using the following criteria
+        //
+        //  Linear model, if R2 linear > R2 exponential
+        //  Linear + cyclical model, if R2 linear+cyclical >= linear + 0.10
+        //  Exponential model, if R2 exponential > R2 linear
+        //  Exponential + cyclical model, if R2 exp.+cyclical >= exp. + 0.10
+        //
+
+        if(    dateSubV.size() >= 2 
+           && (dateSubV.size()==valueSubV.size())
+           && (foundStartDate || calcOneGrowthRateForAllData)){
+        
+          //Order dateSubV so that it proceeds from the earliest date to the 
+          //latest date
+          if(dateSubV.front() > dateSubV.back()){
+            std::reverse(dateSubV.begin(),dateSubV.end());
+            std::reverse(valueSubV.begin(),valueSubV.end());
+          }
+
+          EmpiricalGrowthModel empModel;
+          bool validFitting = false;
+
+          if(empiricalModelType==-1){
+            EmpiricalGrowthModel exponentialModel, linearModel;
+
+            fitExponentialGrowthModel(dateSubV,valueSubV,
+                        maxPropOfOutliersInExpModel,
+                        exponentialModel);
+
+            fitLinearGrowthModel(dateSubV,valueSubV,forceZeroSlopeOnLinearModel,
+                                linearModel);
+
+            validFitting = 
+              (exponentialModel.validFitting || linearModel.validFitting);
+
+            int modelType = -1;
+            int linearModelType = 
+              static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
+            int exponentialModelType = 
+              static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel);
+            
+
+            //A linear model is used unless the exponential model
+            //is both valid and has a higher R2
+            if(exponentialModel.validFitting==true){
+              double exponentialModelR2Upd = 
+                exponentialModel.r2
+                + preferenceForAnExponentialModel;
+              if(exponentialModelR2Upd > linearModel.r2 
+                  || !linearModel.validFitting){
+                modelType=static_cast<int>(
+                    EmpiricalGrowthModelTypes::ExponentialModel);
+              }
+            }else if(linearModel.validFitting){
+              modelType = 
+                static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
+            }
+
+            switch(modelType){
+              case static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel):{
+                fitCyclicalModelWithExponentialBaseline(
+                  dateSubV,
+                  valueSubV,
+                  minCycleTimeInYears,
+                  maxPropOfOutliersInExpModel,
+                  empModel);                
+              } break;
+              case static_cast<int>(EmpiricalGrowthModelTypes::LinearModel):{
+                fitCyclicalModelWithLinearBaseline(
+                  dateSubV,
+                  valueSubV,
+                  minCycleTimeInYears,
+                  forceZeroSlopeOnLinearModel,
+                  empModel);
+              } break;
+            };
+
+          }else{
+            switch(empiricalModelType){
+              case 0:
+              {
+                fitExponentialGrowthModel(dateSubV,valueSubV,
+                        maxPropOfOutliersInExpModel,empModel);
+                validFitting=empModel.validFitting;
+              }break;
+              case 1:
+              {                
+                fitCyclicalModelWithExponentialBaseline(
+                  dateSubV,
+                  valueSubV,
+                  minCycleTimeInYears,
+                  maxPropOfOutliersInExpModel,
+                  empModel);
+                validFitting=empModel.validFitting;
+              }break;
+              case 2:
+              {
+                fitLinearGrowthModel(dateSubV,valueSubV,
+                    forceZeroSlopeOnLinearModel, empModel);
+                validFitting=empModel.validFitting;
+              }break;
+              case 3:
+              {
+                fitCyclicalModelWithLinearBaseline(
+                  dateSubV,
+                  valueSubV,
+                  minCycleTimeInYears,
+                  forceZeroSlopeOnLinearModel,
+                  empModel);
+                  validFitting=empModel.validFitting;
+              }break;
+              default:
+                std::cout <<"Error: empiricalModelType must be [0,1,2,3]"
+                          <<std::endl;
+                std::abort();
+            };
+          }
+
+          if(validFitting){
+
+            //
+            // Store the model results
+            //
+            if(valueSubV.size() > 0 && dateSubV.size() > 0){
+
+              metricGrowthRateUpd.dates.push_back(dateV[indexDate]);
+              metricGrowthRateUpd.datesNumerical.push_back(dateNumV[indexDate]);
+              metricGrowthRateUpd.metricGrowthRate.push_back(
+                empModel.annualGrowthRateOfTrendline);
+              metricGrowthRateUpd.metricValue.push_back(valueSubV.back());
+              metricGrowthRateUpd.model.push_back(empModel);
+            } 
+          } 
+        }
+      }
+    };
+
+    //==========================================================================
+    static void extractEmpiricalAfterTaxOperatingIncomeGrowthRates(
           EmpiricalGrowthDataSet &empiricalGrowthDataUpd,
           const nlohmann::ordered_json &fundamentalData,
           const std::vector< double > &taxRateRecord,
@@ -885,7 +1199,7 @@ class NumericalFunctions {
 
 
           EmpiricalGrowthModel empModel;
-          bool validFitting = false;;          
+          bool validFitting = false;
           
           if(empiricalModelType==-1){
             EmpiricalGrowthModel exponentialModel, linearModel;
@@ -1038,7 +1352,7 @@ class NumericalFunctions {
     };
 
     //==========================================================================
-    static void appendEmpiricalGrowthModel(
+    static void appendEmpiricalAfterTaxOperatingIncomeGrowthModel(
         nlohmann::ordered_json &jsonStruct,
         const EmpiricalGrowthModel &empiricalGrowthModel,
         const std::string nameToPrepend)
@@ -1112,7 +1426,7 @@ class NumericalFunctions {
     };
 
     //==========================================================================
-    static void appendEmpiricalGrowthDataSet(
+    static void appendEmpiricalAfterTaxOperatingIncomeGrowthDataSet(
         size_t index,      
         const EmpiricalGrowthDataSet &empiricalGrowthData,
         double dateInYears,

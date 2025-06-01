@@ -573,7 +573,7 @@ int main (int argc, char* argv[]) {
     cmd.add(historicalFolderInput);
 
     TCLAP::ValueArg<std::string> dateOfTableInput("d","date", 
-      "Date used to produce the dicounted cash flow model detailed output.",
+      "Date used to produce the discounted cash flow model detailed output.",
       false,"","string");
     cmd.add(dateOfTableInput);
 
