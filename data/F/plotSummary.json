@@ -159,7 +159,7 @@
             "boxWhiskerColor": "orange",
             "boxWhiskerPosition": -0.5
         },
-        "empiricalAvgR2":
+        "atoiEmpiricalModelAvgGrowthR2":
         {
             "row": 1,
             "column": 1,
@@ -168,7 +168,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvg_r2Trendline",
+            "fieldName": "atoiEmpiricalModelAvg_r2Trendline",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -193,7 +193,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empirical_r2Trendline",
+            "fieldName": "atoiEmpiricalModel_r2Trendline",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp",
@@ -293,7 +293,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvg_ReturnOnInvestedCapitalLessCostOfCapital",
+            "fieldName": "atoiEmpiricalModelAvg_ReturnOnInvestedCapitalLessCostOfCapital",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",

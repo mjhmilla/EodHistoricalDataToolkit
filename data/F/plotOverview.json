@@ -120,7 +120,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvg_AfterTaxOperatingIncomeGrowth",
+            "fieldName": "atoiEmpiricalAvg_growth",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -145,7 +145,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empirical_AfterTaxOperatingIncomeGrowth",
+            "fieldName": "atoiEmpirical_growth",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp",
@@ -211,7 +211,7 @@
             "boxWhiskerColor": "web-blue",
             "boxWhiskerPosition": -0.5
         },
-        "empiricalAvgReturnOnInvestedCapital":
+        "atoiEmpiricalAvgReturnOnInvestedCapital":
         {
             "row": 2,
             "column": 0,
@@ -220,7 +220,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvg_ReturnOnInvestedCapital",
+            "fieldName": "atoiEmpiricalAvg_ReturnOnInvestedCapital",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -270,7 +270,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empiricalAvg_ReinvestmentRateMean",
+            "fieldName": "atoiEmpiricalAvg_ReinvestmentRateMean",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp Avg",
@@ -295,7 +295,7 @@
             [
                 "metric_data"
             ],
-            "fieldName": "empirical_ReinvestmentRateMean",
+            "fieldName": "atoiEmpirical_ReinvestmentRateMean",
             "dateName": "date",
             "isArray": false,
             "legendEntry": "Emp",

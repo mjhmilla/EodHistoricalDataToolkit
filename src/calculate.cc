@@ -1875,14 +1875,23 @@ int main (int argc, char* argv[]) {
       //Evaluate the growth rate using all of the data available
       NumericalFunctions::EmpiricalGrowthDataSet empiricalGrowthDataAll;
 
-      double growthIntervalInYears = 
+      double growthIntervalInYearsAll = 
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
       - DateFunctions::convertToFractionalYear(analysisDates.common.back());
             
-      bool calcOneGrowthRateForAllData=true;
-      int empiricalModelType = -1; //When this is set to -1 the model
-                                   //that best fits is identified
       bool approximateReinvestmentRate=true;
+
+      NumericalFunctions::EmpiricalGrowthSettings atoiGrowthMdlSettings;
+
+      atoiGrowthMdlSettings.maxDateErrorInDays = maxDayErrorTTM;
+      atoiGrowthMdlSettings.growthIntervalInYears = growthIntervalInYearsAll;
+      atoiGrowthMdlSettings.maxOutlierProportionInEmpiricalModel 
+        = maxProportionOfOutliersInExpModel;
+      atoiGrowthMdlSettings.minCycleDurationInYears = minCycleTimeInYears;
+      atoiGrowthMdlSettings.exponentialModelR2Preference 
+        = minR2ImprovementOfCyclicalModel;
+      atoiGrowthMdlSettings.calcOneGrowthRateForAllData=true;
+      atoiGrowthMdlSettings.typeOfEmpiricalModel=-1;
 
 
       NumericalFunctions::extractEmpiricalAfterTaxOperatingIncomeGrowthRates(
@@ -1893,27 +1902,25 @@ int main (int argc, char* argv[]) {
                                   timePeriod,
                                   indexLastCommonDate,
                                   quarterlyTTMAnalysis,
-                                  maxDayErrorTTM,
-                                  growthIntervalInYears,
-                                  maxProportionOfOutliersInExpModel,
-                                  minCycleTimeInYears,
-                                  minR2ImprovementOfCyclicalModel,
-                                  calcOneGrowthRateForAllData,
-                                  empiricalModelType,
-                                  approximateReinvestmentRate);  
+                                  approximateReinvestmentRate,
+                                  atoiGrowthMdlSettings);  
 
       if(empiricalGrowthDataAll.model.size()>0){
         if(empiricalGrowthDataAll.model[0].validFitting){
-          empiricalModelType = empiricalGrowthDataAll.model[0].modelType;
+          atoiGrowthMdlSettings.typeOfEmpiricalModel 
+            = empiricalGrowthDataAll.model[0].modelType;
         }
       }
       //Evaluate the growth rate data over the same relatively short
       //period of time that is used for the growth period during
       //the valution (5 years)
       NumericalFunctions::EmpiricalGrowthDataSet empiricalGrowthData;
-      growthIntervalInYears = 
+      
+      double growthIntervalInYears = 
         static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
-      calcOneGrowthRateForAllData=false;
+
+      atoiGrowthMdlSettings.growthIntervalInYears=growthIntervalInYears;
+      atoiGrowthMdlSettings.calcOneGrowthRateForAllData=false;
 
       NumericalFunctions::extractEmpiricalAfterTaxOperatingIncomeGrowthRates(
                                   empiricalGrowthData,            
@@ -1923,14 +1930,8 @@ int main (int argc, char* argv[]) {
                                   timePeriod,
                                   indexLastCommonDate,
                                   quarterlyTTMAnalysis,
-                                  maxDayErrorTTM,
-                                  growthIntervalInYears,
-                                  maxProportionOfOutliersInExpModel,
-                                  minCycleTimeInYears,
-                                  minR2ImprovementOfCyclicalModel,
-                                  calcOneGrowthRateForAllData,
-                                  empiricalModelType,
-                                  approximateReinvestmentRate);
+                                  approximateReinvestmentRate,
+                                  atoiGrowthMdlSettings);
 
       //======================================================================= 
       //
@@ -2028,16 +2029,22 @@ int main (int argc, char* argv[]) {
         *Do not need to compute the growth rate of the roic
       */
       //=======================================================================
-      growthIntervalInYears = 
-        static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
-      calcOneGrowthRateForAllData=false;
-      empiricalModelType=-1;
-
-
       NumericalFunctions::MetricGrowthDataSet equityGrowthModel, 
                                               equityGrowthModelAvg;
-      bool includeTimeUnitInAddress = true;
-      calcOneGrowthRateForAllData = false;
+      //bool includeTimeUnitInAddress = true;
+      //calcOneGrowthRateForAllData = false;
+
+      NumericalFunctions::EmpiricalGrowthSettings empGrowthSettings;
+      empGrowthSettings.maxDateErrorInDays            = maxDayErrorTTM;
+      empGrowthSettings.growthIntervalInYears         = growthIntervalInYears;
+      empGrowthSettings.maxOutlierProportionInEmpiricalModel
+                      = maxProportionOfOutliersInExpModel;
+      empGrowthSettings.minCycleDurationInYears       = minCycleTimeInYears;
+      empGrowthSettings.exponentialModelR2Preference 
+                      = minR2ImprovementOfCyclicalModel;
+      empGrowthSettings.calcOneGrowthRateForAllData   = false;        
+      empGrowthSettings.includeTimeUnitInAddress      = true;
+      empGrowthSettings.typeOfEmpiricalModel          = -1;
 
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
@@ -2048,16 +2055,11 @@ int main (int argc, char* argv[]) {
         equityGrowthModel,
         analysisDates,
         indexLastCommonDate,
-        maxDayErrorTTM,
-        growthIntervalInYears,
-        maxProportionOfOutliersInExpModel,
-        minCycleTimeInYears,
-        minR2ImprovementOfCyclicalModel,
-        calcOneGrowthRateForAllData,
-        includeTimeUnitInAddress,
-        empiricalModelType);
+        empGrowthSettings);
 
-      calcOneGrowthRateForAllData=true;
+      empGrowthSettings.calcOneGrowthRateForAllData=true;
+      empGrowthSettings.growthIntervalInYears = growthIntervalInYearsAll;
+
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
         FIN,
@@ -2067,20 +2069,15 @@ int main (int argc, char* argv[]) {
         equityGrowthModelAvg,
         analysisDates,
         indexLastCommonDate,
-        maxDayErrorTTM,
-        growthIntervalInYears,
-        maxProportionOfOutliersInExpModel,
-        minCycleTimeInYears,
-        minR2ImprovementOfCyclicalModel,
-        calcOneGrowthRateForAllData,
-        includeTimeUnitInAddress,
-        empiricalModelType);        
+        empGrowthSettings);
 
 
       NumericalFunctions::MetricGrowthDataSet epsGrowthModel, 
                                               epsGrowthModelAvg;
-      includeTimeUnitInAddress=false;
-      calcOneGrowthRateForAllData=false;      
+
+      empGrowthSettings.includeTimeUnitInAddress      = false;
+      empGrowthSettings.calcOneGrowthRateForAllData   = false;  
+      empGrowthSettings.growthIntervalInYears         = growthIntervalInYears;    
 
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
@@ -2091,16 +2088,10 @@ int main (int argc, char* argv[]) {
         epsGrowthModel,
         analysisDates,
         indexLastCommonDate,
-        maxDayErrorTTM,
-        growthIntervalInYears,
-        maxProportionOfOutliersInExpModel,
-        minCycleTimeInYears,
-        minR2ImprovementOfCyclicalModel,
-        calcOneGrowthRateForAllData,
-        includeTimeUnitInAddress,
-        empiricalModelType);
+        empGrowthSettings);
 
-      calcOneGrowthRateForAllData=true;      
+      empGrowthSettings.calcOneGrowthRateForAllData=true;      
+      empGrowthSettings.growthIntervalInYears       = growthIntervalInYearsAll;    
 
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
@@ -2111,20 +2102,16 @@ int main (int argc, char* argv[]) {
         epsGrowthModelAvg,
         analysisDates,
         indexLastCommonDate,
-        maxDayErrorTTM,
-        growthIntervalInYears,
-        maxProportionOfOutliersInExpModel,
-        minCycleTimeInYears,
-        minR2ImprovementOfCyclicalModel,
-        calcOneGrowthRateForAllData,
-        includeTimeUnitInAddress,
-        empiricalModelType);
+        empGrowthSettings);
 
 
       NumericalFunctions::MetricGrowthDataSet grossProfitGrowthModel,
                                               grossProfitGrowthModelAvg;
-      includeTimeUnitInAddress=true;
-      calcOneGrowthRateForAllData=false;      
+
+      empGrowthSettings.includeTimeUnitInAddress=true;
+      empGrowthSettings.calcOneGrowthRateForAllData=false;      
+      empGrowthSettings.growthIntervalInYears         = growthIntervalInYears;    
+
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
         FIN,
@@ -2134,16 +2121,11 @@ int main (int argc, char* argv[]) {
         grossProfitGrowthModel,
         analysisDates,
         indexLastCommonDate,
-        maxDayErrorTTM,
-        growthIntervalInYears,
-        maxProportionOfOutliersInExpModel,
-        minCycleTimeInYears,
-        minR2ImprovementOfCyclicalModel,
-        calcOneGrowthRateForAllData,
-        includeTimeUnitInAddress,
-        empiricalModelType);
+        empGrowthSettings);
 
-      calcOneGrowthRateForAllData=true;      
+      empGrowthSettings.calcOneGrowthRateForAllData=true;      
+      empGrowthSettings.growthIntervalInYears        = growthIntervalInYearsAll;    
+
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
         FIN,
@@ -2153,19 +2135,15 @@ int main (int argc, char* argv[]) {
         grossProfitGrowthModelAvg,
         analysisDates,
         indexLastCommonDate,
-        maxDayErrorTTM,
-        growthIntervalInYears,
-        maxProportionOfOutliersInExpModel,
-        minCycleTimeInYears,
-        minR2ImprovementOfCyclicalModel,
-        calcOneGrowthRateForAllData,
-        includeTimeUnitInAddress,
-        empiricalModelType);
+        empGrowthSettings);
 
-      NumericalFunctions::MetricGrowthDataSet fcfGrowthModel, fcfGrowthModelAvg;
-      includeTimeUnitInAddress=true;
+      NumericalFunctions::MetricGrowthDataSet fcfGrowthModel, 
+                                              fcfGrowthModelAvg;
 
-      calcOneGrowthRateForAllData=false;      
+      empGrowthSettings.includeTimeUnitInAddress=true;
+      empGrowthSettings.calcOneGrowthRateForAllData=false;      
+      empGrowthSettings.growthIntervalInYears         = growthIntervalInYears;    
+
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
         FIN,
@@ -2175,16 +2153,11 @@ int main (int argc, char* argv[]) {
         fcfGrowthModel,
         analysisDates,
         indexLastCommonDate,
-        maxDayErrorTTM,
-        growthIntervalInYears,
-        maxProportionOfOutliersInExpModel,
-        minCycleTimeInYears,
-        minR2ImprovementOfCyclicalModel,
-        calcOneGrowthRateForAllData,
-        includeTimeUnitInAddress,
-        empiricalModelType);
+        empGrowthSettings);
 
-      calcOneGrowthRateForAllData=true;      
+      empGrowthSettings.calcOneGrowthRateForAllData=true;    
+      empGrowthSettings.growthIntervalInYears      = growthIntervalInYearsAll;    
+
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
         FIN,
@@ -2194,14 +2167,7 @@ int main (int argc, char* argv[]) {
         fcfGrowthModelAvg,
         analysisDates,
         indexLastCommonDate,
-        maxDayErrorTTM,
-        growthIntervalInYears,
-        maxProportionOfOutliersInExpModel,
-        minCycleTimeInYears,
-        minR2ImprovementOfCyclicalModel,
-        calcOneGrowthRateForAllData,
-        includeTimeUnitInAddress,
-        empiricalModelType);
+        empGrowthSettings);
       //=======================================================================
       //
       // Create and set the first values in annualMilestones
@@ -2235,7 +2201,7 @@ int main (int argc, char* argv[]) {
       //
       //======================================================================= 
 
-      nlohmann::ordered_json metricAnalysis;
+      nlohmann::ordered_json metricAnalysisJson;
 
       indexDate         = -1;
       bool validDateSet = true;
@@ -2898,7 +2864,7 @@ int main (int argc, char* argv[]) {
 
           if(appendTermRecord 
             && indexGrowth < empiricalGrowthData.datesNumerical.size()){
-            std::string nameToPrepend("empirical_");
+            std::string nameToPrepend("atoiEmpirical_");
 
             NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthDataSet(
                   indexGrowth,      
@@ -2951,7 +2917,7 @@ int main (int argc, char* argv[]) {
 
           if(appendTermRecord 
               && empiricalGrowthDataAll.datesNumerical.size()==1){
-            std::string nameToPrepend("empiricalAvg_");
+            std::string nameToPrepend("atoiEmpiricalAvg_");
 
             NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthDataSet(
                                   0,      
@@ -2995,8 +2961,45 @@ int main (int argc, char* argv[]) {
           }
         }
 
+        //
+        // Equity growth
+        //
+        NumericalFunctions::appendMetricGrowthDataSet(
+              dateDouble,              
+              equityGrowthModel,
+              std::string("equityEmpiricalModel_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);
 
-        //it.c_str(), 
+        NumericalFunctions::appendMetricGrowthDataSetRecentDate(
+              equityGrowthModelAvg,
+              std::string("equityEmpiricalModelAvg_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);
+
+        //
+        // Earnings per share growth
+        //
+        NumericalFunctions::appendMetricGrowthDataSet(
+              dateDouble,              
+              epsGrowthModel,
+              std::string("epsEmpiricalModel_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);
+
+        NumericalFunctions::appendMetricGrowthDataSetRecentDate(
+              epsGrowthModelAvg,
+              std::string("epsEmpiricalModelAvg_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);              
+
+        //
+        //
+        //
         nlohmann::ordered_json analysisEntry=nlohmann::ordered_json::object();
         analysisEntry.push_back({"date", date});        
         for( unsigned int i=0; i < termNames.size();++i){
@@ -3032,7 +3035,10 @@ int main (int argc, char* argv[]) {
         }
 
 
-        metricAnalysis[date]= analysisEntry;        
+
+        
+
+        metricAnalysisJson[date]= analysisEntry;        
         ++entryCount;
       }
 
@@ -3058,42 +3064,83 @@ int main (int argc, char* argv[]) {
       analysis["annual_milestones"] = annualMilestoneReport;
 
 
-      int indexRecentDate = 0;
-      int indexRecentDateAll = 0;      
-      if(empiricalGrowthData.datesNumerical.size()>0){
-        double dateRange= empiricalGrowthData.datesNumerical.front()
-                        -empiricalGrowthData.datesNumerical.back(); 
-        if(dateRange < 0){
-          indexRecentDate = empiricalGrowthData.datesNumerical.size()-1;
-        }
-        
-        dateRange= empiricalGrowthDataAll.datesNumerical.front()
-                  -empiricalGrowthDataAll.datesNumerical.back(); 
-        if(dateRange < 0){
-          indexRecentDateAll = empiricalGrowthDataAll.datesNumerical.size()-1;
-        }
-      }
+             
+      //if(empiricalGrowthData.datesNumerical.size()>0){
+      //  double dateRange= empiricalGrowthData.datesNumerical.front()
+      //                  -empiricalGrowthData.datesNumerical.back(); 
+      //  if(dateRange < 0){
+      //    indexRecentDate = empiricalGrowthData.datesNumerical.size()-1;
+      //  }
+      //  
+      //  dateRange= empiricalGrowthDataAll.datesNumerical.front()
+      //            -empiricalGrowthDataAll.datesNumerical.back(); 
+      //  if(dateRange < 0){
+      //    indexRecentDateAll = empiricalGrowthDataAll.datesNumerical.size()-1;
+      //  }
+      //}
+
+      //
+      // growth of equity
+      //   equityGrowthModel   
+      //   equityGrowthModelAvg
+      //
+
+      nlohmann::ordered_json equityGrowthModelJson;
+      NumericalFunctions::appendMetricGrowthModelRecent(
+        equityGrowthModelJson,
+        equityGrowthModel,"");
+
+      nlohmann::ordered_json equityGrowthModelAvgJson;
+      NumericalFunctions::appendMetricGrowthModelRecent(
+        equityGrowthModelAvgJson,
+        equityGrowthModelAvg,"");
 
 
+      //
+      // growth of earnings per share
+      //    epsGrowthModel
+      //    epsGrowthModelAvg
+
+      nlohmann::ordered_json epsGrowthModelJson;
+      NumericalFunctions::appendMetricGrowthModelRecent(
+        epsGrowthModelJson,
+        epsGrowthModel,"");
+
+      nlohmann::ordered_json epsGrowthModelAvgJson;
+      NumericalFunctions::appendMetricGrowthModelRecent(
+        epsGrowthModelAvgJson,
+        epsGrowthModelAvg,"");
+
+      //
+      // growth of gross profit
+      //    grossProfitGrowthModel
+      //    grossProfitGrowthModelAvg
+
+      //
+      // growth of free cash flow
+      //    fcfGrowthModel 
+      //    fcfGrowthModelAvg
 
       //
       // Avg empirical model
       //
-      nlohmann::ordered_json atoiGrowthModelAverage;
+
+      nlohmann::ordered_json atoiGrowthModelAverageJson;
       if(empiricalGrowthDataAll.datesNumerical.size() > 0){
-        NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthModel(
-            atoiGrowthModelAverage,
-            empiricalGrowthDataAll.model[indexRecentDateAll],"");
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+            atoiGrowthModelAverageJson,
+            empiricalGrowthDataAll,"");
       }
 
       //
       // Recent empirical data
       //
-      nlohmann::ordered_json atoiGrowthModelRecent;      
+
+      nlohmann::ordered_json atoiGrowthModelRecentJson;      
       if(empiricalGrowthData.datesNumerical.size()>0){
-        NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthModel(
-            atoiGrowthModelRecent,
-            empiricalGrowthData.model[indexRecentDate],"");
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+            atoiGrowthModelRecentJson,
+            empiricalGrowthData,"");
       }
 
       //
@@ -3102,7 +3149,7 @@ int main (int argc, char* argv[]) {
             
       //Downsample all outgoing data.
       //Each year gets 12 data points + the last entry gets added
-      nlohmann::ordered_json priceGrowthModel;      
+      nlohmann::ordered_json priceGrowthModelJson;      
       if(priceModel.x.size()>0){
         NumericalFunctions::EmpiricalGrowthModel priceModelDS;
         int previousMonth=0;
@@ -3165,18 +3212,20 @@ int main (int argc, char* argv[]) {
         }
 
 
-        NumericalFunctions::appendEmpiricalAfterTaxOperatingIncomeGrowthModel(
-            priceGrowthModel,
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+            priceGrowthModelJson,
             priceModelDS,"");
       }
       //
       // Package all three into a single json object
       //
 
-      analysis["metric_data"] = metricAnalysis;
-      analysis["atoi_growth_model_avg"]     = atoiGrowthModelAverage;
-      analysis["atoi_growth_model_recent"]  = atoiGrowthModelRecent;
-      analysis["price_growth_model"]        = priceGrowthModel;
+      analysis["metric_data"]               = metricAnalysisJson;
+      analysis["equity_growth_model_avg"]   = equityGrowthModelAvgJson;
+      analysis["equity_growth_model_recent"]= equityGrowthModelJson;
+      analysis["atoi_growth_model_avg"]     = atoiGrowthModelAverageJson;
+      analysis["atoi_growth_model_recent"]  = atoiGrowthModelRecentJson;
+      analysis["price_growth_model"]        = priceGrowthModelJson;
 
 
       std::string outputFilePath(analyseFolder);
