@@ -137,44 +137,39 @@ int main (int argc, char* argv[]) {
     gapFillPartialDownload    = gapFillPartialDownloadInput.getValue();
     verbose                   = verboseInput.getValue();
 
-    if(tickerFileListPath.length()==0 
-        && singleTickerNameToFetch.length()==0 
-        && exchangeListFileName.length()==0){
-      throw std::invalid_argument(
-        " One of the following tags must be provided to define "
-        "an output file path: output file name (-n), "
-        "ticker file list path (-t), or an exchange list file (-l)");         
-    }
+    //if(tickerFileListPath.length()==0 
+    //    && singleTickerNameToFetch.length()==0 
+    //    && exchangeListFileName.length()==0){
+    //  throw std::invalid_argument(
+    //    " One of the following tags must be provided to define "
+    //    "an output file path: "
+    //    "ticker file list path (-t), or an exchange list file (-l)");         
+    //}
 
-    if( (    tickerFileListPath.length() !=0 
-          || exchangeListFileName.length() !=0 ) && 
-        (firstListEntry != -1 && lastListEntry != -1) ){
-          if(lastListEntry < firstListEntry){
-            throw std::invalid_argument(
-              "The last list entry (-e) is smaller than the"
-              " first list entry (-s).");         
-          }
-    }    
+    //if( (    tickerFileListPath.length() !=0 
+    //      || exchangeListFileName.length() !=0 ) && 
+    //    (firstListEntry != -1 && lastListEntry != -1) ){
+    //      if(lastListEntry < firstListEntry){
+    //        throw std::invalid_argument(
+    //          "The last list entry (-e) is smaller than the"
+    //          " first list entry (-s).");         
+    //      }
+    //}    
 
-    if( tickerFileListPath.length() != 0 ){
-      if( exchangeCode.length() ==0){
-        throw std::invalid_argument(
-          "Both the exchange code (-x) and exchange list "
-          "file name (-l) must be set: one of these arguments is missing.");               
-      }
-    }
+    //if( tickerFileListPath.length() != 0 ){
+    //  if( exchangeCode.length() ==0){
+    //    throw std::invalid_argument(
+    //      "Both the exchange code (-x) and exchange list "
+    //      "file name (-l) must be set: one of these arguments is missing.");               
+    //  }
+    //}
 
-    if(exchangeCode.length() > 0 && exchangeListFileName.length() > 0){
-      throw std::invalid_argument(
-        "Cannot set both the exchange code (-x) and exchange list "
-        "file name (-l).");               
-    }
 
-    if(tickerFileListPath.length() >0 && exchangeListFileName.length() >0){
-      throw std::invalid_argument(
-        "Cannot set both the ticker list file (-t) and the exchange "
-        "list file (-l).");               
-    }    
+    //if(exchangeCode.length() > 0 && exchangeListFileName.length() > 0){
+    //  throw std::invalid_argument(
+    //    "Cannot set both the exchange code (-x) and exchange list "
+    //    "file name (-l).");               
+    //}
 
 
 
@@ -268,16 +263,25 @@ int main (int argc, char* argv[]) {
     for(auto& ticker : tickerNames){
       std::string eodUrl = eodUrlTemplate;
 
-      unsigned int idx = ticker.find(".");
-      std::string tickerCode = ticker.substr(0,idx);          
-      std::string tickerExchange = ticker.substr(idx+1,ticker.length()-1);      
+      std::string fileName;
 
-      StringFunctions::findAndReplaceString(eodUrl,"{TICKER_CODE}",tickerCode);
-      StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-      StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",tickerExchange);
+      if(ticker.length()>0){
+        unsigned int idx = ticker.find(".");
+        std::string tickerCode = ticker.substr(0,idx);          
+        std::string tickerExchange = ticker.substr(idx+1,ticker.length()-1);      
 
-      std::string fileName = ticker;
-      fileName.append(".json");
+        StringFunctions::findAndReplaceString(eodUrl,"{TICKER_CODE}",tickerCode);
+        StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+        StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",tickerExchange);
+        fileName=ticker;
+        fileName.append(".json");
+      }else{
+        StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+        StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
+        fileName = exchangeCode;
+        fileName.append(".json");
+      }
+
 
       std::stringstream ss;
       ss << outputFolder << fileName;
@@ -352,7 +356,7 @@ int main (int argc, char* argv[]) {
         if( (!fileExists && gapFillPartialDownload) || !gapFillPartialDownload){ 
                                   
           successTickerDownload = 
-            CurlToolkit::downloadJsonFile(eodUrl, jsonFilePath, false);
+            CurlToolkit::downloadJsonFile(eodUrl, jsonFilePath, false);        
 
           if(successTickerDownload == false){
             std::cout << count << "." 

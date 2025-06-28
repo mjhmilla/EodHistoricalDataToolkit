@@ -2998,6 +2998,41 @@ int main (int argc, char* argv[]) {
               termValues);              
 
         //
+        // Gross profit growth
+        //
+        NumericalFunctions::appendMetricGrowthDataSet(
+              dateDouble,              
+              grossProfitGrowthModel,
+              std::string("grossProfitEmpiricalModel_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);
+
+        NumericalFunctions::appendMetricGrowthDataSetRecentDate(
+              grossProfitGrowthModelAvg,
+              std::string("grossProfitEmpiricalModelAvg_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);
+        //
+        // Free cash flow
+        //
+        NumericalFunctions::appendMetricGrowthDataSet(
+              dateDouble,              
+              fcfGrowthModel,
+              std::string("fcfEmpiricalModel_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);
+
+        NumericalFunctions::appendMetricGrowthDataSetRecentDate(
+              fcfGrowthModelAvg,
+              std::string("fcfEmpiricalModelAvg_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);
+
+        //
         //
         //
         nlohmann::ordered_json analysisEntry=nlohmann::ordered_json::object();
@@ -3091,10 +3126,11 @@ int main (int argc, char* argv[]) {
         equityGrowthModel,"");
 
       nlohmann::ordered_json equityGrowthModelAvgJson;
-      NumericalFunctions::appendMetricGrowthModelRecent(
-        equityGrowthModelAvgJson,
-        equityGrowthModelAvg,"");
-
+      if(equityGrowthModelAvg.datesNumerical.size() > 0){        
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+            equityGrowthModelAvgJson,
+            equityGrowthModelAvg.model[0],"");
+      }
 
       //
       // growth of earnings per share
@@ -3107,19 +3143,46 @@ int main (int argc, char* argv[]) {
         epsGrowthModel,"");
 
       nlohmann::ordered_json epsGrowthModelAvgJson;
-      NumericalFunctions::appendMetricGrowthModelRecent(
-        epsGrowthModelAvgJson,
-        epsGrowthModelAvg,"");
+      if(epsGrowthModelAvg.datesNumerical.size() > 0){
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+            epsGrowthModelAvgJson,
+            epsGrowthModelAvg.model[0],"");
+      }
 
       //
       // growth of gross profit
       //    grossProfitGrowthModel
       //    grossProfitGrowthModelAvg
 
+      nlohmann::ordered_json grossProfitGrowthModelJson;
+      NumericalFunctions::appendMetricGrowthModelRecent(
+        grossProfitGrowthModelJson,
+        grossProfitGrowthModel,"");
+
+      nlohmann::ordered_json grossProfitGrowthModelAvgJson;
+      if(grossProfitGrowthModelAvg.datesNumerical.size() > 0){
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+            grossProfitGrowthModelAvgJson,
+            grossProfitGrowthModelAvg.model[0],"");
+      }
+
+
       //
       // growth of free cash flow
       //    fcfGrowthModel 
       //    fcfGrowthModelAvg
+
+      nlohmann::ordered_json fcfGrowthModelJson;
+      NumericalFunctions::appendMetricGrowthModelRecent(
+        fcfGrowthModelJson,
+        fcfGrowthModel,"");
+
+      nlohmann::ordered_json fcfGrowthModelAvgJson;
+      if(fcfGrowthModelAvg.datesNumerical.size() > 0){
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+            fcfGrowthModelAvgJson,
+            fcfGrowthModelAvg.model[0],"");
+      }
 
       //
       // Avg empirical model
@@ -3223,6 +3286,13 @@ int main (int argc, char* argv[]) {
       analysis["metric_data"]               = metricAnalysisJson;
       analysis["equity_growth_model_avg"]   = equityGrowthModelAvgJson;
       analysis["equity_growth_model_recent"]= equityGrowthModelJson;
+      analysis["eps_growth_model_avg"]      = epsGrowthModelAvgJson;
+      analysis["eps_growth_model_recent"]   = epsGrowthModelJson;
+      analysis["grossProfit_growth_model_avg"]    = grossProfitGrowthModelAvgJson;
+      analysis["grossProfit_growth_model_recent"] = grossProfitGrowthModelJson;
+      analysis["fcf_growth_model_avg"]      = fcfGrowthModelAvgJson;
+      analysis["fcf_growth_model_recent"]   = fcfGrowthModelJson;
+
       analysis["atoi_growth_model_avg"]     = atoiGrowthModelAverageJson;
       analysis["atoi_growth_model_recent"]  = atoiGrowthModelRecentJson;
       analysis["price_growth_model"]        = priceGrowthModelJson;

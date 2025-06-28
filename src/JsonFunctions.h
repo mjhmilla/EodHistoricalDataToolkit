@@ -400,16 +400,25 @@ class JsonFunctions {
       
       using json = nlohmann::ordered_json;
       std::ifstream jsonFileStream(filePathName.c_str());
-      json jsonData = json::parse(jsonFileStream);  
 
-      if( jsonData.contains("General") ){
-        if(jsonData["General"].contains("PrimaryTicker")){
-          if(jsonData["General"]["PrimaryTicker"].is_null() == false){
-            updPrimaryTickerName = 
-              jsonData["General"]["PrimaryTicker"].get<std::string>();
+      try{
+        json jsonData = json::parse(jsonFileStream);  
+
+        if( jsonData.contains("General") ){
+          if(jsonData["General"].contains("PrimaryTicker")){
+            if(jsonData["General"]["PrimaryTicker"].is_null() == false){
+              updPrimaryTickerName = 
+                jsonData["General"]["PrimaryTicker"].get<std::string>();
+            }
           }
         }
-      }
+      }catch (json::parse_error& ex){
+        std::cerr << "Parse error while reading " 
+                << fileName
+                << " at byte " 
+                << ex.byte << std::endl;
+      };
+
     };
 
 //==============================================================================

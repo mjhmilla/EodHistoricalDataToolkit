@@ -86,6 +86,18 @@ class NumericalFunctions {
     };
 
     //============================================================================
+    struct EmpiricalGrowthSettings{
+      int maxDateErrorInDays;
+      double growthIntervalInYears;
+      double maxOutlierProportionInEmpiricalModel;
+      double minCycleDurationInYears;
+      double exponentialModelR2Preference;
+      bool calcOneGrowthRateForAllData;
+      bool includeTimeUnitInAddress;
+      int typeOfEmpiricalModel;
+    };
+
+    //============================================================================
     struct MetricGrowthDataSet{
       std::vector< std::string > dates;
       std::vector< double > datesNumerical;
@@ -201,6 +213,59 @@ class NumericalFunctions {
 
       
     };
+    //==============================================================================
+    static int getIndexOfMostRecentDate(
+                    const EmpiricalGrowthDataSet &empiricalGrowthData){
+      int index = -1;
+      if(empiricalGrowthData.datesNumerical.size()>0){
+
+        index = 0;
+        double dateRange= empiricalGrowthData.datesNumerical.front()
+                        -empiricalGrowthData.datesNumerical.back(); 
+        if(dateRange < 0){
+          index = empiricalGrowthData.datesNumerical.size()-1;
+        }
+      }
+      return index;
+    };
+
+    //==============================================================================
+    static int getIndexOfMostRecentDate(
+                    const MetricGrowthDataSet &metricGrowthData){
+      int index = -1;
+      if(metricGrowthData.datesNumerical.size()>0){
+
+        index = 0;
+        double dateRange= metricGrowthData.datesNumerical.front()
+                         -metricGrowthData.datesNumerical.back(); 
+        if(dateRange < 0){
+          index = metricGrowthData.datesNumerical.size()-1;
+        }
+      }
+      return index;
+    };
+
+
+    //==============================================================================
+    static size_t getIndexOfMetricGrowthDataSet(
+                          double dateTarget, 
+                          double maxDateTargetError,
+                          const MetricGrowthDataSet &metricGrowthData)
+    {
+
+      bool found = false;
+      size_t index = 0;
+      while(!found && index < metricGrowthData.datesNumerical.size()){
+        double dateError = dateTarget - metricGrowthData.datesNumerical[index];
+        if(dateError >= 0 && dateError <= maxDateTargetError){
+          found = true;
+        }else{
+          ++index;
+        }
+      }
+      return index;
+    };
+
 
     //==============================================================================
     static size_t getIndexOfEmpiricalGrowthDataSet(
@@ -654,15 +719,17 @@ class NumericalFunctions {
                   MetricGrowthDataSet &metricGrowthRateUpd,
                   const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
                   int indexLastCommonDate,
-                  int maxDayError,
-                  double growthIntervalInYears,
-                  double maxPropOfOutliersInExpModel,
-                  double minCycleTimeInYears,
-                  double minR2ImprovementOfCyclicalModel,
-                  bool calcOneGrowthRateForAllData,
-                  bool includeTimeUnitInAddress,
-                  int empiricalModelType)
+                  const EmpiricalGrowthSettings &settings)
     {
+
+      //int maxDayError,
+      //double growthIntervalInYears,
+      //double maxPropOfOutliersInExpModel,
+      //double minCycleTimeInYears,
+      //double minR2ImprovementOfCyclicalModel,
+      //bool calcOneGrowthRateForAllData,
+      //bool includeTimeUnitInAddress,
+      //int empiricalModelType
 
       int indexDate       = -1;
       bool validDate    = true;
@@ -673,18 +740,19 @@ class NumericalFunctions {
       //A value of 0.1 means a 10% preference for an exponential model
       //over a linear model. In this case the exponential model will still
       //be chosen even if its R2 value is 0.1 lower than the linear model.
-      double preferenceForAnExponentialModel = 0.1;  
+      double preferenceForAnExponentialModel = 
+        settings.exponentialModelR2Preference;  
 
       std::vector < double > dateNumV;    //Fractional year
       std::vector < std::string > dateV;  //string yer
       std::vector < double > valueV;       //after tax operating income 
 
-      double maxYearError = maxDayError / DateFunctions::DAYS_PER_YEAR;
+      double maxYearError = settings.maxDateErrorInDays / DateFunctions::DAYS_PER_YEAR;
 
       std::vector < std::string > metricDatesV;
       std::vector < double > metricDatesNumV;
 
-      if(includeTimeUnitInAddress){
+      if(settings.includeTimeUnitInAddress){
         for(auto &el : fundamentalData[reportChapter][reportSection][timePeriod]){
           std::string date;
           JsonFunctions::getJsonString(el["date"],date);
@@ -741,7 +809,7 @@ class NumericalFunctions {
         if(validDate){         
           bool setNansToMissingValue=true;
           double value = std::nan("1");
-          if(includeTimeUnitInAddress){
+          if(settings.includeTimeUnitInAddress){
             value = 
               JsonFunctions::getJsonFloat(fundamentalData[reportChapter]
                   [reportSection][timePeriod][date][fieldName],
@@ -778,8 +846,8 @@ class NumericalFunctions {
               && indexDate < indexDateMax 
               && dateV.size() >= 2
               && validDate
-              && ((calcOneGrowthRateForAllData && indexDate == -1) 
-                    || !calcOneGrowthRateForAllData)){
+              && ((settings.calcOneGrowthRateForAllData && indexDate == -1) 
+                    || !settings.calcOneGrowthRateForAllData)){
 
         ++indexDate;
 
@@ -800,7 +868,7 @@ class NumericalFunctions {
               && indexDateStart < indexDateMax){
             
             double timeSpan      = dateSubV[0] - dateNumV[indexDateStart]; 
-            double timeSpanError = timeSpan-growthIntervalInYears;
+            double timeSpanError = timeSpan-settings.growthIntervalInYears;
 
             if( timeSpanError < maxYearError ){
               dateSubV.push_back(dateNumV[indexDateStart]);
@@ -823,7 +891,7 @@ class NumericalFunctions {
 
         if(    dateSubV.size() >= 2 
            && (dateSubV.size()==valueSubV.size())
-           && (foundStartDate || calcOneGrowthRateForAllData)){
+           && (foundStartDate || settings.calcOneGrowthRateForAllData)){
         
           //Order dateSubV so that it proceeds from the earliest date to the 
           //latest date
@@ -835,11 +903,11 @@ class NumericalFunctions {
           EmpiricalGrowthModel empModel;
           bool validFitting = false;
 
-          if(empiricalModelType==-1){
+          if(settings.typeOfEmpiricalModel==-1){
             EmpiricalGrowthModel exponentialModel, linearModel;
 
             fitExponentialGrowthModel(dateSubV,valueSubV,
-                        maxPropOfOutliersInExpModel,
+                        settings.maxOutlierProportionInEmpiricalModel,
                         exponentialModel);
 
             fitLinearGrowthModel(dateSubV,valueSubV,forceZeroSlopeOnLinearModel,
@@ -876,26 +944,26 @@ class NumericalFunctions {
                 fitCyclicalModelWithExponentialBaseline(
                   dateSubV,
                   valueSubV,
-                  minCycleTimeInYears,
-                  maxPropOfOutliersInExpModel,
+                  settings.minCycleDurationInYears,
+                  settings.maxOutlierProportionInEmpiricalModel,
                   empModel);                
               } break;
               case static_cast<int>(EmpiricalGrowthModelTypes::LinearModel):{
                 fitCyclicalModelWithLinearBaseline(
                   dateSubV,
                   valueSubV,
-                  minCycleTimeInYears,
+                  settings.minCycleDurationInYears,
                   forceZeroSlopeOnLinearModel,
                   empModel);
               } break;
             };
 
           }else{
-            switch(empiricalModelType){
+            switch(settings.typeOfEmpiricalModel){
               case 0:
               {
                 fitExponentialGrowthModel(dateSubV,valueSubV,
-                        maxPropOfOutliersInExpModel,empModel);
+                        settings.maxOutlierProportionInEmpiricalModel,empModel);
                 validFitting=empModel.validFitting;
               }break;
               case 1:
@@ -903,8 +971,8 @@ class NumericalFunctions {
                 fitCyclicalModelWithExponentialBaseline(
                   dateSubV,
                   valueSubV,
-                  minCycleTimeInYears,
-                  maxPropOfOutliersInExpModel,
+                  settings.minCycleDurationInYears,
+                  settings.maxOutlierProportionInEmpiricalModel,
                   empModel);
                 validFitting=empModel.validFitting;
               }break;
@@ -919,13 +987,13 @@ class NumericalFunctions {
                 fitCyclicalModelWithLinearBaseline(
                   dateSubV,
                   valueSubV,
-                  minCycleTimeInYears,
+                  settings.minCycleDurationInYears,
                   forceZeroSlopeOnLinearModel,
                   empModel);
                   validFitting=empModel.validFitting;
               }break;
               default:
-                std::cout <<"Error: empiricalModelType must be [0,1,2,3]"
+                std::cout <<"Error: settings.typeOfEmpiricalModel must be [0,1,2,3]"
                           <<std::endl;
                 std::abort();
             };
@@ -957,17 +1025,20 @@ class NumericalFunctions {
           const std::vector< double > &taxRateRecord,
           const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
           std::string &timePeriod,
-          int indexLastCommonDate,
+          int indexLastCommonDate,  
           bool quarterlyTTMAnalysis,
-          int maxDayErrorTTM,
-          double growthIntervalInYears,
-          double maxPropOfOutliersInExpModel,
-          double minCycleTimeInYears,
-          double minR2ImprovementOfCyclicalModel,
-          bool calcOneGrowthRateForAllData,
-          int empiricalModelType,
-          bool approximateReinvestmentRate)
+          bool approximateReinvestmentRate,
+          const EmpiricalGrowthSettings &settings)
     {
+
+      //    int maxDayErrorTTM,
+      //    double growthIntervalInYears,
+      //    double maxPropOfOutliersInExpModel,
+      //    double minCycleTimeInYears,
+      //    double minR2ImprovementOfCyclicalModel,
+      //    bool calcOneGrowthRateForAllData,
+      //    int empiricalModelType,
+      //    bool approximateReinvestmentRate
 
       int indexDate       = -1;
       bool validDateSet    = true;
@@ -976,7 +1047,8 @@ class NumericalFunctions {
       //A value of 0.1 means a 10% preference for an exponential model
       //over a linear model. In this case the exponential model will still
       //be chosen even if its R2 value is 0.1 lower than the linear model.
-      double preferenceForAnExponentialModel = 0.1;  
+      double preferenceForAnExponentialModel = 
+        settings.exponentialModelR2Preference;  
 
       std::vector < double > dateNumV;    //Fractional year
       std::vector < std::string > dateV;  //string yer
@@ -987,7 +1059,7 @@ class NumericalFunctions {
       std::vector< std::string > previousDateSet;
       std::vector< double > previousDateSetWeight;
 
-      double maxYearErrorTTM = maxDayErrorTTM / DateFunctions::DAYS_PER_YEAR;
+      double maxYearErrorTTM = settings.maxDateErrorInDays / DateFunctions::DAYS_PER_YEAR;
 
       //
       // For all time periods with sufficient data evaluate: after-tax operating
@@ -1007,7 +1079,7 @@ class NumericalFunctions {
                                                     "%Y-%m-%d",
                                                     dateSetTTM,                                    
                                                     dateSetTTMWeight,
-                                                    maxDayErrorTTM); 
+                                                    settings.maxDateErrorInDays); 
           if(!validDateSet){
             break;
           }     
@@ -1031,7 +1103,7 @@ class NumericalFunctions {
                                                     "%Y-%m-%d",
                                                     previousDateSet,
                                                     previousDateSetWeight,
-                                                    maxDayErrorTTM); 
+                                                    settings.maxDateErrorInDays); 
           if(!validDateSet){
             break;
           }     
@@ -1136,8 +1208,8 @@ class NumericalFunctions {
               && indexDate < indexDateMax 
               && rrV.size() >= 2
               && validDateSet
-              && ((calcOneGrowthRateForAllData && indexDate == -1) 
-                    || !calcOneGrowthRateForAllData)){
+              && ((settings.calcOneGrowthRateForAllData && indexDate == -1) 
+                    || !settings.calcOneGrowthRateForAllData)){
 
         ++indexDate;
 
@@ -1161,7 +1233,7 @@ class NumericalFunctions {
               && indexDateStart < indexDateMax){
             
             double timeSpan      = dateSubV[0] - dateNumV[indexDateStart]; 
-            double timeSpanError = timeSpan-growthIntervalInYears;
+            double timeSpanError = timeSpan-settings.growthIntervalInYears;
 
             if( timeSpanError < maxYearErrorTTM ){
               dateSubV.push_back(dateNumV[indexDateStart]);
@@ -1187,7 +1259,7 @@ class NumericalFunctions {
         //
         if(    dateSubV.size() >= 2 
            && (dateSubV.size()==atoiSubV.size())
-           && (foundStartDate || calcOneGrowthRateForAllData)){
+           && (foundStartDate || settings.calcOneGrowthRateForAllData)){
 
           //Order dateSubV so that it proceeds from the earliest date to the 
           //latest date
@@ -1201,11 +1273,11 @@ class NumericalFunctions {
           EmpiricalGrowthModel empModel;
           bool validFitting = false;
           
-          if(empiricalModelType==-1){
+          if(settings.typeOfEmpiricalModel==-1){
             EmpiricalGrowthModel exponentialModel, linearModel;
 
             fitExponentialGrowthModel(dateSubV,atoiSubV,
-                        maxPropOfOutliersInExpModel,
+                        settings.maxOutlierProportionInEmpiricalModel,
                         exponentialModel);
 
             fitLinearGrowthModel(dateSubV,atoiSubV,forceZeroSlopeOnLinearModel,
@@ -1242,26 +1314,26 @@ class NumericalFunctions {
                 fitCyclicalModelWithExponentialBaseline(
                   dateSubV,
                   atoiSubV,
-                  minCycleTimeInYears,
-                  maxPropOfOutliersInExpModel,
+                  settings.minCycleDurationInYears,
+                  settings.maxOutlierProportionInEmpiricalModel,
                   empModel);                
               } break;
               case static_cast<int>(EmpiricalGrowthModelTypes::LinearModel):{
                 fitCyclicalModelWithLinearBaseline(
                   dateSubV,
                   atoiSubV,
-                  minCycleTimeInYears,
+                  settings.minCycleDurationInYears,
                   forceZeroSlopeOnLinearModel,
                   empModel);
               } break;
             };
 
           }else{
-            switch(empiricalModelType){
+            switch(settings.typeOfEmpiricalModel){
               case 0:
               {
                 fitExponentialGrowthModel(dateSubV,atoiSubV,
-                        maxPropOfOutliersInExpModel,empModel);
+                        settings.maxOutlierProportionInEmpiricalModel,empModel);
                 validFitting=empModel.validFitting;
               }break;
               case 1:
@@ -1269,8 +1341,8 @@ class NumericalFunctions {
                 fitCyclicalModelWithExponentialBaseline(
                   dateSubV,
                   atoiSubV,
-                  minCycleTimeInYears,
-                  maxPropOfOutliersInExpModel,
+                  settings.minCycleDurationInYears,
+                  settings.maxOutlierProportionInEmpiricalModel,
                   empModel);
                 validFitting=empModel.validFitting;
               }break;
@@ -1285,13 +1357,13 @@ class NumericalFunctions {
                 fitCyclicalModelWithLinearBaseline(
                   dateSubV,
                   atoiSubV,
-                  minCycleTimeInYears,
+                  settings.minCycleDurationInYears,
                   forceZeroSlopeOnLinearModel,
                   empModel);
                   validFitting=empModel.validFitting;
               }break;
               default:
-                std::cout <<"Error: empiricalModelType must be [0,1,2,3]"
+                std::cout <<"Error: settings.typeOfEmpiricalModel must be [0,1,2,3]"
                           <<std::endl;
                 std::abort();
             };
@@ -1350,79 +1422,212 @@ class NumericalFunctions {
       }     
 
     };
-
     //==========================================================================
-    static void appendEmpiricalAfterTaxOperatingIncomeGrowthModel(
+    static void appendEmpiricalGrowthModelRecent(
         nlohmann::ordered_json &jsonStruct,
-        const EmpiricalGrowthModel &empiricalGrowthModel,
+        const EmpiricalGrowthModel &growthModel,
         const std::string nameToPrepend)
     {
-      if(empiricalGrowthModel.validFitting){
+      if(growthModel.validFitting){
+          std::string fieldName = nameToPrepend+"modelType";
+          jsonStruct[fieldName] = growthModel.modelType;
 
-        size_t indexRecentEntry = 0;
-        if(empiricalGrowthModel.x.front() 
-          < empiricalGrowthModel.x.back()){
-            indexRecentEntry = 
-              empiricalGrowthModel.x.size()-1;
+          fieldName = nameToPrepend+"duration";
+          jsonStruct[fieldName] = growthModel.duration;
+
+          fieldName = nameToPrepend+"annualGrowthRateOfTrendline";
+          jsonStruct[fieldName] = growthModel.annualGrowthRateOfTrendline;
+
+          fieldName = nameToPrepend+"r2";
+          jsonStruct[fieldName] = growthModel.r2;
+
+          fieldName = nameToPrepend+"r2Trendline";
+          jsonStruct[fieldName] = growthModel.r2Cyclic;
+
+          fieldName = nameToPrepend+"r2Cyclic";
+          jsonStruct[fieldName] = growthModel.r2Trendline;
+
+          fieldName = nameToPrepend+"validFitting";
+          jsonStruct[fieldName] = growthModel.validFitting;
+
+          fieldName = nameToPrepend+"outlierCount";
+          jsonStruct[fieldName] = growthModel.outlierCount;
+
+          int indexRecent=0;
+          int indexLast = static_cast<int>(growthModel.x.size())-1;
+
+          if(growthModel.x[indexLast] > growthModel.x[0]){
+            indexRecent = indexLast;
+          }
+
+          fieldName = nameToPrepend+"yCyclicNormDataPercentilesRecent";
+          jsonStruct[fieldName] = 
+            growthModel.yCyclicNormDataPercentiles[indexRecent];
+
+          fieldName = nameToPrepend+"parameters";  
+          jsonStruct[fieldName] = growthModel.parameters;
+
+          fieldName = nameToPrepend+"x";
+          jsonStruct[fieldName] = growthModel.x;
+          
+          fieldName = nameToPrepend+"y";
+          jsonStruct[fieldName] = growthModel.y;
+
+          fieldName = nameToPrepend+"yTrendline";
+          jsonStruct[fieldName] = growthModel.yTrendline;
+
+          fieldName = nameToPrepend+"yCyclic";
+          jsonStruct[fieldName] = growthModel.yCyclic;
+
+          fieldName = nameToPrepend+"yCyclicData";
+          jsonStruct[fieldName] = growthModel.yCyclicData;
+
+          fieldName = nameToPrepend+"yCyclicNorm";
+          jsonStruct[fieldName] = growthModel.yCyclicNorm;
+
+          fieldName = nameToPrepend+"yCyclicNormData";
+          jsonStruct[fieldName] = growthModel.yCyclicNormData;
+
+          fieldName = nameToPrepend+"yCyclicNormDataPercentiles";
+          jsonStruct[fieldName] = growthModel.yCyclicNormDataPercentiles;
         }
+    };
+    //==========================================================================
+    static void appendMetricGrowthModelRecent(
+        nlohmann::ordered_json &jsonStruct,
+        const MetricGrowthDataSet &metricDataSet,
+        const std::string nameToPrepend)
+    {
 
+      if(metricDataSet.datesNumerical.size()>0){
+        int index = NumericalFunctions::getIndexOfMostRecentDate(metricDataSet);      
 
-        std::string fieldName = nameToPrepend+"modelType";
-        jsonStruct[fieldName] = empiricalGrowthModel.modelType;
+        if(metricDataSet.model[index].validFitting){
 
-        fieldName = nameToPrepend+"duration";
-        jsonStruct[fieldName] = empiricalGrowthModel.duration;
+          /*
+          size_t indexRecentEntry = 0;
+          if(metricDataSet.model[index].x.front() 
+            < metricDataSet.model[index].x.back()){
+              indexRecentEntry = 
+                metricDataSet.model[index].x.size()-1;
+          }
+          */
 
-        fieldName = nameToPrepend+"annualGrowthRateOfTrendline";
-        jsonStruct[fieldName] = empiricalGrowthModel.annualGrowthRateOfTrendline;
-
-        fieldName = nameToPrepend+"r2";
-        jsonStruct[fieldName] = empiricalGrowthModel.r2;
-
-        fieldName = nameToPrepend+"r2Trendline";
-        jsonStruct[fieldName] = empiricalGrowthModel.r2Cyclic;
-
-        fieldName = nameToPrepend+"r2Cyclic";
-        jsonStruct[fieldName] = empiricalGrowthModel.r2Trendline;
-
-        fieldName = nameToPrepend+"validFitting";
-        jsonStruct[fieldName] = empiricalGrowthModel.validFitting;
-
-        fieldName = nameToPrepend+"outlierCount";
-        jsonStruct[fieldName] = empiricalGrowthModel.outlierCount;
-
-        fieldName = nameToPrepend+"yCyclicNormDataPercentilesRecent";
-        jsonStruct[fieldName] = 
-          empiricalGrowthModel.yCyclicNormDataPercentiles[indexRecentEntry];
-
-        fieldName = nameToPrepend+"parameters";  
-        jsonStruct[fieldName] = empiricalGrowthModel.parameters;
-
-        fieldName = nameToPrepend+"x";
-        jsonStruct[fieldName] = empiricalGrowthModel.x;
-        
-        fieldName = nameToPrepend+"y";
-        jsonStruct[fieldName] = empiricalGrowthModel.y;
-
-        fieldName = nameToPrepend+"yTrendline";
-        jsonStruct[fieldName] = empiricalGrowthModel.yTrendline;
-
-        fieldName = nameToPrepend+"yCyclic";
-        jsonStruct[fieldName] = empiricalGrowthModel.yCyclic;
-
-        fieldName = nameToPrepend+"yCyclicData";
-        jsonStruct[fieldName] = empiricalGrowthModel.yCyclicData;
-
-        fieldName = nameToPrepend+"yCyclicNorm";
-        jsonStruct[fieldName] = empiricalGrowthModel.yCyclicNorm;
-
-        fieldName = nameToPrepend+"yCyclicNormData";
-        jsonStruct[fieldName] = empiricalGrowthModel.yCyclicNormData;
-
-        fieldName = nameToPrepend+"yCyclicNormDataPercentiles";
-        jsonStruct[fieldName] = empiricalGrowthModel.yCyclicNormDataPercentiles;
+        appendEmpiricalGrowthModelRecent(
+          jsonStruct,
+          metricDataSet.model[index],
+          nameToPrepend);
+        //metricDataSet.model[indexRecentEntry],
+        }
       }
 
+    };
+
+    //==========================================================================
+    static void appendEmpiricalGrowthModelRecent(
+        nlohmann::ordered_json &jsonStruct,
+        const EmpiricalGrowthDataSet &empiricalDataSet,
+        const std::string nameToPrepend)
+    {
+
+      if(empiricalDataSet.datesNumerical.size()>0){
+        int index = NumericalFunctions::getIndexOfMostRecentDate(empiricalDataSet);      
+
+        if(empiricalDataSet.model[index].validFitting){
+
+          /*
+          size_t indexRecentEntry = 0;
+          size_t indexLastEntry  = empiricalDataSet.datesNumerical.size()-1;
+          if(empiricalDataSet.datesNumerical[indexRecentEntry] 
+            < empiricalDataSet.datesNumerical[indexLastEntry]){
+              indexRecentEntry = indexLastEntry;
+          }
+          */
+
+        appendEmpiricalGrowthModelRecent(
+          jsonStruct,
+          empiricalDataSet.model[index],
+          nameToPrepend);
+          //empiricalDataSet.model[indexRecentEntry],
+          
+        }
+      }
+
+    };
+
+
+    //==========================================================================
+    static void appendMetricGrowthDataSetRecentDate(
+        const MetricGrowthDataSet &metricGrowthData,        
+        const std::string nameToPrepend,
+        double maxDateErrorInYearsInEmpiricalData,
+        std::vector< std::string > &termNames,
+        std::vector< double > &termValues)
+    {
+      
+      if(metricGrowthData.datesNumerical.size()>0){
+
+        double date = metricGrowthData.datesNumerical[0];
+
+        if( metricGrowthData.datesNumerical.back() > date){
+          date = metricGrowthData.datesNumerical.back();
+        }
+
+        appendMetricGrowthDataSet(
+                date,
+                metricGrowthData,
+                nameToPrepend,
+                maxDateErrorInYearsInEmpiricalData,
+                termNames,
+                termValues);
+              
+      }
+    };
+
+    //==========================================================================
+    static void appendMetricGrowthDataSet(
+        double dateInYears,   
+        const MetricGrowthDataSet &metricGrowthData,        
+        const std::string nameToPrepend,
+        double maxDateErrorInYearsInEmpiricalData,
+        std::vector< std::string > &termNames,
+        std::vector< double > &termValues)
+    {
+
+      if(metricGrowthData.datesNumerical.size()>0){
+
+        size_t index = 
+        NumericalFunctions::getIndexOfMetricGrowthDataSet(
+                              dateInYears,
+                              maxDateErrorInYearsInEmpiricalData,
+                              metricGrowthData);
+
+        double dateError = metricGrowthData.datesNumerical[index]
+                          -dateInYears;
+        if(std::abs(dateError) < maxDateErrorInYearsInEmpiricalData){
+
+          termNames.push_back(nameToPrepend+"date");
+          termValues.push_back(metricGrowthData.datesNumerical[index]);
+
+          termNames.push_back(nameToPrepend+"value");
+          termValues.push_back(metricGrowthData.metricValue[index]);
+
+          termNames.push_back(nameToPrepend+"growth");
+          termValues.push_back(metricGrowthData.metricGrowthRate[index]);
+
+          termNames.push_back(nameToPrepend+"r2");
+          termValues.push_back(metricGrowthData.model[index].r2);
+
+          termNames.push_back(nameToPrepend+"r2Trendline");
+          termValues.push_back(metricGrowthData.model[index].r2Trendline);
+
+          termNames.push_back(nameToPrepend+"r2Cyclic");
+          termValues.push_back(metricGrowthData.model[index].r2Cyclic);
+
+          termNames.push_back(nameToPrepend+"ModelType");
+          termValues.push_back(metricGrowthData.model[index].modelType);
+        }
+      }
     };
 
     //==========================================================================
