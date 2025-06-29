@@ -2443,10 +2443,18 @@ int main (int argc, char* argv[]) {
         //======================================================================
         //Evaluate the current total short and long term debt
         //======================================================================
-        double longTermDebt = 
-          JsonFunctions::getJsonFloat(
-            fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
-                           ["longTermDebt"]);
+        //double longTermDebt = 
+        //  JsonFunctions::getJsonFloat(
+        //    fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
+        //                   ["longTermDebt"]);
+
+        double longTermDebtEstimate = 
+          FinancialAnalysisFunctions::
+            getLongTermDebtEstimate(
+              fundamentalData,
+              timePeriod.c_str(),
+              date.c_str(),
+              setNansToMissingValue);
 
         //======================================================================        
         //Evaluate the current market capitalization
@@ -2497,7 +2505,7 @@ int main (int argc, char* argv[]) {
         //Evaluate the cost of equity
         //======================================================================        
         double beta = betaUnlevered*(1.0 + 
-          (1.0-taxRate)*(longTermDebt/marketCapitalization));
+          (1.0-taxRate)*(longTermDebtEstimate/marketCapitalization));
 
 
         double annualCostOfEquityAsAPercentage = 
@@ -2538,7 +2546,7 @@ int main (int argc, char* argv[]) {
         termValues.push_back(taxRate);
         termValues.push_back(defaultInflationRate);
         termValues.push_back(inflation);
-        termValues.push_back(longTermDebt);
+        termValues.push_back(longTermDebtEstimate);
         termValues.push_back(adjustedClosePrice);
         termValues.push_back(outstandingShares);
         termValues.push_back(marketCapitalization);
@@ -2554,8 +2562,8 @@ int main (int argc, char* argv[]) {
 
         double costOfCapital = 
           (costOfEquityAsAPercentage*marketCapitalization
-          +afterTaxCostOfDebt*longTermDebt)
-          /(marketCapitalization+longTermDebt);
+          +afterTaxCostOfDebt*longTermDebtEstimate)
+          /(marketCapitalization+longTermDebtEstimate);
 
 
         termNames.push_back("costOfCapital_longTermDebt");
@@ -2566,7 +2574,7 @@ int main (int argc, char* argv[]) {
         termNames.push_back("costOfCapital_afterTaxCostOfDebt");
         termNames.push_back("costOfCapital");
 
-        termValues.push_back(longTermDebt);
+        termValues.push_back(longTermDebtEstimate);
         termValues.push_back(outstandingShares);
         termValues.push_back(adjustedClosePrice);
         termValues.push_back(marketCapitalization);
