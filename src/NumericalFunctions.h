@@ -926,6 +926,10 @@ class NumericalFunctions {
             //A linear model is used unless the exponential model
             //is both valid and has a higher R2
             if(exponentialModel.validFitting==true){
+              
+              modelType=static_cast<int>(
+                          EmpiricalGrowthModelTypes::ExponentialModel);              
+              /*
               double exponentialModelR2Upd = 
                 exponentialModel.r2
                 + preferenceForAnExponentialModel;
@@ -933,7 +937,11 @@ class NumericalFunctions {
                   || !linearModel.validFitting){
                 modelType=static_cast<int>(
                     EmpiricalGrowthModelTypes::ExponentialModel);
+              }else{
+                modelType = 
+                  static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);  
               }
+              */
             }else if(linearModel.validFitting){
               modelType = 
                 static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);

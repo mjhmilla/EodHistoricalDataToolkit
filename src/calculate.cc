@@ -2147,10 +2147,42 @@ int main (int argc, char* argv[]) {
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
         FIN,
+        CF,
+        Y,
+        "freeCashFlow",
+        fcfGrowthModel,
+        analysisDates,
+        indexLastCommonDate,
+        empGrowthSettings);
+
+      empGrowthSettings.calcOneGrowthRateForAllData=true;    
+      empGrowthSettings.growthIntervalInYears      = growthIntervalInYearsAll;    
+
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
+        CF,
+        Y,
+        "freeCashFlow",
+        fcfGrowthModelAvg,
+        analysisDates,
+        indexLastCommonDate,
+        empGrowthSettings);
+
+      NumericalFunctions::MetricGrowthDataSet revenueGrowthModel, 
+                                              revenueGrowthModelAvg;
+
+      empGrowthSettings.includeTimeUnitInAddress=true;
+      empGrowthSettings.calcOneGrowthRateForAllData=false;      
+      empGrowthSettings.growthIntervalInYears         = growthIntervalInYears;    
+
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
         IS,
         Y,
-        "grossProfit",
-        fcfGrowthModel,
+        "totalRevenue",
+        revenueGrowthModel,
         analysisDates,
         indexLastCommonDate,
         empGrowthSettings);
@@ -2163,11 +2195,12 @@ int main (int argc, char* argv[]) {
         FIN,
         IS,
         Y,
-        "grossProfit",
-        fcfGrowthModelAvg,
+        "totalRevenue",
+        revenueGrowthModelAvg,
         analysisDates,
         indexLastCommonDate,
         empGrowthSettings);
+
       //=======================================================================
       //
       // Create and set the first values in annualMilestones
@@ -3039,7 +3072,26 @@ int main (int argc, char* argv[]) {
               maxDateErrorInYearsInEmpiricalData,
               termNames,
               termValues);
+        //
+        // Sales
+        //
+        NumericalFunctions::appendMetricGrowthDataSet(
+              dateDouble,              
+              revenueGrowthModel,
+              std::string("revenueEmpiricalModel_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);
 
+        NumericalFunctions::appendMetricGrowthDataSetRecentDate(
+              revenueGrowthModelAvg,
+              std::string("revenueEmpiricalModelAvg_"),
+              maxDateErrorInYearsInEmpiricalData,
+              termNames,
+              termValues);
+
+        //revenueGrowthModel
+        //revenueGrowthModelAvg              
         //
         //
         //
@@ -3193,6 +3245,23 @@ int main (int argc, char* argv[]) {
       }
 
       //
+      // growth of revenue
+      //    revenueGrowthModel 
+      //    revenueGrowthModelAvg
+
+      nlohmann::ordered_json revenueGrowthModelJson;
+      NumericalFunctions::appendMetricGrowthModelRecent(
+        revenueGrowthModelJson,
+        revenueGrowthModel,"");
+
+      nlohmann::ordered_json revenueGrowthModelAvgJson;
+      if(revenueGrowthModelAvg.datesNumerical.size() > 0){
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+            revenueGrowthModelAvgJson,
+            revenueGrowthModelAvg.model[0],"");
+      }      
+
+      //
       // Avg empirical model
       //
 
@@ -3291,15 +3360,17 @@ int main (int argc, char* argv[]) {
       // Package all three into a single json object
       //
 
-      analysis["metric_data"]               = metricAnalysisJson;
-      analysis["equity_growth_model_avg"]   = equityGrowthModelAvgJson;
-      analysis["equity_growth_model_recent"]= equityGrowthModelJson;
-      analysis["eps_growth_model_avg"]      = epsGrowthModelAvgJson;
-      analysis["eps_growth_model_recent"]   = epsGrowthModelJson;
+      analysis["metric_data"]                     = metricAnalysisJson;
+      analysis["equity_growth_model_avg"]         = equityGrowthModelAvgJson;
+      analysis["equity_growth_model_recent"]      = equityGrowthModelJson;
+      analysis["eps_growth_model_avg"]            = epsGrowthModelAvgJson;
+      analysis["eps_growth_model_recent"]         = epsGrowthModelJson;
       analysis["grossProfit_growth_model_avg"]    = grossProfitGrowthModelAvgJson;
       analysis["grossProfit_growth_model_recent"] = grossProfitGrowthModelJson;
-      analysis["fcf_growth_model_avg"]      = fcfGrowthModelAvgJson;
-      analysis["fcf_growth_model_recent"]   = fcfGrowthModelJson;
+      analysis["fcf_growth_model_avg"]            = fcfGrowthModelAvgJson;
+      analysis["fcf_growth_model_recent"]         = fcfGrowthModelJson;
+      analysis["revenue_growth_model_avg"]        = revenueGrowthModelAvgJson;
+      analysis["revenue_growth_model_recent"]     = revenueGrowthModelJson;
 
       analysis["atoi_growth_model_avg"]     = atoiGrowthModelAverageJson;
       analysis["atoi_growth_model_recent"]  = atoiGrowthModelRecentJson;
