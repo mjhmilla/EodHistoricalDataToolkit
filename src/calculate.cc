@@ -2053,8 +2053,6 @@ int main (int argc, char* argv[]) {
         Y,
         "totalStockholderEquity",
         equityGrowthModel,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
       empGrowthSettings.calcOneGrowthRateForAllData=true;
@@ -2067,8 +2065,6 @@ int main (int argc, char* argv[]) {
         Y,
         "totalStockholderEquity",
         equityGrowthModelAvg,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
 
@@ -2086,12 +2082,10 @@ int main (int argc, char* argv[]) {
         Y,
         "epsActual",
         epsGrowthModel,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
       empGrowthSettings.calcOneGrowthRateForAllData=true;      
-      empGrowthSettings.growthIntervalInYears       = growthIntervalInYearsAll;    
+      empGrowthSettings.growthIntervalInYears      = growthIntervalInYearsAll;    
 
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
@@ -2100,8 +2094,6 @@ int main (int argc, char* argv[]) {
         Y,
         "epsActual",
         epsGrowthModelAvg,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
 
@@ -2119,8 +2111,6 @@ int main (int argc, char* argv[]) {
         Y,
         "grossProfit",
         grossProfitGrowthModel,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
       empGrowthSettings.calcOneGrowthRateForAllData=true;      
@@ -2133,8 +2123,6 @@ int main (int argc, char* argv[]) {
         Y,
         "grossProfit",
         grossProfitGrowthModelAvg,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
       NumericalFunctions::MetricGrowthDataSet fcfGrowthModel, 
@@ -2151,8 +2139,6 @@ int main (int argc, char* argv[]) {
         Y,
         "freeCashFlow",
         fcfGrowthModel,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
       empGrowthSettings.calcOneGrowthRateForAllData=true;    
@@ -2165,8 +2151,6 @@ int main (int argc, char* argv[]) {
         Y,
         "freeCashFlow",
         fcfGrowthModelAvg,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
       NumericalFunctions::MetricGrowthDataSet revenueGrowthModel, 
@@ -2183,8 +2167,6 @@ int main (int argc, char* argv[]) {
         Y,
         "totalRevenue",
         revenueGrowthModel,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
       empGrowthSettings.calcOneGrowthRateForAllData=true;    
@@ -2197,8 +2179,6 @@ int main (int argc, char* argv[]) {
         Y,
         "totalRevenue",
         revenueGrowthModelAvg,
-        analysisDates,
-        indexLastCommonDate,
         empGrowthSettings);
 
       //=======================================================================

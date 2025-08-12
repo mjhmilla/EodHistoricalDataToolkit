@@ -26,7 +26,7 @@ class DateFunctions {
 
       if(dateStr.size() > 0){
         date::year_month_day dateYmd;
-        date::sys_days dateDay, dateDayFirstOfYear;
+        date::sys_days dateDay, dateDayFirstOfYear, dateDayLastOfYear;
 
         std::istringstream dateStrStreamA(dateStr);
         dateStrStreamA.exceptions(std::ios::failbit);
@@ -44,10 +44,22 @@ class DateFunctions {
         dateStrStreamC.exceptions(std::ios::failbit);      
         dateStrStreamC >> date::parse("%Y-%m-%d",dateDayFirstOfYear);
 
-        double daysInYear = 365.0;
-        if(dateYmd.year().is_leap()){
-          daysInYear=364.0;
-        }
+        std::string dateStrLastOfYear(dateStr.substr(0,4));
+        dateStrLastOfYear.append("-12-31");
+
+        std::istringstream dateStrStreamD(dateStrLastOfYear);
+        dateStrStreamD.exceptions(std::ios::failbit);      
+        dateStrStreamD >> date::parse("%Y-%m-%d",dateDayLastOfYear);
+
+        //Adding 1 here because Jan 1 otherwise doesn't count as a day.
+        
+        double daysInYear = 
+          double((dateDayLastOfYear-dateDayFirstOfYear).count())
+          + 1.0;
+
+        //Here 31-12-2025 will be 364 days from 01-01-2025 and the 
+        //fraction will be 364/365=0.9973 of a year. This is consistent 
+        //with https://www.epochcounter.com
           date = double(year) 
             + double( (dateDay-dateDayFirstOfYear).count() )/daysInYear;
       }

@@ -534,6 +534,7 @@ class NumericalFunctions {
         double growth0      = (dydwMdl/y0Mdl);
         double growth1      = (dydwMdl/y1Mdl);
 
+        double expGrowthEq  = exp(log(y1Mdl/y0Mdl)/modelUpd.duration)-1.0;
 
         std::vector< double > yMdl(x.size());   
         for(size_t i=0; i<w.size(); ++i){
@@ -543,7 +544,7 @@ class NumericalFunctions {
         double r2 = calcR2(yMdl,y);
 
 
-        modelUpd.annualGrowthRateOfTrendline=growth1;
+        modelUpd.annualGrowthRateOfTrendline=expGrowthEq;
         modelUpd.parameters.push_back(w0);
         modelUpd.parameters.push_back(y0Mdl);
         modelUpd.parameters.push_back(dydwMdl);
@@ -717,10 +718,10 @@ class NumericalFunctions {
                   const char* timePeriod,
                   const char* fieldName,
                   MetricGrowthDataSet &metricGrowthRateUpd,
-                  const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
-                  int indexLastCommonDate,
                   const EmpiricalGrowthSettings &settings)
     {
+      //const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
+      //                  int indexLastCommonDate,
 
       //int maxDayError,
       //double growthIntervalInYears,
@@ -731,8 +732,8 @@ class NumericalFunctions {
       //bool includeTimeUnitInAddress,
       //int empiricalModelType
 
-      int indexDate       = -1;
-      bool validDate    = true;
+      //int indexDate       = -1;
+      //bool validDate    = true;
       bool forceZeroSlopeOnLinearModel =false;    
 
 
@@ -775,11 +776,15 @@ class NumericalFunctions {
 
 
       //Extract only the valid data in the desired format: Q, Y, or TTM
-      while( (indexDate+1) < indexLastCommonDate){
-        ++indexDate;
-        validDate=true;
+      //while( (indexDate+1) < indexLastCommonDate){
+      for(size_t i =0; i < metricDatesV.size(); ++i){
+        //++indexDate;
+        std::string date = metricDatesV[i];
+        double dateNum = metricDatesNumV[i];
+        
+        //validDate=true;
 
-
+        /*
         std::string dateCommon = analysisDates.common[indexDate];
         double dateCommonNum = 
           DateFunctions::convertToFractionalYear(dateCommon);
@@ -800,13 +805,14 @@ class NumericalFunctions {
         if(!found){
           validDate=false;
         }
+        */
 
         //
         //Eliminate dates in dateSetTTM that are not in the metric date set
         //
 
 
-        if(validDate){         
+        //if(validDate){         
           bool setNansToMissingValue=true;
           double value = std::nan("1");
           if(settings.includeTimeUnitInAddress){
@@ -830,7 +836,7 @@ class NumericalFunctions {
               valueV.push_back(value);
             }
           }                                                       
-        }
+        //}
 
       }
 
@@ -838,14 +844,14 @@ class NumericalFunctions {
       // Extract the growth values for an interval of length 
       // growthIntervalInYears
       //
-      indexDate = -1;
-      validDate=true;
+      int indexDate = -1;
+      //validDate=true;
       int indexDateMax = static_cast<int>(dateV.size());
 
-      while( (indexDate+1) < indexLastCommonDate 
-              && indexDate < indexDateMax 
+      //(indexDate+1) < indexLastCommonDate 
+
+      while(     indexDate < indexDateMax 
               && dateV.size() >= 2
-              && validDate
               && ((settings.calcOneGrowthRateForAllData && indexDate == -1) 
                     || !settings.calcOneGrowthRateForAllData)){
 
@@ -863,12 +869,18 @@ class NumericalFunctions {
         int indexDateStart=indexDate+1;
         bool foundStartDate=false;
 
+        double growthIntervalInYears =settings.growthIntervalInYears;
+        if(settings.calcOneGrowthRateForAllData){
+          growthIntervalInYears = abs(dateNumV[0]-dateNumV[dateNumV.size()-1]);
+        }
+
         while(  !foundStartDate 
-              && indexDateStart < indexLastCommonDate 
               && indexDateStart < indexDateMax){
             
+
+
             double timeSpan      = dateSubV[0] - dateNumV[indexDateStart]; 
-            double timeSpanError = timeSpan-settings.growthIntervalInYears;
+            double timeSpanError = timeSpan-growthIntervalInYears;
 
             if( timeSpanError < maxYearError ){
               dateSubV.push_back(dateNumV[indexDateStart]);
@@ -929,7 +941,7 @@ class NumericalFunctions {
               
               modelType=static_cast<int>(
                           EmpiricalGrowthModelTypes::ExponentialModel);              
-              /*
+              
               double exponentialModelR2Upd = 
                 exponentialModel.r2
                 + preferenceForAnExponentialModel;
@@ -941,7 +953,7 @@ class NumericalFunctions {
                 modelType = 
                   static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);  
               }
-              */
+              
             }else if(linearModel.validFitting){
               modelType = 
                 static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
