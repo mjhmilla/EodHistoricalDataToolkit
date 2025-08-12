@@ -270,7 +270,7 @@
             "jsonData": "calculateData",
             "address":
             [
-                "equity_growth_model_avg"
+                "revenue_growth_model_avg"
             ],
             "fieldName": "yTrendline",
             "dateName": "x",
@@ -295,7 +295,7 @@
             "jsonData": "calculateData",
             "address":
             [
-                "equity_growth_model_recent"
+                "revenue_growth_model_recent"
             ],
             "fieldName": "yTrendline",
             "dateName": "x",
@@ -313,7 +313,7 @@
             "boxWhiskerColor": "red",
             "boxWhiskerPosition": -0.5
         },
-        "epsGrowth":
+        "epsGrowthAvg":
         {
             "row": 2,
             "column": 0,
@@ -338,7 +338,7 @@
             "boxWhiskerColor": "orange",
             "boxWhiskerPosition": -0.5
         },
-        "epsGrowthAvg":
+        "epsGrowth":
         {
             "row": 2,
             "column": 0,
@@ -401,7 +401,7 @@
             "fieldName": "yTrendline",
             "dateName": "x",
             "isArray": true,
-            "legendEntry": "Emp",
+            "legendEntry": "Emp Avg",
             "lineColor": "orange",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
