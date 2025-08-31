@@ -13,6 +13,7 @@
 #include "date.h"
 #include <nlohmann/json.hpp>
 #include "JsonFunctions.h"
+//#include "NumericalFunctions.h"
 #include "DateFunctions.h"
 
 
@@ -2523,7 +2524,7 @@ class FinancialAnalysisFunctions {
 
 
     }
-                                 
+
     //==========================================================================
     static double calcPriceToValueUsingDiscountedCashflowModel(
                                 const nlohmann::ordered_json &jsonData, 
@@ -2537,7 +2538,7 @@ class FinancialAnalysisFunctions {
                                 double afterTaxOperatingIncomeGrowth,
                                 double reinvestmentRate,
                                 double returnOnInvestedCapital,
-                                double marketCaptialization,
+                                double marketCapitalization,
                                 int numberOfYearsForTerminalValuation,
                                 bool appendTermRecord,
                                 bool setNansToMissingValue,
@@ -2724,7 +2725,7 @@ class FinancialAnalysisFunctions {
                       - potentialLiabilities
                       - optionValue;
 
-      double priceToValue = marketCaptialization / presentValue;
+      double priceToValue = marketCapitalization / presentValue;
 
       //Ratio: price to value
       if(appendTermRecord){
@@ -2748,7 +2749,7 @@ class FinancialAnalysisFunctions {
         termValues.push_back(potentialLiabilities);
         termValues.push_back(optionValue);
         termValues.push_back(presentValue);
-        termValues.push_back(marketCaptialization);
+        termValues.push_back(marketCapitalization);
         termValues.push_back(priceToValue);
 
       }

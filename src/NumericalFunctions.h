@@ -130,6 +130,14 @@ class NumericalFunctions {
         };
     };
     //==========================================================================
+    struct FinancialRatios{
+      std::vector< std::string > dates;
+      std::vector< double > dateNumerical;
+      std::vector< double > adjustedClosePrice;
+      std::vector< double > outstandingShares;
+      std::vector< double > marketCapitalization;
+    };
+    //==========================================================================
     // Fun example to get the ranked index of an entry
     // https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
 
@@ -706,6 +714,85 @@ class NumericalFunctions {
         }
       }else{
         modelUpd.validFitting=false;
+      }
+
+    };
+
+    //==========================================================================
+    static void extractFinancialRatios(
+              const nlohmann::ordered_json &fundamentalData,
+              const nlohmann::ordered_json &historicalData,
+              const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
+              const std::string &timePeriod,
+              const std::string &timePeriodOS,
+              int maximumDayErrorOutstandingShareData,
+              FinancialRatios &financialRatiosUpd)
+    {
+      bool setNansToMissingValue = false;
+
+      for(size_t indexDate = 0; indexDate <analysisDates.common.size(); 
+                              ++indexDate){
+
+        std::string date     = analysisDates.common[indexDate];
+        double dateNumerical = DateFunctions::convertToFractionalYear(date);
+
+        //
+        //Go get the number of outstanding shares reported from the closest date
+        //
+        double outstandingShares = std::nan("1");
+        int smallestDateDifference=std::numeric_limits<int>::max();        
+        std::string closestDate("");
+
+        for(auto& el : fundamentalData[OS][timePeriodOS.c_str()]){
+          std::string dateOS("");
+          JsonFunctions::getJsonString(el["dateFormatted"],dateOS);         
+          int dateDifference = 
+            DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+              date,"%Y-%m-%d",dateOS,"%Y-%m-%d");
+          if(std::abs(dateDifference)<smallestDateDifference){
+            closestDate = dateOS;
+            smallestDateDifference=std::abs(dateDifference);
+            outstandingShares = JsonFunctions::getJsonFloat(el["shares"]);
+          }
+        }
+
+        if(smallestDateDifference < maximumDayErrorOutstandingShareData){
+          //
+          //Get the adjusted close price for this date
+          //
+          unsigned int indexHistoricalData = 
+            analysisDates.indicesHistorical[indexDate];   
+
+          std::string closestHistoricalDate= 
+            analysisDates.historical[indexHistoricalData];         
+
+          
+          double adjustedClosePrice = std::nan("1");
+          double closePrice = std::nan("1");
+          try{
+            adjustedClosePrice = JsonFunctions::getJsonFloat(
+                        historicalData[ indexHistoricalData ]["adjusted_close"],
+                        setNansToMissingValue); 
+
+            closePrice = JsonFunctions::getJsonFloat(
+                        historicalData[ indexHistoricalData ]["close"],
+                        setNansToMissingValue);                       
+
+          }catch( std::invalid_argument const& ex){
+            std::cout << " Historical record (" << closestHistoricalDate << ")"
+                      << " is missing an opening share price."
+                      << std::endl;
+          }
+
+          double marketCapitalization = 
+            adjustedClosePrice*outstandingShares;
+
+          financialRatiosUpd.dates.push_back(date);
+          financialRatiosUpd.dateNumerical.push_back(dateNumerical);
+          financialRatiosUpd.adjustedClosePrice.push_back(adjustedClosePrice);
+          financialRatiosUpd.outstandingShares.push_back(outstandingShares);
+          financialRatiosUpd.marketCapitalization.push_back(marketCapitalization);
+        }
       }
 
     };
@@ -1442,6 +1529,27 @@ class NumericalFunctions {
       }     
 
     };
+
+    //==========================================================================
+    static double calcPriceToValueUsingEarningsPerShareGrowth(
+                    const nlohmann::ordered_json &fundamentalData, 
+                    const nlohmann::ordered_json &historicalData, 
+                    const std::vector< std::string > &dateSet,
+                    const char *timeUnit,
+                    const NumericalFunctions::MetricGrowthDataSet &epsGrowthModel,
+                    int numberOfYearsForTerminalValuation,
+                    bool appendTermRecord,
+                    bool setNansToMissingValue,
+                    const std::string &parentName,
+                    std::vector< std::string> &termNames,
+                    std::vector< double > &termValues)                                      
+    {
+      double priceToValue = 0.;
+
+
+      return priceToValue;
+    };
+        
     //==========================================================================
     static void appendEmpiricalGrowthModelRecent(
         nlohmann::ordered_json &jsonStruct,

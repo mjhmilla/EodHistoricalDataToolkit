@@ -1321,6 +1321,7 @@ int main (int argc, char* argv[]) {
   //This defines how far back in time data from the tax table can be taken
   //to approximate the tax of this year.
 
+
   int maxDayErrorHistoricalData = maxDayErrorTabularData; 
   // Historical data has a resolution of 1 day
   
@@ -2181,6 +2182,19 @@ int main (int argc, char* argv[]) {
         revenueGrowthModelAvg,
         empGrowthSettings);
 
+      //MarketCapitalizationSummaryData
+      NumericalFunctions::FinancialRatios financialRatios;
+      
+        NumericalFunctions::extractFinancialRatios(
+                            fundamentalData,
+                            historicalData,
+                            analysisDates,
+                            timePeriod,
+                            timePeriodOS,
+                            maxDayErrorOutstandingShareData,
+                            financialRatios);
+      
+
       //=======================================================================
       //
       // Create and set the first values in annualMilestones
@@ -2629,15 +2643,16 @@ int main (int argc, char* argv[]) {
             "totalStockholderEquity", setNansToMissingValue);
 
         double roicOp = FinancialAnalysisFunctions::
-          calcReturnOnInvestedOperatingCapital(fundamentalData,
-                                      dateSet,
-                                      timePeriod.c_str(),
-                                      taxRate,
-                                      appendTermRecord, 
-                                      emptyParentName,
-                                      setNansToMissingValue,
-                                      termNames, 
-                                      termValues);
+          calcReturnOnInvestedOperatingCapital(
+              fundamentalData,
+              dateSet,
+              timePeriod.c_str(),
+              taxRate,
+              appendTermRecord, 
+              emptyParentName,
+              setNansToMissingValue,
+              termNames, 
+              termValues);
         double roicOpLessCostOfCapital = roicOp - costOfCapitalMature;  
         termNames.push_back("returnOnInvestedOperatingCapitalLessCostOfCapital");
         termValues.push_back(roicOpLessCostOfCapital); 
@@ -2774,8 +2789,8 @@ int main (int argc, char* argv[]) {
                                  termValues);
 
 
-        double retentionRatio = 
-          FinancialAnalysisFunctions::calcRetentionRatio(
+        double retentionRatio = FinancialAnalysisFunctions::
+            calcRetentionRatio(
                                  fundamentalData, 
                                  dateSet, 
                                  timePeriod.c_str(),
@@ -2785,8 +2800,8 @@ int main (int argc, char* argv[]) {
                                  termNames, 
                                  termValues);
         
-        double returnOnEquity = 
-          FinancialAnalysisFunctions::calcReturnOnEquity(
+        double returnOnEquity = FinancialAnalysisFunctions::
+            calcReturnOnEquity(
                                 fundamentalData, 
                                 dateSet, 
                                 timePeriod.c_str(),
@@ -2850,6 +2865,7 @@ int main (int argc, char* argv[]) {
 
         parentName="priceToValue_";
 
+    
         //Valuation (discounted cash flow)
         double presentValue = FinancialAnalysisFunctions::
             calcPriceToValueUsingDiscountedCashflowModel(  
@@ -2981,6 +2997,32 @@ int main (int argc, char* argv[]) {
                   termValues);
           }
         }
+
+        //
+        // Price-to-Value using EPS and EPS growth
+        //
+
+        double priceToValueUsingEPSGrowth = 
+          NumericalFunctions::
+            calcPriceToValueUsingEarningsPerShareGrowth(
+              fundamentalData,
+              historicalData,
+              dateSet,
+              timePeriod.c_str(),
+              epsGrowthModel,
+              numberOfYearsOfGrowthForDcmValuation,
+              appendTermRecord,
+              setNansToMissingValue,
+              parentName,
+              termNames,
+              termValues);  
+
+
+        //
+        // Price-to-Value using free-cash-flow per share and
+        // free-cash-flow yield 
+        //
+
 
         //
         // Equity growth
