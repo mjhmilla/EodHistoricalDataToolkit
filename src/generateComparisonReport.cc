@@ -17,7 +17,7 @@
 #include <nlohmann/json.hpp>
 #include <tclap/CmdLine.h>
 
-#include "FinancialAnalysisFunctions.h"
+#include "DataStructures.h"
 #include "JsonFunctions.h"
 #include <sciplot/sciplot.hpp>
 #include "PlottingFunctions.h"
@@ -47,20 +47,20 @@ void appendComparisonData(
     //
     double weightTotal = 0.;
     std::vector< double > metricAvg;
-    std::vector< NumericalFunctions::SummaryStatistics > summaryStatsAvg;
+    std::vector< DataStructures::SummaryStatistics > summaryStatsAvg;
 
     for(size_t indexMetric=0; 
         indexMetric<metricSummaryDataSet[indexScreen].metricRank[0].size(); 
         ++indexMetric){
 
       metricAvg.push_back(0.);
-      NumericalFunctions::SummaryStatistics summaryStats;
+      DataStructures::SummaryStatistics summaryStats;
       summaryStats.min = 0;
       summaryStats.max = 0;
       summaryStats.current = 0;
 
       for(size_t indexPercentile=0; 
-          indexPercentile<NumericalFunctions::NUM_PERCENTILES;
+          indexPercentile<NUM_PERCENTILES;
           ++indexPercentile){
         summaryStats.percentiles.push_back(0.);
       }
@@ -98,7 +98,7 @@ void appendComparisonData(
             * weight;
 
           for(size_t indexPercentile=0; 
-              indexPercentile<NumericalFunctions::NUM_PERCENTILES;
+              indexPercentile<NUM_PERCENTILES;
               ++indexPercentile){
 
             summaryStatsAvg[indexMetric].percentiles[indexPercentile] += 
@@ -119,7 +119,7 @@ void appendComparisonData(
       summaryStatsAvg[indexMetric].current = summaryStatsAvg[indexMetric].current / weightTotal; 
 
       for(size_t indexPercentile=0; 
-          indexPercentile<NumericalFunctions::NUM_PERCENTILES;
+          indexPercentile<NUM_PERCENTILES;
           ++indexPercentile){                        
         summaryStatsAvg[indexMetric].percentiles[indexPercentile] = 
           summaryStatsAvg[indexMetric].percentiles[indexPercentile] / weightTotal;
@@ -429,13 +429,13 @@ void plotComparisonReportData(
 
 
             //Evaluate the weighted average across all tickers in
-            NumericalFunctions::SummaryStatistics boxWhisker;
+            DataStructures::SummaryStatistics boxWhisker;
             boxWhisker.min=0.;
             boxWhisker.max=0.;
             boxWhisker.current=0.;
             boxWhisker.name = "";
-            boxWhisker.percentiles.resize(NumericalFunctions::NUM_PERCENTILES);
-            for(size_t i=0; i<NumericalFunctions::NUM_PERCENTILES;++i){
+            boxWhisker.percentiles.resize(NUM_PERCENTILES);
+            for(size_t i=0; i<NUM_PERCENTILES;++i){
               boxWhisker.percentiles[i]=0.;
             }
 
@@ -461,7 +461,7 @@ void plotComparisonReportData(
                                 * metricSummaryDataSet[indexScreen]
                                   .summaryStatistics[indexSorted][indexRanking].current;
 
-                for(size_t i= 0; i < NumericalFunctions::NUM_PERCENTILES;++i){
+                for(size_t i= 0; i < NUM_PERCENTILES;++i){
                   boxWhisker.percentiles[i] += weight 
                     * metricSummaryDataSet[indexScreen]
                       .summaryStatistics[indexSorted][indexRanking].percentiles[i];
@@ -474,7 +474,7 @@ void plotComparisonReportData(
             boxWhisker.max     = boxWhisker.max     / totalWeight;
             boxWhisker.current = boxWhisker.current / totalWeight;
 
-            for(size_t i=0; i<NumericalFunctions::NUM_PERCENTILES;++i){
+            for(size_t i=0; i<NUM_PERCENTILES;++i){
               boxWhisker.percentiles[i] = boxWhisker.percentiles[i] / totalWeight;
             }
 

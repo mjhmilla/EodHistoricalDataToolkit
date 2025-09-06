@@ -193,7 +193,7 @@ bool extractDatesOfClosestMatch(
 //============================================================================
 
 bool extractAnalysisDates(
-      FinancialAnalysisFunctions::AnalysisDates &analysisDates,
+      DataStructures::AnalysisDates &analysisDates,
       const nlohmann::ordered_json &fundamentalData,
       const nlohmann::ordered_json &historicalData,
       const nlohmann::ordered_json &bondData,
@@ -610,7 +610,7 @@ double getTaxRateFromTable(
 
 };
 //============================================================================
-double calcAverageTaxRate(  const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
+double calcAverageTaxRate(  const DataStructures::AnalysisDates &analysisDates,
                             const std::string& countryISO2, 
                             const TaxFoundationDataSet &corpWorldTaxTable,
                             double defaultTaxRate,                            
@@ -638,7 +638,7 @@ double calcAverageTaxRate(  const FinancialAnalysisFunctions::AnalysisDates &ana
         std::vector < double > dateSetWeight;
         if(quarterlyTTMAnalysis){
           bool validDateSet = 
-            FinancialAnalysisFunctions::extractTTM(indexDate,
+            DateFunctions::extractTTM(indexDate,
                                     analysisDates.common,
                                     "%Y-%m-%d",
                                     dateSet,
@@ -820,7 +820,7 @@ bool loadTaxFoundationDataSet(std::string &fileName,
 };
 //============================================================================
 double calcAverageInterestCover(  
-          const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
+          const DataStructures::AnalysisDates &analysisDates,
           const nlohmann::ordered_json &fundamentalData,
           double defaultInterestCover,
           const std::string &timePeriod,
@@ -851,7 +851,7 @@ double calcAverageInterestCover(
     std::vector < double > dateSetWeight;
     if(quarterlyTTMAnalysis){
       validDateSet = 
-        FinancialAnalysisFunctions::extractTTM( indexDate,
+        DateFunctions::extractTTM( indexDate,
                                               analysisDates.common,
                                               "%Y-%m-%d",
                                               dateSet,
@@ -891,7 +891,7 @@ double calcAverageInterestCover(
 };
 //============================================================================
 double calcLastValidDateIndex(
-          const FinancialAnalysisFunctions::AnalysisDates &analysisDates,
+          const DataStructures::AnalysisDates &analysisDates,
           bool quarterlyTTMAnalysis,
           int maxDayErrorTTM)
 {
@@ -912,7 +912,7 @@ double calcLastValidDateIndex(
     std::vector < double > dateSetWeight;
     if(quarterlyTTMAnalysis){
       validDateSet = 
-        FinancialAnalysisFunctions::extractTTM(indexDate,
+        DateFunctions::extractTTM(indexDate,
                                              analysisDates.common,
                                              "%Y-%m-%d",
                                              dateSet,
@@ -1686,7 +1686,7 @@ int main (int argc, char* argv[]) {
 
     std::vector< std::string > datesBondYields;
     
-    FinancialAnalysisFunctions::AnalysisDates analysisDates;
+    DataStructures::AnalysisDates analysisDates;
     bool allowRepeatedDates=false;
 
     if(validInput){   
@@ -1874,7 +1874,7 @@ int main (int argc, char* argv[]) {
 
 
       //Evaluate the growth rate using all of the data available
-      NumericalFunctions::EmpiricalGrowthDataSet empiricalGrowthDataAll;
+      DataStructures::EmpiricalGrowthDataSet empiricalGrowthDataAll;
 
       double growthIntervalInYearsAll = 
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
@@ -1882,7 +1882,7 @@ int main (int argc, char* argv[]) {
             
       bool approximateReinvestmentRate=true;
 
-      NumericalFunctions::EmpiricalGrowthSettings atoiGrowthMdlSettings;
+      DataStructures::EmpiricalGrowthSettings atoiGrowthMdlSettings;
 
       atoiGrowthMdlSettings.maxDateErrorInDays = maxDayErrorTTM;
       atoiGrowthMdlSettings.growthIntervalInYears = growthIntervalInYearsAll;
@@ -1915,7 +1915,7 @@ int main (int argc, char* argv[]) {
       //Evaluate the growth rate data over the same relatively short
       //period of time that is used for the growth period during
       //the valution (5 years)
-      NumericalFunctions::EmpiricalGrowthDataSet empiricalGrowthData;
+      DataStructures::EmpiricalGrowthDataSet empiricalGrowthData;
       
       double growthIntervalInYears = 
         static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
@@ -1958,9 +1958,9 @@ int main (int argc, char* argv[]) {
 
 
 
-      NumericalFunctions::EmpiricalGrowthModel linearPriceModel;
-      NumericalFunctions::EmpiricalGrowthModel exponentialPriceModel;
-      NumericalFunctions::EmpiricalGrowthModel priceModel;
+      DataStructures::EmpiricalGrowthModel linearPriceModel;
+      DataStructures::EmpiricalGrowthModel exponentialPriceModel;
+      DataStructures::EmpiricalGrowthModel priceModel;
 
       bool forceZeroSlope=false;
       NumericalFunctions::fitLinearGrowthModel(
@@ -2030,12 +2030,12 @@ int main (int argc, char* argv[]) {
         *Do not need to compute the growth rate of the roic
       */
       //=======================================================================
-      NumericalFunctions::MetricGrowthDataSet equityGrowthModel, 
+      DataStructures::MetricGrowthDataSet equityGrowthModel, 
                                               equityGrowthModelAvg;
       //bool includeTimeUnitInAddress = true;
       //calcOneGrowthRateForAllData = false;
 
-      NumericalFunctions::EmpiricalGrowthSettings empGrowthSettings;
+      DataStructures::EmpiricalGrowthSettings empGrowthSettings;
       empGrowthSettings.maxDateErrorInDays            = maxDayErrorTTM;
       empGrowthSettings.growthIntervalInYears         = growthIntervalInYears;
       empGrowthSettings.maxOutlierProportionInEmpiricalModel
@@ -2069,7 +2069,7 @@ int main (int argc, char* argv[]) {
         empGrowthSettings);
 
 
-      NumericalFunctions::MetricGrowthDataSet epsGrowthModel, 
+      DataStructures::MetricGrowthDataSet epsGrowthModel, 
                                               epsGrowthModelAvg;
 
       empGrowthSettings.includeTimeUnitInAddress      = false;
@@ -2098,7 +2098,7 @@ int main (int argc, char* argv[]) {
         empGrowthSettings);
 
 
-      NumericalFunctions::MetricGrowthDataSet grossProfitGrowthModel,
+      DataStructures::MetricGrowthDataSet grossProfitGrowthModel,
                                               grossProfitGrowthModelAvg;
 
       empGrowthSettings.includeTimeUnitInAddress=true;
@@ -2126,7 +2126,7 @@ int main (int argc, char* argv[]) {
         grossProfitGrowthModelAvg,
         empGrowthSettings);
 
-      NumericalFunctions::MetricGrowthDataSet fcfGrowthModel, 
+      DataStructures::MetricGrowthDataSet fcfGrowthModel, 
                                               fcfGrowthModelAvg;
 
       empGrowthSettings.includeTimeUnitInAddress=true;
@@ -2154,7 +2154,7 @@ int main (int argc, char* argv[]) {
         fcfGrowthModelAvg,
         empGrowthSettings);
 
-      NumericalFunctions::MetricGrowthDataSet revenueGrowthModel, 
+      DataStructures::MetricGrowthDataSet revenueGrowthModel, 
                                               revenueGrowthModelAvg;
 
       empGrowthSettings.includeTimeUnitInAddress=true;
@@ -2183,7 +2183,7 @@ int main (int argc, char* argv[]) {
         empGrowthSettings);
 
       //MarketCapitalizationSummaryData
-      NumericalFunctions::FinancialRatios financialRatios;
+      DataStructures::FinancialRatios financialRatios;
       
         NumericalFunctions::extractFinancialRatios(
                             fundamentalData,
@@ -2249,7 +2249,7 @@ int main (int argc, char* argv[]) {
       
         if(quarterlyTTMAnalysis){
           validDateSet = 
-            FinancialAnalysisFunctions::extractTTM( indexDate,
+            DateFunctions::extractTTM( indexDate,
                                                   analysisDates.common,
                                                   "%Y-%m-%d",
                                                   dateSet,                                    
@@ -2274,7 +2274,7 @@ int main (int argc, char* argv[]) {
         previousDateSet.resize(0);
 
         if(quarterlyTTMAnalysis){
-          validDateSet = FinancialAnalysisFunctions::extractTTM(indexPrevious,
+          validDateSet = DateFunctions::extractTTM(indexPrevious,
                                                         analysisDates.common,
                                                         "%Y-%m-%d",
                                                         previousDateSet,
@@ -2313,7 +2313,7 @@ int main (int argc, char* argv[]) {
           if(validPreviousDateSet){
             if(quarterlyTTMAnalysis){
               validPreviousDateSet = 
-                FinancialAnalysisFunctions::extractTTM(indexPastPeriods,
+                DateFunctions::extractTTM(indexPastPeriods,
                                                     analysisDates.common,
                                                     "%Y-%m-%d",
                                                     pastDateSet,
@@ -3313,7 +3313,7 @@ int main (int argc, char* argv[]) {
       //Each year gets 12 data points + the last entry gets added
       nlohmann::ordered_json priceGrowthModelJson;      
       if(priceModel.x.size()>0){
-        NumericalFunctions::EmpiricalGrowthModel priceModelDS;
+        DataStructures::EmpiricalGrowthModel priceModelDS;
         int previousMonth=0;
         double previousDate=0.;
 

@@ -15,7 +15,9 @@
 #include <nlohmann/json.hpp>
 #include <tclap/CmdLine.h>
 
-#include "FinancialAnalysisFunctions.h"
+#include "DataStructures.h"
+
+//#include "FinancialAnalysisFunctions.h"
 #include "JsonFunctions.h"
 #include <sciplot/sciplot.hpp>
 #include "PlottingFunctions.h"
@@ -80,15 +82,15 @@ void plotScreenerReportData(
         PlottingFunctions::PlotSettings subplotSettings = settings;
         subplotSettings.lineWidth = 0.5;
 
-        NumericalFunctions::SummaryStatistics groupSummary;   
+        DataStructures::SummaryStatistics groupSummary;   
         groupSummary.percentiles.resize(
-            NumericalFunctions::PercentileIndices::NUM_PERCENTILES,0.);
+            PercentileIndices::NUM_PERCENTILES,0.);
 
         double groupWeight = 0; //Tickers between indexTickerStart-indexTickerEnd
 
-        NumericalFunctions::SummaryStatistics screenSummary;   
+        DataStructures::SummaryStatistics screenSummary;   
         screenSummary.percentiles.resize(
-            NumericalFunctions::PercentileIndices::NUM_PERCENTILES,0.);
+            PercentileIndices::NUM_PERCENTILES,0.);
 
         double screenWeight= 0; //All tickers in screenDataSet
 

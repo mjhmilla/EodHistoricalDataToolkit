@@ -111,6 +111,67 @@ class DateFunctions {
 
     };
 
+    //============================================================================
+    static bool extractTTM( int indexA,
+                            const std::vector<std::string> &dateSet,
+                            const char* dateFormat, 
+                            std::vector<std::string> &dateSetTTMUpd,
+                            std::vector<double> &weightTTMUpd,
+                            int maximumTTMDateSetErrorInDays){
+
+      dateSetTTMUpd.clear();
+      //weightingTTMUpd.clear();
+
+      int indexB = indexA;
+
+      std::istringstream dateStream(dateSet[indexA]);
+      dateStream.exceptions(std::ios::failbit);
+      date::sys_days daysA;
+      dateStream >> date::parse(dateFormat,daysA);
+      
+
+      int indexPrevious = indexA;
+      date::sys_days daysPrevious = daysA;
+      int count = 0;
+      bool flagDateSetFilled = false;
+
+      int daysInAYear = 365;
+      int countError = maximumTTMDateSetErrorInDays*2.0;
+
+      while((indexB+1) < dateSet.size() 
+              && std::abs(countError) > maximumTTMDateSetErrorInDays){
+        ++indexB;
+
+        dateStream.clear();
+        dateStream.str(dateSet[indexB]);
+        dateStream.exceptions(std::ios::failbit);
+        date::sys_days daysB;
+        dateStream >> date::parse(dateFormat,daysB);
+
+        int daysInterval  = (daysPrevious-daysB).count();    
+        countError        = daysInAYear - (count+daysInterval);
+        count             += daysInterval;
+
+        dateSetTTMUpd.push_back(dateSet[indexPrevious]);
+        weightTTMUpd.push_back(static_cast<double>(daysInterval));
+        
+        daysPrevious = daysB;
+        indexPrevious=indexB;
+
+      }
+
+      for(size_t i =0; i<weightTTMUpd.size(); ++i){
+        weightTTMUpd[i] = weightTTMUpd[i] / static_cast<double>(count);
+      }
+
+
+      if( std::abs(daysInAYear-count) <= maximumTTMDateSetErrorInDays){
+        return true;
+      }else{
+        return false;
+      }
+
+    };
 
 };
 
