@@ -209,9 +209,12 @@ bool extractAnalysisDates(
   //Clear the analysis structure
   analysisDates.common.clear();
   analysisDates.financial.clear();
+  analysisDates.earningsHistory.clear();
   analysisDates.outstandingShares.clear();
   analysisDates.historical.clear();
   analysisDates.bond.clear();
+  analysisDates.indicesFinancial.clear();
+  analysisDates.indicesEarningsHistory.clear();  
   analysisDates.indicesOutstandingShares.clear();
   analysisDates.indicesHistorical.clear();
   analysisDates.indicesBond.clear();
@@ -310,6 +313,16 @@ bool extractAnalysisDates(
     }   
     validDates = (validDates && analysisDates.outstandingShares.size() > 0);
   }
+
+  if(validDates){
+    for(auto& el : fundamentalData[EARN][HIST].items()){
+      std::string date; 
+      JsonFunctions::getJsonString(el.value()["date"],date);
+      analysisDates.earningsHistory.push_back(date);
+    }   
+    validDates = (validDates && analysisDates.earningsHistory.size() > 0);
+  }
+
 
   if(validDates){
     for(auto& el: historicalData.items()){
@@ -477,6 +490,55 @@ bool extractAnalysisDates(
       }
     }
 
+  
+   if(validDates){
+      std::vector< std::string > commonAB;
+      std::vector< unsigned int> indicesA;
+
+      validDates =     
+        extractDatesOfClosestMatch(
+          analysisDates.common,
+          "%Y-%m-%d",
+          analysisDates.earningsHistory,
+          "%Y-%m-%d",
+          maxDayErrorHistoricalData,
+          commonAB,
+          indicesA,
+          analysisDates.indicesEarningsHistory,
+          allowRepeatedDates);
+
+      //Go through commonAB and common and erase any entries in common that
+      //don't exist in commonAB;
+      if(commonAB.size() < analysisDates.common.size() && validDates){
+        size_t indexA = 0;
+        while(indexA < analysisDates.common.size()){
+          std::string dateA = analysisDates.common[indexA];
+          bool found = false;
+          for(auto& dateB :commonAB){
+            if(dateA.compare(dateB) == 0){
+              found = true;
+              break;
+            }
+          }
+          if(found == false){
+            analysisDates.common.erase(
+                analysisDates.common.begin()+indexA);
+            analysisDates.indicesFinancial.erase(
+                analysisDates.indicesFinancial.begin()+indexA);
+            analysisDates.indicesHistorical.erase(
+                analysisDates.indicesHistorical.begin()+indexA);
+            analysisDates.indicesOutstandingShares.erase(
+                analysisDates.indicesOutstandingShares.begin()+indexA);
+            analysisDates.indicesBond.erase(
+                analysisDates.indicesBond.begin()+indexA);
+          }else{
+            ++indexA;
+          }        
+        }                                    
+      }
+    }
+
+
     //Check to make sure that all date and index vectors are the same
     //length. Note that they won't all necessarily have the same date
     //because some error is allowed to accomodate for the fact that
@@ -498,6 +560,10 @@ bool extractAnalysisDates(
       validDates = validDates 
         && (analysisDates.common.size()
             ==analysisDates.indicesBond.size());
+      
+      validDates = validDates 
+        && (analysisDates.common.size()
+            ==analysisDates.indicesEarningsHistory.size());
     }
 
     //Go through all of the common dates and mark which ones coincide with

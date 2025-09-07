@@ -621,6 +621,14 @@ class NumericalFunctions {
     {
       bool setNansToMissingValue = false;
 
+      std::vector< std::string > dateSetEarnings;
+
+      for(auto& el : fundamentalData[EARN][HIST]){
+        std::string dateEarnings("");
+        JsonFunctions::getJsonString(el["date"],dateEarnings);
+        dateSetEarnings.push_back(dateEarnings);
+      }      
+
       for(size_t indexDate = 0; indexDate <analysisDates.common.size(); 
                               ++indexDate){
 
@@ -684,26 +692,23 @@ class NumericalFunctions {
           
           // 1. Extract the list of dates needed to identify the TTM
           //
+          //
+          //
+
           closestDate.clear();
           smallestDateDifference=std::numeric_limits<int>::max();
 
-          int indexEarnings=0;
           int indexEarningsClosestDate=0;
-          std::vector< std::string > dateSetEarnings;
 
-          for(auto& el : fundamentalData[EARN][HIST]){
-            std::string dateEarnings("");
-            JsonFunctions::getJsonString(el["date"],dateEarnings);
+          for(int i=0; i<dateSetEarnings.size(); ++i){
             int dateDifference = 
               DateFunctions::calcDifferenceInDaysBetweenTwoDates(
-                date,"%Y-%m-%d",dateEarnings,"%Y-%m-%d");
+                date,"%Y-%m-%d",dateSetEarnings[i],"%Y-%m-%d");
             if(std::abs(dateDifference)<smallestDateDifference){
               smallestDateDifference=std::abs(dateDifference);
-              closestDate = dateEarnings;
-              indexEarningsClosestDate = indexEarnings;
+              closestDate = dateSetEarnings[i];
+              indexEarningsClosestDate = i;
             }
-            dateSetEarnings.push_back(dateEarnings);
-            ++indexEarnings;            
           }
 
           std::vector< std::string > dateSetTTM;

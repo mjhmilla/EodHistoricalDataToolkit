@@ -52,11 +52,13 @@ class DataStructures {
     struct AnalysisDates{
       std::vector< std::string > common;
       std::vector< std::string > financial;
+      std::vector< std::string > earningsHistory;
       std::vector< std::string > outstandingShares;
       std::vector< std::string > historical;
       std::vector< std::string > bond;
 
       std::vector< unsigned int > indicesFinancial;
+      std::vector< unsigned int > indicesEarningsHistory;
       std::vector< unsigned int > indicesOutstandingShares;
       std::vector< unsigned int > indicesHistorical;
       std::vector< unsigned int > indicesBond;
