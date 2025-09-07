@@ -615,6 +615,7 @@ class NumericalFunctions {
               const DataStructures::AnalysisDates &analysisDates,
               const std::string &timePeriod,
               const std::string &timePeriodOS,
+              int maximumDayErrorTTM,
               int maximumDayErrorOutstandingShareData,
               DataStructures::FinancialRatios &financialRatiosUpd)
     {
@@ -648,7 +649,7 @@ class NumericalFunctions {
 
         if(smallestDateDifference < maximumDayErrorOutstandingShareData){
           //
-          //Get the adjusted close price for this date
+          //Get the financial ratios for this date
           //
           unsigned int indexHistoricalData = 
             analysisDates.indicesHistorical[indexDate];   
@@ -677,12 +678,90 @@ class NumericalFunctions {
           double marketCapitalization = 
             adjustedClosePrice*outstandingShares;
 
+          //
+          //Evaluate P/E
+          //         
+          
+          // 1. Extract the list of dates needed to identify the TTM
+          //
+          closestDate.clear();
+          smallestDateDifference=std::numeric_limits<int>::max();
+
+          int indexEarnings=0;
+          int indexEarningsClosestDate=0;
+          std::vector< std::string > dateSetEarnings;
+
+          for(auto& el : fundamentalData[EARN][HIST]){
+            std::string dateEarnings("");
+            JsonFunctions::getJsonString(el["date"],dateEarnings);
+            int dateDifference = 
+              DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+                date,"%Y-%m-%d",dateEarnings,"%Y-%m-%d");
+            if(std::abs(dateDifference)<smallestDateDifference){
+              smallestDateDifference=std::abs(dateDifference);
+              closestDate = dateEarnings;
+              indexEarningsClosestDate = indexEarnings;
+            }
+            dateSetEarnings.push_back(dateEarnings);
+            ++indexEarnings;            
+          }
+
+          std::vector< std::string > dateSetTTM;
+          std::vector < double > weightTTM;
+          DateFunctions::extractTTM(
+                        indexEarningsClosestDate,
+                        dateSetEarnings,
+                        "%Y-%m-%d",
+                        dateSetTTM,
+                        weightTTM,
+                        maximumDayErrorTTM);
+
+          //2. Evaluate the epsActual across the TTM
+          //
+          double epsActualTTM = 0.;
+          for(size_t i=0; i< dateSetTTM.size();++i){
+            double epsActual = JsonFunctions::getJsonFloat(
+              fundamentalData[EARN][HIST][dateSetTTM[i].c_str()]["epsActual"],
+              false);        
+            epsActualTTM += epsActual;    
+          }
+
+          double pe = adjustedClosePrice/epsActualTTM;
+
+          /*
+          double netIncome = 
+            JsonFunctions::getJsonFloat(
+              fundamentalData[FIN][CF][timePeriod.c_str()][date]["netIncome"],
+              setNansToMissingValue);
+
+          double dividendsPaid = 
+            JsonFunctions::getJsonFloat(
+              fundamentalData[FIN][CF][timePeriod.c_str()][date]["dividendsPaid"],
+              false);
+          if(std::isnan(dividendsPaid)){
+            dividendsPaid=0.;
+          }
+          */
+
+          
+          /*
+          double pe = std::nan("1");
+          if( (netIncome-dividendsPaid) > 0){
+            pe = marketCapitalization / (netIncome-dividendsPaid);
+          }
+          */
+
           financialRatiosUpd.dates.push_back(date);
           financialRatiosUpd.dateNumerical.push_back(dateNumerical);
+          
           financialRatiosUpd.adjustedClosePrice.push_back(adjustedClosePrice);
           financialRatiosUpd.outstandingShares.push_back(outstandingShares);
           financialRatiosUpd.marketCapitalization.push_back(
                              marketCapitalization);
+
+          financialRatiosUpd.eps.push_back(epsActualTTM);
+          financialRatiosUpd.pe.push_back(pe);
+
         }
       }
 

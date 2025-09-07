@@ -2191,6 +2191,7 @@ int main (int argc, char* argv[]) {
                             analysisDates,
                             timePeriod,
                             timePeriodOS,
+                            maxDayErrorTTM,
                             maxDayErrorOutstandingShareData,
                             financialRatios);
       

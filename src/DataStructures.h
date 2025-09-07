@@ -183,6 +183,8 @@ class DataStructures {
       std::vector< double > adjustedClosePrice;
       std::vector< double > outstandingShares;
       std::vector< double > marketCapitalization;
+      std::vector< double > eps;
+      std::vector< double > pe;
     };
 
 
