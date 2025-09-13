@@ -1433,6 +1433,10 @@ int main (int argc, char* argv[]) {
   //report financial data on an annual basis
   double maxDateErrorInYearsInEmpiricalData = 1.5;
 
+  std::vector< double > peMarketVariation(3);
+  peMarketVariation[0]=10;
+  peMarketVariation[1]=15;
+  peMarketVariation[2]=30;
 
   //2024/8/4 
   //  Note: some fields used in the functions in the FinanacialToolkit
@@ -3081,12 +3085,10 @@ int main (int argc, char* argv[]) {
         parentName="priceToValueEpsGrowth_";
         NumericalFunctions::
           calcPriceToValueUsingEarningsPerShareGrowth(
-            fundamentalData,
-            historicalData,
             dateSet,
-            timePeriod.c_str(),
             epsGrowthModel,
             financialRatios,
+            peMarketVariation,
             discountRate,
             numberOfYearsOfGrowthForDcmValuation,
             appendTermRecord,
