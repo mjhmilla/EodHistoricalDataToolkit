@@ -90,6 +90,42 @@ class DateFunctions {
 
     }
     //==========================================================================
+    static int getIndexClosestToDate(
+                  const std::string &date, 
+                  const std::vector< std::string > &dateSet){
+
+      double dateNum = convertToFractionalYear(date);
+      double dateErrorBest = std::fabs(dateNum
+                                     -convertToFractionalYear(dateSet[0]));
+      int indexBest=0;
+      
+      for(int i=1; i<dateSet.size();++i){
+        double dateError = std::fabs(dateNum-convertToFractionalYear(dateSet[i]));
+        if(dateError<dateErrorBest){
+          indexBest=i;    
+        }
+      }
+      return indexBest;
+    };
+    //==========================================================================
+    static int getIndexClosestToDate(
+                  double dateNumerical, 
+                  const std::vector< double > &dateSetNumerical){
+
+      double dateErrorBest = std::fabs(dateNumerical-dateSetNumerical[0]);
+
+      int indexBest=0;
+      
+      for(int i=1; i<dateSetNumerical.size();++i){
+        double dateError = std::fabs(dateNumerical-dateSetNumerical[i]);
+        if(dateError<dateErrorBest){
+          indexBest=i;
+          dateErrorBest=dateError;   
+        }
+      }
+      return indexBest;
+    };
+    //==========================================================================
     static int calcDifferenceInDaysBetweenTwoDates(const std::string &dateA,
                                             const char* dateAFormat,
                                             const std::string &dateB,

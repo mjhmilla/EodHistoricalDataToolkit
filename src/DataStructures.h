@@ -169,6 +169,8 @@ class DataStructures {
       std::vector< double > percentiles;
       double min;
       double max;
+      double median;
+      double mean;
       double current;
       std::string name;
       SummaryStatistics():
@@ -181,12 +183,19 @@ class DataStructures {
     //==========================================================================
     struct FinancialRatios{
       std::vector< std::string > dates;
-      std::vector< double > dateNumerical;
+      std::vector< double > datesNumerical;
       std::vector< double > adjustedClosePrice;
       std::vector< double > outstandingShares;
       std::vector< double > marketCapitalization;
+      std::vector< double > dividendYield;
       std::vector< double > eps;
       std::vector< double > pe;
+      std::vector< double > epsGaap;
+      std::vector< double > peGaap;
+      std::vector< double > operationalLeverage;
+      std::vector< double > freeCashFlowLeverage;
+      std::vector< double > earningsLeverage;
+      
     };
 
 

@@ -57,38 +57,58 @@ class NumericalFunctions {
       bool validSummaryStatistics = true;                      
 
       if(data.size() > 0){
-      std::vector<double> dataCopy;
-      for(size_t i=0; i<data.size();++i){
-        dataCopy.push_back(data[i]);
-      }
+        std::vector<double> dataCopy(data);
+        //for(size_t i=0; i<data.size();++i){
+        //  dataCopy.push_back(data[i]);
+        //}
 
-      summary.current = std::nan("-1");
+        summary.current = std::nan("-1");
 
-      std::sort(dataCopy.begin(),dataCopy.end());
+        std::sort(dataCopy.begin(),dataCopy.end());
 
-      summary.min = dataCopy[0];
-      summary.max = dataCopy[dataCopy.size()-1];
+        summary.min = dataCopy[0];
+        summary.max = dataCopy[dataCopy.size()-1];
+        summary.median=0;
+        summary.mean = 0;
 
-      if(dataCopy.size() > 1){
-        for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
-        double idx = Percentiles[i]*(dataCopy.size()-1);
-        int indexA = std::floor(idx);
-        int indexB = std::ceil(idx);
-        double weightB = idx - static_cast<double>(indexA);
-        double weightA = 1.0-weightB;
-        double valueA = dataCopy[indexA];
-        double valueB = dataCopy[indexB];
-        double value = valueA*weightA + valueB*weightB;
-        summary.percentiles.push_back(value);
+        if(dataCopy.size() > 1){
+
+          for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
+            double idx = Percentiles[i]*(dataCopy.size()-1);
+            int indexA = std::floor(idx);
+            int indexB = std::ceil(idx);
+            double weightB = idx - static_cast<double>(indexA);
+            double weightA = 1.0-weightB;
+            double valueA = dataCopy[indexA];
+            double valueB = dataCopy[indexB];
+            double value = valueA*weightA + valueB*weightB;
+            summary.percentiles.push_back(value);
+          }
+
+          double idx = 0.5*(dataCopy.size()-1);
+          int indexA = std::floor(idx);
+          int indexB = std::ceil(idx);
+          double weightB = idx - static_cast<double>(indexA);
+          double weightA = 1.0-weightB;
+          double valueA = dataCopy[indexA];
+          double valueB = dataCopy[indexB];
+          summary.median = valueA*weightA + valueB*weightB;           
+
+          for(size_t i=0; i<dataCopy.size();++i){
+            summary.mean+=dataCopy[i];
+          }
+          summary.mean = summary.mean / static_cast<double>(dataCopy.size());
+
+        }else{
+          for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
+            summary.percentiles.push_back(dataCopy[0]);
+          }
+          summary.mean = dataCopy[0];
+          summary.median=dataCopy[0];
+          validSummaryStatistics=false;
         }
       }else{
-        for(size_t i = 0; i < PercentileIndices::NUM_PERCENTILES; ++i){
-          summary.percentiles.push_back(dataCopy[0]);
-        }
         validSummaryStatistics=false;
-      }
-      }else{
-      validSummaryStatistics=false;
       }
       return validSummaryStatistics;
     };
@@ -213,6 +233,7 @@ class NumericalFunctions {
       return (1.0 - (numerator/denominator));
 
     };
+
     //==========================================================================
     static void fitCyclicalModel(
                   const std::vector< double > &x,
@@ -633,7 +654,7 @@ class NumericalFunctions {
                               ++indexDate){
 
         std::string date     = analysisDates.common[indexDate];
-        double dateNumerical = DateFunctions::convertToFractionalYear(date);
+        double datesNumerical = DateFunctions::convertToFractionalYear(date);
 
         //
         //Go get the number of outstanding shares reported from the closest date
@@ -685,6 +706,7 @@ class NumericalFunctions {
 
           double marketCapitalization = 
             adjustedClosePrice*outstandingShares;
+ 
 
           //
           //Evaluate P/E
@@ -711,6 +733,22 @@ class NumericalFunctions {
             }
           }
 
+          int indexEarningsPrevYear=0;
+          smallestDateDifference=std::numeric_limits<int>::max();
+
+          for(int i=0; i<dateSetEarnings.size(); ++i){
+            int dateDifference = 
+              DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+                date,"%Y-%m-%d",dateSetEarnings[i],"%Y-%m-%d");
+            if(std::abs(dateDifference-365)<smallestDateDifference 
+              && dateDifference > 0){
+              smallestDateDifference=std::abs(dateDifference-365);
+              closestDate = dateSetEarnings[i];
+              indexEarningsPrevYear = i;
+            }
+          }
+
+
           std::vector< std::string > dateSetTTM;
           std::vector < double > weightTTM;
           DateFunctions::extractTTM(
@@ -721,8 +759,19 @@ class NumericalFunctions {
                         weightTTM,
                         maximumDayErrorTTM);
 
-          //2. Evaluate the epsActual across the TTM
-          //
+          std::vector< std::string > dateSetPrevTTM;
+          std::vector < double > weightPrevTTM;
+          DateFunctions::extractTTM(
+                        indexEarningsPrevYear,
+                        dateSetEarnings,
+                        "%Y-%m-%d",
+                        dateSetPrevTTM,
+                        weightPrevTTM,
+                        maximumDayErrorTTM);                        
+
+          //2. Evaluate the epsActual and PE across the TTM using the reported
+          //   values and the GAAP values
+
           double epsActualTTM = 0.;
           for(size_t i=0; i< dateSetTTM.size();++i){
             double epsActual = JsonFunctions::getJsonFloat(
@@ -731,41 +780,168 @@ class NumericalFunctions {
             epsActualTTM += epsActual;    
           }
 
-          double pe = adjustedClosePrice/epsActualTTM;
+          double peTTM = adjustedClosePrice/epsActualTTM;
 
-          /*
-          double netIncome = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][CF][timePeriod.c_str()][date]["netIncome"],
-              setNansToMissingValue);
 
-          double dividendsPaid = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][CF][timePeriod.c_str()][date]["dividendsPaid"],
-              false);
-          if(std::isnan(dividendsPaid)){
-            dividendsPaid=0.;
+          double netIncomeTTM=0;
+          double dividendsPaidTTM=0;
+          for(size_t i=0; i<dateSetTTM.size();++i){
+            double netIncome = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][CF][timePeriod.c_str()]
+                               [dateSetTTM[i].c_str()]["netIncome"],
+                                setNansToMissingValue);
+
+            double dividendsPaid = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][CF][timePeriod.c_str()]
+                                [dateSetTTM[i].c_str()]["dividendsPaid"],
+                                false);
+
+            if(std::isnan(dividendsPaid)){
+              dividendsPaid=0.;
+            }
+
+            netIncomeTTM      +=  netIncome;
+            dividendsPaidTTM  +=  dividendsPaid;          
           }
-          */
+          double epsGaapTTM = (netIncomeTTM-dividendsPaidTTM)/outstandingShares; 
+          double peGaapTTM = marketCapitalization/(netIncomeTTM-dividendsPaidTTM);          
 
+          double dividendYield = dividendsPaidTTM / marketCapitalization;
+
+          //3. Evaluate the operating leverage
+          // https://www.investopedia.com/terms/d/degreeofoperatingleverage.asp
+          double revenueTTM=0; 
+          double revenuePreviousTTM=0;
           
-          /*
-          double pe = std::nan("1");
-          if( (netIncome-dividendsPaid) > 0){
-            pe = marketCapitalization / (netIncome-dividendsPaid);
+          double operatingIncomeTTM=0; 
+          double operatingIncomePreviousTTM=0;
+
+          double fcfTTM=0; 
+          double fcfPreviousTTM=0;
+
+          double earningsTTM=0; 
+          double earningsPreviousTTM=0;
+
+          for(size_t i=0; i<dateSetTTM.size();++i){
+            double revenue = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][IS][timePeriod.c_str()]
+                               [dateSetTTM[i].c_str()]["totalRevenue"],
+                              setNansToMissingValue);
+
+            double operatingIncome = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][IS][timePeriod.c_str()]
+                               [dateSetTTM[i].c_str()]["operatingIncome"],
+                              setNansToMissingValue);              
+
+            double freeCashFlow = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][CF][timePeriod.c_str()]
+                               [dateSetTTM[i].c_str()]["freeCashFlow"],
+                              setNansToMissingValue);
+            
+            double netIncome = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][CF][timePeriod.c_str()]
+                               [dateSetTTM[i].c_str()]["netIncome"],
+                              setNansToMissingValue); 
+
+            double dividendsPaid = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][CF][timePeriod.c_str()]
+                               [dateSetTTM[i].c_str()]["dividendsPaid"],
+                              false);
+
+            if(std::isnan(dividendsPaid)){
+              dividendsPaid=0.;
+            }
+
+            operatingIncomeTTM  += operatingIncome;
+            revenueTTM          += revenue;
+            fcfTTM              += freeCashFlow;
+            earningsTTM         += (netIncome-dividendsPaid);
           }
-          */
+
+          for(size_t i=0; i<dateSetPrevTTM.size();++i){
+            double revenue = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][IS][timePeriod.c_str()]
+                               [dateSetPrevTTM[i].c_str()]["totalRevenue"],
+                              setNansToMissingValue);
+
+            double operatingIncome = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][IS][timePeriod.c_str()]
+                               [dateSetPrevTTM[i].c_str()]["operatingIncome"],
+                              setNansToMissingValue);   
+
+            double freeCashFlow = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][CF][timePeriod.c_str()]
+                               [dateSetPrevTTM[i].c_str()]["freeCashFlow"],
+                              setNansToMissingValue);
+            
+            double netIncome = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][CF][timePeriod.c_str()]
+                               [dateSetPrevTTM[i].c_str()]["netIncome"],
+                              setNansToMissingValue); 
+
+            double dividendsPaid = 
+              JsonFunctions::getJsonFloat(
+                fundamentalData[FIN][CF][timePeriod.c_str()]
+                               [dateSetPrevTTM[i].c_str()]["dividendsPaid"],
+                              false);
+
+            if(std::isnan(dividendsPaid)){
+              dividendsPaid=0.;
+            }
+
+
+            operatingIncomePreviousTTM  += operatingIncome;
+            revenuePreviousTTM          += revenue;
+            fcfPreviousTTM              += freeCashFlow;
+            earningsPreviousTTM         +=(netIncome-dividendsPaid);
+
+          }
+
+          double operatingIncomeChange  = (operatingIncomeTTM
+                                          /operatingIncomePreviousTTM)-1.0;
+          
+          double fcfChange              = (fcfTTM/fcfPreviousTTM)-1.0;
+
+          double earningsChange         = (earningsTTM/earningsPreviousTTM)-1.0;
+
+          double revenueChange          = (revenueTTM/revenuePreviousTTM)-1.0;
+
+
+
+          double operationalLeverage = operatingIncomeChange/revenueChange;
+
+          double fcfLeverage = fcfChange/revenueChange;
+
+          double earningsLeverage = earningsChange/revenueChange;
 
           financialRatiosUpd.dates.push_back(date);
-          financialRatiosUpd.dateNumerical.push_back(dateNumerical);
+          financialRatiosUpd.datesNumerical.push_back(datesNumerical);
           
           financialRatiosUpd.adjustedClosePrice.push_back(adjustedClosePrice);
           financialRatiosUpd.outstandingShares.push_back(outstandingShares);
           financialRatiosUpd.marketCapitalization.push_back(
                              marketCapitalization);
 
+          financialRatiosUpd.dividendYield.push_back(dividendYield);                             
           financialRatiosUpd.eps.push_back(epsActualTTM);
-          financialRatiosUpd.pe.push_back(pe);
+          financialRatiosUpd.pe.push_back(peTTM);
+          financialRatiosUpd.epsGaap.push_back(epsGaapTTM);
+          financialRatiosUpd.peGaap.push_back(peGaapTTM);
+          
+          financialRatiosUpd.operationalLeverage.push_back(operationalLeverage);
+          financialRatiosUpd.freeCashFlowLeverage.push_back(fcfLeverage);
+          financialRatiosUpd.earningsLeverage.push_back(earningsLeverage);
 
         }
       }
@@ -782,20 +958,7 @@ class NumericalFunctions {
                   DataStructures::MetricGrowthDataSet &metricGrowthRateUpd,
                   const DataStructures::EmpiricalGrowthSettings &settings)
     {
-      //const DataStructures::AnalysisDates &analysisDates,
-      //                  int indexLastCommonDate,
 
-      //int maxDayError,
-      //double growthIntervalInYears,
-      //double maxPropOfOutliersInExpModel,
-      //double minCycleTimeInYears,
-      //double minR2ImprovementOfCyclicalModel,
-      //bool calcOneGrowthRateForAllData,
-      //bool includeTimeUnitInAddress,
-      //int empiricalModelType
-
-      //int indexDate       = -1;
-      //bool validDate    = true;
       bool forceZeroSlopeOnLinearModel =false;    
 
 
@@ -838,42 +1001,11 @@ class NumericalFunctions {
 
 
 
-      //Extract only the valid data in the desired format: Q, Y, or TTM
-      //while( (indexDate+1) < indexLastCommonDate){
       for(size_t i =0; i < metricDatesV.size(); ++i){
         //++indexDate;
         std::string date = metricDatesV[i];
         double dateNum = metricDatesNumV[i];
         
-        //validDate=true;
-
-        /*
-        std::string dateCommon = analysisDates.common[indexDate];
-        double dateCommonNum = 
-          DateFunctions::convertToFractionalYear(dateCommon);
-        
-        //Check to see if this date is in the list of metric dates
-        std::string date("");
-        double dateNum=0.;
-        bool found=false;
-        size_t i=0;
-        while(i<metricDatesNumV.size() && !found){
-          if(std::abs(metricDatesNumV[i]-dateCommonNum) <= maxYearError){
-            date = metricDatesV[i];
-            dateNum=metricDatesNumV[i];
-            found=true;
-          }
-          ++i;
-        }
-        if(!found){
-          validDate=false;
-        }
-        */
-
-        //
-        //Eliminate dates in dateSetTTM that are not in the metric date set
-        //
-
 
         //if(validDate){         
           bool setNansToMissingValue=true;
@@ -1172,6 +1304,18 @@ class NumericalFunctions {
           if(!validDateSet){
             break;
           }     
+          double dateFront = 
+            DateFunctions::convertToFractionalYear(dateSetTTM.front());
+          double dateBack = 
+            DateFunctions::convertToFractionalYear(dateSetTTM.back());
+
+          if(dateBack > dateFront){
+            std::cerr << "Error: dateSetTTM is assumed by many functions to go"
+                         "from the most recent date at the front to the oldest"
+                         "date at the back. " << std::endl;
+            std::abort();                         
+          }
+
         }else{
           dateSetTTM.push_back(analysisDates.common[indexDate]);
         }                     
@@ -1520,12 +1664,14 @@ class NumericalFunctions {
     };
 
     //==========================================================================
-    static double calcPriceToValueUsingEarningsPerShareGrowth(
+    static void calcPriceToValueUsingEarningsPerShareGrowth(
                     const nlohmann::ordered_json &fundamentalData, 
                     const nlohmann::ordered_json &historicalData, 
                     const std::vector< std::string > &dateSet,
                     const char *timeUnit,
                     const DataStructures::MetricGrowthDataSet &epsGrowthModel,
+                    const DataStructures::FinancialRatios &financialRatios,
+                    double discountRate,
                     int numberOfYearsForTerminalValuation,
                     bool appendTermRecord,
                     bool setNansToMissingValue,
@@ -1533,10 +1679,185 @@ class NumericalFunctions {
                     std::vector< std::string> &termNames,
                     std::vector< double > &termValues)                                      
     {
-      double priceToValue = 0.;
+
+      double dateNumRecent=DateFunctions::convertToFractionalYear(dateSet[0]);
+
+      //Go get the corresponding financialRatio index
+      int idxFR = DateFunctions::getIndexClosestToDate(
+                      dateNumRecent,
+                      financialRatios.datesNumerical);
+
+      //Go get the corresponding MetricGrowthDataSet index
+      int idxGM= DateFunctions::getIndexClosestToDate(
+                                dateNumRecent,
+                                epsGrowthModel.datesNumerical);      
 
 
-      return priceToValue;
+      double eps0 = financialRatios.eps[idxFR];
+
+      DataStructures::SummaryStatistics growthStats;
+      extractSummaryStatistics(epsGrowthModel.metricGrowthRate,growthStats);
+
+      DataStructures::SummaryStatistics dividendYieldStats;
+      extractSummaryStatistics(financialRatios.dividendYield,dividendYieldStats);
+
+      DataStructures::SummaryStatistics peStats;                           
+      extractSummaryStatistics(financialRatios.pe,peStats);
+
+      double growth=epsGrowthModel.metricGrowthRate[idxGM];
+      double dividendYield = financialRatios.dividendYield[idxFR];
+
+      std::vector<double> cumPresentValue(4); //nominal, less growth, more growth
+      std::vector<double> growthVariation(4);
+      std::vector<double> dividendYieldVariation(4);
+      std::vector<double> peVariation(4);
+      std::vector< double > priceToValue(4);
+
+      for(size_t i=0; i<cumPresentValue.size();++i){
+
+        std::string nameMod("");
+        switch(i){
+          case 0:
+            {
+              growthVariation[i]        =growth;
+              dividendYieldVariation[i] =dividendYield;
+              peVariation[i]            =financialRatios.pe[idxFR];
+              if(appendTermRecord){
+                  nameMod="";
+                  termNames.push_back(parentName+"growth");
+                  termNames.push_back(parentName+"dividendYield");
+                  termNames.push_back(parentName+"pe");
+                  termValues.push_back(growthVariation[i]);
+                  termValues.push_back(dividendYieldVariation[i]);
+                  termValues.push_back(peVariation[i]);
+              }
+            } break;
+          case 1:
+            {
+              growthVariation[i]        =growthStats.percentiles[P25];
+              dividendYieldVariation[i] =dividendYieldStats.percentiles[P25];
+              peVariation[i]            =peStats.percentiles[P25];
+              if(appendTermRecord){
+                  nameMod="_P25";
+                  termNames.push_back(parentName+"growth"+nameMod);
+                  termNames.push_back(parentName+"dividendYield"+nameMod);
+                  termNames.push_back(parentName+"pe"+nameMod);
+                  termValues.push_back(growthVariation[i]);
+                  termValues.push_back(dividendYieldVariation[i]);
+                  termValues.push_back(peVariation[i]);
+              }
+
+            } break;
+          case 2:
+            {
+              growthVariation[i]        =growthStats.percentiles[P50];
+              dividendYieldVariation[i] =dividendYieldStats.percentiles[P50];
+              peVariation[i]            =peStats.percentiles[P50];
+              if(appendTermRecord){
+                  nameMod="_P50";
+                  termNames.push_back(parentName+"growth"+nameMod);
+                  termNames.push_back(parentName+"dividendYield"+nameMod);
+                  termNames.push_back(parentName+"pe"+nameMod);
+                  termValues.push_back(growthVariation[i]);
+                  termValues.push_back(dividendYieldVariation[i]);
+                  termValues.push_back(peVariation[i]);
+              }
+
+            } break;
+          case 3:
+            {
+              growthVariation[i]        =growthStats.percentiles[P75];
+              dividendYieldVariation[i] =dividendYieldStats.percentiles[P75];
+              peVariation[i]            =peStats.percentiles[P75];
+              if(appendTermRecord){
+                  nameMod="_P75";
+                  termNames.push_back(parentName+"growth"+nameMod);
+                  termNames.push_back(parentName+"dividendYield"+nameMod);
+                  termNames.push_back(parentName+"pe"+nameMod);
+                  termValues.push_back(growthVariation[i]);
+                  termValues.push_back(dividendYieldVariation[i]);
+                  termValues.push_back(peVariation[i]);
+              }
+
+            } break;
+          default:
+          {
+            std::cerr << "Error: invalid case hit in "
+                      << "calcPriceToValueUsingEarningsPerShareGrowth"
+                      << std::endl;
+            std::abort();                      
+          }
+        }
+
+        //Compute the present value
+        cumPresentValue[i] = 0.;
+        for (int j=1; j <= numberOfYearsForTerminalValuation;++j){
+          double eps = eps0*std::pow(1.0+growthVariation[i],j);
+          double dividend = eps*dividendYieldVariation[i];
+          double discountFactor= std::pow(1.0+discountRate,j);
+          double presentValue = (eps+dividend) / discountFactor;
+
+          cumPresentValue[i] += presentValue;
+
+          //The details are only outputted for the nominal case
+          if(appendTermRecord && i == 0){
+            std::stringstream ss;
+            ss << j;
+            termNames.push_back(parentName+"eps"+nameMod+"_"+ss.str());
+            termNames.push_back(parentName+"dividend"+nameMod+"_"+ss.str());
+            termNames.push_back(parentName+"discount_factor"+nameMod+"_"+ss.str());
+            termNames.push_back(parentName+"annual_present_value"+nameMod+"_"+ss.str());
+
+            termValues.push_back(eps);
+            termValues.push_back(dividend);
+            termValues.push_back(discountFactor);
+            termValues.push_back(presentValue);            
+          }
+          
+        }
+
+        if(appendTermRecord){
+          termNames.push_back(parentName+"cumulative_present_value"+nameMod);
+          termValues.push_back(cumPresentValue[i]);
+        }
+
+        double epsTerminal = eps0*std::pow(1.0+growthVariation[i],
+                                numberOfYearsForTerminalValuation);
+
+        double terminalValue = (epsTerminal*peVariation[i]);
+
+
+        double terminalDiscount = 
+          std::pow(1.+discountRate,numberOfYearsForTerminalValuation);
+
+        terminalValue = terminalValue / terminalDiscount;       
+
+        if(appendTermRecord){
+          termNames.push_back(parentName+"terminal_present_value"+nameMod);
+          termValues.push_back(terminalValue);
+        }
+
+
+        cumPresentValue[i] += terminalValue;
+
+
+        if(appendTermRecord){
+          termNames.push_back(parentName+"total_present_value"+nameMod);
+          termValues.push_back(cumPresentValue[i]);
+        }
+
+
+        priceToValue[i] = 
+          financialRatios.adjustedClosePrice[idxFR]/cumPresentValue[i];
+
+        //Compute the price to value ratio
+        if(appendTermRecord){
+          termNames.push_back(parentName+"price_to_value"+nameMod);
+          termValues.push_back(priceToValue[i]);
+        }
+
+      }
+
     };
         
     //==========================================================================

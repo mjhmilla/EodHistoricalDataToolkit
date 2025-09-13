@@ -1084,8 +1084,9 @@ int main (int argc, char* argv[]) {
   int numberOfYearsOfGrowthForDcmValuation;
   int maxDayErrorTabularData;
   bool relaxedCalculation;
-
   double matureFirmFractionOfDebtCapital=0;
+
+  double discountRate=0.;
 
   bool verbose;
 
@@ -1171,6 +1172,14 @@ int main (int argc, char* argv[]) {
       " in csv format (https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/)",
       false,"","string");
     cmd.add(corpTaxesWorldFileInput);  
+
+    TCLAP::ValueArg<double> defaultDiscountRateInput("s",
+      "discount_rate", 
+      "The discount rate used in more basic evaluation methods in which "
+      "the cost of capital is not estimated.",
+      false,0.10,"double");
+    cmd.add(defaultDiscountRateInput);  
+
 
     TCLAP::ValueArg<double> defaultRiskFreeRateInput("r",
       "default_risk_free_rate", 
@@ -1272,6 +1281,7 @@ int main (int argc, char* argv[]) {
     //defaultInflationRate= defaultInflationRateInput.getValue();
     nameOfHomeCountryISO3= nameOfHomeCountryISO3Input.getValue(); 
     corpTaxesWorldFile  = corpTaxesWorldFileInput.getValue();
+    discountRate        = defaultDiscountRateInput.getValue();
     defaultRiskFreeRate = defaultRiskFreeRateInput.getValue();
     defaultBeta         = defaultBetaInput.getValue();
     erpUSADefault       = equityRiskPremiumUSAInput.getValue();
@@ -2136,7 +2146,7 @@ int main (int argc, char* argv[]) {
 
 
       DataStructures::MetricGrowthDataSet epsGrowthModel, 
-                                              epsGrowthModelAvg;
+                                          epsGrowthModelAvg;
 
       empGrowthSettings.includeTimeUnitInAddress      = false;
       empGrowthSettings.calcOneGrowthRateForAllData   = false;  
@@ -3068,21 +3078,22 @@ int main (int argc, char* argv[]) {
         //
         // Price-to-Value using EPS and EPS growth
         //
-
-        double priceToValueUsingEPSGrowth = 
-          NumericalFunctions::
-            calcPriceToValueUsingEarningsPerShareGrowth(
-              fundamentalData,
-              historicalData,
-              dateSet,
-              timePeriod.c_str(),
-              epsGrowthModel,
-              numberOfYearsOfGrowthForDcmValuation,
-              appendTermRecord,
-              setNansToMissingValue,
-              parentName,
-              termNames,
-              termValues);  
+        parentName="priceToValueEpsGrowth_";
+        NumericalFunctions::
+          calcPriceToValueUsingEarningsPerShareGrowth(
+            fundamentalData,
+            historicalData,
+            dateSet,
+            timePeriod.c_str(),
+            epsGrowthModel,
+            financialRatios,
+            discountRate,
+            numberOfYearsOfGrowthForDcmValuation,
+            appendTermRecord,
+            setNansToMissingValue,
+            parentName,
+            termNames,
+            termValues);  
 
 
         //
