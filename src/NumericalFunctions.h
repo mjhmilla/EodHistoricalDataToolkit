@@ -1668,7 +1668,7 @@ class NumericalFunctions {
                     const std::vector< std::string > &dateSet,
                     const DataStructures::MetricGrowthDataSet &epsGrowthModel,
                     const DataStructures::FinancialRatios &financialRatios,
-                    const std::vector<double> &peMarketVariation,
+                    const std::vector<double> &peMarketVariationUpperBound,
                     double discountRate,
                     int numberOfYearsForTerminalValuation,
                     bool appendTermRecord,
@@ -1735,8 +1735,10 @@ class NumericalFunctions {
               growthVariation[i]        =growthStats.percentiles[P25];
               dividendYieldVariation[i] =dividendYieldStats.percentiles[P25];
               peVariation[i]            =peStats.percentiles[P25];
-              if(peMarketVariation.size()>=1){
-                peVariation[i]=peMarketVariation[0];
+              if(peMarketVariationUpperBound.size()>=1){
+                if(peVariation[i]> peMarketVariationUpperBound[0]){
+                  peVariation[i]=peMarketVariationUpperBound[0];
+                }
               }
               if(appendTermRecord){
                   nameMod="_P25";
@@ -1754,9 +1756,12 @@ class NumericalFunctions {
               growthVariation[i]        =growthStats.percentiles[P50];
               dividendYieldVariation[i] =dividendYieldStats.percentiles[P50];
               peVariation[i]            =peStats.percentiles[P50];
-              if(peMarketVariation.size()>=2){
-                peVariation[i]=peMarketVariation[1];
+              if(peMarketVariationUpperBound .size()>=1){
+                if(peVariation[i]> peMarketVariationUpperBound[1]){
+                  peVariation[i]=peMarketVariationUpperBound[1];
+                }
               }
+
 
               if(appendTermRecord){
                   nameMod="_P50";
@@ -1774,9 +1779,12 @@ class NumericalFunctions {
               growthVariation[i]        =growthStats.percentiles[P75];
               dividendYieldVariation[i] =dividendYieldStats.percentiles[P75];
               peVariation[i]            =peStats.percentiles[P75];
-              if(peMarketVariation.size()>=3){
-                peVariation[i]=peMarketVariation[2];
+              if(peMarketVariationUpperBound.size()>=1){
+                if(peVariation[i]> peMarketVariationUpperBound[2]){
+                  peVariation[i]=peMarketVariationUpperBound[2];
+                }
               }
+
 
               if(appendTermRecord){
                   nameMod="_P75";

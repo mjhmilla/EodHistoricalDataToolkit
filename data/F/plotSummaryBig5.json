@@ -11,79 +11,52 @@
     },
     "plots":
     {
-        "priceToValue":
+        "historicalData":
         {
             "row": 0,
             "column": 0,
-            "jsonData": "calculateData",
+            "jsonData": "historicalData",
             "address":
-            [
-                "metric_data"
-            ],
-            "fieldName": "priceToValue",
+            [],
+            "fieldName": "adjusted_close",
             "dateName": "date",
             "isArray": false,
-            "legendEntry": "Fin",
+            "legendEntry": "@PrimaryTickerLaTeX",
             "lineColor": "grey20",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
-            "yAxisLabel": "P/DCM-V",
+            "yAxisLabel": "Adjusted Close (@CurrencyCodeLaTeX)",
             "xMin": null,
             "xMax": null,
-            "yMin": 0.0,
-            "yMax": 4.0,
+            "yMin": 0,
+            "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
             "boxWhiskerPosition": -0.5
         },
-        "priceToValueEmpirical":
+        "historicalDataTrend":
         {
             "row": 0,
             "column": 0,
             "jsonData": "calculateData",
             "address":
             [
-                "metric_data"
+                "price_growth_model"
             ],
-            "fieldName": "priceToValueEmpirical",
-            "dateName": "date",
-            "isArray": false,
-            "legendEntry": "Emp",
-            "lineColor": "red",
+            "fieldName": "yTrendline",
+            "dateName": "x",
+            "isArray": true,
+            "legendEntry": "@PrimaryTickerLaTeX - trend",
+            "lineColor": "magenta",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
-            "yAxisLabel": "P/DCM-V",
+            "yAxisLabel": "Adjusted Close (@CurrencyCodeLaTeX)",
             "xMin": null,
             "xMax": null,
-            "yMin": 0.0,
-            "yMax": 4.0,
+            "yMin": 0,
+            "yMax": null,
             "useLogScale": false,
-            "boxWhiskerColor": "red",
-            "boxWhiskerPosition": -0.5
-        },
-        "priceToValueEmpiricalAvg":
-        {
-            "row": 0,
-            "column": 0,
-            "jsonData": "calculateData",
-            "address":
-            [
-                "metric_data"
-            ],
-            "fieldName": "priceToValueEmpiricalAvg",
-            "dateName": "date",
-            "isArray": false,
-            "legendEntry": "Emp Avg",
-            "lineColor": "orange",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "P/DCM-V",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": 4.0,
-            "useLogScale": false,
-            "boxWhiskerColor": "orange",
+            "boxWhiskerColor": "magenta",
             "boxWhiskerPosition": -0.5
         },
         "returnOnInvestedFinancialCapitalLessCostOfCapital":

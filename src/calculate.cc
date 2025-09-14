@@ -1433,10 +1433,10 @@ int main (int argc, char* argv[]) {
   //report financial data on an annual basis
   double maxDateErrorInYearsInEmpiricalData = 1.5;
 
-  std::vector< double > peMarketVariation(3);
-  peMarketVariation[0]=10;
-  peMarketVariation[1]=15;
-  peMarketVariation[2]=30;
+  std::vector< double > peMarketVariationUpperBound(3);
+  peMarketVariationUpperBound[0]=10;
+  peMarketVariationUpperBound[1]=15;
+  peMarketVariationUpperBound[2]=30;
 
   //2024/8/4 
   //  Note: some fields used in the functions in the FinanacialToolkit
@@ -2711,6 +2711,19 @@ int main (int argc, char* argv[]) {
         termValues.push_back(costOfCapitalMature);
 
         //======================================================================
+        // Write some of the financial ratios
+        //======================================================================
+        double dateRecent = DateFunctions::convertToFractionalYear(dateSet[0]);
+        int idxFR = DateFunctions::getIndexClosestToDate(dateRecent,
+                                    financialRatios.datesNumerical);
+
+        termNames.push_back("financialRatios_dividendYield");
+        termNames.push_back("financialRatios_operationalLeverage");
+        termNames.push_back("financialRatios_pe");
+        termValues.push_back(financialRatios.dividendYield[idxFR]);
+        termValues.push_back(financialRatios.operationalLeverage[idxFR]);
+        termValues.push_back(financialRatios.pe[idxFR]);                                    
+        //======================================================================
         //Evaluate the metrics
         //  At the moment residual cash flow and the company's valuation are
         //  most of interest. The remaining metrics are useful, however, and so,
@@ -3088,7 +3101,7 @@ int main (int argc, char* argv[]) {
             dateSet,
             epsGrowthModel,
             financialRatios,
-            peMarketVariation,
+            peMarketVariationUpperBound,
             discountRate,
             numberOfYearsOfGrowthForDcmValuation,
             appendTermRecord,
