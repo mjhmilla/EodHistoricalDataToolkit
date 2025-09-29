@@ -323,22 +323,23 @@ class FinancialAnalysisFunctions {
     static double getLongTermDebtEstimate(
                     const nlohmann::ordered_json &fundamentalData,
                     const char *timeUnit,
-                    const char *date,
+                    const char *date,                    
+                    DataStructures::DebtInfo &updDebtInfo,
                     bool setNansToMissingValue=false){
 
 
-      double longTermDebtEstimate = 
-          JsonFunctions::getJsonFloat(
-            fundamentalData[FIN][BAL][timeUnit][date]
-                           ["longTermDebt"], false);
+      getDebtInfo(fundamentalData,timeUnit,date,updDebtInfo,
+                  setNansToMissingValue);
 
+      double longTermDebtEstimate = updDebtInfo.longTermDebt;
+      updDebtInfo.id = 0;
+      updDebtInfo.info = "longTermDebt";
 
       //If longTermDebt is nan, check if longTermDebtTotal is populated
       if(!JsonFunctions::isJsonFloatValid(longTermDebtEstimate)){
-        longTermDebtEstimate = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["longTermDebtTotal"], false);
+        longTermDebtEstimate = updDebtInfo.longTermDebtTotal;
+        updDebtInfo.id = 1;
+        updDebtInfo.info = "longTermDebtTotal";
       }
 
       //  If longTermDebtTotal is not available, then try to calculate
@@ -349,83 +350,80 @@ class FinancialAnalysisFunctions {
       //  This is confusing, in my opinion, but I have to deal with it.
       //
       // https://eodhd.com/financial-academy/financial-faq/fundamentals-glossary-common-stock
-      double shortTermDebt = std::nan("1");
 
       if(!JsonFunctions::isJsonFloatValid(longTermDebtEstimate)){
 
-        double shortLongTermDebt = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["shortLongTermDebt"], false);
-
-        if(!JsonFunctions::isJsonFloatValid(shortLongTermDebt)){                            
-          shortLongTermDebt = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["shortLongTermDebtTotal"], false);
+        if(   JsonFunctions::isJsonFloatValid(updDebtInfo.shortLongTermDebtTotal) 
+           && JsonFunctions::isJsonFloatValid(updDebtInfo.shortTermDebt)){
+          longTermDebtEstimate = updDebtInfo.shortLongTermDebtTotal 
+                                - updDebtInfo.shortTermDebt;
+          updDebtInfo.id = 2;
+          updDebtInfo.info = "shortLongTermDebtTotal-shortTermDebt";
         }
-
-        shortTermDebt = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["shortTermDebt"], false);
-
-        if(!JsonFunctions::isJsonFloatValid(shortTermDebt)){
-          if(fundamentalData[FIN][BAL][timeUnit][date]
-                .contains("shortTermDebtTotal")){
-            shortTermDebt = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][BAL][timeUnit][date]
-                              ["shortTermDebtTotal"], false);
-          }
-        }
-
-        if(   JsonFunctions::isJsonFloatValid(shortLongTermDebt) 
-           && JsonFunctions::isJsonFloatValid(shortTermDebt)){
-          longTermDebtEstimate = shortLongTermDebt - shortTermDebt;
-        }
-
+        
       }
 
       if(!JsonFunctions::isJsonFloatValid(longTermDebtEstimate)){
-        double netDebt = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["netDebt"], false);
-        double cash  =
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["cash"], false);
 
-        if(    JsonFunctions::isJsonFloatValid(shortTermDebt)
-            && JsonFunctions::isJsonFloatValid(netDebt)
-            && JsonFunctions::isJsonFloatValid(cash)){
-          longTermDebtEstimate = netDebt -(shortTermDebt-cash);
+        if(   JsonFunctions::isJsonFloatValid(updDebtInfo.shortLongTermDebtTotal) 
+           && JsonFunctions::isJsonFloatValid(updDebtInfo.shortLongTermDebt)){
+          longTermDebtEstimate = updDebtInfo.shortLongTermDebtTotal 
+                                - updDebtInfo.shortLongTermDebt;
+          updDebtInfo.id = 3;
+          updDebtInfo.info = "shortLongTermDebtTotal-shortLongTermDebt";
+        }
+        
+      }
+
+
+      if(!JsonFunctions::isJsonFloatValid(longTermDebtEstimate)){
+
+        double shortTermDebt = updDebtInfo.shortTermDebt;
+        if(!JsonFunctions::isJsonFloatValid(shortTermDebt)){
+          shortTermDebt = updDebtInfo.shortLongTermDebt;
         }
 
+
+        if(    JsonFunctions::isJsonFloatValid(shortTermDebt)
+            && JsonFunctions::isJsonFloatValid(updDebtInfo.netDebt)
+            && JsonFunctions::isJsonFloatValid(updDebtInfo.cash)){
+          longTermDebtEstimate = updDebtInfo.netDebt 
+                              -(updDebtInfo.shortTermDebt-updDebtInfo.cash);
+          updDebtInfo.id=4;
+          updDebtInfo.info="netDebt-(shortTermDebt/shortLongTermDebt-cash)";                              
+        }
+
+        
         //A worse approximation
         if(     JsonFunctions::isJsonFloatValid(shortTermDebt)
-            &&  JsonFunctions::isJsonFloatValid(netDebt)
-            && !JsonFunctions::isJsonFloatValid(cash)            
+            &&  JsonFunctions::isJsonFloatValid(updDebtInfo.netDebt)
+            && !JsonFunctions::isJsonFloatValid(updDebtInfo.cash)            
             && !JsonFunctions::isJsonFloatValid(longTermDebtEstimate)){
-          longTermDebtEstimate = netDebt -(shortTermDebt);
+          longTermDebtEstimate = updDebtInfo.netDebt -(shortTermDebt);
+          updDebtInfo.id=5;
+          updDebtInfo.info="netDebt-shortTermDebt (approx.)";      
         }
 
         //An even worse approximation
         if(    !JsonFunctions::isJsonFloatValid(shortTermDebt)
-            &&  JsonFunctions::isJsonFloatValid(netDebt)
-            &&  JsonFunctions::isJsonFloatValid(cash)            
+            &&  JsonFunctions::isJsonFloatValid(updDebtInfo.netDebt)
+            &&  JsonFunctions::isJsonFloatValid(updDebtInfo.cash)            
             && !JsonFunctions::isJsonFloatValid(longTermDebtEstimate)){
-          longTermDebtEstimate = netDebt + cash;
+          longTermDebtEstimate = updDebtInfo.netDebt + updDebtInfo.cash;
+          updDebtInfo.id=6;
+          updDebtInfo.info="netDebt+cash (approx.)";
         }
 
         //The worst (?) approximation
         if(    !JsonFunctions::isJsonFloatValid(shortTermDebt)
-            &&  JsonFunctions::isJsonFloatValid(netDebt)
-            && !JsonFunctions::isJsonFloatValid(cash)            
+            &&  JsonFunctions::isJsonFloatValid(updDebtInfo.netDebt)
+            && !JsonFunctions::isJsonFloatValid(updDebtInfo.cash)            
             && !JsonFunctions::isJsonFloatValid(longTermDebtEstimate)){
-          longTermDebtEstimate = netDebt;
+          longTermDebtEstimate = updDebtInfo.netDebt;
+          updDebtInfo.id=7;
+          updDebtInfo.info="netDebt (approx.)";
         }
+        
 
       }
 
@@ -437,81 +435,110 @@ class FinancialAnalysisFunctions {
       return longTermDebtEstimate;
     }
     //==========================================================================
+    static void getDebtInfo(
+                    const nlohmann::ordered_json &fundamentalData,
+                    const char *timeUnit,
+                    const char *date,
+                    DataStructures::DebtInfo &debtInfoUpd,
+                    bool setNansToMissingValue=false){
+      
+      debtInfoUpd.shortTermDebt = 
+        JsonFunctions::getJsonFloat( 
+          fundamentalData[FIN][BAL][timeUnit][date]["shortTermDebt"], 
+          setNansToMissingValue);
+      
+      debtInfoUpd.shortLongTermDebt = 
+        JsonFunctions::getJsonFloat( 
+          fundamentalData[FIN][BAL][timeUnit][date]["shortLongTermDebt"], 
+          setNansToMissingValue);
+
+      debtInfoUpd.shortLongTermDebtTotal = 
+        JsonFunctions::getJsonFloat( 
+          fundamentalData[FIN][BAL][timeUnit][date]["shortLongTermDebtTotal"], 
+          setNansToMissingValue);
+
+      debtInfoUpd.longTermDebt = 
+        JsonFunctions::getJsonFloat( 
+          fundamentalData[FIN][BAL][timeUnit][date]["longTermDebt"], 
+          setNansToMissingValue);
+
+      debtInfoUpd.longTermDebtTotal = 
+        JsonFunctions::getJsonFloat( 
+          fundamentalData[FIN][BAL][timeUnit][date]["longTermDebtTotal"], 
+          setNansToMissingValue);
+
+      debtInfoUpd.capitalLeaseObligations = 
+      JsonFunctions::getJsonFloat( 
+                fundamentalData[FIN][BAL][timeUnit][date]["capitalLeaseObligations"], 
+                setNansToMissingValue);     
+
+      debtInfoUpd.netDebt = 
+        JsonFunctions::getJsonFloat( 
+          fundamentalData[FIN][BAL][timeUnit][date]["netDebt"], 
+          setNansToMissingValue);
+
+      debtInfoUpd.cash = 
+        JsonFunctions::getJsonFloat( 
+          fundamentalData[FIN][BAL][timeUnit][date]["cash"], 
+          setNansToMissingValue);
+
+      debtInfoUpd.id = -1;
+      debtInfoUpd.info="";
+
+    };
+    //==========================================================================
     static double getTotalDebtEstimate(
                     const nlohmann::ordered_json &fundamentalData,
                     const char *timeUnit,
                     const char *date,
+                    DataStructures::DebtInfo &debtInfoUpd,
                     bool setNansToMissingValue=false){
 
-        double totalDebtEstimate = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["shortLongTermDebt"], false);
+      getDebtInfo(fundamentalData,timeUnit,date,debtInfoUpd,
+                  setNansToMissingValue);
 
-        if(!JsonFunctions::isJsonFloatValid(totalDebtEstimate)){                            
-          totalDebtEstimate = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["shortLongTermDebtTotal"], false);
-        }
-
+      double totalDebtEstimate = debtInfoUpd.shortLongTermDebtTotal;
+      debtInfoUpd.id = 0;
+      debtInfoUpd.info="shortLongTermDebtTotal";
 
       if(!JsonFunctions::isJsonFloatValid(totalDebtEstimate)){
-
-        double shortTermDebt = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["shortTermDebt"], false);
+        double shortTermDebt  =debtInfoUpd.shortTermDebt;
+        double longTermDebt   =debtInfoUpd.longTermDebt;
 
         if(!JsonFunctions::isJsonFloatValid(shortTermDebt)){
-          if(fundamentalData[FIN][BAL][timeUnit][date]
-              .contains("shortTermDebtTotal")){
-            shortTermDebt = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][BAL][timeUnit][date]
-                              ["shortTermDebtTotal"], false);
-          }
+          shortTermDebt = debtInfoUpd.shortLongTermDebtTotal;
         }
-
-        double longTermDebt = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["longTermDebt"], false);
 
         if(!JsonFunctions::isJsonFloatValid(longTermDebt)){
-          longTermDebt = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["longTermDebtTotal"], false);
-        }        
-
-        if(   JsonFunctions::isJsonFloatValid(longTermDebt) 
-           && JsonFunctions::isJsonFloatValid(shortTermDebt)){
-          totalDebtEstimate = longTermDebt + shortTermDebt;
+          longTermDebt = debtInfoUpd.longTermDebtTotal;
         }
 
+        if( JsonFunctions::isJsonFloatValid(shortTermDebt)
+            && JsonFunctions::isJsonFloatValid(longTermDebt)){
+          totalDebtEstimate=shortTermDebt+longTermDebt;
+          debtInfoUpd.id = 1;
+          debtInfoUpd.info="longTermDebt+shortTermDebt";
+        }
+        
       }
+      
 
       if(!JsonFunctions::isJsonFloatValid(totalDebtEstimate)){
-        double netDebt = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["netDebt"], false);
-        double cash  =
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][BAL][timeUnit][date]
-                            ["cash"], false);
+        double netDebt = debtInfoUpd.netDebt;
+        double cash  = debtInfoUpd.cash;
 
+        //According to EOD, 
+        //
+        // netDebt = shortTermDebt+longTermDebt-cash
+        //
+        // and so, 
+        //
+        // totalDebt = netDebt+cash
         if(    JsonFunctions::isJsonFloatValid(netDebt)
             && JsonFunctions::isJsonFloatValid(cash)){
           totalDebtEstimate = netDebt + cash;
-        }
-
-        //A worse approximation
-        if(    JsonFunctions::isJsonFloatValid(netDebt)
-            && !JsonFunctions::isJsonFloatValid(cash)
-            && !JsonFunctions::isJsonFloatValid(totalDebtEstimate)){
-          totalDebtEstimate = netDebt;
+          debtInfoUpd.id=2;
+          debtInfoUpd.info="netDebt+cash";
         }
 
       }
@@ -777,7 +804,7 @@ class FinancialAnalysisFunctions {
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
-
+      DataStructures::DebtInfo longTermDebtInfo, totalDebtInfo;
 
       double longTermDebtEstimate = 
         FinancialAnalysisFunctions::
@@ -785,19 +812,22 @@ class FinancialAnalysisFunctions {
             jsonData,
             timeUnit,
             dateSet[0].c_str(),
+            longTermDebtInfo,
             setNansToMissingValue);
+      
 
-      double shortLongTermDebtEstimate = 
+      double totalDebtEstimate = 
         FinancialAnalysisFunctions::
           getTotalDebtEstimate(
             jsonData,
             timeUnit,
             dateSet[0].c_str(),
+            totalDebtInfo,
             setNansToMissingValue);
 
       double debtBookValue = longTermDebtEstimate;
       if(!JsonFunctions::isJsonFloatValid(debtBookValue)){
-        debtBookValue = shortLongTermDebtEstimate;
+        debtBookValue = totalDebtEstimate;
       }
 
 
@@ -855,7 +885,7 @@ class FinancialAnalysisFunctions {
         termNames.push_back(parentCategoryName+"returnOnInvestedFinancialCapital");
 
         termValues.push_back(debtBookValue);
-        termValues.push_back(shortLongTermDebtEstimate);
+        termValues.push_back(totalDebtEstimate);
         termValues.push_back(longTermDebtEstimate);
         termValues.push_back(std::nan("1"));
         termValues.push_back(totalStockholderEquity);

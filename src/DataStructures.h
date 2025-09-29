@@ -198,8 +198,78 @@ class DataStructures {
       
     };
 
+    //==========================================================================
+    /**
+      Many financial calculations depend on knowing the debt of a company. EOD
+      reports many different types of debt though not of them are populated for
+      all companies. For clairity, I'm reporting the definitions for each of 
+      these fields below using EOD's glossary
 
+      https://eodhd.com/financial-academy/financial-faq/fundamentals-glossary-common-stock
 
+      @param shortTermDebt:
+           Short-term debt refers to any debt that is due within one year or 
+           less. This may include loans, credit card balances, and other 
+           obligations that are expected to be paid off within the next 
+           12 months. For some companies, this number represents the current 
+           capital lease obligations. 
+      @param shortLongTermDebt;
+           the Short/Current Long-Term Debt (current portion of the long term 
+           debt).           
+           https://www.investopedia.com/ask/answers/06/currentportionlongtermdebt.asp
+      @param shortLongTermDebtTotal;
+           may differ between companies: 
+            longTermDebt/longTermDebtTotal 
+            +  shortTermDebt / + shortLongTermDebt 
+            / = shortLongTermDebtTotal. 
+      @param longTermDebt:
+          any debt that is due in more than one year.
+      @param longTermDebtTotal: 
+          may be same as longTermDebt for some companies, 
+          or longTermDebt + capitalLeaseObligations for others.
+      @param capitalLeaseObligations
+           long-term (non-current) amount of hire charges or rent owed by the 
+           lessee to the lessor for taking capital assets on hire under a 
+           capital lease. 
+      @param netDebt;
+            a metric that shows how much debt a company has on its balance sheet 
+            compared to its liquid assets. 
+            netDebt = shortTermDebt + longTermDebtTotal – cash.
+      @param cash;
+            the fields cash and cashAndEquivalents are interchangeable for US 
+            tickers, the latter being a later addition to the template. For 
+            other exchanges, this may differ in some cases, and “cash” will 
+            only have the cash figure      
+      @param id;       
+            A free parameter used by a method that manipulates this struct to
+            communicate which method it used to evaluate a debt-related quantity
+      @param info:
+            A free parameter used by the method to directly comment on the 
+            method it used to evaluate a debt-related quantity            
+     */
+    struct DebtInfo{
+      double shortTermDebt;
+      double shortLongTermDebt;
+      double shortLongTermDebtTotal;
+      double longTermDebt;
+      double longTermDebtTotal;
+      double capitalLeaseObligations;
+      double netDebt;
+      double cash;
+      int id;
+      std::string info;
+      DebtInfo():
+        shortTermDebt(std::nan("1")),
+        shortLongTermDebt(std::nan("1")),
+        shortLongTermDebtTotal(std::nan("1")),
+        longTermDebt(std::nan("1")),
+        longTermDebtTotal(std::nan("1")),
+        capitalLeaseObligations(std::nan("1")),
+        netDebt(std::nan("1")),
+        cash(std::nan("1")),
+        id(-1),
+        info(""){};
+    };
 
 };
 
