@@ -2556,12 +2556,14 @@ int main (int argc, char* argv[]) {
         //    fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
         //                   ["longTermDebt"]);
 
+        DataStructures::DebtInfo longTermDebtInfo;
         double longTermDebtEstimate = 
           FinancialAnalysisFunctions::
             getLongTermDebtEstimate(
               fundamentalData,
               timePeriod.c_str(),
               date.c_str(),
+              longTermDebtInfo,
               setNansToMissingValue);
 
         //======================================================================        

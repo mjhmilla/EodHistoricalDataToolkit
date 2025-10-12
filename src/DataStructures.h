@@ -239,13 +239,21 @@ class DataStructures {
             the fields cash and cashAndEquivalents are interchangeable for US 
             tickers, the latter being a later addition to the template. For 
             other exchanges, this may differ in some cases, and “cash” will 
-            only have the cash figure      
-      @param id;       
-            A free parameter used by a method that manipulates this struct to
-            communicate which method it used to evaluate a debt-related quantity
-      @param info:
-            A free parameter used by the method to directly comment on the 
-            method it used to evaluate a debt-related quantity            
+            only have the cash figure   
+      @param shortTermDebtEstimate   
+            This field contains shortTermDebt, or if the shortTermDebt field is 
+            nan, then this field contains the estimated value, evaluated using, 
+            for example, shortTermDebt = shortLongTermDebt-longTermDebt
+      @param longTermDebtEstimate   
+            This field contains longTermDebt, or if the longTermDebt field is 
+            nan, then this field contains the estimated value, evaluated using, 
+            for example, longTermDebt = shortLongTermDebt-shortTermDebt, or
+            longTermDebt = netDebt-(shortTermDebt-cash)
+      @param totalDebtEstimate
+            This field contains totalDebt, or if the totalDebt field is 
+            nan, then this field contains the estimated value, evaluated using, 
+            for example, totalDebt=shortTermDebt+longTermDebt, or
+            totalDebt = netDebt+cash, as netDebt=shortTermDebt+longTermDebt-cash
      */
     struct DebtInfo{
       double shortTermDebt;
@@ -256,6 +264,12 @@ class DataStructures {
       double capitalLeaseObligations;
       double netDebt;
       double cash;
+      double shortTermDebtEstimate;
+      std::string shortTermDebtInfo;
+      double longTermDebtEstimate;
+      std::string longTermDebtInfo;
+      double totalDebtEstimate;
+      std::string totalDebtInfo;            
       int id;
       std::string info;
       DebtInfo():
@@ -267,8 +281,9 @@ class DataStructures {
         capitalLeaseObligations(std::nan("1")),
         netDebt(std::nan("1")),
         cash(std::nan("1")),
-        id(-1),
-        info(""){};
+        shortTermDebtEstimate(std::nan("1")),
+        longTermDebtEstimate(std::nan("1")),
+        totalDebtEstimate(std::nan("1")){};
     };
 
 };
