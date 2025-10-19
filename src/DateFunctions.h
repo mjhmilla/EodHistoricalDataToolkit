@@ -186,11 +186,17 @@ class DateFunctions {
 
         int daysInterval  = (daysPrevious-daysB).count();    
         countError        = daysInAYear - (count+daysInterval);
-        count             += daysInterval;
+        count            += daysInterval;
+              
+        if(daysInterval < 0){
+          std::cerr << "Error: dates should be in reverse chronological order"
+                    << std::endl;
+          std::abort();                    
+        }
 
         dateSetTTMUpd.push_back(dateSet[indexPrevious]);
-        weightTTMUpd.push_back(static_cast<double>(daysInterval));
-        
+        weightTTMUpd.push_back(static_cast<double>(daysInterval));        
+
         daysPrevious = daysB;
         indexPrevious=indexB;
 
@@ -199,7 +205,6 @@ class DateFunctions {
       for(size_t i =0; i<weightTTMUpd.size(); ++i){
         weightTTMUpd[i] = weightTTMUpd[i] / static_cast<double>(count);
       }
-
 
       if( std::abs(daysInAYear-count) <= maximumTTMDateSetErrorInDays){
         return true;

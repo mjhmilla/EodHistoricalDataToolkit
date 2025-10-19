@@ -918,11 +918,11 @@ double calcAverageInterestCover(
     if(quarterlyTTMAnalysis){
       validDateSet = 
         DateFunctions::extractTTM( indexDate,
-                                              analysisDates.common,
-                                              "%Y-%m-%d",
-                                              dateSet,
-                                              dateSetWeight,
-                                              maxDayErrorTTM);                                     
+                                    analysisDates.common,
+                                    "%Y-%m-%d",
+                                    dateSet,
+                                    dateSetWeight,
+                                    maxDayErrorTTM);                                     
       if(!validDateSet){
         break;
       }
@@ -2330,15 +2330,16 @@ int main (int argc, char* argv[]) {
       
         if(quarterlyTTMAnalysis){
           validDateSet = 
-            DateFunctions::extractTTM( indexDate,
-                                                  analysisDates.common,
-                                                  "%Y-%m-%d",
-                                                  dateSet,                                    
-                                                  dateSetWeight,
-                                                  maxDayErrorTTM); 
+            DateFunctions::extractTTM(indexDate,
+                                      analysisDates.common,
+                                      "%Y-%m-%d",
+                                      dateSet,                                    
+                                      dateSetWeight,
+                                      maxDayErrorTTM); 
+            
           if(!validDateSet){
             break;
-          }     
+          }    
         }else{
           dateSet.push_back(date);
         }           
@@ -2356,11 +2357,11 @@ int main (int argc, char* argv[]) {
 
         if(quarterlyTTMAnalysis){
           validDateSet = DateFunctions::extractTTM(indexPrevious,
-                                                        analysisDates.common,
-                                                        "%Y-%m-%d",
-                                                        previousDateSet,
-                                                        previousDateSetWeight,
-                                                        maxDayErrorTTM); 
+                                                    analysisDates.common,
+                                                    "%Y-%m-%d",
+                                                    previousDateSet,
+                                                    previousDateSetWeight,
+                                                    maxDayErrorTTM); 
           if(!validDateSet){
             break;
           }     
@@ -2399,7 +2400,7 @@ int main (int argc, char* argv[]) {
                                                     "%Y-%m-%d",
                                                     pastDateSet,
                                                     pastDateSetWeight,
-                                                    maxDayErrorTTM); 
+                                                    maxDayErrorTTM);
             }else{
               if(indexPastPeriods < analysisDates.common.size()){
                 pastDateSet.push_back(analysisDates.common[indexPastPeriods]);
@@ -2428,7 +2429,7 @@ int main (int argc, char* argv[]) {
           }
 
           //It would be nice to replace this with a historical table of
-          //inflationd data by country.
+          //inflation data by country.
           if(riskTableFound && !std::isnan(riskTable.inflation_2019_2023)
                             && !std::isnan(riskTable.inflation_2024_2028)){
 
@@ -2547,7 +2548,33 @@ int main (int argc, char* argv[]) {
         termValues.push_back(taxRate);
         termValues.push_back(afterTaxCostOfDebt);
 
+        //======================================================================
+        //Evaluate short, long, and total debt
+        //======================================================================
+        DataStructures::DebtInfo debtInfo, previousDebtInfo;
+        std::string debtParentName = "debt_";
+        std::string previousDebtParentName = "previousDebt_";
 
+        FinancialAnalysisFunctions::getDebtInfo(  fundamentalData,
+                                                  timePeriod.c_str(),
+                                                  dateSet[0].c_str(),
+                                                  debtInfo,
+                                                  appendTermRecord,
+                                                  debtParentName,
+                                                  termNames,
+                                                  termValues,
+                                                  setNansToMissingValue);
+        
+        FinancialAnalysisFunctions::getDebtInfo(  fundamentalData,
+                                                  timePeriod.c_str(),
+                                                  previousDateSet[0].c_str(),
+                                                  previousDebtInfo,
+                                                  appendTermRecord,
+                                                  previousDebtParentName,
+                                                  termNames,
+                                                  termValues,
+                                                  setNansToMissingValue);
+        
         //======================================================================
         //Evaluate the current total short and long term debt
         //======================================================================
@@ -2556,15 +2583,6 @@ int main (int argc, char* argv[]) {
         //    fundamentalData[FIN][BAL][timePeriod.c_str()][date.c_str()]
         //                   ["longTermDebt"]);
 
-        DataStructures::DebtInfo longTermDebtInfo;
-        double longTermDebtEstimate = 
-          FinancialAnalysisFunctions::
-            getLongTermDebtEstimate(
-              fundamentalData,
-              timePeriod.c_str(),
-              date.c_str(),
-              longTermDebtInfo,
-              setNansToMissingValue);
 
         //======================================================================        
         //Evaluate the current market capitalization
@@ -2615,7 +2633,7 @@ int main (int argc, char* argv[]) {
         //Evaluate the cost of equity
         //======================================================================        
         double beta = betaUnlevered*(1.0 + 
-          (1.0-taxRate)*(longTermDebtEstimate/marketCapitalization));
+          (1.0-taxRate)*(debtInfo.longTermDebtEstimate/marketCapitalization));
 
 
         double annualCostOfEquityAsAPercentage = 
@@ -2656,7 +2674,7 @@ int main (int argc, char* argv[]) {
         termValues.push_back(taxRate);
         termValues.push_back(defaultInflationRate);
         termValues.push_back(inflation);
-        termValues.push_back(longTermDebtEstimate);
+        termValues.push_back(debtInfo.longTermDebtEstimate);
         termValues.push_back(adjustedClosePrice);
         termValues.push_back(outstandingShares);
         termValues.push_back(marketCapitalization);
@@ -2672,8 +2690,8 @@ int main (int argc, char* argv[]) {
 
         double costOfCapital = 
           (costOfEquityAsAPercentage*marketCapitalization
-          +afterTaxCostOfDebt*longTermDebtEstimate)
-          /(marketCapitalization+longTermDebtEstimate);
+          +afterTaxCostOfDebt*debtInfo.longTermDebtEstimate)
+          /(marketCapitalization+debtInfo.longTermDebtEstimate);
 
 
         termNames.push_back("costOfCapital_longTermDebt");
@@ -2684,7 +2702,7 @@ int main (int argc, char* argv[]) {
         termNames.push_back("costOfCapital_afterTaxCostOfDebt");
         termNames.push_back("costOfCapital");
 
-        termValues.push_back(longTermDebtEstimate);
+        termValues.push_back(debtInfo.longTermDebtEstimate);
         termValues.push_back(outstandingShares);
         termValues.push_back(adjustedClosePrice);
         termValues.push_back(marketCapitalization);
@@ -2798,6 +2816,7 @@ int main (int argc, char* argv[]) {
           calcDebtToCapitalizationRatio(  fundamentalData,
                                           dateSet,
                                           timePeriod.c_str(),
+                                          debtInfo,
                                           appendTermRecord,
                                           setNansToMissingValue,
                                           termNames,
@@ -2836,6 +2855,7 @@ int main (int argc, char* argv[]) {
                                 marketCapitalization, 
                                 dateSet,
                                 timePeriod.c_str(),
+                                debtInfo,
                                 appendTermRecord,                                
                                 emptyParentName,
                                 setNansToMissingValue,
@@ -2866,6 +2886,8 @@ int main (int argc, char* argv[]) {
                                      dateSet,
                                      previousDateSet,
                                      timePeriod.c_str(),
+                                     debtInfo,
+                                     previousDebtInfo,
                                      appendTermRecord,
                                      setNansToMissingValue,
                                      termNames,
@@ -2926,6 +2948,7 @@ int main (int argc, char* argv[]) {
                             dateSet,
                             timePeriod.c_str(),
                             taxRate,
+                            debtInfo,
                             appendTermRecord, 
                             emptyParentName,
                             setNansToMissingValue,
@@ -2969,6 +2992,7 @@ int main (int argc, char* argv[]) {
               dateSet,
               previousDateSet,
               timePeriod.c_str(),
+              debtInfo,
               riskFreeRate,
               costOfCapital,
               costOfCapitalMature,
@@ -3025,6 +3049,7 @@ int main (int argc, char* argv[]) {
                   dateSet,
                   previousDateSet,
                   timePeriod.c_str(),
+                  debtInfo,
                   riskFreeRate,
                   costOfCapital,
                   costOfCapitalMature,
@@ -3077,6 +3102,7 @@ int main (int argc, char* argv[]) {
                   dateSet,
                   previousDateSet,
                   timePeriod.c_str(),
+                  debtInfo,
                   riskFreeRate,
                   costOfCapital,
                   costOfCapitalMature,
