@@ -915,15 +915,15 @@ int main (int argc, char* argv[]) {
 
         bool appendedMetricData = 
             ScreenerFunctions::appendMetricData(
-                        filteredTickers[i],  
-                        fundamentalData,                 
-                        historicalData,
-                        calculateData,
-                        screenReportConfig,
-                        targetDate,
-                        maxTargetDateErrorInDays,
-                        metricDataSet,                        
-                        verbose);
+                                filteredTickers[i],  
+                                fundamentalData,                 
+                                historicalData,
+                                calculateData,
+                                screenReportConfig,
+                                targetDate,
+                                maxTargetDateErrorInDays,
+                                metricDataSet,                        
+                                verbose);
         
         if(verbose && !appendedMetricData){
           std::cout << "Skipping: " 

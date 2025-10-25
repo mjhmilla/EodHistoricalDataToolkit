@@ -1722,12 +1722,20 @@ class NumericalFunctions {
               peVariation[i]            =financialRatios.pe[idxFR];
               if(appendTermRecord){
                   nameMod="";
+                  termNames.push_back(parentName+"sharePrice");
+                  termNames.push_back(parentName+"eps");
                   termNames.push_back(parentName+"growth");
                   termNames.push_back(parentName+"dividendYield");
                   termNames.push_back(parentName+"pe");
+                  termNames.push_back(parentName+"discountRate");
+                  termNames.push_back(parentName+"years");
+                  termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
+                  termValues.push_back(eps0);
                   termValues.push_back(growthVariation[i]);
                   termValues.push_back(dividendYieldVariation[i]);
                   termValues.push_back(peVariation[i]);
+                  termValues.push_back(discountRate);
+                  termValues.push_back(numberOfYearsForTerminalValuation);
               }
             } break;
           case 1:
@@ -1742,12 +1750,17 @@ class NumericalFunctions {
               }
               if(appendTermRecord){
                   nameMod="_P25";
+                  termNames.push_back(parentName+"sharePrice"+nameMod);
+                  termNames.push_back(parentName+"eps"+nameMod);
                   termNames.push_back(parentName+"growth"+nameMod);
                   termNames.push_back(parentName+"dividendYield"+nameMod);
                   termNames.push_back(parentName+"pe"+nameMod);
+                  termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
+                  termValues.push_back(eps0);
                   termValues.push_back(growthVariation[i]);
                   termValues.push_back(dividendYieldVariation[i]);
                   termValues.push_back(peVariation[i]);
+
               }
 
             } break;
@@ -1765,9 +1778,13 @@ class NumericalFunctions {
 
               if(appendTermRecord){
                   nameMod="_P50";
+                  termNames.push_back(parentName+"sharePrice"+nameMod);
+                  termNames.push_back(parentName+"eps"+nameMod);
                   termNames.push_back(parentName+"growth"+nameMod);
                   termNames.push_back(parentName+"dividendYield"+nameMod);
                   termNames.push_back(parentName+"pe"+nameMod);
+                  termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
+                  termValues.push_back(eps0);
                   termValues.push_back(growthVariation[i]);
                   termValues.push_back(dividendYieldVariation[i]);
                   termValues.push_back(peVariation[i]);
@@ -1788,9 +1805,13 @@ class NumericalFunctions {
 
               if(appendTermRecord){
                   nameMod="_P75";
+                  termNames.push_back(parentName+"sharePrice"+nameMod);
+                  termNames.push_back(parentName+"eps"+nameMod);
                   termNames.push_back(parentName+"growth"+nameMod);
                   termNames.push_back(parentName+"dividendYield"+nameMod);
                   termNames.push_back(parentName+"pe"+nameMod);
+                  termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
+                  termValues.push_back(eps0);
                   termValues.push_back(growthVariation[i]);
                   termValues.push_back(dividendYieldVariation[i]);
                   termValues.push_back(peVariation[i]);
@@ -1847,15 +1868,19 @@ class NumericalFunctions {
         double terminalDiscount = 
           std::pow(1.+discountRate,numberOfYearsForTerminalValuation);
 
-        terminalValue = terminalValue / terminalDiscount;       
+        double terminalPresentValue = terminalValue / terminalDiscount;       
 
         if(appendTermRecord){
+          termNames.push_back(parentName+"terminal_value"+nameMod);
+          termValues.push_back(terminalValue);  
+          termNames.push_back(parentName+"terminal_discount"+nameMod);
+          termValues.push_back(terminalDiscount);        
           termNames.push_back(parentName+"terminal_present_value"+nameMod);
-          termValues.push_back(terminalValue);
+          termValues.push_back(terminalPresentValue);
         }
 
 
-        cumPresentValue[i] += terminalValue;
+        cumPresentValue[i] += terminalPresentValue;
 
 
         if(appendTermRecord){

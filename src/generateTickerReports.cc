@@ -740,6 +740,23 @@ bool generateLaTeXReport(
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "52 Week High";
+  metric.fieldNames.push_back("Technicals");
+  metric.fieldNames.push_back("52WeekHigh");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "52 Week Low";
+  metric.fieldNames.push_back("Technicals");
+  metric.fieldNames.push_back("52WeekLow");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
   metric.fileName.clear();
   metric.label.clear();
   metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
@@ -783,6 +800,45 @@ bool generateLaTeXReport(
   metric.label = "Strong Sell";
   metric.fieldNames.push_back("AnalystRatings");
   metric.fieldNames.push_back("StrongSell");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName.clear();
+  metric.label.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Shares Short";
+  metric.fieldNames.push_back("Technicals");
+  metric.fieldNames.push_back("SharesShort");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Shares Short Prior Month";
+  metric.fieldNames.push_back("Technicals");
+  metric.fieldNames.push_back("SharesShortPriorMonth");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Short Ratio";
+  metric.fieldNames.push_back("Technicals");
+  metric.fieldNames.push_back("ShortRatio");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "fundamentalData";
+  metric.label = "Short Percent";
+  metric.fieldNames.push_back("Technicals");
+  metric.fieldNames.push_back("ShortPercent");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
@@ -969,7 +1025,9 @@ bool generateLaTeXReport(
                               entryMetric.fieldNames, 
                               replaceNansWithMissingData);
 
-              latexReport << entryMetric.label << " & " << value << "\\\\" << std::endl;                          
+              latexReport << entryMetric.label << " & " 
+                          << ReportingFunctions::formatJsonEntry( value ) 
+                          << "\\\\" << std::endl;                          
             }
             break;
             case JSON_FIELD_TYPE::STRING : {
@@ -1035,7 +1093,7 @@ bool generateLaTeXReport(
 
     latexReport << "\\begin{center}" << std::endl;
     latexReport << "\\Large{\\underline{II. Supplementary Tables}} \\\\" << std::endl;
-    latexReport << "\\end{center}" << std::endl;
+    latexReport << "\\end{center}" << std::endl << std::endl;
 
 
     ReportingFunctions::appendOperatingMarginTable(
@@ -1059,6 +1117,13 @@ bool generateLaTeXReport(
       date,
       verbose);
 
+    ReportingFunctions::appendDebtTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData["metric_data"],
+      date,
+      verbose);
+
     //Append gross margin
     //Append cash conversion ratio
 
@@ -1067,7 +1132,7 @@ bool generateLaTeXReport(
     latexReport << "\\newpage" << std::endl;
 
     latexReport << "\\begin{center}" << std::endl;
-    latexReport << "\\Large{\\underline{III. Valuation Tables}} \\\\" << std::endl;
+    latexReport << "\\Large{\\underline{III. Business Valuation Tables}} \\\\" << std::endl;
     latexReport << "\\end{center}" << std::endl;
 
 
@@ -1183,7 +1248,25 @@ bool generateLaTeXReport(
 
     latexReport << "\\break"          << std::endl;
     latexReport << "\\newpage"        << std::endl;
-        
+   
+
+    jsonTableName="priceToValueEpsGrowth";
+    if(calculateData["metric_data"][date].contains(jsonTableName+"_growth")){
+
+      latexReport << "\\begin{center}" << std::endl;
+      latexReport << "\\Large{\\underline{III. Investor Earnings Valuation Tables}} \\\\" 
+                  << std::endl;                  
+      latexReport << "\\end{center}" << std::endl;
+
+      ReportingFunctions::appendEarningPerShareGrowthValuationTable(
+                              latexReport,
+                              tickerMetaData.primaryTicker,
+                              calculateData["metric_data"],
+                              date,
+                              jsonTableName,
+                              verbose);
+    }
+    
   }
 
   latexReport.close();

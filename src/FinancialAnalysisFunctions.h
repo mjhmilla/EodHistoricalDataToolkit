@@ -248,8 +248,8 @@ class FinancialAnalysisFunctions {
                     bool setNansToMissingValue=false){
 
 
-      double shortTermDebtEstimateMethod = 0.;
-      double longTermDebtEstimateMethod  = 0.; 
+      double shortTermDebtEstimateMethod = -1;
+      double longTermDebtEstimateMethod  = -1; 
 
       //Copy over all of the debt fields in EOD's records
       debtInfoUpd.shortTermDebt = 
@@ -312,6 +312,14 @@ class FinancialAnalysisFunctions {
       }else{
         bool shortTermDebtSet=false;
 
+        if(!shortTermDebtSet 
+          && JsonFunctions::isJsonFloatValid(debtInfoUpd.shortLongTermDebtTotal)){
+          debtInfoUpd.shortTermDebtEstimate = debtInfoUpd.shortLongTermDebtTotal;
+          debtInfoUpd.shortTermDebtInfo = "shortLongTermDebtTotal";
+          shortTermDebtEstimateMethod=1.;
+          shortTermDebtSet=true;
+        }
+
         if(JsonFunctions::isJsonFloatValid(debtInfoUpd.longTermDebt)
            && JsonFunctions::isJsonFloatValid(debtInfoUpd.shortLongTermDebtTotal)){
           debtInfoUpd.shortTermDebtEstimate = 
@@ -326,7 +334,7 @@ class FinancialAnalysisFunctions {
               -debtInfoUpd.capitalLeaseObligations;
             debtInfoUpd.shortTermDebtInfo.append("-capitalLeaseObligations");
           }
-          shortTermDebtEstimateMethod=1.;
+          shortTermDebtEstimateMethod=2.;
           shortTermDebtSet=true;
         }
 
@@ -337,17 +345,10 @@ class FinancialAnalysisFunctions {
           debtInfoUpd.shortTermDebtEstimate = 
             debtInfoUpd.netDebt-(debtInfoUpd.longTermDebt-debtInfoUpd.cash);
           debtInfoUpd.shortTermDebtInfo = "netDebt-(longTermDebt-cash)";
-          shortTermDebtEstimateMethod=2.;
-          shortTermDebtSet=true;
-        }
-
-        if(!shortTermDebtSet 
-          && JsonFunctions::isJsonFloatValid(debtInfoUpd.shortLongTermDebtTotal)){
-          debtInfoUpd.shortTermDebtEstimate = debtInfoUpd.shortLongTermDebtTotal;
-          debtInfoUpd.shortTermDebtInfo = "shortLongTermDebtTotal";
           shortTermDebtEstimateMethod=3.;
           shortTermDebtSet=true;
         }
+
 
       }
 
@@ -357,6 +358,22 @@ class FinancialAnalysisFunctions {
         longTermDebtEstimateMethod=0.;
       }else{
         bool longTermDebtSet=false;
+
+        if(!longTermDebtSet 
+          && JsonFunctions::isJsonFloatValid(debtInfoUpd.longTermDebtTotal)){
+          
+          debtInfoUpd.longTermDebtEstimate = debtInfoUpd.longTermDebtTotal;
+          debtInfoUpd.longTermDebtInfo = "longTermDebtTotal";
+          
+          if(JsonFunctions::isJsonFloatValid(debtInfoUpd.capitalLeaseObligations)){
+            debtInfoUpd.longTermDebtEstimate = 
+              debtInfoUpd.longTermDebtEstimate
+              -debtInfoUpd.capitalLeaseObligations;
+            debtInfoUpd.longTermDebtInfo.append("-capitalLeaseObligations");
+          }
+          longTermDebtEstimateMethod=1.;
+          longTermDebtSet=true;
+        }
 
         if(JsonFunctions::isJsonFloatValid(debtInfoUpd.shortTermDebtEstimate)
            && JsonFunctions::isJsonFloatValid(debtInfoUpd.shortLongTermDebtTotal)){
@@ -373,7 +390,7 @@ class FinancialAnalysisFunctions {
               -debtInfoUpd.capitalLeaseObligations;
             debtInfoUpd.longTermDebtInfo.append("-capitalLeaseObligations");
           }
-          longTermDebtEstimateMethod=1.;
+          longTermDebtEstimateMethod=2.;
           longTermDebtSet=true;
         }
         
@@ -385,25 +402,11 @@ class FinancialAnalysisFunctions {
           debtInfoUpd.longTermDebtEstimate = 
             debtInfoUpd.netDebt -(debtInfoUpd.shortTermDebtEstimate-debtInfoUpd.cash);
           debtInfoUpd.info="netDebt-(shortTermDebtEstimate-cash)";                              
-          longTermDebtEstimateMethod=2.;
-          longTermDebtSet=true;
-        }
-        
-        if(!longTermDebtSet 
-          && JsonFunctions::isJsonFloatValid(debtInfoUpd.longTermDebtTotal)){
-          
-          debtInfoUpd.longTermDebtEstimate = debtInfoUpd.longTermDebtTotal;
-          debtInfoUpd.longTermDebtInfo = "longTermDebtTotal";
-          
-          if(JsonFunctions::isJsonFloatValid(debtInfoUpd.capitalLeaseObligations)){
-            debtInfoUpd.longTermDebtEstimate = 
-              debtInfoUpd.longTermDebtEstimate
-              -debtInfoUpd.capitalLeaseObligations;
-            debtInfoUpd.longTermDebtInfo.append("-capitalLeaseObligations");
-          }
           longTermDebtEstimateMethod=3.;
           longTermDebtSet=true;
         }
+        
+
 
       }
 
@@ -421,6 +424,7 @@ class FinancialAnalysisFunctions {
       if(appendTermRecord){
         termNames.push_back(parentCategoryName+"shortTermDebt");
         termNames.push_back(parentCategoryName+"shortLongTermDebt");
+        termNames.push_back(parentCategoryName+"shortLongTermDebtTotal");
         termNames.push_back(parentCategoryName+"longTermDebt");
         termNames.push_back(parentCategoryName+"longTermDebtTotal");
         termNames.push_back(parentCategoryName+"capitalLeaseObligations");
@@ -434,6 +438,7 @@ class FinancialAnalysisFunctions {
 
         termValues.push_back(debtInfoUpd.shortTermDebt);
         termValues.push_back(debtInfoUpd.shortLongTermDebt);
+        termValues.push_back(debtInfoUpd.shortLongTermDebtTotal);
         termValues.push_back(debtInfoUpd.longTermDebt);
         termValues.push_back(debtInfoUpd.longTermDebtTotal);
         termValues.push_back(debtInfoUpd.capitalLeaseObligations);

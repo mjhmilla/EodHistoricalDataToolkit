@@ -365,14 +365,6 @@ static void appendResidualCashflowToEnterpriseValueTable(
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["enterpriseValue_debtBookValue"],true))
                 << " \\\\" << std::endl;     
-    latexReport << "\\qquad Short-long term debt entry& "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["enterpriseValue_shortLongTermDebtTotal"],true))
-                << " \\\\" << std::endl; 
-    latexReport << "\\qquad Long term debt entry & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["enterpriseValue_longTermDebt"],true))
-                << " \\\\" << std::endl; 
     latexReport << "$C$. Cash \\& Equivalents & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["enterpriseValue_cashAndEquivalentsEntry"],true))
@@ -426,6 +418,128 @@ static void appendResidualCashflowToEnterpriseValueTable(
                     << "\\bigskip" << std::endl<< std::endl;                      
 
     }                
+};
+//==============================================================================
+static void appendDebtTable(
+                std::ofstream &latexReport, 
+                const std::string &primaryTicker, 
+                const nlohmann::ordered_json &calculateData,
+                const std::string &date,
+                bool verbose)
+{
+    if(calculateData[date].contains("debt_totalDebtEstimate")){
+        latexReport << "\\begin{tabular}{l l}" << std::endl;
+        latexReport << "\\hline \\multicolumn{2}{c}{Debt} \\\\" 
+                    << std::endl;
+        latexReport << "\\hline " << std::endl;                    
+        latexReport << "$A$. Short Term Debt & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_shortTermDebt"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$B$. Short-Long Term Debt & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_shortLongTermDebt"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$C$. Long Term Debt & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_longTermDebt"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$D$. Long Term Debt Total & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_longTermDebtTotal"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$E$. Short Long Term Debt Total & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_shortLongTermDebtTotal"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$F$. Capital Lease Obligations & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_capitalLeaseObligations"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$G$. Net Debt & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_netDebt"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$H$. Cash & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_cash"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "\\hline $I$. Short Term Debt Estimate & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_shortTermDebtEstimate"],true))
+                    << " \\\\" << std::endl;
+        double iDbl = JsonFunctions::getJsonFloat(
+                calculateData[date]["debt_shortTermDebtEstimateMethod"],true);
+        int i = static_cast<int>(std::round(iDbl));
+        switch(i){
+            case 0:{
+                latexReport << "\\multicolumn{2}{c}{ $I = A$} \\\\" 
+                            << std::endl;  
+                break;
+            };
+            case 1:{
+                latexReport << "\\multicolumn{2}{c}{ $I = B$} \\\\" 
+                            << std::endl;  
+                break;
+            };            
+            case 2:{
+                latexReport << "\\multicolumn{2}{c}{ $I = E-C-F$} \\\\" 
+                            << std::endl;  
+                break;
+            };
+            case 3:{
+                latexReport << "\\multicolumn{2}{c}{ $I = G-(C-H)$} \\\\" 
+                            << std::endl;  
+                break;
+            };
+            default:{
+                latexReport << "\\multicolumn{2}{c}{ Cannot compute} \\\\" 
+                            << std::endl;  
+            }
+        };               
+        latexReport << "$J$. Long Term Debt Estimate & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_longTermDebtEstimate"],true))
+                    << " \\\\" << std::endl;
+        iDbl = JsonFunctions::getJsonFloat(
+                calculateData[date]["debt_longTermDebtEstimateMethod"],true);
+        i = static_cast<int>(std::round(iDbl));
+        switch(i){
+            case 0:{
+                latexReport << "\\multicolumn{2}{c}{ $J = C$} \\\\" 
+                            << std::endl;  
+                break;                            
+            }; 
+            case 1:{
+                latexReport << "\\multicolumn{2}{c}{ $J = D$} \\\\" 
+                            << std::endl;  
+                break;                            
+            };            
+            case 2:{
+                latexReport << "\\multicolumn{2}{c}{ $J = E-I-F$} \\\\" 
+                            << std::endl;  
+                break;                            
+            };
+            case 3:{
+                latexReport << "\\multicolumn{2}{c}{ $J = G-(I-H)$} \\\\" 
+                            << std::endl;  
+                break;                            
+            };
+            default:{
+                latexReport << "\\multicolumn{2}{c}{ Cannot compute} \\\\" 
+                            << std::endl;  
+            }
+        };   
+        latexReport << "$K$. Total Debt Estimate & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date]["debt_totalDebtEstimate"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "\\multicolumn{2}{c}{ $K = I+J$} \\\\" 
+                    << std::endl;  
+
+        latexReport << "\\end{tabular}" << std::endl 
+                    << "\\bigskip" << std::endl<< std::endl;  
+    }
 };
 
 //==============================================================================
@@ -824,7 +938,7 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
               << std::endl;
 
   latexReport << "\\multicolumn{2}{c}{"<<  date <<"} \\\\" << std::endl;
-  latexReport << "\\hline \\multicolumn{2}{c}{Part 1: After-tax cost of debt} \\\\" 
+  latexReport << "\\hline \\multicolumn{2}{c}{Part 1: After-tax cost of debt \\& equity} \\\\" 
                   << std::endl;
   latexReport << "\\hline ";
 
@@ -1099,14 +1213,6 @@ static void appendReturnOnInvestedCapitalTableForValuation(std::ofstream &latexR
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["returnOnInvestedFinancialCapital_debtBookValue"],true))
                 << " \\\\" << std::endl; 
-    latexReport << "\\qquad short-long term debt entry & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["returnOnInvestedFinancialCapital_shortLongTermDebt"],true))
-                << " \\\\" << std::endl; 
-    latexReport << "\\qquad long term debt entry & "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date]["returnOnInvestedFinancialCapital_longTermDebt"],true))
-                << " \\\\" << std::endl; 
     latexReport << "$B_6$. Total stock holder equity & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["returnOnInvestedFinancialCapital_totalStockholderEquity"],true),3,
@@ -1157,14 +1263,153 @@ static void appendOperatingIncomeGrowthTableForValuation(std::ofstream &latexRep
 
 };
 //==============================================================================
-static int appendValuationTable(std::ofstream &latexReport, 
-                           const std::string &primaryTicker, 
-                           const nlohmann::ordered_json &calculateData,
-                           const std::string &date,
-                           int tableId,
-                           const std::string &tableTitle,
-                           const std::string &jsonTableName,
-                           bool verbose){
+static void appendEarningPerShareGrowthValuationTable(
+                std::ofstream &latexReport, 
+                const std::string &primaryTicker, 
+                const nlohmann::ordered_json &calculateData,
+                const std::string &date,
+                const std::string &jsonTableName,
+                bool verbose){
+
+    if(calculateData[date].contains(jsonTableName+"_price_to_value")){
+        latexReport << "\\begin{tabular}{l l}" << std::endl;
+        latexReport << "\\hline \\multicolumn{2}{c}{Nominal valuation "
+                    << "using " << date << " data " 
+                    <<"} \\\\" 
+                    << std::endl; 
+
+        latexReport << "\\multicolumn{2}{c}{Common Inputs} \\\\" 
+                    << std::endl; 
+        latexReport << "\\hline " << std::endl;      
+
+        latexReport << "$A.$ Share price & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_sharePrice"],true))
+                    << " \\\\" << std::endl;        
+        latexReport << "$B.$ EPS & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_eps"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$C.$ EPS Growth & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_growth"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$D.$ Dividend Yield & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_dividendYield"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$E.$ P/E & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_pe"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$F.$ Discount Rate & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_discountRate"],true))
+                    << " \\\\" << std::endl;
+        latexReport << "$G.$ Years of growth & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_years"],true))
+                    << " \\\\" << std::endl;
+
+        latexReport << "\\hline\\multicolumn{2}{c}{DCF Cashflows} \\\\" 
+                    << std::endl;                     
+                    
+        std::vector<std::string> yearMod;
+        double yearsDbl = JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_years"],true);
+        int years = static_cast<int>(yearsDbl);
+        for(int i=0; i<years;++i){
+            std::stringstream ss;
+            ss << i+1;
+            yearMod.push_back("_"+ss.str());
+        }                        
+        int idxLast = years-1;
+
+
+        for(size_t i=0; i<yearMod.size(); ++i){
+            latexReport << "\\hline " << std::endl;      
+            latexReport << "Year & " << (i+1) << " \\\\" << std::endl;
+            latexReport << "EPS & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_eps"+yearMod[i]],true))
+                    << " \\\\" << std::endl;            
+            latexReport << "Dividend & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_dividend"+yearMod[i]],true))
+                    << " \\\\" << std::endl;            
+            latexReport << "Discount factor & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_discount_factor"+yearMod[i]],true))
+                    << " \\\\" << std::endl;            
+            latexReport << "Discounted value & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_annual_present_value"+yearMod[i]],true))
+                    << " \\\\" << std::endl;            
+        }
+        latexReport << "\\hline " << std::endl;      
+        latexReport << "Total discounted value & "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date][jsonTableName+"_cumulative_present_value"],true))
+                << " \\\\" << std::endl;            
+
+        latexReport << " &  \\\\" << std::endl; 
+        latexReport << "\\hline " << std::endl;                     
+        latexReport << "Terminal EPS & "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date][jsonTableName+"_eps"+yearMod[idxLast]],true))
+                << " \\\\" << std::endl;            
+        latexReport << "Terminal P/E & "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date][jsonTableName+"_pe"],true))
+                << " \\\\" << std::endl;            
+        latexReport << "Terminal share price & "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date][jsonTableName+"_terminal_value"],true))
+                << " \\\\" << std::endl;   
+        latexReport << "Discount factor & "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date][jsonTableName+"_terminal_discount"],true))
+                << " \\\\" << std::endl;   
+        latexReport << "Discounted terminal share price & "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date][jsonTableName+"_terminal_present_value"],true))
+                << " \\\\" << std::endl;   
+        latexReport << " &  \\\\" << std::endl; 
+        latexReport << "\\hline " << std::endl;                     
+        latexReport << "Total present value & "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date][jsonTableName+"_total_present_value"],true))
+                << " \\\\" << std::endl;            
+        latexReport << "Share price & "
+                    << formatJsonEntry(JsonFunctions::getJsonFloat(
+                        calculateData[date][jsonTableName+"_sharePrice"],true))
+                    << " \\\\" << std::endl;        
+        latexReport << "\\textbf{Price to value} & "
+                << formatJsonEntry(JsonFunctions::getJsonFloat(
+                    calculateData[date][jsonTableName+"_price_to_value"],true))
+                << " \\\\" << std::endl;            
+        latexReport << "\\end{tabular}" << " \\\\" << std::endl;
+
+        std::vector< std::string > growthMod;                    
+        growthMod.push_back("_P25");
+        growthMod.push_back("_P50");
+        growthMod.push_back("_P75");
+            
+    }
+
+
+
+};
+//==============================================================================
+static int appendValuationTable(
+                std::ofstream &latexReport, 
+                const std::string &primaryTicker, 
+                const nlohmann::ordered_json &calculateData,
+                const std::string &date,
+                int tableId,
+                const std::string &tableTitle,
+                const std::string &jsonTableName,
+                bool verbose){
 
 
   if(calculateData[date].contains(jsonTableName+"_riskFreeRate")){
@@ -1335,19 +1580,10 @@ static int appendValuationTable(std::ofstream &latexReport,
                 << " \\\\" << std::endl; 
     latexReport << "(from majority stake) &  "
                 << " \\\\" << std::endl; 
-    latexReport << "$D_{" << tableId << "}$. Short and long term debt  &  "
+    latexReport << "$D_{" << tableId << "}$. Total debt estimate entry &  "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_shortLongTermDebtTotalEntry"],true))
+                    calculateData[date][jsonTableName+"_totalDebtEstimate"],true))
                 << " \\\\" << std::endl;                 
-    latexReport << "\\qquad Short and long term debt entry &  "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_shortLongTermDebtTotal"],true))
-                << " \\\\" << std::endl;                 
-    latexReport << "\\qquad long term debt entry &  "
-                << formatJsonEntry(JsonFunctions::getJsonFloat(
-                    calculateData[date][jsonTableName+"_longTermDebt"],true))
-                << " \\\\" << std::endl;                 
-
     latexReport << "$E_{" << tableId << "}$. Potential liabilities  & ? "
                 << " \\\\" << std::endl; 
     latexReport << "(underfunded pension, lawsuits ...) &  "
