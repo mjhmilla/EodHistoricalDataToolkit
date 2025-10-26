@@ -1244,17 +1244,16 @@ bool generateLaTeXReport(
                             empTableTitle,
                             verbose);
     }
-    latexReport << "\\end{multicols}" << std::endl;
 
     latexReport << "\\break"          << std::endl;
     latexReport << "\\newpage"        << std::endl;
    
 
     jsonTableName="priceToValueEpsGrowth";
-    if(calculateData["metric_data"][date].contains(jsonTableName+"_growth")){
+    if(calculateData["metric_data"][date].contains(jsonTableName+"_equityGrowth")){
 
       latexReport << "\\begin{center}" << std::endl;
-      latexReport << "\\Large{\\underline{III. Investor Earnings Valuation Tables}} \\\\" 
+      latexReport << "\\Large{\\underline{IV. Investor Earnings Valuation Tables}} \\\\" 
                   << std::endl;                  
       latexReport << "\\end{center}" << std::endl;
 
@@ -1268,7 +1267,7 @@ bool generateLaTeXReport(
     }
     
   }
-
+  latexReport << "\\end{multicols}" << std::endl;
   latexReport.close();
 
   if(verbose){

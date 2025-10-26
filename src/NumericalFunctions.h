@@ -1666,7 +1666,7 @@ class NumericalFunctions {
     //==========================================================================
     static void calcPriceToValueUsingEarningsPerShareGrowth(
                     const std::vector< std::string > &dateSet,
-                    const DataStructures::MetricGrowthDataSet &epsGrowthModel,
+                    const DataStructures::MetricGrowthDataSet &equityGrowthModel,
                     const DataStructures::FinancialRatios &financialRatios,
                     const std::vector<double> &peMarketVariationUpperBound,
                     double discountRate,
@@ -1688,13 +1688,13 @@ class NumericalFunctions {
       //Go get the corresponding MetricGrowthDataSet index
       int idxGM= DateFunctions::getIndexClosestToDate(
                                 dateNumRecent,
-                                epsGrowthModel.datesNumerical);      
+                                equityGrowthModel.datesNumerical);      
 
 
       double eps0 = financialRatios.eps[idxFR];
 
       DataStructures::SummaryStatistics growthStats;
-      extractSummaryStatistics(epsGrowthModel.metricGrowthRate,growthStats);
+      extractSummaryStatistics(equityGrowthModel.metricGrowthRate,growthStats);
 
       DataStructures::SummaryStatistics dividendYieldStats;
       extractSummaryStatistics(financialRatios.dividendYield,dividendYieldStats);
@@ -1702,7 +1702,7 @@ class NumericalFunctions {
       DataStructures::SummaryStatistics peStats;                           
       extractSummaryStatistics(financialRatios.pe,peStats);
 
-      double growth=epsGrowthModel.metricGrowthRate[idxGM];
+      double growth=equityGrowthModel.metricGrowthRate[idxGM];
       double dividendYield = financialRatios.dividendYield[idxFR];
 
       std::vector<double> cumPresentValue(4); //nominal, less growth, more growth
@@ -1724,7 +1724,7 @@ class NumericalFunctions {
                   nameMod="";
                   termNames.push_back(parentName+"sharePrice");
                   termNames.push_back(parentName+"eps");
-                  termNames.push_back(parentName+"growth");
+                  termNames.push_back(parentName+"equityGrowth");
                   termNames.push_back(parentName+"dividendYield");
                   termNames.push_back(parentName+"pe");
                   termNames.push_back(parentName+"discountRate");
@@ -1752,7 +1752,7 @@ class NumericalFunctions {
                   nameMod="_P25";
                   termNames.push_back(parentName+"sharePrice"+nameMod);
                   termNames.push_back(parentName+"eps"+nameMod);
-                  termNames.push_back(parentName+"growth"+nameMod);
+                  termNames.push_back(parentName+"equityGrowth"+nameMod);
                   termNames.push_back(parentName+"dividendYield"+nameMod);
                   termNames.push_back(parentName+"pe"+nameMod);
                   termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
@@ -1780,7 +1780,7 @@ class NumericalFunctions {
                   nameMod="_P50";
                   termNames.push_back(parentName+"sharePrice"+nameMod);
                   termNames.push_back(parentName+"eps"+nameMod);
-                  termNames.push_back(parentName+"growth"+nameMod);
+                  termNames.push_back(parentName+"equityGrowth"+nameMod);
                   termNames.push_back(parentName+"dividendYield"+nameMod);
                   termNames.push_back(parentName+"pe"+nameMod);
                   termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
@@ -1807,7 +1807,7 @@ class NumericalFunctions {
                   nameMod="_P75";
                   termNames.push_back(parentName+"sharePrice"+nameMod);
                   termNames.push_back(parentName+"eps"+nameMod);
-                  termNames.push_back(parentName+"growth"+nameMod);
+                  termNames.push_back(parentName+"equityGrowth"+nameMod);
                   termNames.push_back(parentName+"dividendYield"+nameMod);
                   termNames.push_back(parentName+"pe"+nameMod);
                   termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
@@ -1833,7 +1833,7 @@ class NumericalFunctions {
           double eps = eps0*std::pow(1.0+growthVariation[i],j);
           double dividend = eps*dividendYieldVariation[i];
           double discountFactor= std::pow(1.0+discountRate,j);
-          double presentValue = (eps+dividend) / discountFactor;
+          double presentValue = (dividend) / discountFactor;
 
           cumPresentValue[i] += presentValue;
 
@@ -1844,7 +1844,7 @@ class NumericalFunctions {
             termNames.push_back(parentName+"eps"+nameMod+"_"+ss.str());
             termNames.push_back(parentName+"dividend"+nameMod+"_"+ss.str());
             termNames.push_back(parentName+"discount_factor"+nameMod+"_"+ss.str());
-            termNames.push_back(parentName+"annual_present_value"+nameMod+"_"+ss.str());
+            termNames.push_back(parentName+"dividend_present_value"+nameMod+"_"+ss.str());
 
             termValues.push_back(eps);
             termValues.push_back(dividend);
@@ -1855,7 +1855,7 @@ class NumericalFunctions {
         }
 
         if(appendTermRecord){
-          termNames.push_back(parentName+"cumulative_present_value"+nameMod);
+          termNames.push_back(parentName+"cumulative_dividend_present_value"+nameMod);
           termValues.push_back(cumPresentValue[i]);
         }
 
@@ -1871,6 +1871,10 @@ class NumericalFunctions {
         double terminalPresentValue = terminalValue / terminalDiscount;       
 
         if(appendTermRecord){
+          termNames.push_back(parentName+"terminal_eps"+nameMod);
+          termValues.push_back(epsTerminal);  
+          termNames.push_back(parentName+"terminal_pe"+nameMod);
+          termValues.push_back(peVariation[i]);  
           termNames.push_back(parentName+"terminal_value"+nameMod);
           termValues.push_back(terminalValue);  
           termNames.push_back(parentName+"terminal_discount"+nameMod);

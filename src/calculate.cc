@@ -3127,7 +3127,7 @@ int main (int argc, char* argv[]) {
         NumericalFunctions::
           calcPriceToValueUsingEarningsPerShareGrowth(
             dateSet,
-            epsGrowthModel,
+            equityGrowthModel,
             financialRatios,
             peMarketVariationUpperBound,
             discountRate,
