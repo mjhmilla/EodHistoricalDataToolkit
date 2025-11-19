@@ -112,15 +112,18 @@ class DateFunctions {
                   double dateNumerical, 
                   const std::vector< double > &dateSetNumerical){
 
-      double dateErrorBest = std::fabs(dateNumerical-dateSetNumerical[0]);
 
-      int indexBest=0;
+      int indexBest=-1;
       
-      for(int i=1; i<dateSetNumerical.size();++i){
-        double dateError = std::fabs(dateNumerical-dateSetNumerical[i]);
-        if(dateError<dateErrorBest){
-          indexBest=i;
-          dateErrorBest=dateError;   
+      if(dateSetNumerical.size() > 0){
+        indexBest=0;
+        double dateErrorBest = std::fabs(dateNumerical-dateSetNumerical[0]);
+        for(int i=1; i<dateSetNumerical.size();++i){
+          double dateError = std::fabs(dateNumerical-dateSetNumerical[i]);
+          if(dateError<dateErrorBest){
+            indexBest=i;
+            dateErrorBest=dateError;   
+          }
         }
       }
       return indexBest;
@@ -156,7 +159,7 @@ class DateFunctions {
                             int maximumTTMDateSetErrorInDays){
 
       dateSetTTMUpd.clear();
-      //weightingTTMUpd.clear();
+      weightTTMUpd.clear();
 
       int indexB = indexA;
 
@@ -175,7 +178,8 @@ class DateFunctions {
       int countError = maximumTTMDateSetErrorInDays*2.0;
 
       while((indexB+1) < dateSet.size() 
-              && std::abs(countError) > maximumTTMDateSetErrorInDays){
+              && countError > maximumTTMDateSetErrorInDays 
+              && count <= daysInAYear){
         ++indexB;
 
         dateStream.clear();

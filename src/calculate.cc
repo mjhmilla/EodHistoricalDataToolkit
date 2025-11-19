@@ -2734,15 +2734,21 @@ int main (int argc, char* argv[]) {
         // Write some of the financial ratios
         //======================================================================
         double dateRecent = DateFunctions::convertToFractionalYear(dateSet[0]);
-        int idxFR = DateFunctions::getIndexClosestToDate(dateRecent,
-                                    financialRatios.datesNumerical);
+        bool validFinancialRatios = financialRatios.datesNumerical.size() > 0;
 
-        termNames.push_back("financialRatios_dividendYield");
-        termNames.push_back("financialRatios_operationalLeverage");
-        termNames.push_back("financialRatios_pe");
-        termValues.push_back(financialRatios.dividendYield[idxFR]);
-        termValues.push_back(financialRatios.operationalLeverage[idxFR]);
-        termValues.push_back(financialRatios.pe[idxFR]);                                    
+      
+        if(validFinancialRatios){
+          int idxFR = DateFunctions::getIndexClosestToDate(dateRecent,
+                                      financialRatios.datesNumerical);
+
+          termNames.push_back("financialRatios_dividendYield");
+          termNames.push_back("financialRatios_operationalLeverage");
+          termNames.push_back("financialRatios_pe");
+          termValues.push_back(financialRatios.dividendYield[idxFR]);
+          termValues.push_back(financialRatios.operationalLeverage[idxFR]);
+          termValues.push_back(financialRatios.pe[idxFR]);  
+                                            
+        }
         //======================================================================
         //Evaluate the metrics
         //  At the moment residual cash flow and the company's valuation are

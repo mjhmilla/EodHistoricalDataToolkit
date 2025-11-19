@@ -656,11 +656,67 @@ class NumericalFunctions {
         std::string date     = analysisDates.common[indexDate];
         double datesNumerical = DateFunctions::convertToFractionalYear(date);
 
+        // 
+        // Get the date of the previous year
+        //
+        std::string datePreviousYear("");
+        int indexDatePrevYear=0;
+        int smallestDateDifference=std::numeric_limits<int>::max();
+
+        for(int i=indexDate; i<analysisDates.common.size(); ++i){
+          int dateDifference = 
+            DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+              date,"%Y-%m-%d",analysisDates.common[i],"%Y-%m-%d");
+          if(std::abs(dateDifference-365)<smallestDateDifference 
+            && dateDifference >= 0){
+            smallestDateDifference=std::abs(dateDifference-365);
+            datePreviousYear = analysisDates.common[i];
+            indexDatePrevYear = i;
+          }
+        }
+
+        //
+        // Go and get the TTM and previous TTM date sets
+        //
+        std::vector< std::string > dateSetTTM;
+        dateSetTTM.clear();
+        std::vector < double > weightTTM;
+        bool dateSetTTMValid = 
+          DateFunctions::extractTTM(
+                      indexDate,
+                      analysisDates.common,
+                      "%Y-%m-%d",
+                      dateSetTTM,
+                      weightTTM,
+                      maximumDayErrorTTM);   
+
+        if( !(dateSetTTMValid) ){
+          break;
+        }       
+
+        std::vector< std::string > dateSetPrevTTM;
+        std::vector < double > weightPrevTTM;
+
+
+        bool dateSetPrevTTMValid = 
+          DateFunctions::extractTTM(
+                        indexDatePrevYear,
+                        analysisDates.common,
+                        "%Y-%m-%d",
+                        dateSetPrevTTM,
+                        weightPrevTTM,
+                        maximumDayErrorTTM);    
+                        
+
+        if( !dateSetPrevTTMValid){
+          break;
+        }  
+
         //
         //Go get the number of outstanding shares reported from the closest date
         //
         double outstandingShares = std::nan("1");
-        int smallestDateDifference=std::numeric_limits<int>::max();        
+        smallestDateDifference=std::numeric_limits<int>::max();        
         std::string closestDate("");
 
         for(auto& el : fundamentalData[OS][timePeriodOS.c_str()]){
@@ -669,7 +725,8 @@ class NumericalFunctions {
           int dateDifference = 
             DateFunctions::calcDifferenceInDaysBetweenTwoDates(
               date,"%Y-%m-%d",dateOS,"%Y-%m-%d");
-          if(std::abs(dateDifference)<smallestDateDifference){
+          if(   std::abs(dateDifference)<smallestDateDifference 
+             && dateDifference >= 0){
             closestDate = dateOS;
             smallestDateDifference=std::abs(dateDifference);
             outstandingShares = JsonFunctions::getJsonFloat(el["shares"]);
@@ -741,41 +798,41 @@ class NumericalFunctions {
               DateFunctions::calcDifferenceInDaysBetweenTwoDates(
                 date,"%Y-%m-%d",dateSetEarnings[i],"%Y-%m-%d");
             if(std::abs(dateDifference-365)<smallestDateDifference 
-              && dateDifference > 0){
+              && dateDifference >= 0){
               smallestDateDifference=std::abs(dateDifference-365);
               closestDate = dateSetEarnings[i];
               indexEarningsPrevYear = i;
             }
           }
 
+          //
+          // Go get the TTM date sets for earnings
+          //
+          std::vector< std::string > dateSetTTMEarnings;
+          dateSetTTMEarnings.clear();
+          std::vector < double > weightTTMEarnings;
 
-          std::vector< std::string > dateSetTTM;
-          std::vector < double > weightTTM;
-          DateFunctions::extractTTM(
+          bool dateSetTTMValidEarnings = 
+            DateFunctions::extractTTM(
                         indexEarningsClosestDate,
                         dateSetEarnings,
                         "%Y-%m-%d",
-                        dateSetTTM,
-                        weightTTM,
-                        maximumDayErrorTTM);
+                        dateSetTTMEarnings,
+                        weightTTMEarnings,
+                        maximumDayErrorTTM);   
 
-          std::vector< std::string > dateSetPrevTTM;
-          std::vector < double > weightPrevTTM;
-          DateFunctions::extractTTM(
-                        indexEarningsPrevYear,
-                        dateSetEarnings,
-                        "%Y-%m-%d",
-                        dateSetPrevTTM,
-                        weightPrevTTM,
-                        maximumDayErrorTTM);                        
+          if( !(dateSetTTMValidEarnings) ){
+            break;
+          }       
+
 
           //2. Evaluate the epsActual and PE across the TTM using the reported
           //   values and the GAAP values
 
           double epsActualTTM = 0.;
-          for(size_t i=0; i< dateSetTTM.size();++i){
+          for(size_t i=0; i< dateSetTTMEarnings.size();++i){
             double epsActual = JsonFunctions::getJsonFloat(
-              fundamentalData[EARN][HIST][dateSetTTM[i].c_str()]["epsActual"],
+              fundamentalData[EARN][HIST][dateSetTTMEarnings[i].c_str()]["epsActual"],
               false);        
             epsActualTTM += epsActual;    
           }
@@ -1680,230 +1737,234 @@ class NumericalFunctions {
 
       double dateNumRecent=DateFunctions::convertToFractionalYear(dateSet[0]);
 
-      //Go get the corresponding financialRatio index
-      int idxFR = DateFunctions::getIndexClosestToDate(
-                      dateNumRecent,
-                      financialRatios.datesNumerical);
+      bool validFinancialRatios = financialRatios.datesNumerical.size() > 0;
+      bool validEquityGrowthModel = equityGrowthModel.datesNumerical.size()>0;
 
-      //Go get the corresponding MetricGrowthDataSet index
-      int idxGM= DateFunctions::getIndexClosestToDate(
-                                dateNumRecent,
-                                equityGrowthModel.datesNumerical);      
+      if(validFinancialRatios && validEquityGrowthModel){
+        //Go get the corresponding financialRatio index
+        int idxFR = DateFunctions::getIndexClosestToDate(
+                        dateNumRecent,
+                        financialRatios.datesNumerical);
+      
+        //Go get the corresponding MetricGrowthDataSet index
+        int idxGM= DateFunctions::getIndexClosestToDate(
+                                  dateNumRecent,
+                                  equityGrowthModel.datesNumerical);      
 
 
-      double eps0 = financialRatios.eps[idxFR];
+        double eps0 = financialRatios.eps[idxFR];
 
-      DataStructures::SummaryStatistics growthStats;
-      extractSummaryStatistics(equityGrowthModel.metricGrowthRate,growthStats);
+        DataStructures::SummaryStatistics growthStats;
+        extractSummaryStatistics(equityGrowthModel.metricGrowthRate,growthStats);
 
-      DataStructures::SummaryStatistics dividendYieldStats;
-      extractSummaryStatistics(financialRatios.dividendYield,dividendYieldStats);
+        DataStructures::SummaryStatistics dividendYieldStats;
+        extractSummaryStatistics(financialRatios.dividendYield,dividendYieldStats);
 
-      DataStructures::SummaryStatistics peStats;                           
-      extractSummaryStatistics(financialRatios.pe,peStats);
+        DataStructures::SummaryStatistics peStats;                           
+        extractSummaryStatistics(financialRatios.pe,peStats);
 
-      double growth=equityGrowthModel.metricGrowthRate[idxGM];
-      double dividendYield = financialRatios.dividendYield[idxFR];
+        double growth=equityGrowthModel.metricGrowthRate[idxGM];
+        double dividendYield = financialRatios.dividendYield[idxFR];
 
-      std::vector<double> cumPresentValue(4); //nominal, less growth, more growth
-      std::vector<double> growthVariation(4);
-      std::vector<double> dividendYieldVariation(4);
-      std::vector<double> peVariation(4);
-      std::vector< double > priceToValue(4);
+        std::vector<double> cumPresentValue(4); //nominal, less growth, more growth
+        std::vector<double> growthVariation(4);
+        std::vector<double> dividendYieldVariation(4);
+        std::vector<double> peVariation(4);
+        std::vector< double > priceToValue(4);
 
-      for(size_t i=0; i<cumPresentValue.size();++i){
+        for(size_t i=0; i<cumPresentValue.size();++i){
 
-        std::string nameMod("");
-        switch(i){
-          case 0:
-            {
-              growthVariation[i]        =growth;
-              dividendYieldVariation[i] =dividendYield;
-              peVariation[i]            =financialRatios.pe[idxFR];
-              if(appendTermRecord){
-                  nameMod="";
-                  termNames.push_back(parentName+"sharePrice");
-                  termNames.push_back(parentName+"eps");
-                  termNames.push_back(parentName+"equityGrowth");
-                  termNames.push_back(parentName+"dividendYield");
-                  termNames.push_back(parentName+"pe");
-                  termNames.push_back(parentName+"discountRate");
-                  termNames.push_back(parentName+"years");
-                  termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
-                  termValues.push_back(eps0);
-                  termValues.push_back(growthVariation[i]);
-                  termValues.push_back(dividendYieldVariation[i]);
-                  termValues.push_back(peVariation[i]);
-                  termValues.push_back(discountRate);
-                  termValues.push_back(numberOfYearsForTerminalValuation);
-              }
-            } break;
-          case 1:
-            {
-              growthVariation[i]        =growthStats.percentiles[P25];
-              dividendYieldVariation[i] =dividendYieldStats.percentiles[P25];
-              peVariation[i]            =peStats.percentiles[P25];
-              if(peMarketVariationUpperBound.size()>=1){
-                if(peVariation[i]> peMarketVariationUpperBound[0]){
-                  peVariation[i]=peMarketVariationUpperBound[0];
+          std::string nameMod("");
+          switch(i){
+            case 0:
+              {
+                growthVariation[i]        =growth;
+                dividendYieldVariation[i] =dividendYield;
+                peVariation[i]            =financialRatios.pe[idxFR];
+                if(appendTermRecord){
+                    nameMod="";
+                    termNames.push_back(parentName+"sharePrice");
+                    termNames.push_back(parentName+"eps");
+                    termNames.push_back(parentName+"equityGrowth");
+                    termNames.push_back(parentName+"dividendYield");
+                    termNames.push_back(parentName+"pe");
+                    termNames.push_back(parentName+"discountRate");
+                    termNames.push_back(parentName+"years");
+                    termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
+                    termValues.push_back(eps0);
+                    termValues.push_back(growthVariation[i]);
+                    termValues.push_back(dividendYieldVariation[i]);
+                    termValues.push_back(peVariation[i]);
+                    termValues.push_back(discountRate);
+                    termValues.push_back(numberOfYearsForTerminalValuation);
                 }
-              }
-              if(appendTermRecord){
-                  nameMod="_P25";
-                  termNames.push_back(parentName+"sharePrice"+nameMod);
-                  termNames.push_back(parentName+"eps"+nameMod);
-                  termNames.push_back(parentName+"equityGrowth"+nameMod);
-                  termNames.push_back(parentName+"dividendYield"+nameMod);
-                  termNames.push_back(parentName+"pe"+nameMod);
-                  termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
-                  termValues.push_back(eps0);
-                  termValues.push_back(growthVariation[i]);
-                  termValues.push_back(dividendYieldVariation[i]);
-                  termValues.push_back(peVariation[i]);
-
-              }
-
-            } break;
-          case 2:
-            {
-              growthVariation[i]        =growthStats.percentiles[P50];
-              dividendYieldVariation[i] =dividendYieldStats.percentiles[P50];
-              peVariation[i]            =peStats.percentiles[P50];
-              if(peMarketVariationUpperBound .size()>=1){
-                if(peVariation[i]> peMarketVariationUpperBound[1]){
-                  peVariation[i]=peMarketVariationUpperBound[1];
+              } break;
+            case 1:
+              {
+                growthVariation[i]        =growthStats.percentiles[P25];
+                dividendYieldVariation[i] =dividendYieldStats.percentiles[P25];
+                peVariation[i]            =peStats.percentiles[P25];
+                if(peMarketVariationUpperBound.size()>=1){
+                  if(peVariation[i]> peMarketVariationUpperBound[0]){
+                    peVariation[i]=peMarketVariationUpperBound[0];
+                  }
                 }
-              }
+                if(appendTermRecord){
+                    nameMod="_P25";
+                    termNames.push_back(parentName+"sharePrice"+nameMod);
+                    termNames.push_back(parentName+"eps"+nameMod);
+                    termNames.push_back(parentName+"equityGrowth"+nameMod);
+                    termNames.push_back(parentName+"dividendYield"+nameMod);
+                    termNames.push_back(parentName+"pe"+nameMod);
+                    termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
+                    termValues.push_back(eps0);
+                    termValues.push_back(growthVariation[i]);
+                    termValues.push_back(dividendYieldVariation[i]);
+                    termValues.push_back(peVariation[i]);
 
-
-              if(appendTermRecord){
-                  nameMod="_P50";
-                  termNames.push_back(parentName+"sharePrice"+nameMod);
-                  termNames.push_back(parentName+"eps"+nameMod);
-                  termNames.push_back(parentName+"equityGrowth"+nameMod);
-                  termNames.push_back(parentName+"dividendYield"+nameMod);
-                  termNames.push_back(parentName+"pe"+nameMod);
-                  termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
-                  termValues.push_back(eps0);
-                  termValues.push_back(growthVariation[i]);
-                  termValues.push_back(dividendYieldVariation[i]);
-                  termValues.push_back(peVariation[i]);
-              }
-
-            } break;
-          case 3:
-            {
-              growthVariation[i]        =growthStats.percentiles[P75];
-              dividendYieldVariation[i] =dividendYieldStats.percentiles[P75];
-              peVariation[i]            =peStats.percentiles[P75];
-              if(peMarketVariationUpperBound.size()>=1){
-                if(peVariation[i]> peMarketVariationUpperBound[2]){
-                  peVariation[i]=peMarketVariationUpperBound[2];
                 }
-              }
+
+              } break;
+            case 2:
+              {
+                growthVariation[i]        =growthStats.percentiles[P50];
+                dividendYieldVariation[i] =dividendYieldStats.percentiles[P50];
+                peVariation[i]            =peStats.percentiles[P50];
+                if(peMarketVariationUpperBound .size()>=1){
+                  if(peVariation[i]> peMarketVariationUpperBound[1]){
+                    peVariation[i]=peMarketVariationUpperBound[1];
+                  }
+                }
 
 
-              if(appendTermRecord){
-                  nameMod="_P75";
-                  termNames.push_back(parentName+"sharePrice"+nameMod);
-                  termNames.push_back(parentName+"eps"+nameMod);
-                  termNames.push_back(parentName+"equityGrowth"+nameMod);
-                  termNames.push_back(parentName+"dividendYield"+nameMod);
-                  termNames.push_back(parentName+"pe"+nameMod);
-                  termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
-                  termValues.push_back(eps0);
-                  termValues.push_back(growthVariation[i]);
-                  termValues.push_back(dividendYieldVariation[i]);
-                  termValues.push_back(peVariation[i]);
-              }
+                if(appendTermRecord){
+                    nameMod="_P50";
+                    termNames.push_back(parentName+"sharePrice"+nameMod);
+                    termNames.push_back(parentName+"eps"+nameMod);
+                    termNames.push_back(parentName+"equityGrowth"+nameMod);
+                    termNames.push_back(parentName+"dividendYield"+nameMod);
+                    termNames.push_back(parentName+"pe"+nameMod);
+                    termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
+                    termValues.push_back(eps0);
+                    termValues.push_back(growthVariation[i]);
+                    termValues.push_back(dividendYieldVariation[i]);
+                    termValues.push_back(peVariation[i]);
+                }
 
-            } break;
-          default:
-          {
-            std::cerr << "Error: invalid case hit in "
-                      << "calcPriceToValueUsingEarningsPerShareGrowth"
-                      << std::endl;
-            std::abort();                      
+              } break;
+            case 3:
+              {
+                growthVariation[i]        =growthStats.percentiles[P75];
+                dividendYieldVariation[i] =dividendYieldStats.percentiles[P75];
+                peVariation[i]            =peStats.percentiles[P75];
+                if(peMarketVariationUpperBound.size()>=1){
+                  if(peVariation[i]> peMarketVariationUpperBound[2]){
+                    peVariation[i]=peMarketVariationUpperBound[2];
+                  }
+                }
+
+
+                if(appendTermRecord){
+                    nameMod="_P75";
+                    termNames.push_back(parentName+"sharePrice"+nameMod);
+                    termNames.push_back(parentName+"eps"+nameMod);
+                    termNames.push_back(parentName+"equityGrowth"+nameMod);
+                    termNames.push_back(parentName+"dividendYield"+nameMod);
+                    termNames.push_back(parentName+"pe"+nameMod);
+                    termValues.push_back(financialRatios.adjustedClosePrice[idxFR]);
+                    termValues.push_back(eps0);
+                    termValues.push_back(growthVariation[i]);
+                    termValues.push_back(dividendYieldVariation[i]);
+                    termValues.push_back(peVariation[i]);
+                }
+
+              } break;
+            default:
+            {
+              std::cerr << "Error: invalid case hit in "
+                        << "calcPriceToValueUsingEarningsPerShareGrowth"
+                        << std::endl;
+              std::abort();                      
+            }
           }
-        }
 
-        //Compute the present value
-        cumPresentValue[i] = 0.;
-        for (int j=1; j <= numberOfYearsForTerminalValuation;++j){
-          double eps = eps0*std::pow(1.0+growthVariation[i],j);
-          double dividend = eps*dividendYieldVariation[i];
-          double discountFactor= std::pow(1.0+discountRate,j);
-          double presentValue = (dividend) / discountFactor;
+          //Compute the present value
+          cumPresentValue[i] = 0.;
+          for (int j=1; j <= numberOfYearsForTerminalValuation;++j){
+            double eps = eps0*std::pow(1.0+growthVariation[i],j);
+            double dividend = eps*dividendYieldVariation[i];
+            double discountFactor= std::pow(1.0+discountRate,j);
+            double presentValue = (dividend) / discountFactor;
 
-          cumPresentValue[i] += presentValue;
+            cumPresentValue[i] += presentValue;
 
-          //The details are only outputted for the nominal case
-          if(appendTermRecord && i == 0){
-            std::stringstream ss;
-            ss << j;
-            termNames.push_back(parentName+"eps"+nameMod+"_"+ss.str());
-            termNames.push_back(parentName+"dividend"+nameMod+"_"+ss.str());
-            termNames.push_back(parentName+"discount_factor"+nameMod+"_"+ss.str());
-            termNames.push_back(parentName+"dividend_present_value"+nameMod+"_"+ss.str());
+            //The details are only outputted for the nominal case
+            if(appendTermRecord && i == 0){
+              std::stringstream ss;
+              ss << j;
+              termNames.push_back(parentName+"eps"+nameMod+"_"+ss.str());
+              termNames.push_back(parentName+"dividend"+nameMod+"_"+ss.str());
+              termNames.push_back(parentName+"discount_factor"+nameMod+"_"+ss.str());
+              termNames.push_back(parentName+"dividend_present_value"+nameMod+"_"+ss.str());
 
-            termValues.push_back(eps);
-            termValues.push_back(dividend);
-            termValues.push_back(discountFactor);
-            termValues.push_back(presentValue);            
+              termValues.push_back(eps);
+              termValues.push_back(dividend);
+              termValues.push_back(discountFactor);
+              termValues.push_back(presentValue);            
+            }
+            
           }
-          
+
+          if(appendTermRecord){
+            termNames.push_back(parentName+"cumulative_dividend_present_value"+nameMod);
+            termValues.push_back(cumPresentValue[i]);
+          }
+
+          double epsTerminal = eps0*std::pow(1.0+growthVariation[i],
+                                  numberOfYearsForTerminalValuation);
+
+          double terminalValue = (epsTerminal*peVariation[i]);
+
+
+          double terminalDiscount = 
+            std::pow(1.+discountRate,numberOfYearsForTerminalValuation);
+
+          double terminalPresentValue = terminalValue / terminalDiscount;       
+
+          if(appendTermRecord){
+            termNames.push_back(parentName+"terminal_eps"+nameMod);
+            termValues.push_back(epsTerminal);  
+            termNames.push_back(parentName+"terminal_pe"+nameMod);
+            termValues.push_back(peVariation[i]);  
+            termNames.push_back(parentName+"terminal_value"+nameMod);
+            termValues.push_back(terminalValue);  
+            termNames.push_back(parentName+"terminal_discount"+nameMod);
+            termValues.push_back(terminalDiscount);        
+            termNames.push_back(parentName+"terminal_present_value"+nameMod);
+            termValues.push_back(terminalPresentValue);
+          }
+
+
+          cumPresentValue[i] += terminalPresentValue;
+
+
+          if(appendTermRecord){
+            termNames.push_back(parentName+"total_present_value"+nameMod);
+            termValues.push_back(cumPresentValue[i]);
+          }
+
+
+          priceToValue[i] = 
+            financialRatios.adjustedClosePrice[idxFR]/cumPresentValue[i];
+
+          //Compute the price to value ratio
+          if(appendTermRecord){
+            termNames.push_back(parentName+"price_to_value"+nameMod);
+            termValues.push_back(priceToValue[i]);
+          }
+
         }
-
-        if(appendTermRecord){
-          termNames.push_back(parentName+"cumulative_dividend_present_value"+nameMod);
-          termValues.push_back(cumPresentValue[i]);
-        }
-
-        double epsTerminal = eps0*std::pow(1.0+growthVariation[i],
-                                numberOfYearsForTerminalValuation);
-
-        double terminalValue = (epsTerminal*peVariation[i]);
-
-
-        double terminalDiscount = 
-          std::pow(1.+discountRate,numberOfYearsForTerminalValuation);
-
-        double terminalPresentValue = terminalValue / terminalDiscount;       
-
-        if(appendTermRecord){
-          termNames.push_back(parentName+"terminal_eps"+nameMod);
-          termValues.push_back(epsTerminal);  
-          termNames.push_back(parentName+"terminal_pe"+nameMod);
-          termValues.push_back(peVariation[i]);  
-          termNames.push_back(parentName+"terminal_value"+nameMod);
-          termValues.push_back(terminalValue);  
-          termNames.push_back(parentName+"terminal_discount"+nameMod);
-          termValues.push_back(terminalDiscount);        
-          termNames.push_back(parentName+"terminal_present_value"+nameMod);
-          termValues.push_back(terminalPresentValue);
-        }
-
-
-        cumPresentValue[i] += terminalPresentValue;
-
-
-        if(appendTermRecord){
-          termNames.push_back(parentName+"total_present_value"+nameMod);
-          termValues.push_back(cumPresentValue[i]);
-        }
-
-
-        priceToValue[i] = 
-          financialRatios.adjustedClosePrice[idxFR]/cumPresentValue[i];
-
-        //Compute the price to value ratio
-        if(appendTermRecord){
-          termNames.push_back(parentName+"price_to_value"+nameMod);
-          termValues.push_back(priceToValue[i]);
-        }
-
       }
-
     };
         
     //==========================================================================
