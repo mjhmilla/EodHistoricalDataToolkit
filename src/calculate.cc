@@ -703,20 +703,19 @@ double calcAverageTaxRate(  const DataStructures::AnalysisDates &analysisDates,
     //std::vector < std::string > dateSet;
     //std::vector < double > dateSetWeight;
     DateFunctions::DateSetTTM dateSet;
-    if(quarterlyTTMAnalysis){
-      bool validDateSet = 
-        DateFunctions::extractTTM(indexDate,
-                                analysisDates.common,
-                                "%Y-%m-%d",
-                                dateSet,
-                                maxDayErrorTTM);                                     
-      if(!validDateSet){
-        break;
-      }
 
-    }else{
-        dateSet.addAnnualData(date);
-    }                             
+    bool validDateSet = 
+      DateFunctions::extractTTM(indexDate,
+                              analysisDates.common,
+                              "%Y-%m-%d",
+                              dateSet,
+                              maxDayErrorTTM,
+                              quarterlyTTMAnalysis);                                     
+    if(!validDateSet){
+      break;
+    }
+
+                        
     
     ++numberOfIterations;
     numberOfDatesPerIteration += static_cast<int>(dateSet.dates.size());
@@ -916,19 +915,15 @@ double calcAverageInterestCover(
     //std::vector < std::string > dateSet;
     //std::vector < double > dateSetWeight;
     DateFunctions::DateSetTTM dateSet;
-    if(quarterlyTTMAnalysis){
-      validDateSet = 
-        DateFunctions::extractTTM( indexDate,
-                                    analysisDates.common,
-                                    "%Y-%m-%d",
-                                    dateSet,
-                                    maxDayErrorTTM);                                     
-      if(!validDateSet){
-        break;
-      }
-
-    }else{
-      dateSet.addAnnualData(date);
+    validDateSet = 
+      DateFunctions::extractTTM( indexDate,
+                                  analysisDates.common,
+                                  "%Y-%m-%d",
+                                  dateSet,
+                                  maxDayErrorTTM,
+                                  quarterlyTTMAnalysis);                                     
+    if(!validDateSet){
+      break;
     }
 
     std::vector<std::string> localTermNames;
@@ -977,18 +972,18 @@ double calcLastValidDateIndex(
     //std::vector < double > dateSetWeight;
     DateFunctions::DateSetTTM dateSet;
 
-    if(quarterlyTTMAnalysis){
-      validDateSet = 
-        DateFunctions::extractTTM(indexDate,
-                                  analysisDates.common,
-                                  "%Y-%m-%d",
-                                  dateSet,
-                                  maxDayErrorTTM);                                     
-      if(!validDateSet){
-        break;
-      }
+    validDateSet = 
+      DateFunctions::extractTTM(indexDate,
+                                analysisDates.common,
+                                "%Y-%m-%d",
+                                dateSet,
+                                maxDayErrorTTM,
+                                quarterlyTTMAnalysis);                                     
+    if(!validDateSet){
+      break;
+    }
 
-    }                               
+                                  
     ++numberOfIterations;
     numberOfDatesPerIteration += static_cast<int>(dateSet.dates.size());    
   }        
@@ -2274,6 +2269,7 @@ int main (int argc, char* argv[]) {
                             timePeriodOS,
                             maxDayErrorTTM,
                             maxDayErrorOutstandingShareData,
+                            quarterlyTTMAnalysis,
                             financialRatios);
       
 
@@ -2329,20 +2325,19 @@ int main (int argc, char* argv[]) {
         //std::vector < double > dateSetWeight;
         DateFunctions::DateSetTTM dateSet;
       
-        if(quarterlyTTMAnalysis){
-          validDateSet = 
-            DateFunctions::extractTTM(indexDate,
-                                      analysisDates.common,
-                                      "%Y-%m-%d",
-                                      dateSet,
-                                      maxDayErrorTTM); 
-            
-          if(!validDateSet){
-            break;
-          }    
-        }else{
-          dateSet.addAnnualData(date);
-        }           
+
+        validDateSet = 
+          DateFunctions::extractTTM(indexDate,
+                                    analysisDates.common,
+                                    "%Y-%m-%d",
+                                    dateSet,
+                                    maxDayErrorTTM,
+                                    quarterlyTTMAnalysis); 
+          
+        if(!validDateSet){
+          break;
+        }    
+         
              
         //======================================================================
         //Update the list of previous time periods
@@ -2360,7 +2355,8 @@ int main (int argc, char* argv[]) {
                                                     analysisDates.common,
                                                     "%Y-%m-%d",
                                                     previousDateSet,
-                                                    maxDayErrorTTM); 
+                                                    maxDayErrorTTM,
+                                                    quarterlyTTMAnalysis); 
           if(!validDateSet){
             break;
           }     
@@ -2393,17 +2389,17 @@ int main (int argc, char* argv[]) {
           DateFunctions::DateSetTTM pastDateSet;
 
           if(validPreviousDateSet){
-            if(quarterlyTTMAnalysis){
+            if(quarterlyTTMAnalysis 
+              || (indexPastPeriods < analysisDates.common.size())){
               validPreviousDateSet = 
                 DateFunctions::extractTTM(indexPastPeriods,
                                           analysisDates.common,
                                           "%Y-%m-%d",
                                           pastDateSet,
-                                          maxDayErrorTTM);
+                                          maxDayErrorTTM,
+                                          quarterlyTTMAnalysis);
             }else{
-              if(indexPastPeriods < analysisDates.common.size()){
-                pastDateSet.addAnnualData(analysisDates.common[indexPastPeriods]);
-              }else{
+              if(indexPastPeriods >= analysisDates.common.size()){
                 validPreviousDateSet=false;
               }
             }           
@@ -2732,7 +2728,8 @@ int main (int argc, char* argv[]) {
         //======================================================================
         // Write some of the financial ratios
         //======================================================================
-        double dateRecent = DateFunctions::convertToFractionalYear(dateSet[0]);
+        double dateRecent = 
+          DateFunctions::convertToFractionalYear(dateSet.dates[0]);
         bool validFinancialRatios = financialRatios.datesNumerical.size() > 0;
 
       
@@ -2995,7 +2992,6 @@ int main (int argc, char* argv[]) {
             calcPriceToValueUsingDiscountedCashflowModel(  
               fundamentalData,
               dateSet,
-              previousDateSet,
               timePeriod.c_str(),
               debtInfo,
               riskFreeRate,
@@ -3052,7 +3048,6 @@ int main (int argc, char* argv[]) {
                 calcPriceToValueUsingDiscountedCashflowModel(  
                   fundamentalData,
                   dateSet,
-                  previousDateSet,
                   timePeriod.c_str(),
                   debtInfo,
                   riskFreeRate,
@@ -3105,7 +3100,6 @@ int main (int argc, char* argv[]) {
                 calcPriceToValueUsingDiscountedCashflowModel(  
                   fundamentalData,
                   dateSet,
-                  previousDateSet,
                   timePeriod.c_str(),
                   debtInfo,
                   riskFreeRate,

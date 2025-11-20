@@ -638,6 +638,7 @@ class NumericalFunctions {
               const std::string &timePeriodOS,
               int maximumDayErrorTTM,
               int maximumDayErrorOutstandingShareData,
+              bool quarterlyTTMAnalysis,              
               DataStructures::FinancialRatios &financialRatiosUpd)
     {
       bool setNansToMissingValue = false;
@@ -678,25 +679,21 @@ class NumericalFunctions {
         //
         // Go and get the TTM and previous TTM date sets
         //
-        std::vector< std::string > dateSetTTM;
-        dateSetTTM.clear();
-        std::vector < double > weightTTM;
+        DateFunctions::DateSetTTM dateSetTTM;      
         bool dateSetTTMValid = 
           DateFunctions::extractTTM(
                       indexDate,
                       analysisDates.common,
                       "%Y-%m-%d",
                       dateSetTTM,
-                      weightTTM,
-                      maximumDayErrorTTM);   
+                      maximumDayErrorTTM,
+                      quarterlyTTMAnalysis);   
 
         if( !(dateSetTTMValid) ){
           break;
         }       
 
-        std::vector< std::string > dateSetPrevTTM;
-        std::vector < double > weightPrevTTM;
-
+        DateFunctions::DateSetTTM dateSetPrevTTM;
 
         bool dateSetPrevTTMValid = 
           DateFunctions::extractTTM(
@@ -704,8 +701,8 @@ class NumericalFunctions {
                         analysisDates.common,
                         "%Y-%m-%d",
                         dateSetPrevTTM,
-                        weightPrevTTM,
-                        maximumDayErrorTTM);    
+                        maximumDayErrorTTM,
+                        quarterlyTTMAnalysis);    
                         
 
         if( !dateSetPrevTTMValid){
@@ -808,9 +805,8 @@ class NumericalFunctions {
           //
           // Go get the TTM date sets for earnings
           //
-          std::vector< std::string > dateSetTTMEarnings;
-          dateSetTTMEarnings.clear();
-          std::vector < double > weightTTMEarnings;
+          DateFunctions::DateSetTTM dateSetTTMEarnings;
+
 
           bool dateSetTTMValidEarnings = 
             DateFunctions::extractTTM(
@@ -818,8 +814,8 @@ class NumericalFunctions {
                         dateSetEarnings,
                         "%Y-%m-%d",
                         dateSetTTMEarnings,
-                        weightTTMEarnings,
-                        maximumDayErrorTTM);   
+                        maximumDayErrorTTM,
+                        quarterlyTTMAnalysis);   
 
           if( !(dateSetTTMValidEarnings) ){
             break;
@@ -829,10 +825,14 @@ class NumericalFunctions {
           //2. Evaluate the epsActual and PE across the TTM using the reported
           //   values and the GAAP values
 
+          std::cerr << "Replace this with a weighted call" << std::endl;
+          std::abort();
+
           double epsActualTTM = 0.;
-          for(size_t i=0; i< dateSetTTMEarnings.size();++i){
+          for(size_t i=0; i< dateSetTTMEarnings.dates.size();++i){
             double epsActual = JsonFunctions::getJsonFloat(
-              fundamentalData[EARN][HIST][dateSetTTMEarnings[i].c_str()]["epsActual"],
+              fundamentalData[EARN][HIST][dateSetTTMEarnings.dates[i].c_str()]
+                ["epsActual"],
               false);        
             epsActualTTM += epsActual;    
           }
@@ -842,18 +842,19 @@ class NumericalFunctions {
 
           double netIncomeTTM=0;
           double dividendsPaidTTM=0;
-          for(size_t i=0; i<dateSetTTM.size();++i){
+          for(size_t i=0; i<dateSetTTM.dates.size();++i){
             double netIncome = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetTTM[i].c_str()]["netIncome"],
+                               [dateSetTTM.dates[i].c_str()]["netIncome"],
                                 setNansToMissingValue);
-
+            netIncome *= dateSetTTM.weights[i];
             double dividendsPaid = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][CF][timePeriod.c_str()]
-                                [dateSetTTM[i].c_str()]["dividendsPaid"],
+                                [dateSetTTM.dates[i].c_str()]["dividendsPaid"],
                                 false);
+            dividendsPaid *= dateSetTTM.weights[i];
 
             if(std::isnan(dividendsPaid)){
               dividendsPaid=0.;
@@ -881,36 +882,41 @@ class NumericalFunctions {
           double earningsTTM=0; 
           double earningsPreviousTTM=0;
 
-          for(size_t i=0; i<dateSetTTM.size();++i){
+          for(size_t i=0; i<dateSetTTM.dates.size();++i){
             double revenue = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][IS][timePeriod.c_str()]
-                               [dateSetTTM[i].c_str()]["totalRevenue"],
+                               [dateSetTTM.dates[i].c_str()]["totalRevenue"],
                               setNansToMissingValue);
+            revenue *= dateSetTTM.weights[i];
 
             double operatingIncome = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][IS][timePeriod.c_str()]
-                               [dateSetTTM[i].c_str()]["operatingIncome"],
-                              setNansToMissingValue);              
+                               [dateSetTTM.dates[i].c_str()]["operatingIncome"],
+                              setNansToMissingValue);  
+            operatingIncome *= dateSetTTM.weights[i];                                          
 
             double freeCashFlow = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetTTM[i].c_str()]["freeCashFlow"],
+                               [dateSetTTM.dates[i].c_str()]["freeCashFlow"],
                               setNansToMissingValue);
-            
+            freeCashFlow *= dateSetTTM.weights[i];
+
             double netIncome = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetTTM[i].c_str()]["netIncome"],
+                               [dateSetTTM.dates[i].c_str()]["netIncome"],
                               setNansToMissingValue); 
+            netIncome *= dateSetTTM.weights[i];
 
             double dividendsPaid = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetTTM[i].c_str()]["dividendsPaid"],
+                               [dateSetTTM.dates[i].c_str()]["dividendsPaid"],
                               false);
+            dividendsPaid *= dateSetTTM.weights[i];
 
             if(std::isnan(dividendsPaid)){
               dividendsPaid=0.;
@@ -922,36 +928,41 @@ class NumericalFunctions {
             earningsTTM         += (netIncome-dividendsPaid);
           }
 
-          for(size_t i=0; i<dateSetPrevTTM.size();++i){
+          for(size_t i=0; i<dateSetPrevTTM.dates.size();++i){
             double revenue = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][IS][timePeriod.c_str()]
-                               [dateSetPrevTTM[i].c_str()]["totalRevenue"],
+                               [dateSetPrevTTM.dates[i].c_str()]["totalRevenue"],
                               setNansToMissingValue);
+            revenue *= dateSetPrevTTM.weights[i];
 
             double operatingIncome = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][IS][timePeriod.c_str()]
-                               [dateSetPrevTTM[i].c_str()]["operatingIncome"],
+                               [dateSetPrevTTM.dates[i].c_str()]["operatingIncome"],
                               setNansToMissingValue);   
-
+            operatingIncome *= dateSetPrevTTM.weights[i];
+            
             double freeCashFlow = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetPrevTTM[i].c_str()]["freeCashFlow"],
+                               [dateSetPrevTTM.dates[i].c_str()]["freeCashFlow"],
                               setNansToMissingValue);
-            
+            freeCashFlow *= dateSetPrevTTM.weights[i];
+
             double netIncome = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetPrevTTM[i].c_str()]["netIncome"],
+                               [dateSetPrevTTM.dates[i].c_str()]["netIncome"],
                               setNansToMissingValue); 
+            netIncome *= dateSetPrevTTM.weights[i];
 
             double dividendsPaid = 
               JsonFunctions::getJsonFloat(
                 fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetPrevTTM[i].c_str()]["dividendsPaid"],
+                               [dateSetPrevTTM.dates[i].c_str()]["dividendsPaid"],
                               false);
+            dividendsPaid *= dateSetPrevTTM.weights[i];
 
             if(std::isnan(dividendsPaid)){
               dividendsPaid=0.;
@@ -1333,8 +1344,8 @@ class NumericalFunctions {
       std::vector < double > rrV;         //reinvestment rate
 
       std::string previousTimePeriod("");
-      std::vector< std::string > previousDateSet;
-      std::vector< double > previousDateSetWeight;
+      DateFunctions::DateSetTTM previousDateSet;
+      
 
       double maxYearErrorTTM = settings.maxDateErrorInDays 
                              / DateFunctions::DAYS_PER_YEAR;
@@ -1347,59 +1358,54 @@ class NumericalFunctions {
         ++indexDate;
 
         //The set of dates used for the TTM analysis
-        std::vector < std::string > dateSetTTM;
+        DateFunctions::DateSetTTM dateSetTTM;
         std::vector < double > dateSetTTMWeight;
 
+        validDateSet = 
+          DateFunctions::extractTTM( indexDate,
+                                      analysisDates.common,
+                                      "%Y-%m-%d",
+                                      dateSetTTM,
+                                      settings.maxDateErrorInDays,
+                                      quarterlyTTMAnalysis); 
+        if(!validDateSet){
+          break;
+        }     
         if(quarterlyTTMAnalysis){
-          validDateSet = 
-            DateFunctions::extractTTM( indexDate,
-                                       analysisDates.common,
-                                       "%Y-%m-%d",
-                                       dateSetTTM,                                    
-                                       dateSetTTMWeight,
-                                       settings.maxDateErrorInDays); 
-          if(!validDateSet){
-            break;
-          }     
           double dateFront = 
-            DateFunctions::convertToFractionalYear(dateSetTTM.front());
+            DateFunctions::convertToFractionalYear(dateSetTTM.dates.front());
           double dateBack = 
-            DateFunctions::convertToFractionalYear(dateSetTTM.back());
+            DateFunctions::convertToFractionalYear(dateSetTTM.dates.back());
 
           if(dateBack > dateFront){
             std::cerr << "Error: dateSetTTM is assumed by many functions to go"
-                         "from the most recent date at the front to the oldest"
-                         "date at the back. " << std::endl;
+                          "from the most recent date at the front to the oldest"
+                          "date at the back. " << std::endl;
             std::abort();                         
           }
-
-        }else{
-          dateSetTTM.push_back(analysisDates.common[indexDate]);
-        }                     
+        }
+                      
 
         //Check if we have enough data to get the previous time period
-        int indexPrevious = indexDate+static_cast<int>(dateSetTTM.size());        
+        int indexPrevious = indexDate+static_cast<int>(dateSetTTM.dates.size());        
 
         //
         //Fetch the previous TTM
         //
-        previousTimePeriod = analysisDates.common[indexPrevious];
-        previousDateSet.resize(0);
 
-        if(quarterlyTTMAnalysis){
-          validDateSet = 
-            DateFunctions::extractTTM( indexPrevious,
-                                       analysisDates.common,
-                                       "%Y-%m-%d",
-                                       previousDateSet,
-                                       previousDateSetWeight,
-                                       settings.maxDateErrorInDays); 
-          if(!validDateSet){
-            break;
-          }     
-        }else{
-          previousDateSet.push_back(previousTimePeriod);
-        } 
+        previousDateSet.clear();
+
+        validDateSet = 
+          DateFunctions::extractTTM( indexPrevious,
+                                      analysisDates.common,
+                                      "%Y-%m-%d",
+                                      previousDateSet,
+                                      settings.maxDateErrorInDays,
+                                      quarterlyTTMAnalysis); 
+        if(!validDateSet){
+          break;
+        }     
+
 
         if(validDateSet){
           double operatingIncome = 
@@ -1722,7 +1728,7 @@ class NumericalFunctions {
 
     //==========================================================================
     static void calcPriceToValueUsingEarningsPerShareGrowth(
-                    const std::vector< std::string > &dateSet,
+                    const DateFunctions::DateSetTTM &dateSet,
                     const DataStructures::MetricGrowthDataSet &equityGrowthModel,
                     const DataStructures::FinancialRatios &financialRatios,
                     const std::vector<double> &peMarketVariationUpperBound,
@@ -1735,7 +1741,8 @@ class NumericalFunctions {
                     std::vector< double > &termValues)                                      
     {
 
-      double dateNumRecent=DateFunctions::convertToFractionalYear(dateSet[0]);
+      double dateNumRecent=
+        DateFunctions::convertToFractionalYear(dateSet.dates[0]);
 
       bool validFinancialRatios = financialRatios.datesNumerical.size() > 0;
       bool validEquityGrowthModel = equityGrowthModel.datesNumerical.size()>0;

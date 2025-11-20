@@ -36,36 +36,35 @@ class FinancialAnalysisFunctions {
         const char* reportChapter,
         const char* reportSection,
         const char* timeUnit,
-        const std::vector< std::string > &dates,
+        const DateFunctions::DateSetTTM &dateSet,
         const char* fieldName,        
         bool setNansToMissingValue,
         bool includeTimeUnitInAddress=true){
 
-      std::cerr << "This function needs to be upgraded to use DateSetTTM" << std::endl;
-      std::abort();
 
       double value        = 0;
+      double weight       = 0;
       double sumOfValues  = 0;
       bool valueMissing   = false;
       int numberOfEntries = 0;
 
-      for(auto &ele : dates){
+      //for(auto &ele : dateSet.dates){
+      for(size_t i=0; i<dateSet.dates.size(); ++i){
 
         if(includeTimeUnitInAddress){
           value = JsonFunctions::getJsonFloat( 
-            fundamentalData[reportChapter][reportSection][timeUnit][ele.c_str()]
-                           [fieldName],false);
+            fundamentalData[reportChapter][reportSection][timeUnit]
+                          [dateSet.dates[i].c_str()][fieldName],false);
         }else{
           value = JsonFunctions::getJsonFloat( 
-            fundamentalData[reportChapter][reportSection][ele.c_str()]
-                           [fieldName],false);
+            fundamentalData[reportChapter][reportSection]
+                           [dateSet.dates[i].c_str()][fieldName],false);
         }
 
         if(!std::isnan(value)){
-          sumOfValues += value;
+          sumOfValues += value*dateSet.weights[i];
           ++numberOfEntries;
         }
-
         
       }
 
@@ -460,7 +459,7 @@ class FinancialAnalysisFunctions {
     //==========================================================================
     static double calcReturnOnCapitalDeployed( 
                                     const nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string > &dateSet, 
+                                    const DateFunctions::DateSetTTM &dateSet, 
                                     const char *timeUnit,
                                     bool appendTermRecord,
                                     const std::string &parentCategoryName,
@@ -469,19 +468,23 @@ class FinancialAnalysisFunctions {
                                     std::vector< double > &termValues){
       // Return On Capital Deployed
       //  Source: https://www.investopedia.com/terms/r/roce.asp
-      double longTermDebt = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["longTermDebt"], 
+      double longTermDebt = 
+        JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+            ["longTermDebt"], 
         setNansToMissingValue);     
 
       //Total shareholder equity is the money that would be left over if the 
       //company went out of business immediately. 
       //https://www.investopedia.com/ask/answers/033015/what-does-total-stockholders-equity-represent.asp
-      double totalStockholderEquity = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["totalStockholderEquity"], 
-        setNansToMissingValue);
+      double totalStockholderEquity = 
+        JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+            ["totalStockholderEquity"], 
+          setNansToMissingValue);
 
       double operatingIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);      
 
@@ -551,7 +554,7 @@ class FinancialAnalysisFunctions {
     */
     static double calcReturnOnInvestedOperatingCapital(
                                     const nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string> &dateSet,
+                                    const DateFunctions::DateSetTTM &dateSet,
                                     const char *timeUnit,
                                     double taxRate,
                                     bool appendTermRecord,
@@ -560,28 +563,31 @@ class FinancialAnalysisFunctions {
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
 
-      double netWorkingCapital= 
-        JsonFunctions::getJsonFloat(
-          jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["netWorkingCapital"], 
-          setNansToMissingValue);       
+      double netWorkingCapital= JsonFunctions::getJsonFloat(
+                      jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+                        ["netWorkingCapital"], 
+                      setNansToMissingValue);       
 
       double propertyPlantEquipmentNet = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
-                ["propertyPlantAndEquipmentNet"], 
-                setNansToMissingValue);
+                      jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+                              ["propertyPlantAndEquipmentNet"], 
+                              setNansToMissingValue);
 
       double intangibleAssets = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["intangibleAssets"],
+                        jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+                          ["intangibleAssets"],
         true);
 
       double goodWill = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["goodWill"], true);
+                        jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+                          ["goodWill"], true);
 
       double otherAssets = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["otherAssets"], true);                      
+                        jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+                          ["otherAssets"], true);                      
 
       double operatingIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
         
@@ -704,7 +710,7 @@ class FinancialAnalysisFunctions {
     */
     static double calcReturnOnInvestedFinancialCapital(
                                     const nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string> &dateSet,
+                                    const DateFunctions::DateSetTTM &dateSet,
                                     const char *timeUnit,
                                     double taxRate,
                                     const DataStructures::DebtInfo &debtInfo,
@@ -721,19 +727,17 @@ class FinancialAnalysisFunctions {
       }
 
 
-      double totalStockholderEquity = 
-        JsonFunctions::getJsonFloat(
-          jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+      double totalStockholderEquity = JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
                   ["totalStockholderEquity"], 
                   setNansToMissingValue);
       
-      double cash = 
-        JsonFunctions::getJsonFloat(
-          jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["cash"], 
+      double cash =  JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]["cash"], 
           setNansToMissingValue);
 
       double operatingIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
         
@@ -743,7 +747,7 @@ class FinancialAnalysisFunctions {
       //the effect of increasing the ROIC for a misleading reason.
 
       //double dividendsPaid = 
-      //  FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+      //  sumFundamentalDataOverDates(
       //    jsonData,FIN,CF,timeUnit,dateSet,"dividendsPaid",
       //    true);   
 
@@ -801,19 +805,21 @@ class FinancialAnalysisFunctions {
      * https://www.investopedia.com/terms/r/returnonequity.asp
     */
     static double calcReturnOnEquity(const nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string > &dateSet,
+                                    const DateFunctions::DateSetTTM &dateSet,
                                     const char *timeUnit,
                                     bool appendTermRecord,
                                     const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
                                     std::vector< std::string> &termNames,
                                     std::vector< double > &termValues){
-      double totalStockholderEquity = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
-                      ["totalStockholderEquity"], setNansToMissingValue);
+
+      double totalStockholderEquity = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+          ["totalStockholderEquity"], 
+          setNansToMissingValue);
       
       double netIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
@@ -847,7 +853,7 @@ class FinancialAnalysisFunctions {
 
     //==========================================================================
     static double calcRetentionRatio(const nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string > &dateSet,
+                                    const DateFunctions::DateSetTTM &dateSet,
                                     const char *timeUnit,
                                     bool appendTermRecord,
                                     const std::string &parentCategoryName,
@@ -859,7 +865,7 @@ class FinancialAnalysisFunctions {
       // https://www.investopedia.com/terms/r/returnoninvestmentcapital.asp
 
       double netIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
@@ -870,7 +876,7 @@ class FinancialAnalysisFunctions {
       //                ["dividendsPaid"], setNansToMissingValue);
     
       double dividendsPaid = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"dividendsPaid",
           true);
 
@@ -907,20 +913,20 @@ class FinancialAnalysisFunctions {
      * 
     */      
     static double calcReturnOnAssets(const nlohmann::ordered_json &jsonData, 
-                                     std::vector< std::string > &dateSet,
+                                     const DateFunctions::DateSetTTM &dateSet,
                                      const char *timeUnit,
                                      bool appendTermRecord,
                                      double setNansToMissingValue,
                                      std::vector< std::string> &termNames,
                                      std::vector< double > &termValues){
 
-      double netIncome =  FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+      double netIncome =  sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
-      double totalAssets = 
-        JsonFunctions::getJsonFloat(jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]
-                      ["totalAssets"],setNansToMissingValue);
+      double totalAssets = JsonFunctions::getJsonFloat(
+        jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]["totalAssets"],
+        setNansToMissingValue);
 
       //There are two definitions for capital depoloyed, and they should
       //be the same. These values are not the same for Apple, but are within
@@ -959,20 +965,20 @@ class FinancialAnalysisFunctions {
      * https://www.investopedia.com/terms/g/grossmargin.asp
     */
     static double calcGrossMargin(const nlohmann::ordered_json &jsonData, 
-                                     std::vector< std::string > &dateSet,
-                                     const char *timeUnit,
-                                     bool appendTermRecord,
-                                     bool setNansToMissingValue,
-                                     std::vector< std::string> &termNames,
-                                     std::vector< double > &termValues){
+                                  const DateFunctions::DateSetTTM &dateSet,
+                                  const char *timeUnit,
+                                  bool appendTermRecord,
+                                  bool setNansToMissingValue,
+                                  std::vector< std::string> &termNames,
+                                  std::vector< double > &termValues){
       
       double totalRevenue = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "totalRevenue", setNansToMissingValue);
 
       double costOfRevenue = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "costOfRevenue", setNansToMissingValue);
 
@@ -1006,7 +1012,7 @@ class FinancialAnalysisFunctions {
      * https://www.investopedia.com/terms/o/operatingmargin.asp
     */
     static double calcOperatingMargin(const nlohmann::ordered_json &jsonData, 
-                                     std::vector< std::string > &dateSet,
+                                     const DateFunctions::DateSetTTM &dateSet,
                                      const char *timeUnit,
                                      bool appendTermRecord,
                                      bool setNansToMissingValue,
@@ -1014,12 +1020,12 @@ class FinancialAnalysisFunctions {
                                      std::vector< double > &termValues){
 
       double operatingIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "operatingIncome", setNansToMissingValue);
 
       double totalRevenue = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "totalRevenue", setNansToMissingValue);
 
@@ -1052,14 +1058,15 @@ class FinancialAnalysisFunctions {
     /**
      * https://corporatefinanceinstitute.com/resources/accounting/cash-conversion-ratio/
     */
-    static double calcCashConversionRatio(const nlohmann::ordered_json &jsonData, 
-                                     std::vector< std::string> &dateSet,
-                                     const char *timeUnit,
-                                     double taxRate,
-                                     bool appendTermRecord,
-                                     bool setNansToMissingValue,
-                                     std::vector< std::string> &termNames,
-                                     std::vector< double > &termValues){
+    static double calcCashConversionRatio(
+                    const nlohmann::ordered_json &jsonData, 
+                    const DateFunctions::DateSetTTM &dateSet,
+                    const char *timeUnit,
+                    double taxRate,
+                    bool appendTermRecord,
+                    bool setNansToMissingValue,
+                    std::vector< std::string> &termNames,
+                    std::vector< double > &termValues){
       /*
         Free cash flow is not reported in the 10-Q that I'm working through,
         but it does appear in EOD's data. The formula suggested from 
@@ -1134,7 +1141,7 @@ class FinancialAnalysisFunctions {
                                                 termValues);
 
       double netIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "netIncome", setNansToMissingValue);
 
@@ -1168,7 +1175,7 @@ class FinancialAnalysisFunctions {
     */
     static double calcDebtToCapitalizationRatio(
                                     const nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string> &dateSet,
+                                    const DateFunctions::DateSetTTM &dateSet,
                                     const char *timeUnit,     
                                     const DataStructures::DebtInfo &debtInfo,                               
                                     bool appendTermRecord,
@@ -1177,9 +1184,11 @@ class FinancialAnalysisFunctions {
                                     std::vector< double > &termValues){
 
                                 
-      double totalStockholderEquity =  JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["totalStockholderEquity"], 
-        setNansToMissingValue);
+      double totalStockholderEquity =  
+        JsonFunctions::getJsonFloat(
+          jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+            ["totalStockholderEquity"], 
+          setNansToMissingValue);
 
       double debtToCapitalizationRatio=
                   (debtInfo.totalDebtEstimate)
@@ -1214,7 +1223,7 @@ class FinancialAnalysisFunctions {
      https://www.investopedia.com/terms/i/interestcoverageratio.asp
     */
     static double calcInterestCover(const nlohmann::ordered_json &jsonData, 
-                                    const std::vector< std::string > &dateSet,
+                                    const DateFunctions::DateSetTTM &dateSet,
                                     double defaultInterestCover,
                                     const char *timeUnit,                                    
                                     bool appendTermRecord,                                    
@@ -1255,15 +1264,16 @@ class FinancialAnalysisFunctions {
     };    
 
     //==========================================================================
-    static double calcDefaultSpread(const nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string>  &dateSet,
-                                    const char *timeUnit,
-                                    double meanInterestCover,
-                                    const nlohmann::ordered_json &jsonDefaultSpread,
-                                    bool appendTermRecord,
-                                    bool setNansToMissingValue,
-                                    std::vector< std::string> &termNames,
-                                    std::vector< double > &termValues){
+    static double calcDefaultSpread(
+                    const nlohmann::ordered_json &jsonData, 
+                    const DateFunctions::DateSetTTM &dateSet,
+                    const char *timeUnit,
+                    double meanInterestCover,
+                    const nlohmann::ordered_json &jsonDefaultSpread,
+                    bool appendTermRecord,
+                    bool setNansToMissingValue,
+                    std::vector< std::string> &termNames,
+                    std::vector< double > &termValues){
 
         double interestCover = FinancialAnalysisFunctions::
           calcInterestCover(jsonData,
@@ -1370,7 +1380,7 @@ class FinancialAnalysisFunctions {
 
     //==========================================================================
     static double calcFreeCashFlow( const nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string> &dateSet,
+                                    const DateFunctions::DateSetTTM &dateSet,
                                     const char *timeUnit,
                                     double taxRate,
                                     bool appendTermRecord,
@@ -1384,13 +1394,13 @@ class FinancialAnalysisFunctions {
       //https://www.investopedia.com/terms/f/freecashflow.asp
 
       double totalCashFromOperatingActivities = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,
             "totalCashFromOperatingActivities", setNansToMissingValue);                    
 
       //Sometimes this is not reported. I would rather this get computed
       double interestExpense = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "interestExpense", true);  
 
@@ -1400,7 +1410,7 @@ class FinancialAnalysisFunctions {
       double taxShieldOnInterestExpense = interestExpense*taxRate;
 
       double capitalExpenditures = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,
             "capitalExpenditures", setNansToMissingValue);    
 
@@ -1411,7 +1421,7 @@ class FinancialAnalysisFunctions {
           - capitalExpenditures;
 
       double freeCashFlowEOD = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,
             "freeCashFlow", setNansToMissingValue); 
 
@@ -1465,16 +1475,16 @@ class FinancialAnalysisFunctions {
 
     //==========================================================================
     static double calcNetCapitalExpenditures(
-                                     const nlohmann::ordered_json &jsonData, 
-                                     std::vector< std::string > &dateSet,
-                                     std::vector< std::string > &previousDateSet,
-                                     const char *timeUnit,
-                                     bool appendTermRecord,
-                                     const std::string &parentCategoryName,
-                                     bool setNansToMissingValue,
-                                     bool ignoreDepreciation,
-                                     std::vector< std::string> &termNames,
-                                     std::vector< double > &termValues){
+                      const nlohmann::ordered_json &jsonData, 
+                      const DateFunctions::DateSetTTM &dateSet,
+                      const DateFunctions::DateSetTTM &previousDateSet,
+                      const char *timeUnit,
+                      bool appendTermRecord,
+                      const std::string &parentCategoryName,
+                      bool setNansToMissingValue,
+                      bool ignoreDepreciation,
+                      std::vector< std::string> &termNames,
+                      std::vector< double > &termValues){
       /*
       Problem: the depreciation field in EOD's json data is often null
       Solution: Since Damodran's formula for net capital expenditures is
@@ -1494,7 +1504,7 @@ class FinancialAnalysisFunctions {
 
 
       double capitalExpenditures = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"capitalExpenditures",
           setNansToMissingValue);
 
@@ -1504,30 +1514,34 @@ class FinancialAnalysisFunctions {
 
       if(!JsonFunctions::isJsonFloatValid(capitalExpenditures)){
 
-        std::vector< std::string > dateSetAnalysis;
-        for(size_t i =0; i < dateSet.size(); ++i){
-          dateSetAnalysis.push_back(dateSet[i]);
-        }
-        dateSetAnalysis.push_back(previousDateSet[0]);
+        //Append the first interval of the previous data set to make it 
+        //possible to evaluate the change in quantities associated with 
+        //every entry in dataSet        
+        DateFunctions::DateSetTTM dateSetAnalysis(dateSet);
+        dateSetAnalysis.appendDate(previousDateSet.dates[0],
+                                   previousDateSet.days[0]);
 
         capitalExpenditures=0.;
 
         for(int indexPrevious=1; 
-          indexPrevious < dateSetAnalysis.size();++indexPrevious){
+          indexPrevious < dateSetAnalysis.dates.size();++indexPrevious){
 
           int index = indexPrevious-1;
+          double weight = dateSetAnalysis.weights[index];
+          double weightPrevious = dateSetAnalysis.weights[indexPrevious];
 
           //Use an alternative method to calculate capital expenditures
           plantPropertyEquipment = 
             JsonFunctions::getJsonFloat(
-              jsonData[FIN][BAL][timeUnit][dateSetAnalysis[index].c_str()]
+              jsonData[FIN][BAL][timeUnit][dateSetAnalysis.dates[index].c_str()]
               ["propertyPlantEquipment"], setNansToMissingValue);
-
+          plantPropertyEquipment *= weight;
 
           plantPropertyEquipmentPrevious = 
             JsonFunctions::getJsonFloat(
-              jsonData[FIN][BAL][timeUnit][dateSetAnalysis[indexPrevious].c_str()]
+              jsonData[FIN][BAL][timeUnit][dateSetAnalysis.dates[indexPrevious].c_str()]
               ["propertyPlantEquipment"], setNansToMissingValue);
+          plantPropertyEquipmentPrevious *= weightPrevious;
 
           //If one of the PPE's is populated copy it over to the PPE that is
           //nan: this is a better approximation of the PPE than 0.
@@ -1544,7 +1558,7 @@ class FinancialAnalysisFunctions {
 
 
       double depreciation = 
-          FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+          sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,dateSet,"depreciation",
             setNansToMissingValue);
 
@@ -1584,15 +1598,15 @@ class FinancialAnalysisFunctions {
 
     //==========================================================================
     static double calcChangeInNonCashWorkingCapital(
-                                    const nlohmann::ordered_json &jsonData, 
-                                    std::vector< std::string > &dateSet,
-                                    std::vector< std::string > &previousDateSet,
-                                    const char *timeUnit,
-                                    bool appendTermRecord,
-                                    const std::string &parentCategoryName,
-                                    bool setNansToMissingValue,
-                                    std::vector< std::string> &termNames,
-                                    std::vector< double > &termValues){
+                        const nlohmann::ordered_json &jsonData, 
+                        const DateFunctions::DateSetTTM &dateSet,
+                        const DateFunctions::DateSetTTM &previousDateSet,
+                        const char *timeUnit,
+                        bool appendTermRecord,
+                        const std::string &parentCategoryName,
+                        bool setNansToMissingValue,
+                        std::vector< std::string> &termNames,
+                        std::vector< double > &termValues){
       /*
         Problem: Damodran's FCFE needs change in non-cash working capital, but
                  this quantity is not really reported by EOD. 
@@ -1608,13 +1622,13 @@ class FinancialAnalysisFunctions {
 
       bool isInputValid=true;
 
-      std::vector< std::string > dateSetAnalysis;
-      for(size_t i =0; i < dateSet.size(); ++i){
-        dateSetAnalysis.push_back(dateSet[i]);
-      }
-      dateSetAnalysis.push_back(previousDateSet[0]);
-      
-
+      //Append the first interval of the previous data set to make it 
+      //possible to evaluate the change in quantities associated with 
+      //every entry in dataSet
+      DateFunctions::DateSetTTM dateSetAnalysis(dateSet);
+      dateSetAnalysis.appendDate(previousDateSet.dates[0],
+                                previousDateSet.days[0]);
+    
       double changeInNonCashWorkingCapital = 0.;
       double changeInInventory          = 0.;
       double changeInReceivables        = 0.;
@@ -1624,40 +1638,51 @@ class FinancialAnalysisFunctions {
       bool changeInAccountsPayableAdded = false;
 
       for(int indexPrevious=1; 
-          indexPrevious < dateSetAnalysis.size();++indexPrevious){
+          indexPrevious < dateSetAnalysis.dates.size();++indexPrevious){
 
         int index = indexPrevious-1;
 
+        double weight = dateSetAnalysis.weights[index];
+        double weightPrevious = dateSetAnalysis.weights[indexPrevious];
+
+        std::string date         = dateSetAnalysis.dates[index];
+        std::string datePrevious = dateSetAnalysis.dates[indexPrevious];
+
         double inventory =  
           JsonFunctions::getJsonFloat(      
-            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[index].c_str()]["inventory"],
+            jsonData[FIN][BAL][timeUnit][date.c_str()]["inventory"],
             setNansToMissingValue);
+        inventory *= weight;
 
         double inventoryPrevious = 
           JsonFunctions::getJsonFloat(  
-            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[indexPrevious].c_str()]["inventory"],
+            jsonData[FIN][BAL][timeUnit][datePrevious.c_str()]["inventory"],
             setNansToMissingValue);
+        inventoryPrevious *= weightPrevious;
 
         double netReceivables =
           JsonFunctions::getJsonFloat(  
-            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[index].c_str()]["netReceivables"],
+            jsonData[FIN][BAL][timeUnit][date.c_str()]["netReceivables"],
             setNansToMissingValue);
+        netReceivables *= weight;
 
         double netReceivablesPrevious = 
           JsonFunctions::getJsonFloat(  
-            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[indexPrevious].c_str()]["netReceivables"],
+            jsonData[FIN][BAL][timeUnit][datePrevious.c_str()]["netReceivables"],
             setNansToMissingValue);
+        netReceivablesPrevious *= weightPrevious;
 
         double accountsPayable =
           JsonFunctions::getJsonFloat(  
-            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[index].c_str()]["accountsPayable"],
+            jsonData[FIN][BAL][timeUnit][date.c_str()]["accountsPayable"],
             setNansToMissingValue);
+        accountsPayable *= weight;
 
         double accountsPayablePrevious = 
           JsonFunctions::getJsonFloat(  
-            jsonData[FIN][BAL][timeUnit][dateSetAnalysis[indexPrevious].c_str()]["accountsPayable"],
+            jsonData[FIN][BAL][timeUnit][datePrevious.c_str()]["accountsPayable"],
             setNansToMissingValue);
-
+        accountsPayablePrevious *= weightPrevious;
 
         //There are a number of companies that produce software or a service
         //and so never have any inventory to report.
@@ -1730,8 +1755,8 @@ class FinancialAnalysisFunctions {
     */
     static double calcFreeCashFlowToEquity(
                             const nlohmann::ordered_json &jsonData, 
-                            std::vector< std::string > &dateSet,
-                            std::vector< std::string > &previousDateSet,
+                            const DateFunctions::DateSetTTM &dateSet,
+                            const DateFunctions::DateSetTTM &previousDateSet,
                             const char *timeUnit,
                             const DataStructures::DebtInfo &debtInfo,
                             const DataStructures::DebtInfo &previousDebtInfo,
@@ -1744,12 +1769,12 @@ class FinancialAnalysisFunctions {
       std::string parentName = "freeCashFlowToEquity_";
       
       double netIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
       double depreciation = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"depreciation",
           setNansToMissingValue);
 
@@ -1866,21 +1891,22 @@ class FinancialAnalysisFunctions {
      than free-cash-flow-to-equity because the cash flow created by debt is
      not included.
      * */
-    static double calcOwnersEarnings(const nlohmann::ordered_json &jsonData, 
-                                     std::vector< std::string> &dateSet,
-                                     std::vector< std::string> &previousDateSet,
-                                     const char *timeUnit,   
-                                     bool appendTermRecord,
-                                     bool setNansToMissingValue,
-                                     std::vector< std::string> &termNames,
-                                     std::vector< double > &termValues){
+    static double calcOwnersEarnings(
+                    const nlohmann::ordered_json &jsonData, 
+                    const DateFunctions::DateSetTTM &dateSet,
+                    const DateFunctions::DateSetTTM &previousDateSet,
+                    const char *timeUnit,   
+                    bool appendTermRecord,
+                    bool setNansToMissingValue,
+                    std::vector< std::string> &termNames,
+                    std::vector< double > &termValues){
 
     
       //Definition from Ch. 3 of Damodaran (page 40/172 22%)     
       //Damodaran (2011). The little book of valuation    
 
       double netIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"netIncome",
           setNansToMissingValue);
 
@@ -1940,22 +1966,23 @@ class FinancialAnalysisFunctions {
 
 
     //==========================================================================
-    static double calcReinvestmentRate(const nlohmann::ordered_json &jsonData, 
-                                     std::vector< std::string > &dateSet,
-                                     std::vector< std::string > &previousDateSet,  
-                                     const char *timeUnit,
-                                     double taxRate,
-                                     bool appendTermRecord,
-                                     const std::string &parentCategoryName,
-                                     bool setNansToMissingValue,
-                                     std::vector< std::string> &termNames,
-                                     std::vector< double > &termValues){
+    static double calcReinvestmentRate(
+                    const nlohmann::ordered_json &jsonData, 
+                    const DateFunctions::DateSetTTM &dateSet,
+                    const DateFunctions::DateSetTTM &previousDateSet,  
+                    const char *timeUnit,
+                    double taxRate,
+                    bool appendTermRecord,
+                    const std::string &parentCategoryName,
+                    bool setNansToMissingValue,
+                    std::vector< std::string> &termNames,
+                    std::vector< double > &termValues){
 
     
       //Damodaran definition (page 40/172 22%)     
       
       double operatingIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
 
@@ -2027,19 +2054,20 @@ class FinancialAnalysisFunctions {
     };   
 
     //==========================================================================
-    static double calcFreeCashFlowToFirm(const nlohmann::ordered_json &jsonData, 
-                                     std::vector< std::string> &dateSet,
-                                     std::vector< std::string> &previousDateSet,                                     
-                                     const char *timeUnit,
-                                     double taxRate,
-                                     bool appendTermRecord,
-                                     bool setNansToMissingValue,
-                                     std::vector< std::string> &termNames,
-                                     std::vector< double > &termValues){
+    static double calcFreeCashFlowToFirm(
+                    const nlohmann::ordered_json &jsonData, 
+                    DateFunctions::DateSetTTM &dateSet,
+                    DateFunctions::DateSetTTM &previousDateSet,                                     
+                    const char *timeUnit,
+                    double taxRate,
+                    bool appendTermRecord,
+                    bool setNansToMissingValue,
+                    std::vector< std::string> &termNames,
+                    std::vector< double > &termValues){
 
 
       double operatingIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
             jsonData,FIN,IS,timeUnit,dateSet,
             "operatingIncome",true);
 
@@ -2106,23 +2134,23 @@ class FinancialAnalysisFunctions {
     */
     static double calcResidualCashFlow(
         const nlohmann::ordered_json &jsonData, 
-        std::vector< std::string > &dateSet,
+        const DateFunctions::DateSetTTM &dateSet,
         const char *timeUnit,
         double costOfEquityAsAPercentage,
-        std::vector< std::vector< std::string >> &datesToAverageCapitalExpenditures,
+        std::vector< DateFunctions::DateSetTTM > &datesToAverageCapitalExpenditures,
         bool appendTermRecord,
         bool setNansToMissingValue,
         std::vector< std::string> &termNames,
         std::vector< double > &termValues){
 
       double totalCashFromOperatingActivities = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"totalCashFromOperatingActivities",
           setNansToMissingValue);
 
       //Not all firms actually have a research and development entry
       double researchDevelopment = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"researchDevelopment",
           true);  
       
@@ -2133,7 +2161,7 @@ class FinancialAnalysisFunctions {
 
       for(size_t i =0; i < datesToAverageCapitalExpenditures.size(); ++i){
         capitalExpenditure = 
-          FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+          sumFundamentalDataOverDates(
             jsonData,FIN,CF,timeUnit,datesToAverageCapitalExpenditures[i],
             "capitalExpenditures",setNansToMissingValue);
 
@@ -2150,9 +2178,11 @@ class FinancialAnalysisFunctions {
                                 /capitalExpenditureCount;
       }
       //Evaluate the cost of equity
-      double totalStockholderEquity = JsonFunctions::getJsonFloat( 
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["totalStockholderEquity"],
-        setNansToMissingValue);
+      double totalStockholderEquity = 
+        JsonFunctions::getJsonFloat( 
+          jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
+            ["totalStockholderEquity"],
+          setNansToMissingValue);
 
       double costOfEquity = JsonFunctions::MISSING_VALUE; 
       
@@ -2201,16 +2231,17 @@ class FinancialAnalysisFunctions {
     }
 
     //==========================================================================
-    static double calcEnterpriseValue(const nlohmann::ordered_json &fundamentalData, 
-                                    double marketCapitalization, 
-                                    std::vector< std::string > &dateSet,
-                                    const char *timeUnit, 
-                                    const DataStructures::DebtInfo &debtInfo,
-                                    bool appendTermRecord,                                      
-                                    const std::string &parentCategoryName,
-                                    bool setNansToMissingValue,
-                                    std::vector< std::string> &termNames,
-                                    std::vector< double > &termValues){
+    static double calcEnterpriseValue(
+          const nlohmann::ordered_json &fundamentalData, 
+          double marketCapitalization, 
+          const DateFunctions::DateSetTTM &dateSet,
+          const char *timeUnit, 
+          const DataStructures::DebtInfo &debtInfo,
+          bool appendTermRecord,                                      
+          const std::string &parentCategoryName,
+          bool setNansToMissingValue,
+          std::vector< std::string> &termNames,
+          std::vector< double > &termValues){
 
       double debtBookValue = debtInfo.totalDebtEstimate;      
       if(!JsonFunctions::isJsonFloatValid(debtBookValue)){
@@ -2219,11 +2250,11 @@ class FinancialAnalysisFunctions {
 
       //Not all firms have an entry for cash and equivalents
       double cashAndEquivalents = JsonFunctions::getJsonFloat(
-        fundamentalData[FIN][BAL][timeUnit][dateSet[0].c_str()]
+        fundamentalData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
                        ["cashAndEquivalents"],true);
 
       double cash = JsonFunctions::getJsonFloat(
-        fundamentalData[FIN][BAL][timeUnit][dateSet[0].c_str()]["cash"],
+        fundamentalData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]["cash"],
         true);
       
       double cashAndEquivalentsEntry=cashAndEquivalents;
@@ -2280,25 +2311,24 @@ class FinancialAnalysisFunctions {
 
     //==========================================================================
     static double calcPriceToValueUsingDiscountedCashflowModel(
-                                const nlohmann::ordered_json &jsonData, 
-                                std::vector< std::string > &dateSet,
-                                std::vector< std::string > &previousDateSet,
-                                const char *timeUnit,   
-                                const DataStructures::DebtInfo &debtInfo,
-                                double riskFreeRate,
-                                double costOfCapital,
-                                double costOfCapitalMature,
-                                double taxRate,
-                                double afterTaxOperatingIncomeGrowth,
-                                double reinvestmentRate,
-                                double returnOnInvestedCapital,
-                                double marketCapitalization,
-                                int numberOfYearsForTerminalValuation,
-                                bool appendTermRecord,
-                                bool setNansToMissingValue,
-                                const std::string &parentName,
-                                std::vector< std::string> &termNames,
-                                std::vector< double > &termValues){
+                    const nlohmann::ordered_json &jsonData, 
+                    const DateFunctions::DateSetTTM &dateSet,
+                    const char *timeUnit,   
+                    const DataStructures::DebtInfo &debtInfo,
+                    double riskFreeRate,
+                    double costOfCapital,
+                    double costOfCapitalMature,
+                    double taxRate,
+                    double afterTaxOperatingIncomeGrowth,
+                    double reinvestmentRate,
+                    double returnOnInvestedCapital,
+                    double marketCapitalization,
+                    int numberOfYearsForTerminalValuation,
+                    bool appendTermRecord,
+                    bool setNansToMissingValue,
+                    const std::string &parentName,
+                    std::vector< std::string> &termNames,
+                    std::vector< double > &termValues){
 
 
       
@@ -2332,7 +2362,7 @@ class FinancialAnalysisFunctions {
                               1+numberOfYearsForTerminalValuation);
 
       double operatingIncome = 
-        FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+        sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
           setNansToMissingValue);
 
@@ -2439,7 +2469,7 @@ class FinancialAnalysisFunctions {
 
       //Market value (make adjustments as described in Damodaran Ch. 3)
       double cash = JsonFunctions::getJsonFloat(
-        jsonData[FIN][BAL][timeUnit][dateSet[0].c_str()]["cash"],
+        jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]["cash"],
         true);
 
       double crossHoldings = JsonFunctions::MISSING_VALUE;

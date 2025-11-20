@@ -24,19 +24,54 @@ class DateFunctions {
       std::vector< std::string > dates;
       std::vector< double > weights;
       std::vector< double > weightsNormalized;
-      std::vector< int > days;   
+      std::vector< int > days; 
+      bool isQuarterlyData;  
+      DateSetTTM():isQuarterlyData(false){
+        dates.resize(0);
+        weights.resize(0);
+        weightsNormalized.resize(0);
+        days.resize(0);
+      };
       void clear(){
         dates.resize(0);
         weights.resize(0);
         weightsNormalized.resize(0);
         days.resize(0);
       }; 
-      void addAnnualData(std::string &date){
+
+      void addAnnualData(const std::string &date){
         dates.push_back(date);
         weights.push_back(1.0);
         weightsNormalized.push_back(1.0);
         days.push_back(static_cast<int>(DAYS_PER_YEAR));
-      }
+        isQuarterlyData=false;
+      };
+
+      void normalizeWeights(){
+        double weightTotal=0.;
+        for(size_t i=0; i<weights.size();++i){
+          weightTotal += weights[i];
+        }
+        for(size_t i=0; i<weights.size();++i){
+          weightsNormalized[i] = weightsNormalized[i]/weightTotal;
+        }        
+      };
+
+      void appendDate(const std::string &date, int dayCount){
+        dates.push_back(date);
+        days.push_back(dayCount);
+
+        double weight = 0.0;
+        if(isQuarterlyData){
+          weight =  (0.25 * DateFunctions::DAYS_PER_YEAR) 
+                    / static_cast<double>(dayCount);                
+        }else{
+          weight = (DateFunctions::DAYS_PER_YEAR)
+                   / static_cast<double>(dayCount);
+        }
+        weights.push_back(weight);
+        normalizeWeights();        
+      };
     };
   //==============================================================================
     static double convertToFractionalYear(const std::string &dateStr){
@@ -175,154 +210,166 @@ class DateFunctions {
                             const std::vector<std::string> &dateSet,
                             const char* dateFormat, 
                             DateSetTTM &dateSetTTMUpd,
-                            int maximumTTMDateSetErrorInDays){
+                            int maximumTTMDateSetErrorInDays,
+                            bool quaterlyTTM){
 
       if(indexA >= dateSet.size() || indexA < 0){
         return false;
       }
 
-      dateSetTTMUpd.dates.clear();
-      dateSetTTMUpd.weights.clear();
-      dateSetTTMUpd.days.clear();
+      dateSetTTMUpd.clear();
+      dateSetTTMUpd.isQuarterlyData = quaterlyTTM;
 
-
-      int indexB = indexA;
-
-      std::istringstream dateStream(dateSet[indexA]);
-      dateStream.exceptions(std::ios::failbit);
-      date::sys_days daysA;
-      dateStream >> date::parse(dateFormat,daysA);
-
-      //int indexPrevious = indexA;
-      date::sys_days daysPrevious = daysA;
-      int count = 0;
-      bool flagDateSetFilled = false;
-
-      int daysInAYear = static_cast<int>(DAYS_PER_YEAR);
-      int countError = maximumTTMDateSetErrorInDays*2.0;
-      int daysInterval = 0;
-
-      //If we know the next reporting date, then set the number of days
-      //that the data in indexA applies to.
-      if(indexA > 0){
-        int indexC = indexA-1;
-        dateStream.clear();
-        dateStream.str(dateSet[indexC]);
-        dateStream.exceptions(std::ios::failbit);
-        date::sys_days daysC;
-        dateStream >> date::parse(dateFormat,daysC);
-        daysInterval = (daysC-daysA).count();            
-      }
-      dateSetTTMUpd.days.push_back(daysInterval);    
-
-      //Store the previous valid date
-      dateSetTTMUpd.dates.push_back(dateSet[indexA]);
-
-
-      while((indexB+1) < dateSet.size() 
-              && count <= daysInAYear){
-        
-        ++indexB;
-
-        //Get the current date's day count
-        dateStream.clear();
-        dateStream.str(dateSet[indexB]);
-        dateStream.exceptions(std::ios::failbit);
-        date::sys_days daysB;
-        dateStream >> date::parse(dateFormat,daysB);
-
-        //Evaluate the time spanned with the current date
-        daysInterval      = (daysPrevious-daysB).count();    
-        count             = (daysA-daysB).count() + dateSetTTMUpd.days[0];
-              
-        if(daysInterval < 0){
-          std::cerr << "Error: dates should be in reverse chronological order"
-                    << std::endl;
-          std::abort();                    
-        }
-
-        dateSetTTMUpd.dates.push_back(dateSet[indexB]);
-        dateSetTTMUpd.days.push_back(daysInterval);
-
-        daysPrevious = daysB;
-      }
-
-      //If we are starting from the first entry, we don't actually 
-      //know how long its reporting period is. Estimate the pre
-      if(indexA == 0){        
-        std::vector< int > daysTTMSort;
-        for(size_t i=1; i<dateSetTTMUpd.days.size();++i){
-          daysTTMSort.push_back(dateSetTTMUpd.days[i]);
-        }
-        std::sort(daysTTMSort.begin(),daysTTMSort.end());
-        double indexMedianDbl = 
-          std::round(static_cast<double>(daysTTMSort.size())*0.5);
-        int indexMedian = static_cast<int>(indexMedianDbl-1);
-        dateSetTTMUpd.days[0] = daysTTMSort[indexMedian];
-      }
-
-      //
-      // Set the weights associated with each entry
-      //
-      double weight = 1.0;       
-      int countPrevious = 0;      
-      bool isYearReached = false;
-      std::vector< bool > eraseElement;
-
-      count = 0;
-      double countWeighted = 0.0;
-      for(size_t i=0; i < dateSetTTMUpd.days.size(); ++i){
-        count += dateSetTTMUpd.days[i];
-        if(count < daysInAYear){
-          weight = 1.0;
-        }else{
-          int remainder = daysInAYear-countPrevious;
-          if(remainder < 0){
-            remainder=0;
-            isYearReached = true;
-          }
-          weight = static_cast<double>(remainder)
-                  /static_cast<double>(dateSetTTMUpd.days[i]);
-          
-        }
-        
-        
-        if(!isYearReached){
-          dateSetTTMUpd.weights.push_back(weight);
-          countWeighted += weight * static_cast<double>(dateSetTTMUpd.days[i]);        
-        }
-
-        countPrevious = count;
-      }
-
-      //Trim excess data
-      while(dateSetTTMUpd.dates.size()>dateSetTTMUpd.weights.size()){
-        dateSetTTMUpd.dates.pop_back();
-        dateSetTTMUpd.days.pop_back();
-      }
-
-      double weightTotal = 0.;
-      for(size_t i=0; i<dateSetTTMUpd.weights.size();++i){
-        weightTotal += dateSetTTMUpd.weights[i];
-      }
-      for(size_t i=0; i<dateSetTTMUpd.weights.size();++i){
-        dateSetTTMUpd.weightsNormalized.push_back(
-          dateSetTTMUpd.weights[i]/weightTotal);
-      }
-
-
-      double weightedDayError = countWeighted
-                              - static_cast<double>(daysInAYear);
-
-      //Here a valid TTM date set has at least 1 years worth of 
-      //data in it. If companies occassionally have irregularities, there
-      //may be more than 1 year's worth of data in the set.
-      if( std::abs(weightedDayError) <= maximumTTMDateSetErrorInDays){
+      if(!quaterlyTTM){
+        dateSetTTMUpd.addAnnualData(dateSet[indexA]);
         return true;
       }else{
-        return false;
-      }
+        
+        int indexB = indexA;
 
+        std::istringstream dateStream(dateSet[indexA]);
+        dateStream.exceptions(std::ios::failbit);
+        date::sys_days daysA;
+        dateStream >> date::parse(dateFormat,daysA);
+
+        //int indexPrevious = indexA;
+        date::sys_days daysPrevious = daysA;
+        int count = 0;
+        bool flagDateSetFilled = false;
+
+        int daysInAYear = static_cast<int>(DAYS_PER_YEAR);
+        int countError = maximumTTMDateSetErrorInDays*2.0;
+        int daysInterval = 0;
+
+        //If we know the next reporting date, then set the number of days
+        //that the data in indexA applies to.
+        if(indexA > 0){
+          int indexC = indexA-1;
+          dateStream.clear();
+          dateStream.str(dateSet[indexC]);
+          dateStream.exceptions(std::ios::failbit);
+          date::sys_days daysC;
+          dateStream >> date::parse(dateFormat,daysC);
+          daysInterval = (daysC-daysA).count();            
+        }
+        dateSetTTMUpd.days.push_back(daysInterval);    
+
+        //Store the previous valid date
+        dateSetTTMUpd.dates.push_back(dateSet[indexA]);
+
+
+        while((indexB+1) < dateSet.size() 
+                && count <= daysInAYear){
+          
+          ++indexB;
+
+          //Get the current date's day count
+          dateStream.clear();
+          dateStream.str(dateSet[indexB]);
+          dateStream.exceptions(std::ios::failbit);
+          date::sys_days daysB;
+          dateStream >> date::parse(dateFormat,daysB);
+
+          //Evaluate the time spanned with the current date
+          daysInterval      = (daysPrevious-daysB).count();    
+          count             = (daysA-daysB).count() + dateSetTTMUpd.days[0];
+                
+          if(daysInterval < 0){
+            std::cerr << "Error: dates should be in reverse chronological order"
+                      << std::endl;
+            std::abort();                    
+          }
+
+          dateSetTTMUpd.dates.push_back(dateSet[indexB]);
+          dateSetTTMUpd.days.push_back(daysInterval);
+
+          daysPrevious = daysB;
+        }
+
+        //If we are starting from the first entry, we don't actually 
+        //know how long its reporting period is. Estimate the pre
+        if(indexA == 0){        
+          std::vector< int > daysTTMSort;
+          for(size_t i=1; i<dateSetTTMUpd.days.size();++i){
+            daysTTMSort.push_back(dateSetTTMUpd.days[i]);
+          }
+          std::sort(daysTTMSort.begin(),daysTTMSort.end());
+          double indexMedianDbl = 
+            std::round(static_cast<double>(daysTTMSort.size())*0.5);
+          int indexMedian = static_cast<int>(indexMedianDbl-1);
+          dateSetTTMUpd.days[0] = daysTTMSort[indexMedian];
+        }
+
+        //
+        // Set the weights associated with each entry
+        //
+        double weight = 1.0;       
+        double weightThreshold = 1.0 
+          - (static_cast<double>(maximumTTMDateSetErrorInDays) / daysInAYear);
+        
+        int countPrevious = 0;      
+        bool isYearReached = false;
+        std::vector< bool > eraseElement;
+
+        count = 0;
+        double countWeighted = 0.0;
+        for(size_t i=0; i < dateSetTTMUpd.days.size(); ++i){
+          count += dateSetTTMUpd.days[i];
+          if(count < daysInAYear){
+            weight = 1.0;
+          }else{
+            int remainder = daysInAYear-countPrevious;
+            if(remainder < 0){
+              remainder=0;
+              isYearReached = true;
+            }
+            weight = static_cast<double>(remainder)
+                    /static_cast<double>(dateSetTTMUpd.days[i]);
+            
+            //Round up to 1 if the weight is within the desired tolerance
+            if(weight > weightThreshold){
+              weight = 1.0;
+            }
+            
+          }
+          
+          
+          if(!isYearReached){
+            dateSetTTMUpd.weights.push_back(weight);
+            countWeighted += weight * static_cast<double>(dateSetTTMUpd.days[i]);        
+          }
+
+          countPrevious = count;
+        }
+
+        //Trim excess data
+        while(dateSetTTMUpd.dates.size()>dateSetTTMUpd.weights.size()){
+          dateSetTTMUpd.dates.pop_back();
+          dateSetTTMUpd.days.pop_back();
+        }
+
+        double weightTotal = 0.;
+        for(size_t i=0; i<dateSetTTMUpd.weights.size();++i){
+          weightTotal += dateSetTTMUpd.weights[i];
+        }
+        for(size_t i=0; i<dateSetTTMUpd.weights.size();++i){
+          dateSetTTMUpd.weightsNormalized.push_back(
+            dateSetTTMUpd.weights[i]/weightTotal);
+        }
+
+
+        double weightedDayError = countWeighted
+                                - static_cast<double>(daysInAYear);
+
+        //Here a valid TTM date set has at least 1 years worth of 
+        //data in it. If companies occassionally have irregularities, there
+        //may be more than 1 year's worth of data in the set.
+        if( std::abs(weightedDayError) <= maximumTTMDateSetErrorInDays){
+          return true;
+        }else{
+          return false;
+        }
+      }
     };
 
 };
