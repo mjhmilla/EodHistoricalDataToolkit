@@ -41,6 +41,9 @@ class FinancialAnalysisFunctions {
         bool setNansToMissingValue,
         bool includeTimeUnitInAddress=true){
 
+      std::cerr << "This function needs to be upgraded to use DateSetTTM" << std::endl;
+      std::abort();
+
       double value        = 0;
       double sumOfValues  = 0;
       bool valueMissing   = false;

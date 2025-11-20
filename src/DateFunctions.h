@@ -20,6 +20,24 @@ class DateFunctions {
   public:
     static constexpr double DAYS_PER_YEAR = 365.25;
 
+    struct DateSetTTM{
+      std::vector< std::string > dates;
+      std::vector< double > weights;
+      std::vector< double > weightsNormalized;
+      std::vector< int > days;   
+      void clear(){
+        dates.resize(0);
+        weights.resize(0);
+        weightsNormalized.resize(0);
+        days.resize(0);
+      }; 
+      void addAnnualData(std::string &date){
+        dates.push_back(date);
+        weights.push_back(1.0);
+        weightsNormalized.push_back(1.0);
+        days.push_back(static_cast<int>(DAYS_PER_YEAR));
+      }
+    };
   //==============================================================================
     static double convertToFractionalYear(const std::string &dateStr){
       double date = std::nan("1");
@@ -150,22 +168,23 @@ class DateFunctions {
 
     };
 
+    //std::vector<std::string> &dateSetTTMUpd,
+    //std::vector<double> &weightTTMUpd,
     //============================================================================
     static bool extractTTM( int indexA,
                             const std::vector<std::string> &dateSet,
                             const char* dateFormat, 
-                            std::vector<std::string> &dateSetTTMUpd,
-                            std::vector<double> &weightTTMUpd,
+                            DateSetTTM &dateSetTTMUpd,
                             int maximumTTMDateSetErrorInDays){
-
-      dateSetTTMUpd.clear();
-      weightTTMUpd.clear();
 
       if(indexA >= dateSet.size() || indexA < 0){
         return false;
       }
 
-      std::vector< int > daysTTM;
+      dateSetTTMUpd.dates.clear();
+      dateSetTTMUpd.weights.clear();
+      dateSetTTMUpd.days.clear();
+
 
       int indexB = indexA;
 
@@ -194,10 +213,10 @@ class DateFunctions {
         dateStream >> date::parse(dateFormat,daysC);
         daysInterval = (daysC-daysA).count();            
       }
-      daysTTM.push_back(daysInterval);    
+      dateSetTTMUpd.days.push_back(daysInterval);    
 
       //Store the previous valid date
-      dateSetTTMUpd.push_back(dateSet[indexA]);
+      dateSetTTMUpd.dates.push_back(dateSet[indexA]);
 
 
       while((indexB+1) < dateSet.size() 
@@ -214,7 +233,7 @@ class DateFunctions {
 
         //Evaluate the time spanned with the current date
         daysInterval      = (daysPrevious-daysB).count();    
-        count             = (daysA-daysB).count() + daysTTM[0];
+        count             = (daysA-daysB).count() + dateSetTTMUpd.days[0];
               
         if(daysInterval < 0){
           std::cerr << "Error: dates should be in reverse chronological order"
@@ -222,8 +241,8 @@ class DateFunctions {
           std::abort();                    
         }
 
-        dateSetTTMUpd.push_back(dateSet[indexB]);
-        daysTTM.push_back(daysInterval);
+        dateSetTTMUpd.dates.push_back(dateSet[indexB]);
+        dateSetTTMUpd.days.push_back(daysInterval);
 
         daysPrevious = daysB;
       }
@@ -232,14 +251,14 @@ class DateFunctions {
       //know how long its reporting period is. Estimate the pre
       if(indexA == 0){        
         std::vector< int > daysTTMSort;
-        for(size_t i=1; i<daysTTM.size();++i){
-          daysTTMSort.push_back(daysTTM[i]);
+        for(size_t i=1; i<dateSetTTMUpd.days.size();++i){
+          daysTTMSort.push_back(dateSetTTMUpd.days[i]);
         }
         std::sort(daysTTMSort.begin(),daysTTMSort.end());
         double indexMedianDbl = 
           std::round(static_cast<double>(daysTTMSort.size())*0.5);
         int indexMedian = static_cast<int>(indexMedianDbl-1);
-        daysTTM[0] = daysTTMSort[indexMedian];
+        dateSetTTMUpd.days[0] = daysTTMSort[indexMedian];
       }
 
       //
@@ -252,8 +271,8 @@ class DateFunctions {
 
       count = 0;
       double countWeighted = 0.0;
-      for(size_t i=0; i < daysTTM.size(); ++i){
-        count += daysTTM[i];
+      for(size_t i=0; i < dateSetTTMUpd.days.size(); ++i){
+        count += dateSetTTMUpd.days[i];
         if(count < daysInAYear){
           weight = 1.0;
         }else{
@@ -263,23 +282,32 @@ class DateFunctions {
             isYearReached = true;
           }
           weight = static_cast<double>(remainder)
-                  /static_cast<double>(daysTTM[i]);
+                  /static_cast<double>(dateSetTTMUpd.days[i]);
           
         }
         
         
         if(!isYearReached){
-          weightTTMUpd.push_back(weight);
-          countWeighted += weight * static_cast<double>(daysTTM[i]);        
+          dateSetTTMUpd.weights.push_back(weight);
+          countWeighted += weight * static_cast<double>(dateSetTTMUpd.days[i]);        
         }
 
         countPrevious = count;
       }
 
       //Trim excess data
-      while(dateSetTTMUpd.size()>weightTTMUpd.size()){
-        dateSetTTMUpd.pop_back();
-        daysTTM.pop_back();
+      while(dateSetTTMUpd.dates.size()>dateSetTTMUpd.weights.size()){
+        dateSetTTMUpd.dates.pop_back();
+        dateSetTTMUpd.days.pop_back();
+      }
+
+      double weightTotal = 0.;
+      for(size_t i=0; i<dateSetTTMUpd.weights.size();++i){
+        weightTotal += dateSetTTMUpd.weights[i];
+      }
+      for(size_t i=0; i<dateSetTTMUpd.weights.size();++i){
+        dateSetTTMUpd.weightsNormalized.push_back(
+          dateSetTTMUpd.weights[i]/weightTotal);
       }
 
 

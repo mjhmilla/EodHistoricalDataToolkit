@@ -693,60 +693,60 @@ double calcAverageTaxRate(  const DataStructures::AnalysisDates &analysisDates,
   double meanTaxRate                        = 0.;
   unsigned int taxRateEntryCount            = 0;
 
-      while( (indexDate+1) < analysisDates.common.size()){
+  while( (indexDate+1) < analysisDates.common.size()){
 
-        ++indexDate;
+    ++indexDate;
 
-        std::string date = analysisDates.common[indexDate]; 
-        
-        //The set of dates used for the TTM analysis
-        std::vector < std::string > dateSet;
-        std::vector < double > dateSetWeight;
-        if(quarterlyTTMAnalysis){
-          bool validDateSet = 
-            DateFunctions::extractTTM(indexDate,
-                                    analysisDates.common,
-                                    "%Y-%m-%d",
-                                    dateSet,
-                                    dateSetWeight,
-                                    maxDayErrorTTM);                                     
-          if(!validDateSet){
-            break;
-          }
-
-        }else{
-            dateSet.push_back(date);
-            dateSetWeight.push_back(1.0);
-        }                             
-        
-        ++numberOfIterations;
-        numberOfDatesPerIteration += static_cast<int>(dateSet.size());
-        
-        taxRate=0.0;
-        for(unsigned int j=0; j<dateSet.size();++j){
-          int year  = std::stoi(dateSet[j].substr(0,4));
-          int yearMin = year-maxYearErrorTaxRateTable;
-          double taxRateDate = getTaxRateFromTable(countryISO2, year, yearMin, 
-                                        corpWorldTaxTable);
-          taxRate += taxRateDate*dateSetWeight[j];
-        }
-        taxRate = taxRate*0.01;                                   
-        if(std::isnan(taxRate)){
-          taxRate=defaultTaxRate;
-        }                              
-
-        meanTaxRate += taxRate;        
-        ++taxRateEntryCount;    
-    }        
-      //=======================================================================
-      
-      if(taxRateEntryCount > 0){
-        meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
-      }else{
-        meanTaxRate = std::nan("1");
+    std::string date = analysisDates.common[indexDate]; 
+    
+    //The set of dates used for the TTM analysis
+    //std::vector < std::string > dateSet;
+    //std::vector < double > dateSetWeight;
+    DateFunctions::DateSetTTM dateSet;
+    if(quarterlyTTMAnalysis){
+      bool validDateSet = 
+        DateFunctions::extractTTM(indexDate,
+                                analysisDates.common,
+                                "%Y-%m-%d",
+                                dateSet,
+                                maxDayErrorTTM);                                     
+      if(!validDateSet){
+        break;
       }
-      
-      return meanTaxRate;
+
+    }else{
+        dateSet.addAnnualData(date);
+    }                             
+    
+    ++numberOfIterations;
+    numberOfDatesPerIteration += static_cast<int>(dateSet.dates.size());
+    
+    taxRate=0.0;
+
+    for(unsigned int j=0; j<dateSet.dates.size();++j){
+      int year  = std::stoi(dateSet.dates[j].substr(0,4));
+      int yearMin = year-maxYearErrorTaxRateTable;
+      double taxRateDate = getTaxRateFromTable(countryISO2, year, yearMin, 
+                                    corpWorldTaxTable);
+      taxRate += taxRateDate*dateSet.weightsNormalized[j];
+    }
+    taxRate = taxRate*0.01;                                   
+    if(std::isnan(taxRate)){
+      taxRate=defaultTaxRate;
+    }                              
+
+    meanTaxRate += taxRate;        
+    ++taxRateEntryCount;    
+  }        
+  //=======================================================================
+  
+  if(taxRateEntryCount > 0){
+    meanTaxRate = meanTaxRate / static_cast<double>(taxRateEntryCount);
+  }else{
+    meanTaxRate = std::nan("1");
+  }
+  
+  return meanTaxRate;
 
 };
 
@@ -913,23 +913,22 @@ double calcAverageInterestCover(
     std::string date = analysisDates.common[indexDate]; 
     
     //The set of dates used for the TTM analysis
-    std::vector < std::string > dateSet;
-    std::vector < double > dateSetWeight;
+    //std::vector < std::string > dateSet;
+    //std::vector < double > dateSetWeight;
+    DateFunctions::DateSetTTM dateSet;
     if(quarterlyTTMAnalysis){
       validDateSet = 
         DateFunctions::extractTTM( indexDate,
                                     analysisDates.common,
                                     "%Y-%m-%d",
                                     dateSet,
-                                    dateSetWeight,
                                     maxDayErrorTTM);                                     
       if(!validDateSet){
         break;
       }
 
     }else{
-      dateSet.push_back(date);
-      dateSetWeight.push_back(1.0);
+      dateSet.addAnnualData(date);
     }
 
     std::vector<std::string> localTermNames;
@@ -974,15 +973,16 @@ double calcLastValidDateIndex(
     std::string date = analysisDates.common[indexDate]; 
     
     //The set of dates used for the TTM analysis
-    std::vector < std::string > dateSet;
-    std::vector < double > dateSetWeight;
+    //std::vector < std::string > dateSet;
+    //std::vector < double > dateSetWeight;
+    DateFunctions::DateSetTTM dateSet;
+
     if(quarterlyTTMAnalysis){
       validDateSet = 
         DateFunctions::extractTTM(indexDate,
                                   analysisDates.common,
                                   "%Y-%m-%d",
                                   dateSet,
-                                  dateSetWeight,
                                   maxDayErrorTTM);                                     
       if(!validDateSet){
         break;
@@ -990,7 +990,7 @@ double calcLastValidDateIndex(
 
     }                               
     ++numberOfIterations;
-    numberOfDatesPerIteration += static_cast<int>(dateSet.size());    
+    numberOfDatesPerIteration += static_cast<int>(dateSet.dates.size());    
   }        
   
 
@@ -1799,10 +1799,11 @@ int main (int argc, char* argv[]) {
     nlohmann::ordered_json analysis;
     if(validInput){
 
-      std::vector< std::vector< std::string >> trailingPastPeriods;
+      std::vector< DateFunctions::DateSetTTM > trailingPastPeriods;
       std::string previousTimePeriod("");
-      std::vector< std::string > previousDateSet;
-      std::vector< double > previousDateSetWeight;
+      DateFunctions::DateSetTTM previousDateSet;
+      //std::vector< std::string > previousDateSet;
+      //std::vector< double > previousDateSetWeight;
       unsigned int entryCount = 0;
 
       //========================================================================
@@ -2324,24 +2325,23 @@ int main (int argc, char* argv[]) {
 
                 
         //The set of dates used for the TTM analysis
-        std::vector < std::string > dateSet;
-        std::vector < double > dateSetWeight;
-
+        //std::vector < std::string > dateSet;
+        //std::vector < double > dateSetWeight;
+        DateFunctions::DateSetTTM dateSet;
       
         if(quarterlyTTMAnalysis){
           validDateSet = 
             DateFunctions::extractTTM(indexDate,
                                       analysisDates.common,
                                       "%Y-%m-%d",
-                                      dateSet,                                    
-                                      dateSetWeight,
+                                      dateSet,
                                       maxDayErrorTTM); 
             
           if(!validDateSet){
             break;
           }    
         }else{
-          dateSet.push_back(date);
+          dateSet.addAnnualData(date);
         }           
              
         //======================================================================
@@ -2349,24 +2349,23 @@ int main (int argc, char* argv[]) {
         //======================================================================        
 
         //Check if we have enough data to get the previous time period
-        int indexPrevious = indexDate+static_cast<int>(dateSet.size());        
+        int indexPrevious = indexDate+static_cast<int>(dateSet.dates.size());        
 
         //Fetch the previous TTM
         previousTimePeriod = analysisDates.common[indexPrevious];
-        previousDateSet.resize(0);
+        previousDateSet.clear();
 
         if(quarterlyTTMAnalysis){
           validDateSet = DateFunctions::extractTTM(indexPrevious,
                                                     analysisDates.common,
                                                     "%Y-%m-%d",
                                                     previousDateSet,
-                                                    previousDateSetWeight,
                                                     maxDayErrorTTM); 
           if(!validDateSet){
             break;
           }     
         }else{
-          previousDateSet.push_back(previousTimePeriod);
+          previousDateSet.addAnnualData(previousTimePeriod);
         } 
 
         termNames.clear();
@@ -2389,8 +2388,9 @@ int main (int argc, char* argv[]) {
                        ++i)
         {
 
-          std::vector< std::string > pastDateSet;
-          std::vector< double > pastDateSetWeight;
+          //std::vector< std::string > pastDateSet;
+          //std::vector< double > pastDateSetWeight;
+          DateFunctions::DateSetTTM pastDateSet;
 
           if(validPreviousDateSet){
             if(quarterlyTTMAnalysis){
@@ -2399,11 +2399,10 @@ int main (int argc, char* argv[]) {
                                           analysisDates.common,
                                           "%Y-%m-%d",
                                           pastDateSet,
-                                          pastDateSetWeight,
                                           maxDayErrorTTM);
             }else{
               if(indexPastPeriods < analysisDates.common.size()){
-                pastDateSet.push_back(analysisDates.common[indexPastPeriods]);
+                pastDateSet.addAnnualData(analysisDates.common[indexPastPeriods]);
               }else{
                 validPreviousDateSet=false;
               }
@@ -2411,7 +2410,7 @@ int main (int argc, char* argv[]) {
           }
           if(validPreviousDateSet){
             trailingPastPeriods.push_back(pastDateSet);
-            indexPastPeriods += pastDateSet.size();
+            indexPastPeriods += pastDateSet.dates.size();
           }
 
         }
@@ -2555,25 +2554,25 @@ int main (int argc, char* argv[]) {
         std::string debtParentName = "debt_";
         std::string previousDebtParentName = "previousDebt_";
 
-        FinancialAnalysisFunctions::getDebtInfo(  fundamentalData,
-                                                  timePeriod.c_str(),
-                                                  dateSet[0].c_str(),
-                                                  debtInfo,
-                                                  appendTermRecord,
-                                                  debtParentName,
-                                                  termNames,
-                                                  termValues,
-                                                  setNansToMissingValue);
+        FinancialAnalysisFunctions::getDebtInfo(fundamentalData,
+                                                timePeriod.c_str(),
+                                                dateSet.dates[0].c_str(),
+                                                debtInfo,
+                                                appendTermRecord,
+                                                debtParentName,
+                                                termNames,
+                                                termValues,
+                                                setNansToMissingValue);
         
-        FinancialAnalysisFunctions::getDebtInfo(  fundamentalData,
-                                                  timePeriod.c_str(),
-                                                  previousDateSet[0].c_str(),
-                                                  previousDebtInfo,
-                                                  appendTermRecord,
-                                                  previousDebtParentName,
-                                                  termNames,
-                                                  termValues,
-                                                  setNansToMissingValue);
+        FinancialAnalysisFunctions::getDebtInfo(fundamentalData,
+                                                timePeriod.c_str(),
+                                                previousDateSet.dates[0].c_str(),
+                                                previousDebtInfo,
+                                                appendTermRecord,
+                                                previousDebtParentName,
+                                                termNames,
+                                                termValues,
+                                                setNansToMissingValue);
         
         //======================================================================
         //Evaluate the current total short and long term debt
