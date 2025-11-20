@@ -685,7 +685,7 @@ double calcAverageTaxRate(  const DataStructures::AnalysisDates &analysisDates,
                             int maxDayErrorTTM)
 {
 
-  int indexDate                 = 0;
+  int indexDate                 = -1;
   int numberOfDatesPerIteration = 0;
   int numberOfIterations        = 0;
 
@@ -896,7 +896,7 @@ double calcAverageInterestCover(
           bool appendTermRecord)
 {
 
-  int indexDate                       = 0;
+  int indexDate                       = -1;
   bool validDateSet                   = true;      
 
   double meanInterestCover            = 0.;
@@ -962,7 +962,7 @@ double calcLastValidDateIndex(
           int maxDayErrorTTM)
 {
 
-  int indexDate                    = 0;
+  int indexDate                    = -1;
   bool validDateSet                = true;      
   double numberOfDatesPerIteration = 0;
   double numberOfIterations        = 0;
@@ -979,11 +979,11 @@ double calcLastValidDateIndex(
     if(quarterlyTTMAnalysis){
       validDateSet = 
         DateFunctions::extractTTM(indexDate,
-                                             analysisDates.common,
-                                             "%Y-%m-%d",
-                                             dateSet,
-                                             dateSetWeight,
-                                             maxDayErrorTTM);                                     
+                                  analysisDates.common,
+                                  "%Y-%m-%d",
+                                  dateSet,
+                                  dateSetWeight,
+                                  maxDayErrorTTM);                                     
       if(!validDateSet){
         break;
       }
@@ -2396,11 +2396,11 @@ int main (int argc, char* argv[]) {
             if(quarterlyTTMAnalysis){
               validPreviousDateSet = 
                 DateFunctions::extractTTM(indexPastPeriods,
-                                                    analysisDates.common,
-                                                    "%Y-%m-%d",
-                                                    pastDateSet,
-                                                    pastDateSetWeight,
-                                                    maxDayErrorTTM);
+                                          analysisDates.common,
+                                          "%Y-%m-%d",
+                                          pastDateSet,
+                                          pastDateSetWeight,
+                                          maxDayErrorTTM);
             }else{
               if(indexPastPeriods < analysisDates.common.size()){
                 pastDateSet.push_back(analysisDates.common[indexPastPeriods]);

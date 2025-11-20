@@ -1559,9 +1559,8 @@ int main (int argc, char* argv[]) {
         bool isMetricDataNull = calculateData["metric_data"].is_null();
         //
         // Generate and save the pdf
-        //
+        //           && !isMetricDataNull 
         if(!isTickerProcessed 
-          && !isMetricDataNull 
           && tickerMetaData.companyName.length() > 0){
 
           std::filesystem::path outputPlotFilePath = outputFolderPath;                  

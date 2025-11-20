@@ -300,33 +300,72 @@ class JsonFunctions {
                     const std::vector< std::string > &fields,
                     nlohmann::ordered_json &jsonElement){
     
-      bool success = false;
+      bool validElement = false;
       switch( fields.size() ){
         case 1:{
-            jsonElement = jsonTable[fields[0]];
-            success=true;
+            validElement=jsonTable.contains(fields[0]);
+
+            if(validElement){
+              jsonElement = jsonTable[fields[0]];
+            }
           }
           break;
         case 2:{
-            jsonElement = jsonTable[fields[0]][fields[1]];
-            success=true;
+            validElement=jsonTable.contains(fields[0]);
+            if(validElement){
+              validElement = jsonTable[fields[0]].contains(fields[1]);
+            }
+
+            if(validElement){
+              jsonElement = jsonTable[fields[0]][fields[1]];
+            }
           }
           break;
         case 3:{
-            jsonElement = jsonTable[fields[0]][fields[1]][fields[2]];
-            success=true;
+            validElement=jsonTable.contains(fields[0]);
+            if(validElement){
+              validElement = jsonTable[fields[0]].contains(fields[1]);
+            }
+            if(validElement){
+              validElement = jsonTable[fields[0]][fields[1]].contains(fields[2]);
+            }
+
+            if(validElement){
+              jsonElement = jsonTable[fields[0]][fields[1]][fields[2]];
+            }
           }
           break;
         case 4:{
-            jsonElement = jsonTable[fields[0]][fields[1]][fields[2]][fields[3]];
-            success=true;
+            validElement=jsonTable.contains(fields[0]);
+            if(validElement){
+              validElement = jsonTable[fields[0]].contains(fields[1]);
+            }
+            if(validElement){
+              validElement = 
+                jsonTable[fields[0]][fields[1]].contains(fields[2]);
+            }
+            if(validElement){
+              validElement = 
+                jsonTable[fields[0]][fields[1]][fields[2]].contains(fields[3]);
+            }
+           
+
+            if(validElement){
+              jsonElement = 
+                jsonTable[fields[0]][fields[1]][fields[2]][fields[3]];
+            }
           }
           break;
         default: {
-          success=false;          
+          validElement=false;          
         }
       };
-      return success;            
+
+      if(!validElement){
+        bool here=true;
+      }
+
+      return validElement;            
     };
 
 //==============================================================================
