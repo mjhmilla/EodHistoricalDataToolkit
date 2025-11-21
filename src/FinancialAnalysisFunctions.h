@@ -39,13 +39,14 @@ class FinancialAnalysisFunctions {
         const DateFunctions::DateSetTTM &dateSet,
         const char* fieldName,        
         bool setNansToMissingValue,
-        bool includeTimeUnitInAddress=true){
+        bool includeTimeUnitInAddress=true,
+        bool ignoreNans=false){
 
 
       double value        = 0;
       double weight       = 0;
-      double sumOfValues  = 0;
-      bool valueMissing   = false;
+      double sumOfValues  = 0;    
+      bool sumOfValuesContainsNans = false;
       int numberOfEntries = 0;
 
       //for(auto &ele : dateSet.dates){
@@ -61,15 +62,19 @@ class FinancialAnalysisFunctions {
                            [dateSet.dates[i].c_str()][fieldName],false);
         }
 
+        if(std::isnan(value)){
+          sumOfValuesContainsNans = true;
+        }
+        
         if(!std::isnan(value)){
           sumOfValues += value*dateSet.weights[i];
           ++numberOfEntries;
         }
-        
+
       }
 
       //If TTM data is being processed
-      if( numberOfEntries == 0 ){
+      if( numberOfEntries == 0 || (sumOfValuesContainsNans && !ignoreNans)){
         if(setNansToMissingValue){
           sumOfValues = JsonFunctions::MISSING_VALUE;
         }else{
@@ -1259,6 +1264,10 @@ class FinancialAnalysisFunctions {
         termValues.push_back(interestCover);
       }
 
+      if(std::isinf(interestCover)){
+        bool here=true;
+      }
+
       return interestCover;
 
     };    
@@ -1642,47 +1651,53 @@ class FinancialAnalysisFunctions {
 
         int index = indexPrevious-1;
 
-        double weight = dateSetAnalysis.weights[index];
-        double weightPrevious = dateSetAnalysis.weights[indexPrevious];
 
         std::string date         = dateSetAnalysis.dates[index];
         std::string datePrevious = dateSetAnalysis.dates[indexPrevious];
+
+        //Inventory, receivables, and accounts payable are quantities that
+        //do not accumulate over the year. I'm not going to use the
+        //weights associated with each date to scale the inventory, for example,
+        //for reporting periods that span more than a quarter.
+        //
+        //double weight = dateSetAnalysis.weights[index];
+        //double weightPrevious = dateSetAnalysis.weights[indexPrevious];
 
         double inventory =  
           JsonFunctions::getJsonFloat(      
             jsonData[FIN][BAL][timeUnit][date.c_str()]["inventory"],
             setNansToMissingValue);
-        inventory *= weight;
+        //inventory *= weight;
 
         double inventoryPrevious = 
           JsonFunctions::getJsonFloat(  
             jsonData[FIN][BAL][timeUnit][datePrevious.c_str()]["inventory"],
             setNansToMissingValue);
-        inventoryPrevious *= weightPrevious;
+        //inventoryPrevious *= weightPrevious;
 
         double netReceivables =
           JsonFunctions::getJsonFloat(  
             jsonData[FIN][BAL][timeUnit][date.c_str()]["netReceivables"],
             setNansToMissingValue);
-        netReceivables *= weight;
+        //netReceivables *= weight;
 
         double netReceivablesPrevious = 
           JsonFunctions::getJsonFloat(  
             jsonData[FIN][BAL][timeUnit][datePrevious.c_str()]["netReceivables"],
             setNansToMissingValue);
-        netReceivablesPrevious *= weightPrevious;
+        //netReceivablesPrevious *= weightPrevious;
 
         double accountsPayable =
           JsonFunctions::getJsonFloat(  
             jsonData[FIN][BAL][timeUnit][date.c_str()]["accountsPayable"],
             setNansToMissingValue);
-        accountsPayable *= weight;
+        //accountsPayable *= weight;
 
         double accountsPayablePrevious = 
           JsonFunctions::getJsonFloat(  
             jsonData[FIN][BAL][timeUnit][datePrevious.c_str()]["accountsPayable"],
             setNansToMissingValue);
-        accountsPayablePrevious *= weightPrevious;
+        //accountsPayablePrevious *= weightPrevious;
 
         //There are a number of companies that produce software or a service
         //and so never have any inventory to report.

@@ -2350,19 +2350,16 @@ int main (int argc, char* argv[]) {
         previousTimePeriod = analysisDates.common[indexPrevious];
         previousDateSet.clear();
 
-        if(quarterlyTTMAnalysis){
-          validDateSet = DateFunctions::extractTTM(indexPrevious,
-                                                    analysisDates.common,
-                                                    "%Y-%m-%d",
-                                                    previousDateSet,
-                                                    maxDayErrorTTM,
-                                                    quarterlyTTMAnalysis); 
-          if(!validDateSet){
-            break;
-          }     
-        }else{
-          previousDateSet.addAnnualData(previousTimePeriod);
-        } 
+        validDateSet = DateFunctions::extractTTM(indexPrevious,
+                                                  analysisDates.common,
+                                                  "%Y-%m-%d",
+                                                  previousDateSet,
+                                                  maxDayErrorTTM,
+                                                  quarterlyTTMAnalysis); 
+        if(!validDateSet){
+          break;
+        }     
+
 
         termNames.clear();
         termValues.clear();

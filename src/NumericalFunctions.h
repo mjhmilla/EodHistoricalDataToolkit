@@ -825,44 +825,35 @@ class NumericalFunctions {
           //2. Evaluate the epsActual and PE across the TTM using the reported
           //   values and the GAAP values
 
-          std::cerr << "Replace this with a weighted call" << std::endl;
-          std::abort();
+          bool includeTimeUnit  = false;
+          bool ignoreNans       = false;
 
-          double epsActualTTM = 0.;
-          for(size_t i=0; i< dateSetTTMEarnings.dates.size();++i){
-            double epsActual = JsonFunctions::getJsonFloat(
-              fundamentalData[EARN][HIST][dateSetTTMEarnings.dates[i].c_str()]
-                ["epsActual"],
-              false);        
-            epsActualTTM += epsActual;    
-          }
+          double epsActualTTM = 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+                fundamentalData,EARN,HIST,"",dateSetTTMEarnings,
+                "epsActual",setNansToMissingValue,
+                 includeTimeUnit,ignoreNans);
 
           double peTTM = adjustedClosePrice/epsActualTTM;
 
+          includeTimeUnit = true;
+          ignoreNans      = false;
 
-          double netIncomeTTM=0;
-          double dividendsPaidTTM=0;
-          for(size_t i=0; i<dateSetTTM.dates.size();++i){
-            double netIncome = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetTTM.dates[i].c_str()]["netIncome"],
-                                setNansToMissingValue);
-            netIncome *= dateSetTTM.weights[i];
-            double dividendsPaid = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][CF][timePeriod.c_str()]
-                                [dateSetTTM.dates[i].c_str()]["dividendsPaid"],
-                                false);
-            dividendsPaid *= dateSetTTM.weights[i];
+          double netIncomeTTM= 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,CF,timePeriod.c_str(),dateSetTTM,
+              "netIncome",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
 
-            if(std::isnan(dividendsPaid)){
-              dividendsPaid=0.;
-            }
+          includeTimeUnit = true;
+          ignoreNans      = true;
 
-            netIncomeTTM      +=  netIncome;
-            dividendsPaidTTM  +=  dividendsPaid;          
-          }
+          double dividendsPaidTTM=
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,CF,timePeriod.c_str(),dateSetTTM,
+              "dividendsPaid",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
+
           double epsGaapTTM = (netIncomeTTM-dividendsPaidTTM)/outstandingShares; 
           double peGaapTTM = marketCapitalization/(netIncomeTTM-dividendsPaidTTM);          
 
@@ -870,111 +861,78 @@ class NumericalFunctions {
 
           //3. Evaluate the operating leverage
           // https://www.investopedia.com/terms/d/degreeofoperatingleverage.asp
-          double revenueTTM=0; 
-          double revenuePreviousTTM=0;
-          
-          double operatingIncomeTTM=0; 
-          double operatingIncomePreviousTTM=0;
 
-          double fcfTTM=0; 
-          double fcfPreviousTTM=0;
+          includeTimeUnit = true;
+          ignoreNans      = false;
 
-          double earningsTTM=0; 
-          double earningsPreviousTTM=0;
+          double revenueTTM= 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,IS,timePeriod.c_str(),dateSetTTM,
+              "totalRevenue",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
 
-          for(size_t i=0; i<dateSetTTM.dates.size();++i){
-            double revenue = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][IS][timePeriod.c_str()]
-                               [dateSetTTM.dates[i].c_str()]["totalRevenue"],
-                              setNansToMissingValue);
-            revenue *= dateSetTTM.weights[i];
+          double operatingIncomeTTM= 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,IS,timePeriod.c_str(),dateSetTTM,
+              "operatingIncome",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
 
-            double operatingIncome = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][IS][timePeriod.c_str()]
-                               [dateSetTTM.dates[i].c_str()]["operatingIncome"],
-                              setNansToMissingValue);  
-            operatingIncome *= dateSetTTM.weights[i];                                          
+          double fcfTTM= 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,CF,timePeriod.c_str(),dateSetTTM,
+              "freeCashFlow",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
 
-            double freeCashFlow = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetTTM.dates[i].c_str()]["freeCashFlow"],
-                              setNansToMissingValue);
-            freeCashFlow *= dateSetTTM.weights[i];
+          double earningsTTM = (netIncomeTTM-dividendsPaidTTM);
 
-            double netIncome = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetTTM.dates[i].c_str()]["netIncome"],
-                              setNansToMissingValue); 
-            netIncome *= dateSetTTM.weights[i];
+          //
+          // Evaluate all of the same quantities for the previous time period
+          //
 
-            double dividendsPaid = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetTTM.dates[i].c_str()]["dividendsPaid"],
-                              false);
-            dividendsPaid *= dateSetTTM.weights[i];
+          includeTimeUnit = true;
+          ignoreNans      = false;
 
-            if(std::isnan(dividendsPaid)){
-              dividendsPaid=0.;
-            }
+          double netIncomePreviousTTM= 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,CF,timePeriod.c_str(),dateSetPrevTTM,
+              "netIncome",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
 
-            operatingIncomeTTM  += operatingIncome;
-            revenueTTM          += revenue;
-            fcfTTM              += freeCashFlow;
-            earningsTTM         += (netIncome-dividendsPaid);
-          }
+          includeTimeUnit = true;
+          ignoreNans      = true;
 
-          for(size_t i=0; i<dateSetPrevTTM.dates.size();++i){
-            double revenue = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][IS][timePeriod.c_str()]
-                               [dateSetPrevTTM.dates[i].c_str()]["totalRevenue"],
-                              setNansToMissingValue);
-            revenue *= dateSetPrevTTM.weights[i];
+          double dividendsPaidPreviousTTM=
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,CF,timePeriod.c_str(),dateSetPrevTTM,
+              "dividendsPaid",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
 
-            double operatingIncome = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][IS][timePeriod.c_str()]
-                               [dateSetPrevTTM.dates[i].c_str()]["operatingIncome"],
-                              setNansToMissingValue);   
-            operatingIncome *= dateSetPrevTTM.weights[i];
-            
-            double freeCashFlow = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetPrevTTM.dates[i].c_str()]["freeCashFlow"],
-                              setNansToMissingValue);
-            freeCashFlow *= dateSetPrevTTM.weights[i];
+          includeTimeUnit = true;
+          ignoreNans      = false;
 
-            double netIncome = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetPrevTTM.dates[i].c_str()]["netIncome"],
-                              setNansToMissingValue); 
-            netIncome *= dateSetPrevTTM.weights[i];
+          double revenuePreviousTTM= 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,IS,timePeriod.c_str(),dateSetPrevTTM,
+              "totalRevenue",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
 
-            double dividendsPaid = 
-              JsonFunctions::getJsonFloat(
-                fundamentalData[FIN][CF][timePeriod.c_str()]
-                               [dateSetPrevTTM.dates[i].c_str()]["dividendsPaid"],
-                              false);
-            dividendsPaid *= dateSetPrevTTM.weights[i];
+          double operatingIncomePreviousTTM= 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,IS,timePeriod.c_str(),dateSetPrevTTM,
+              "operatingIncome",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
 
-            if(std::isnan(dividendsPaid)){
-              dividendsPaid=0.;
-            }
+          double fcfPreviousTTM = 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,CF,timePeriod.c_str(),dateSetPrevTTM,
+              "freeCashFlow",setNansToMissingValue,
+              includeTimeUnit, ignoreNans);
 
-
-            operatingIncomePreviousTTM  += operatingIncome;
-            revenuePreviousTTM          += revenue;
-            fcfPreviousTTM              += freeCashFlow;
-            earningsPreviousTTM         +=(netIncome-dividendsPaid);
-
-          }
+          double earningsPreviousTTM = (netIncomePreviousTTM-dividendsPaidPreviousTTM);
+                    
+          //
+          // Evaluate the change between the current and previous time period
+          //
 
           double operatingIncomeChange  = (operatingIncomeTTM
                                           /operatingIncomePreviousTTM)-1.0;
