@@ -779,14 +779,27 @@ static void appendEmpiricalGrowthTable(std::ofstream &latexReport,
                            const std::string &date,
                            const std::string &name,
                            const std::string &title,
+                           bool isDateMostRecent,
                            bool verbose){
 
     if(calculateData[date].contains(name+"AfterTaxOperatingIncomeGrowth")){
+
+      
       //latexReport << "\\bigskip" << std::endl<< std::endl;  
       latexReport << "\\begin{tabular}{l l}" << std::endl;
       latexReport << " & \\\\" << std::endl;      
       latexReport << "\\hline \\multicolumn{2}{c}{"+title+"} \\\\" 
                   << std::endl;
+      if(isDateMostRecent){
+        latexReport << "\\hline \\multicolumn{2}{c}{ " << date  
+                    <<"} \\\\" 
+                    << std::endl;
+      }else{
+        latexReport << "\\hline \\multicolumn{2}{c}{\\cellcolor{RedOrange} " 
+                    << date  
+                    <<"} \\\\" 
+                    << std::endl;
+      }                  
       latexReport << "\\hline " << std::endl;                
       latexReport << "$A$. Lsq. After-tax op. income growth & "
                   << formatJsonEntry(JsonFunctions::getJsonFloat(
@@ -936,8 +949,6 @@ static void appendCostOfCapitalTableForValuation( std::ofstream &latexReport,
   latexReport << "\\begin{tabular}{l l}" << std::endl;
   latexReport << "\\multicolumn{2}{c}{\\textbf{Cost of Capital}} \\\\" 
               << std::endl;
-
-  latexReport << "\\multicolumn{2}{c}{"<<  date <<"} \\\\" << std::endl;
   latexReport << "\\hline \\multicolumn{2}{c}{Part 1: After-tax cost of debt \\& equity} \\\\" 
                   << std::endl;
   latexReport << "\\hline ";
@@ -1269,6 +1280,7 @@ static void appendEarningPerShareGrowthValuationTable(
                 const nlohmann::ordered_json &calculateData,
                 const std::string &date,
                 const std::string &jsonTableName,
+                bool isDateMostRecent,
                 bool verbose){
 
     if(calculateData[date].contains(jsonTableName+"_price_to_value")){
@@ -1276,10 +1288,18 @@ static void appendEarningPerShareGrowthValuationTable(
         int tableId = 1;
 
         latexReport << "\\begin{tabular}{l l}" << std::endl;
+        if(isDateMostRecent){
+            latexReport << "\\hline \\multicolumn{2}{c}{ " << date  
+                        <<"} \\\\" 
+                        << std::endl;
+        }else{
+            latexReport << "\\hline \\multicolumn{2}{c}{\\cellcolor{RedOrange} " 
+                        << date  
+                        <<"} \\\\" 
+                        << std::endl;
+        }
         latexReport << "\\hline \\multicolumn{2}{c}{ Part " 
-                    << tableId << ". Nominal valuation "
-                    << "using " << date << " data " 
-                    <<"} \\\\" 
+                    << tableId << ". Nominal valuation } \\\\" 
                     << std::endl; 
 
         latexReport << "\\hline " << std::endl;      
@@ -1566,10 +1586,24 @@ static int appendValuationTable(
                 int tableId,
                 const std::string &tableTitle,
                 const std::string &jsonTableName,
+                bool isDateMostRecent,
                 bool verbose){
 
 
   if(calculateData[date].contains(jsonTableName+"_riskFreeRate")){
+    latexReport << "\\begin{center}" << std::endl;    
+    latexReport << "\\begin{tabular}{c}" << std::endl;
+    if(isDateMostRecent){
+        latexReport << "\\hline " << date  
+                    << " \\\\ \\hline \\\\" << std::endl;
+    }else{
+        latexReport << "\\hline \\cellcolor{RedOrange} " 
+                    << date <<" \\\\ \\hline \\\\" << std::endl;
+    }
+    latexReport << "\\end{tabular}" << std::endl;
+    latexReport << "\\end{center}" 
+                << std::endl << std::endl;   
+
     //latexReport << "\\begin{table}[h]" << std::endl;
     latexReport << "\\begin{tabular}{l l}" << std::endl;
     latexReport << "\\multicolumn{2}{c}{\\textbf{" << tableTitle <<"}} \\\\" 

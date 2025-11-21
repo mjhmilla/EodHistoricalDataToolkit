@@ -567,7 +567,6 @@ void generateLaTeXReportWrapper(
 //==============================================================================
 bool generateLaTeXReport(
     const TickerMetaData &tickerMetaData,
-    const std::string &date,
     const nlohmann::ordered_json &fundamentalData,
     const nlohmann::ordered_json &historicalData,
     const nlohmann::ordered_json &calculateData,
@@ -1095,6 +1094,46 @@ bool generateLaTeXReport(
     latexReport << "\\Large{\\underline{II. Supplementary Tables}} \\\\" << std::endl;
     latexReport << "\\end{center}" << std::endl << std::endl;
 
+    //==========================================================================
+    // priceToValue - Damodaran's DCF analysis
+    //==========================================================================    
+    std::string date;
+    bool dateFound=false;
+    bool isDateMostRecent=true;
+    std::vector< std::string > fieldsToTest;
+    fieldsToTest.push_back("priceToValue");
+
+    for(const auto& item : calculateData["metric_data"].items()){
+      date = item.key();
+      bool valid = true;
+
+      for(size_t j=0; j < fieldsToTest.size();++j){
+        double value = JsonFunctions::getJsonFloat(
+            item.value()[fieldsToTest[j]], false);
+        if(std::isnan(value)){
+          valid=false;
+          isDateMostRecent=false;
+        }
+      }
+      
+      if(valid){
+        break;
+      }          
+    }
+
+    latexReport << "\\begin{center}" << std::endl;    
+    latexReport << "\\begin{tabular}{c}" << std::endl;
+    if(isDateMostRecent){
+        latexReport << "\\hline " << date  
+                    << " \\\\ \\hline \\\\" << std::endl;
+    }else{
+        latexReport << "\\hline \\cellcolor{RedOrange} " 
+                    << date <<" \\\\ \\hline \\\\" << std::endl;
+    }
+    latexReport << "\\end{tabular}" << std::endl;
+    latexReport << "\\end{center}" 
+                << std::endl << std::endl;   
+
 
     ReportingFunctions::appendOperatingMarginTable(
       latexReport,
@@ -1133,7 +1172,21 @@ bool generateLaTeXReport(
 
     latexReport << "\\begin{center}" << std::endl;
     latexReport << "\\Large{\\underline{III. Business Valuation Tables}} \\\\" << std::endl;
-    latexReport << "\\end{center}" << std::endl;
+    latexReport << "\\end{center}" << std::endl << std::endl;
+
+    latexReport << "\\begin{center}" << std::endl;    
+    latexReport << "\\begin{tabular}{c}" << std::endl;
+    if(isDateMostRecent){
+        latexReport << "\\hline " << date  
+                    << " \\\\ \\hline \\\\" << std::endl;
+    }else{
+        latexReport << "\\hline \\cellcolor{RedOrange} " 
+                    << date <<" \\\\ \\hline \\\\" << std::endl;
+    }
+    latexReport << "\\end{tabular}" << std::endl;
+    latexReport << "\\end{center}" 
+                << std::endl << std::endl;   
+  
 
 
     ReportingFunctions::appendCostOfCapitalTableForValuation(
@@ -1165,6 +1218,7 @@ bool generateLaTeXReport(
       date,
       verbose);
 
+
     std::string tableTitle("Price to DCM-Value (Finance)");
     std::string jsonTableName("priceToValue");
 
@@ -1179,13 +1233,39 @@ bool generateLaTeXReport(
       tableId,
       tableTitle,
       jsonTableName,
+      isDateMostRecent,
       verbose);
 
     latexReport << "\\break" << std::endl;
     latexReport << "\\newpage" << std::endl;
     ++tableId;
 
-      
+    //==========================================================================
+    // priceToValueEmpirical
+    //==========================================================================    
+    
+    dateFound=false;
+    fieldsToTest.resize(0);
+    fieldsToTest.push_back("priceToValueEmpirical");
+    fieldsToTest.push_back("priceToValueEmpiricalAvg");
+    isDateMostRecent=true;
+    for(const auto& item : calculateData["metric_data"].items()){
+      date = item.key();
+      bool valid = true;
+
+      for(size_t j=0; j < fieldsToTest.size();++j){
+        double value = JsonFunctions::getJsonFloat(
+            item.value()[fieldsToTest[j]], false);
+        if(std::isnan(value)){
+          valid=false;
+          isDateMostRecent=false;
+        }
+      }      
+      if(valid){
+        break;
+      }          
+    }
+
     tableTitle ="Price to DCM-Value (Empirical)";
     jsonTableName = "priceToValueEmpirical";
 
@@ -1198,6 +1278,7 @@ bool generateLaTeXReport(
                                       tableId,
                                       tableTitle,
                                       jsonTableName,
+                                      isDateMostRecent,
                                       verbose);
 
       std::string nameToPrepend("empirical_");
@@ -1209,6 +1290,7 @@ bool generateLaTeXReport(
                                   date,
                                   nameToPrepend,
                                   empTableTitle,
+                                  isDateMostRecent,
                                   verbose);
 
 
@@ -1216,11 +1298,9 @@ bool generateLaTeXReport(
       latexReport << "\\newpage" << std::endl;
       ++tableId;      
     }
+
     tableTitle ="Price to DCM-Value (Empirical Avg.)";
     jsonTableName = "priceToValueEmpiricalAvg";
-
-
-
 
     if(calculateData["metric_data"][date].contains(jsonTableName+"_riskFreeRate")){
       tableId=ReportingFunctions::appendValuationTable(
@@ -1231,6 +1311,7 @@ bool generateLaTeXReport(
                                     tableId,
                                     tableTitle,
                                     jsonTableName,
+                                    isDateMostRecent,
                                     verbose);
 
       std::string nameToPrepend="empiricalAvg_";
@@ -1242,12 +1323,41 @@ bool generateLaTeXReport(
                             date,
                             nameToPrepend,
                             empTableTitle,
+                            isDateMostRecent,
                             verbose);
     }
 
     latexReport << "\\break"          << std::endl;
     latexReport << "\\newpage"        << std::endl;
    
+
+    //==========================================================================
+    // priceToValueEpsGrowth
+    //==========================================================================
+    dateFound=false;
+    isDateMostRecent=true;
+    fieldsToTest.resize(0);
+    fieldsToTest.push_back("priceToValueEpsGrowth_price_to_value");
+    fieldsToTest.push_back("priceToValueEpsGrowth_price_to_value_P25");
+    fieldsToTest.push_back("priceToValueEpsGrowth_price_to_value_P50");
+    fieldsToTest.push_back("priceToValueEpsGrowth_price_to_value_P75");
+
+    for(const auto& item : calculateData["metric_data"].items()){
+      date = item.key();
+      bool valid = true;
+
+      for(size_t j=0; j < fieldsToTest.size();++j){
+        double value = JsonFunctions::getJsonFloat(
+            item.value()[fieldsToTest[j]], false);
+        if(std::isnan(value)){
+          valid=false;
+          isDateMostRecent=false;
+        }
+      }      
+      if(valid){
+        break;
+      }          
+    }
 
     jsonTableName="priceToValueEpsGrowth";
     if(calculateData["metric_data"][date].contains(jsonTableName+"_equityGrowth")){
@@ -1263,6 +1373,7 @@ bool generateLaTeXReport(
                               calculateData["metric_data"],
                               date,
                               jsonTableName,
+                              isDateMostRecent,
                               verbose);
     }
     
@@ -1639,15 +1750,11 @@ int main (int argc, char* argv[]) {
           reportFileName.append(".tex");
           outputReportFilePath.append(reportFileName);
 
-          std::string date = calculateData["metric_data"].begin().key();
-          if(dateOfTable.length()>0){
-            date=dateOfTable;
-          }
+
 
           bool successGenerateLaTeXReport = 
             generateLaTeXReport(
               tickerMetaData,
-              date,
               fundamentalData,
               historicalData,
               calculateData,
