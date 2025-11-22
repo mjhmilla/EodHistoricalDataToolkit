@@ -466,12 +466,17 @@ class NumericalFunctions {
         double yMdlExp0 = yMdl[i];
         
 
-        double expGrowthEq  = 
-          std::exp(std::log(yMdlExp1/yMdlExp0)/durationExp)-1.0;
+        //double expGrowthEq  = 
+        //  std::exp(std::log(yMdlExp1/yMdlExp0)/durationExp)-1.0;
+
+        // This linear formula agrees with the exponential growth formula
+        // for sensible values, but in addition, will function as 
+        // expected for negative values, and negative growth rates.
+        double growth = (((yMdlExp1-yMdlExp0)/durationExp)
+                        /( std::max(1e-6, std::abs(yMdlExp0))));
 
 
-
-        modelUpd.annualGrowthRateOfTrendline=expGrowthEq;
+        modelUpd.annualGrowthRateOfTrendline=growth;
         modelUpd.parameters.push_back(w0);
         modelUpd.parameters.push_back(y0Mdl);
         modelUpd.parameters.push_back(dydwMdl);
