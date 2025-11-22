@@ -215,7 +215,7 @@ class DateFunctions {
                             int maximumTTMDateSetErrorInDays,
                             bool quaterlyTTM){
 
-      if(indexA >= dateSet.size() || indexA < 0){
+      if(indexA >= dateSet.size() || indexA < 0 || dateSet.size()==0){
         return false;
       }
 
@@ -287,6 +287,10 @@ class DateFunctions {
         daysPrevious = daysB;
       }
 
+      if(count ==0 ){
+        return false;
+      }
+
       //If we are starting from the first entry, we don't actually 
       //know how long its reporting period is. Estimate the pre
       if(indexA == 0){        
@@ -297,7 +301,7 @@ class DateFunctions {
         std::sort(daysTTMSort.begin(),daysTTMSort.end());
         double indexMedianDbl = 
           std::round(static_cast<double>(daysTTMSort.size())*0.5);
-        int indexMedian = static_cast<int>(indexMedianDbl-1);
+        int indexMedian = std::max(0, (static_cast<int>(indexMedianDbl)-1) );      
         dateSetTTMUpd.days[0] = daysTTMSort[indexMedian];
       }
 
