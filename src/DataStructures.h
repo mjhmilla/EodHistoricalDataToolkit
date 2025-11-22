@@ -56,7 +56,7 @@ class DataStructures {
       std::vector< std::string > outstandingShares;
       std::vector< std::string > historical;
       std::vector< std::string > bond;
-
+      double durationInYears;
       std::vector< unsigned int > indicesFinancial;
       std::vector< unsigned int > indicesEarningsHistory;
       std::vector< unsigned int > indicesOutstandingShares;

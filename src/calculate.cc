@@ -218,7 +218,7 @@ bool extractAnalysisDates(
   analysisDates.indicesOutstandingShares.clear();
   analysisDates.indicesHistorical.clear();
   analysisDates.indicesBond.clear();
-
+  analysisDates.durationInYears=0.;
 
   //Extract dates only the dates common to all financial reports
   std::vector< std::string > datesBAL;
@@ -593,6 +593,14 @@ bool extractAnalysisDates(
 
   }
 
+  if(validDates){
+    double dateEnd = 
+      DateFunctions::convertToFractionalYear(analysisDates.common[0]);
+    double dateStart = 
+      DateFunctions::convertToFractionalYear(
+          analysisDates.common[analysisDates.common.size()-1]);
+    analysisDates.durationInYears = dateEnd-dateStart;
+  }
 
   return validDates;
 
@@ -1788,7 +1796,29 @@ int main (int argc, char* argv[]) {
           maxDayErrorBondYieldData,
           allowRepeatedDates);    
 
-      validInput = (validInput && validDates);
+      bool sufficientData=true;
+      if(analysisDates.durationInYears < numberOfYearsOfGrowthForDcmValuation){
+        sufficientData=false;
+      }
+      int minNumberOfEntries = 
+        std::max(static_cast<int>(
+                  std::round(numberOfYearsOfGrowthForDcmValuation*0.5)),
+                3);
+
+      if(analysisDates.common.size() < minNumberOfEntries){
+        sufficientData=false;
+      }
+
+      if(!sufficientData){
+        std::cout << "    Skipping: insufficient data. Only "
+                  << analysisDates.durationInYears
+                  << " years of data available available over "
+                  << analysisDates.common.size()
+                  << " entries."
+                  << std::endl;
+      }
+
+      validInput = (validInput && validDates && sufficientData);
       if(verbose && !validDates){
         std::cout << "    Skipping: no valid dates" << std::endl;
       }
@@ -3301,6 +3331,7 @@ int main (int argc, char* argv[]) {
         metricAnalysisJson[date]= analysisEntry;        
         ++entryCount;
       }
+
 
       nlohmann::ordered_json stringDataReport;
       stringDataReport["home_country"] = homeRiskTable.CountryISO3;

@@ -1108,8 +1108,11 @@ bool generateLaTeXReport(
       bool valid = true;
 
       for(size_t j=0; j < fieldsToTest.size();++j){
-        double value = JsonFunctions::getJsonFloat(
-            item.value()[fieldsToTest[j]], false);
+        double value = std::nan("1");
+        if(item.value().contains(fieldsToTest[j])){
+          value = JsonFunctions::getJsonFloat(
+                      item.value()[fieldsToTest[j]], false);
+        }
         if(std::isnan(value)){
           valid=false;
           isDateMostRecent=false;
@@ -1254,8 +1257,11 @@ bool generateLaTeXReport(
       bool valid = true;
 
       for(size_t j=0; j < fieldsToTest.size();++j){
-        double value = JsonFunctions::getJsonFloat(
-            item.value()[fieldsToTest[j]], false);
+        double value = std::nan("1");
+        if(item.value().contains(fieldsToTest[j])){
+          value = JsonFunctions::getJsonFloat(
+                      item.value()[fieldsToTest[j]], false);
+        }
         if(std::isnan(value)){
           valid=false;
           isDateMostRecent=false;
@@ -1347,8 +1353,11 @@ bool generateLaTeXReport(
       bool valid = true;
 
       for(size_t j=0; j < fieldsToTest.size();++j){
-        double value = JsonFunctions::getJsonFloat(
-            item.value()[fieldsToTest[j]], false);
+        double value = std::nan("1");
+        if(item.value().contains(fieldsToTest[j])){
+          value = JsonFunctions::getJsonFloat(
+                      item.value()[fieldsToTest[j]], false);
+        }
         if(std::isnan(value)){
           valid=false;
           isDateMostRecent=false;
