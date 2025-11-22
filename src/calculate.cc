@@ -1422,7 +1422,7 @@ int main (int argc, char* argv[]) {
 
   // In order to accept a more complex cyclic model, it should provide at least
   // this amount of improvement in R2
-  double minR2ImprovementOfCyclicalModel=0.1;
+  double exponentialModelR2Preference=0.25;
 
   //This date error is over 1 year to accomodate for firms that only
   //report financial data on an annual basis
@@ -1698,7 +1698,9 @@ int main (int argc, char* argv[]) {
           if(validInput){
             fileName = primaryFileName;
             tickerName = primaryTickerName;
-          }                                                  
+          }else{
+            std::cout << "    Skipping: could not load fundamental data" << std::endl;     
+          }                    
         }
 
         //If the primary ticker doesn't load (or exist) then use the file
@@ -1717,7 +1719,11 @@ int main (int argc, char* argv[]) {
                         << tickerName << " and " << primaryTickerName
                         << " failed to load" << std::endl;
             }
-          }                                                  
+          }
+          
+          if(!validInput){
+            std::cout << "    Skipping: could not load fundamental data" << std::endl;
+          }           
         }
 
     }else{
@@ -1757,6 +1763,9 @@ int main (int argc, char* argv[]) {
     if(validInput){
       validInput=JsonFunctions::loadJsonFile(fileName, historicalFolder, 
                                             historicalData, verbose);
+      if(!validInput){
+        std::cout << "    Skipping: could not load historical data" << std::endl;
+      }                                            
     }
 
     std::vector< std::string > datesBondYields;
@@ -1784,7 +1793,6 @@ int main (int argc, char* argv[]) {
         std::cout << "    Skipping: no valid dates" << std::endl;
       }
     }
-
 
     //==========================================================================
     //
@@ -1952,23 +1960,31 @@ int main (int argc, char* argv[]) {
       //Evaluate the growth rate using all of the data available
       DataStructures::EmpiricalGrowthDataSet empiricalGrowthDataAll;
 
-      double growthIntervalInYearsAll = 
+      double growthIntervalInYears = 
+        static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
+
+      double totalNumberOfYearsInDataSet = 
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
       - DateFunctions::convertToFractionalYear(analysisDates.common.back());
             
+      double growthIntervalInYearsAll = 
+        std::max(totalNumberOfYearsInDataSet-growthIntervalInYears,
+                 2.0*growthIntervalInYears);
+
       bool approximateReinvestmentRate=true;
 
       DataStructures::EmpiricalGrowthSettings atoiGrowthMdlSettings;
 
+
       atoiGrowthMdlSettings.maxDateErrorInDays = maxDayErrorTTM;
-      atoiGrowthMdlSettings.growthIntervalInYears = growthIntervalInYearsAll;
+      atoiGrowthMdlSettings.growthIntervalInYears = totalNumberOfYearsInDataSet;
       atoiGrowthMdlSettings.maxOutlierProportionInEmpiricalModel 
         = maxProportionOfOutliersInExpModel;
       atoiGrowthMdlSettings.minCycleDurationInYears = minCycleTimeInYears;
       atoiGrowthMdlSettings.exponentialModelR2Preference 
-        = minR2ImprovementOfCyclicalModel;
+        = exponentialModelR2Preference;
       atoiGrowthMdlSettings.calcOneGrowthRateForAllData=true;
-      atoiGrowthMdlSettings.typeOfEmpiricalModel=-1;
+      atoiGrowthMdlSettings.typeOfEmpiricalModel= -1;
 
 
       NumericalFunctions::extractEmpiricalAfterTaxOperatingIncomeGrowthRates(
@@ -1993,8 +2009,6 @@ int main (int argc, char* argv[]) {
       //the valution (5 years)
       DataStructures::EmpiricalGrowthDataSet empiricalGrowthData;
       
-      double growthIntervalInYears = 
-        static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
 
       atoiGrowthMdlSettings.growthIntervalInYears=growthIntervalInYears;
       atoiGrowthMdlSettings.calcOneGrowthRateForAllData=false;
@@ -2118,10 +2132,23 @@ int main (int argc, char* argv[]) {
                       = maxProportionOfOutliersInExpModel;
       empGrowthSettings.minCycleDurationInYears       = minCycleTimeInYears;
       empGrowthSettings.exponentialModelR2Preference 
-                      = minR2ImprovementOfCyclicalModel;
+                      = exponentialModelR2Preference;
       empGrowthSettings.calcOneGrowthRateForAllData   = false;        
       empGrowthSettings.includeTimeUnitInAddress      = true;
       empGrowthSettings.typeOfEmpiricalModel          = -1;
+
+      //I'm not fitting to all of the data any more, because I'm seeing this 
+      //common case 
+      //
+      //- One growth model nicely fits data from the first half of 
+      //  companies life
+      //- Another growth model nicely fits data from the second half of a 
+      //  companies life
+      //- No single model fits the entire span well.
+      //
+      // Given that I care more about most recent data, I'm revising the 
+      // average to be 2x longer than the growth interval in years 
+      // so 10 years with my current settings
 
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
@@ -2155,20 +2182,19 @@ int main (int argc, char* argv[]) {
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
         EARN,
-        HIST,
-        Y,
+        ANNUAL,
+        "",
         "epsActual",
         epsGrowthModel,
         empGrowthSettings);
 
       empGrowthSettings.calcOneGrowthRateForAllData=true;      
       empGrowthSettings.growthIntervalInYears      = growthIntervalInYearsAll;    
-
       NumericalFunctions::extractFundamentalDataMetricGrowthRates(
         fundamentalData,
         EARN,
-        HIST,
-        Y,
+        ANNUAL,
+        "",
         "epsActual",
         epsGrowthModelAvg,
         empGrowthSettings);

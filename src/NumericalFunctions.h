@@ -447,19 +447,28 @@ class NumericalFunctions {
         }
             
 
-        //Here I'm normalizing the slope by the starting and ending values
-        //to get something like a growth rate
-        double growth0      = (dydwMdl/y0Mdl);
-        double growth1      = (dydwMdl/y1Mdl);
-
-        double expGrowthEq  = exp(log(y1Mdl/y0Mdl)/modelUpd.duration)-1.0;
-
         std::vector< double > yMdl(x.size());   
         for(size_t i=0; i<w.size(); ++i){
           yMdl[i]= y0Mdl + dydwMdl*w[i];
         }
-
+        
         double r2 = calcR2(yMdl,y);
+
+        //Evaluate an equivalent growth rate using the last year of data
+        double yMdlExp1 = yMdl[yMdl.size()-1];
+        size_t i=yMdl.size()-2;
+
+        double durationExp = w[w.size()-1]-w[i];
+        while(durationExp < 1.0 && i > 0){
+          --i;
+          durationExp = w[w.size()-1]-w[i];
+        }
+        double yMdlExp0 = yMdl[i];
+        
+
+        double expGrowthEq  = 
+          std::exp(std::log(yMdlExp1/yMdlExp0)/durationExp)-1.0;
+
 
 
         modelUpd.annualGrowthRateOfTrendline=expGrowthEq;
@@ -597,10 +606,11 @@ class NumericalFunctions {
             logZ[i] = std::log(z[i]);
           } 
 
+          //Fit with all of the data
           auto [z0Mdl, dzdwMdl, logZR2] = 
             boost::math::statistics::
               simple_ordinary_least_squares_with_R_squared(w,logZ);
-
+              
           double growth       = std::exp( dzdwMdl )-1.0;
           double y0Mdl        = std::exp( z0Mdl );
           double y1Mdl        = std::exp( z0Mdl + dzdwMdl*modelUpd.duration);    
@@ -609,6 +619,24 @@ class NumericalFunctions {
           for(size_t i=0; i<w.size(); ++i){
             yMdl[i]=y0Mdl*pow(1.0+growth,w[i]);
           }
+
+          /*
+          std::cout << std::endl << "w" << std::endl;
+          for(size_t i=0; i<w.size();++i){
+            std::cout << w[i] << std::endl;
+          }
+
+          std::cout << std::endl << "y" << std::endl;
+          for(size_t i=0; i<y.size();++i){
+            std::cout << y[i] << std::endl;
+          }
+
+          std::cout << std::endl << "yMdl" << std::endl;
+          for(size_t i=0; i<yMdl.size();++i){
+            std::cout << yMdl[i] << std::endl;
+          }
+          */
+
 
           double r2 = calcR2(yMdl,y);
 
@@ -1078,6 +1106,7 @@ class NumericalFunctions {
 
         ++indexDate;
 
+
         std::vector< double > dateSubV; //date sub vector
         std::vector< double > valueSubV; //after-tax operating income sub vector
 
@@ -1103,7 +1132,10 @@ class NumericalFunctions {
             double timeSpan      = dateSubV[0] - dateNumV[indexDateStart]; 
             double timeSpanError = timeSpan-growthIntervalInYears;
 
-            if( timeSpanError < maxYearError ){
+            if( ((timeSpanError < maxYearError) 
+                  && !settings.calcOneGrowthRateForAllData) 
+              || (settings.calcOneGrowthRateForAllData 
+                  && timeSpan <= settings.growthIntervalInYears) ){
               dateSubV.push_back(dateNumV[indexDateStart]);
               valueSubV.push_back(valueV[indexDateStart]);
             }else{
@@ -1731,11 +1763,17 @@ class NumericalFunctions {
         double growth=equityGrowthModel.metricGrowthRate[idxGM];
         double dividendYield = financialRatios.dividendYield[idxFR];
 
+        if(dividendYield < 0){
+          dividendYield = 0.0;
+        }
+
         std::vector<double> cumPresentValue(4); //nominal, less growth, more growth
         std::vector<double> growthVariation(4);
         std::vector<double> dividendYieldVariation(4);
         std::vector<double> peVariation(4);
         std::vector< double > priceToValue(4);
+
+
 
         for(size_t i=0; i<cumPresentValue.size();++i){
 
@@ -1746,6 +1784,10 @@ class NumericalFunctions {
                 growthVariation[i]        =growth;
                 dividendYieldVariation[i] =dividendYield;
                 peVariation[i]            =financialRatios.pe[idxFR];
+
+                if(std::isnan(dividendYieldVariation[i])){
+                  dividendYieldVariation[i] = 0.;
+                }                
                 if(appendTermRecord){
                     nameMod="";
                     termNames.push_back(parentName+"sharePrice");
@@ -1774,6 +1816,11 @@ class NumericalFunctions {
                     peVariation[i]=peMarketVariationUpperBound[0];
                   }
                 }
+
+                if(std::isnan(dividendYieldVariation[i])){
+                  dividendYieldVariation[i] = 0.;
+                }                
+
                 if(appendTermRecord){
                     nameMod="_P25";
                     termNames.push_back(parentName+"sharePrice"+nameMod);
@@ -1801,6 +1848,9 @@ class NumericalFunctions {
                   }
                 }
 
+                if(std::isnan(dividendYieldVariation[i])){
+                  dividendYieldVariation[i] = 0.;
+                }                
 
                 if(appendTermRecord){
                     nameMod="_P50";
@@ -1827,6 +1877,10 @@ class NumericalFunctions {
                     peVariation[i]=peMarketVariationUpperBound[2];
                   }
                 }
+
+                if(std::isnan(dividendYieldVariation[i])){
+                  dividendYieldVariation[i] = 0.;
+                }                
 
 
                 if(appendTermRecord){

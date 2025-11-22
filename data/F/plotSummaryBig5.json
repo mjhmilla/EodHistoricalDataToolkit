@@ -344,7 +344,7 @@
             "address":
             [
                 "Earnings",
-                "History"
+                "Annual"
             ],
             "fieldName": "epsActual",
             "dateName": "date",
