@@ -1416,6 +1416,7 @@ int main (int argc, char* argv[]) {
 
   std::string singleFileToEvaluate;
 
+  bool gapFill;
   bool verbose;
 
   try{
@@ -1476,6 +1477,11 @@ int main (int argc, char* argv[]) {
       true,"","string");
     cmd.add(plotOverviewConfigurationFilePathInput);        
 
+    TCLAP::SwitchArg gapFillInput("g","gapfill",
+      "Generate ticker reports that appear in calculate data but not"
+      " in the output folder.", false);
+    cmd.add(gapFillInput);    
+
     TCLAP::SwitchArg verboseInput("v","verbose",
       "Verbose output printed to screen", false);
     cmd.add(verboseInput);    
@@ -1493,6 +1499,7 @@ int main (int argc, char* argv[]) {
     historicalFolder         = historicalFolderInput.getValue();    
     reportFolder             = reportFolderOutput.getValue();
     dateOfTable              = dateOfTableInput.getValue();
+    gapFill                  = gapFillInput.getValue();
     verbose                  = verboseInput.getValue();
 
     if(verbose){
@@ -1524,6 +1531,9 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Overview Plot Configuration File" << std::endl;
       std::cout << "    " << plotOverviewConfigurationFilePath << std::endl;                
+
+      std::cout << "  Gapfill mode " << std::endl;
+      std::cout << "    " << gapFill << std::endl;      
     }
 
   } catch (TCLAP::ArgException &e){ 
@@ -1568,6 +1578,7 @@ int main (int argc, char* argv[]) {
 
   std::vector< std::string > processedTickers;
 
+  int gapFillCount = 0;
   int totalFileCount = 0;
   int validFileCount = 0;
   std::string analysisExt = ".json";  
@@ -1600,7 +1611,7 @@ int main (int argc, char* argv[]) {
 
     std::size_t fileExtPos = fileName.find(analysisExt);
 
-    if(verbose){
+    if(verbose && !gapFill){
       std::cout << totalFileCount << '\t' << fileName << std::endl;
     }    
 
@@ -1615,7 +1626,9 @@ int main (int argc, char* argv[]) {
 
 
 
-
+    std::string ticker;
+    std::string tickerFolderName;
+    std::filesystem::path  outputFolderPath;
 
     if(validInput){
 
@@ -1624,19 +1637,31 @@ int main (int argc, char* argv[]) {
       // Create the output folder
       //      
 
-      std::string ticker = fileName.substr(0,fileExtPos);
-      std::string tickerFolderName = ticker;
+      ticker = fileName.substr(0,fileExtPos);
+      tickerFolderName = ticker;
       std::replace(tickerFolderName.begin(),tickerFolderName.end(),'.','_');
 
       std::string outputFolderName = reportFolder;
       outputFolderName.append(tickerFolderName);
 
-      std::filesystem::path outputFolderPath = outputFolderName;
-      if( !std::filesystem::is_directory(outputFolderPath) ){
-        std::filesystem::create_directory(outputFolderPath);
+      outputFolderPath = outputFolderName;
+      if( gapFill ){
+
+        if( !std::filesystem::is_directory(outputFolderPath) ){
+          ++gapFillCount;
+          std::cout << gapFillCount << '\t' << fileName << std::endl;          
+        }else{
+          validInput = false;
+        }
       }
 
+    }
 
+    if(validInput){
+
+      if( !std::filesystem::is_directory(outputFolderPath) ){
+        std::filesystem::create_directory(outputFolderPath);
+      }      
       //
       //Read in the inputs
       //
@@ -1813,12 +1838,24 @@ int main (int argc, char* argv[]) {
   }
  
   if(verbose){
-    std::cout << std::endl;
-    std::cout << "Summary" << std::endl;
-    std::cout << '\t' << totalFileCount 
-              << '\t' << "number of tickers processed" << std::endl;
-    std::cout << '\t' << validFileCount
-              << '\t' << "number of tickers with valid data" << std::endl;
+    if(gapFill){
+      std::cout << std::endl;
+      std::cout << "Summary" << std::endl;
+      std::cout << '\t' << gapFillCount 
+                << '\t' << "number of ticker gaps filled" << std::endl;
+      if(gapFillCount > 0){
+        std::cout << '\t' << validFileCount
+                  << '\t' << "number of tickers during gap filling"
+                             " with valid data" << std::endl;
+      }
+    }else{
+      std::cout << std::endl;
+      std::cout << "Summary" << std::endl;
+      std::cout << '\t' << totalFileCount 
+                << '\t' << "number of tickers processed" << std::endl;
+      std::cout << '\t' << validFileCount
+                << '\t' << "number of tickers with valid data" << std::endl;
+    }
   } 
 
 
