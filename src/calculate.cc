@@ -2635,6 +2635,12 @@ int main (int argc, char* argv[]) {
         //======================================================================        
         //Evaluate the current market capitalization
         //======================================================================
+        double outstandingShares = 
+          FinancialAnalysisFunctions::getOutstandingSharesClosestToDate(
+              fundamentalData, 
+              date,
+              timePeriodOS.c_str());
+        /*
         double outstandingShares = std::nan("1");
         int smallestDateDifference=std::numeric_limits<int>::max();        
         std::string closestDate("");
@@ -2650,6 +2656,7 @@ int main (int argc, char* argv[]) {
             outstandingShares = JsonFunctions::getJsonFloat(el["shares"]);
           }
         }
+        */
 
         unsigned int indexHistoricalData = 
           analysisDates.indicesHistorical[indexDate];   
@@ -3036,6 +3043,24 @@ int main (int argc, char* argv[]) {
         termNames.push_back("afterTaxOperatingIncomeGrowth");
         termValues.push_back(afterTaxOperatingIncomeGrowth); 
 
+        //William Price's shareholder yield
+        parentName = "shareHolderYield_";
+        double shareHolderYield =  
+                FinancialAnalysisFunctions::
+                  calcShareholderYield( fundamentalData, 
+                                        historicalData,
+                                        dateSet,
+                                        previousDateSet,
+                                        timePeriod.c_str(), 
+                                        timePeriodOS.c_str(),
+                                        debtInfo,
+                                        previousDebtInfo,
+                                        costOfCapital,
+                                        appendTermRecord,                                      
+                                        parentName,
+                                        setNansToMissingValue,
+                                        termNames,
+                                        termValues);
 
         parentName="priceToValue_";
 

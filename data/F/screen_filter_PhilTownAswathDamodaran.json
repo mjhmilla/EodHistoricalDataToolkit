@@ -7,7 +7,7 @@
             "field":
             [
                 "metric_data",
-                "atoiEmpiricalAvg_ReturnOnInvestedCapital"
+                "returnOnInvestedFinancialCapitalLessCostOfCapital"
             ],
             "isDateSeries": true,
             "condition": ">=",

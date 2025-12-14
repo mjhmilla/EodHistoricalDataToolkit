@@ -2323,7 +2323,146 @@ class FinancialAnalysisFunctions {
 
 
     }
+    //==========================================================================
+    static double getOutstandingSharesClosestToDate(
+          const nlohmann::ordered_json &fundamentalData, 
+          const std::string &date,
+          const char *timePeriodOS){
 
+      double outstandingShares = std::nan("1");
+      int smallestDateDifference=std::numeric_limits<int>::max();              
+      std::string closestDate("");
+
+      for(auto& el : fundamentalData[OS][timePeriodOS.c_str()]){
+        std::string dateOS("");
+        JsonFunctions::getJsonString(el["dateFormatted"],dateOS);         
+        int dateDifference = 
+          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+            date,"%Y-%m-%d",dateOS,"%Y-%m-%d");
+        if(std::abs(dateDifference)<smallestDateDifference){
+          closestDate = dateOS;
+          smallestDateDifference=std::abs(dateDifference);
+          outstandingShares = JsonFunctions::getJsonFloat(el["shares"]);
+        }
+      }
+
+      return outstandingShares;
+    }
+
+
+    //==========================================================================
+    /*
+      From William Priest's book 
+    */
+    static double calcShareholderYield(
+          const nlohmann::ordered_json &fundamentalData, 
+          const nlohmann::ordered_json &historicalData,
+          const DateFunctions::DateSetTTM &dateSet,
+          const DateFunctions::DateSetTTM &previousDateSet,
+          const char *timeUnit, 
+          const char *timeUnitOS,
+          const DataStructures::DebtInfo &debtInfo,
+          const DataStructures::DebtInfo &previousDebtInfo,
+          double costOfCapital,
+          bool appendTermRecord,                                      
+          const std::string &parentCategoryName,
+          bool setNansToMissingValue,
+          std::vector< std::string> &termNames,
+          std::vector< double > &termValues){
+
+      
+
+        double dividendYield = 0;
+
+        //
+        // Evaluate the average dividend yield across the trailing time period
+        //
+        for(size_t i=0; i<dateSet.dates.size();++i){
+          double dividendsPaid = JsonFunctions::getJsonFloat(
+            fundamentalData[FIN][CF][timeUnit][dateSet.dates[i]]["dividendsPaid"],
+            false);
+          if(std::isnan(dividendsPaid)){
+            dividendsPaid = 0.;
+          }
+
+          int index = calcIndexOfClosestDateInHistoricalData(
+                          dateSet.dates[i],
+                          "%Y-%m-%d",
+                          historicalData,
+                          "%Y-%m-%d",
+                          false);
+
+          double stockPrice = JsonFunctions::getJsonFloat(
+              historicalData[index]["adjusted_close"],false);
+          
+          double outstandingShares = getOutstandingSharesClosestToDate(
+                                        fundamentalData,
+                                        dateSet.dates[i],
+                                        timeUnitOS);
+
+          );
+          double marketValue = stockPrice*outstandingShares;
+          
+          double dividendYieldEntry = dividendsPaid / marketValue;
+          dividendsPaid += dividendYieldEntry * dateSet.weights[i];          
+        }
+
+        //
+        // Share buybacks
+        //
+
+        double outstandingShares =  getOutstandingSharesClosestToDate(
+                                      fundamentalData,
+                                      dateSet.dates[0],
+                                      timeUnitOS);
+
+        double outstandingSharesPrevious = getOutstandingSharesClosestToDate(
+                                              fundamentalData,
+                                              previousDateSet.dates[0],
+                                              timeUnitOS);
+                                              
+        double changeInOutstandingShares = outstandingShares
+                                 - outstandingSharesPrevious;
+
+
+
+        double outstandingShareYield = -(changeInOutstandingShares
+                                         /outstandingSharesPrevious);
+
+        //
+        // Debt paid
+        //
+
+        double changeInDebt =  debtInfo.longTermDebtEstimate
+                              -previousDebtInfo.longTermDebtEstimate;
+
+        int index = calcIndexOfClosestDateInHistoricalData(
+                        dateSet.dates[0],
+                        "%Y-%m-%d",
+                        historicalData,
+                        "%Y-%m-%d",
+                        false);
+
+        double stockPrice = JsonFunctions::getJsonFloat(
+              historicalData[index]["adjusted_close"],false);
+
+        double marketCap = stockPrice*outstandingShares;              
+
+        double debtYield = - changeInDebt / marketCap;
+
+                                         
+        //
+        // Shareholder yield
+        //
+
+        double shareHolderYield =  dividendYield 
+                                 + outstandingShareYield
+                                 + debtYield;
+
+        std::assert(0);
+        std::abort();  
+        //You are here                               
+    }
     //==========================================================================
     static double calcPriceToValueUsingDiscountedCashflowModel(
                     const nlohmann::ordered_json &jsonData, 
