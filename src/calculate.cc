@@ -3044,7 +3044,7 @@ int main (int argc, char* argv[]) {
         termValues.push_back(afterTaxOperatingIncomeGrowth); 
 
         //William Price's shareholder yield
-        parentName = "shareHolderYield_";
+        parentName = "";
         double shareHolderYield =  
                 FinancialAnalysisFunctions::
                   calcShareholderYield( fundamentalData, 

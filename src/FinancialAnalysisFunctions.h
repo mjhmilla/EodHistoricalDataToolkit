@@ -87,7 +87,7 @@ class FinancialAnalysisFunctions {
     };
 
     //==========================================================================
-    static int calcIndexOfClosestDateInHistorcalData(
+    static int calcIndexOfClosestDateInHistoricalData(
                   const std::string &targetDate,
                   const char* targetDateFormat,
                   const nlohmann::ordered_json &historicalData,
@@ -2333,7 +2333,7 @@ class FinancialAnalysisFunctions {
       int smallestDateDifference=std::numeric_limits<int>::max();              
       std::string closestDate("");
 
-      for(auto& el : fundamentalData[OS][timePeriodOS.c_str()]){
+      for(auto& el : fundamentalData[OS][timePeriodOS]){
         std::string dateOS("");
         JsonFunctions::getJsonString(el["dateFormatted"],dateOS);         
         int dateDifference = 
@@ -2372,39 +2372,19 @@ class FinancialAnalysisFunctions {
 
       
 
-        double dividendYield = 0;
-
+        double dividendsPaid = 0;        
         //
         // Evaluate the average dividend yield across the trailing time period
         //
         for(size_t i=0; i<dateSet.dates.size();++i){
-          double dividendsPaid = JsonFunctions::getJsonFloat(
+
+          double dividendsPaidEntry = JsonFunctions::getJsonFloat(
             fundamentalData[FIN][CF][timeUnit][dateSet.dates[i]]["dividendsPaid"],
             false);
-          if(std::isnan(dividendsPaid)){
-            dividendsPaid = 0.;
+          if(std::isnan(dividendsPaidEntry)){
+            dividendsPaidEntry = 0.;
           }
-
-          int index = calcIndexOfClosestDateInHistoricalData(
-                          dateSet.dates[i],
-                          "%Y-%m-%d",
-                          historicalData,
-                          "%Y-%m-%d",
-                          false);
-
-          double stockPrice = JsonFunctions::getJsonFloat(
-              historicalData[index]["adjusted_close"],false);
-          
-          double outstandingShares = getOutstandingSharesClosestToDate(
-                                        fundamentalData,
-                                        dateSet.dates[i],
-                                        timeUnitOS);
-
-          );
-          double marketValue = stockPrice*outstandingShares;
-          
-          double dividendYieldEntry = dividendsPaid / marketValue;
-          dividendsPaid += dividendYieldEntry * dateSet.weights[i];          
+          dividendsPaid += dividendsPaidEntry * dateSet.weights[i];                              
         }
 
         //
@@ -2425,9 +2405,40 @@ class FinancialAnalysisFunctions {
                                  - outstandingSharesPrevious;
 
 
+        //
+        // Eod currently does not record how much money has been spent on
+        // share buy backs. So here I'm going to estimate this value by
+        // using average TTM value of the stock price multipled by the change
+        // in stock price.
+        //
+        double sharePriceAvg = 0.;
+        int sharePriceCount = 0;
+        int indexA = FinancialAnalysisFunctions::
+                    calcIndexOfClosestDateInHistoricalData(
+                          dateSet.dates[0],
+                          "%Y-%m-%d",
+                          historicalData,
+                          "%Y-%m-%d",
+                          false);
+        int indexB = FinancialAnalysisFunctions::
+                      calcIndexOfClosestDateInHistoricalData(
+                          previousDateSet.dates[0],
+                          "%Y-%m-%d",
+                          historicalData,
+                          "%Y-%m-%d",
+                          false);
+        for (int i=indexB; i<indexA;++i){
+          double stockPrice = JsonFunctions::getJsonFloat(
+              historicalData[i]["adjusted_close"],false);
+          if(!std::isnan(stockPrice)){
+            sharePriceAvg += stockPrice;
+            sharePriceCount++;
+          }          
+        }
+        sharePriceAvg /= static_cast<double>(sharePriceCount);
 
-        double outstandingShareYield = -(changeInOutstandingShares
-                                         /outstandingSharesPrevious);
+        double costOfChangeInOutandingShares = 
+          sharePriceAvg*changeInOutstandingShares;
 
         //
         // Debt paid
@@ -2436,7 +2447,8 @@ class FinancialAnalysisFunctions {
         double changeInDebt =  debtInfo.longTermDebtEstimate
                               -previousDebtInfo.longTermDebtEstimate;
 
-        int index = calcIndexOfClosestDateInHistoricalData(
+        int index = FinancialAnalysisFunctions::
+                      calcIndexOfClosestDateInHistoricalData(
                         dateSet.dates[0],
                         "%Y-%m-%d",
                         historicalData,
@@ -2448,20 +2460,57 @@ class FinancialAnalysisFunctions {
 
         double marketCap = stockPrice*outstandingShares;              
 
-        double debtYield = - changeInDebt / marketCap;
 
                                          
         //
-        // Shareholder yield
+        // Yield values
         //
 
-        double shareHolderYield =  dividendYield 
-                                 + outstandingShareYield
-                                 + debtYield;
+        double shareHolderYield = (dividendsPaid
+                                  -(costOfChangeInOutandingShares+changeInDebt)
+                                  )/marketCap;
 
-        std::assert(0);
-        std::abort();  
-        //You are here                               
+        double dividendYield      = dividendsPaid/marketCap;
+        double shareBuybackYield  = -costOfChangeInOutandingShares/marketCap;
+        double debtPaybackYield   = -changeInDebt/marketCap;
+
+        //
+        // Append 
+        //
+        if(appendTermRecord){
+          std::string resultName(parentCategoryName);
+          resultName.append("shareholderYield_");            
+          termNames.push_back(resultName + "dividendsPaid");
+          termNames.push_back(resultName + "changeInOutstandingShares");
+          termNames.push_back(resultName + "averageStockPrice");
+          termNames.push_back(resultName + "costOfChangeInOutstandingShares");
+          termNames.push_back(resultName + "changeInDebt");
+          termNames.push_back(resultName + "outstandingShares");
+          termNames.push_back(resultName + "stockPrice");
+          termNames.push_back(resultName + "marketCapitalization");
+          termNames.push_back(resultName + "dividendYield");
+          termNames.push_back(resultName + "shareBuybackYield");
+          termNames.push_back(resultName + "debtPaybackYield");
+
+          termNames.push_back(parentCategoryName + "shareholderYield");
+
+          termValues.push_back(dividendsPaid);
+          termValues.push_back(changeInOutstandingShares);
+          termValues.push_back(sharePriceAvg);
+          termValues.push_back(costOfChangeInOutandingShares);
+          termValues.push_back(changeInDebt);
+          termValues.push_back(outstandingShares);
+          termValues.push_back(stockPrice);
+          termValues.push_back(marketCap);
+          termValues.push_back(dividendYield);
+          termValues.push_back(shareBuybackYield);
+          termValues.push_back(debtPaybackYield);
+
+          termValues.push_back(shareHolderYield);
+
+        }            
+
+        return shareHolderYield;
     }
     //==========================================================================
     static double calcPriceToValueUsingDiscountedCashflowModel(
