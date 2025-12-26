@@ -27,9 +27,6 @@ class FinancialAnalysisFunctions {
     
 
 
-
-
-
     //==========================================================================
     static double sumFundamentalDataOverDates(
         const nlohmann::ordered_json &fundamentalData,
@@ -78,7 +75,9 @@ class FinancialAnalysisFunctions {
         if(setNansToMissingValue){
           sumOfValues = JsonFunctions::MISSING_VALUE;
         }else{
-          sumOfValues = std::nan("1");
+          if(!ignoreNans){
+            sumOfValues = std::nan("1");
+          }
         }
       }
 
@@ -2332,7 +2331,8 @@ class FinancialAnalysisFunctions {
       double outstandingShares = std::nan("1");
       int smallestDateDifference=std::numeric_limits<int>::max();              
       std::string closestDate("");
-
+      int previousDateDifference=1;
+      int count=0;
       for(auto& el : fundamentalData[OS][timePeriodOS]){
         std::string dateOS("");
         JsonFunctions::getJsonString(el["dateFormatted"],dateOS);         
@@ -2344,6 +2344,17 @@ class FinancialAnalysisFunctions {
           smallestDateDifference=std::abs(dateDifference);
           outstandingShares = JsonFunctions::getJsonFloat(el["shares"]);
         }
+
+        //Stop this loop if we have gotten the date
+        if(dateDifference==0){
+          break;
+        }
+        //Or if the difference calculation changes sign
+        if(previousDateDifference*dateDifference <= 0 && count > 0){
+          break;
+        }
+        previousDateDifference = dateDifference;
+        ++count;
       }
 
       return outstandingShares;

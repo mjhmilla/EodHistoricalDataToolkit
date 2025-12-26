@@ -661,7 +661,74 @@ class NumericalFunctions {
       }
 
     };
+    //==========================================================================
+    static void extractDividendInfo(  
+              const nlohmann::ordered_json &fundamentalData,
+              const nlohmann::ordered_json &historicalData,
+              const DataStructures::AnalysisDates &analysisDates,
+              const char *timePeriod,
+              const char *timePeriodOS,
+              int maximumDayErrorTTM,
+              int yearsToAverageTTMLessDividends,
+              bool quarterlyTTMAnalysis,              
+              DataStructures::DividendInfo &dividendInfoUpd)
+    {
 
+      if(!std::strcmp(timePeriod,Y) || !std::strcmp(timePeriodOS,Y)){
+        std::cout << "Error: extractDividendInfo can only be applied to yearly "
+                     "data. Set the fields analysisDates, timePeriod, "
+                     "timePeriodOS appropriately"
+                  << std::endl;
+        std::abort();                  
+      }
+
+      bool setNansToMissingValue = false;
+      bool ignoreNans=true;
+      bool includeTimeUnitInAddress = true;
+      int countDividend = 0;
+      int countEntry = 0;
+
+      for(size_t indexDate = 0; indexDate <analysisDates.common.size(); 
+                              ++indexDate){
+
+        std::string date     = analysisDates.common[indexDate];
+        double datesNumerical = DateFunctions::convertToFractionalYear(date);
+
+
+        int indexHistoricalData = analysisDates.indicesHistorical[indexDate];
+
+        // Go and get dividendsPaid, the stock price, freeCashFlow
+        // etc.
+
+        //When there are no dividends paid EOD often sets this field to null,
+        //so here, I must change the default value on ignoreNans to true to  
+        //replace any null value with 0.
+        double dividendsPaid = JsonFunctions::getJsonFloat(
+          fundamentalData[FIN][CF][timePeriod][date]["dividendsPaid"],
+          setNansToMissingValue);
+
+        if(std::isnan(dividendsPaid)){
+          dividendsPaid=0.;
+        }
+
+        double freeCashFlow = JsonFunctions::getJsonFloat(
+          fundamentalData[FIN][CF][timePeriod][date]["freeCashFlow"],
+         setNansToMissingValue);
+
+        double stockPrice = 
+          JsonFunctions::getJsonFloat(
+            historicalData[indexHistoricalData]["adjusted_close"],
+            setNansToMissingValue);
+
+        double dividendYield = dividendsPaid/stockPrice;
+
+        if(dividendsPaid > 0.){
+          ++countDividend;
+        }
+        ++countEntry;
+      }
+
+    };
     //==========================================================================
     static void extractFinancialRatios(
               const nlohmann::ordered_json &fundamentalData,
@@ -696,14 +763,17 @@ class NumericalFunctions {
         std::string datePreviousYear("");
         int indexDatePrevYear=0;
         int smallestDateDifference=std::numeric_limits<int>::max();
+        int daysPerYearInt= static_cast<int>(DateFunctions::DAYS_PER_YEAR);
 
         for(int i=indexDate; i<analysisDates.common.size(); ++i){
+
           int dateDifference = 
             DateFunctions::calcDifferenceInDaysBetweenTwoDates(
               date,"%Y-%m-%d",analysisDates.common[i],"%Y-%m-%d");
-          if(std::abs(dateDifference-365)<smallestDateDifference 
-            && dateDifference >= 0){
-            smallestDateDifference=std::abs(dateDifference-365);
+
+          if(std::abs(dateDifference-daysPerYearInt)<smallestDateDifference 
+              && dateDifference >= 0){
+            smallestDateDifference=std::abs(dateDifference-daysPerYearInt);
             datePreviousYear = analysisDates.common[i];
             indexDatePrevYear = i;
           }

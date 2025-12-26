@@ -197,6 +197,20 @@ class DataStructures {
       std::vector< double > earningsLeverage;
       
     };
+    //==========================================================================
+    struct DividendInfo{
+      std::vector< std::string > dates;
+      std::vector< double > datesNumerical;
+      std::vector< double > dividendsPaid;
+      std::vector< double > stockPrice;
+      std::vector< double > dividendYield;
+      std::vector< double > freeCashFlow;
+      std::vector< double > freeCashFlowLessDividends;
+      int yearsWithADividend;      
+      double fractionOfYearsWithDividendIncreases;
+      double fractionOfYearsWithCancelledDividends;      
+    };
+
 
     //==========================================================================
     /**

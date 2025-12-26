@@ -2317,18 +2317,46 @@ int main (int argc, char* argv[]) {
       //MarketCapitalizationSummaryData
       DataStructures::FinancialRatios financialRatios;
       
-        NumericalFunctions::extractFinancialRatios(
-                            fundamentalData,
-                            historicalData,
-                            analysisDates,
-                            timePeriod,
-                            timePeriodOS,
-                            maxDayErrorTTM,
-                            maxDayErrorOutstandingShareData,
-                            quarterlyTTMAnalysis,
-                            financialRatios);
+      NumericalFunctions::extractFinancialRatios(
+                          fundamentalData,
+                          historicalData,
+                          analysisDates,
+                          timePeriod,
+                          timePeriodOS,
+                          maxDayErrorTTM,
+                          maxDayErrorOutstandingShareData,
+                          quarterlyTTMAnalysis,
+                          financialRatios);
       
 
+      DataStructures::AnalysisDates analysisDatesYearly;
+      bool validDates= 
+        extractAnalysisDates(
+          analysisDatesYearly,
+          fundamentalData,
+          historicalData,
+          jsonBondYield["US"]["10y_bond_yield"],
+          Y,
+          A,
+          maxDayErrorHistoricalData,
+          maxDayErrorOutstandingShareData,
+          maxDayErrorBondYieldData,
+          allowRepeatedDates);  
+
+      DataStructures::DividendInfo dividendInfo;
+      int yearsToAverageTTMLessDividends=3;
+
+      NumericalFunctions::extractDividendInfo(
+                            fundamentalData,
+                            historicalData,
+                            analysisDatesYearly,
+                            Y,
+                            A,
+                            maxDayErrorTTM,
+                            yearsToAverageTTMLessDividends,
+                            quarterlyTTMAnalysis,
+                            dividendInfo);
+      
       //=======================================================================
       //
       // Create and set the first values in annualMilestones
