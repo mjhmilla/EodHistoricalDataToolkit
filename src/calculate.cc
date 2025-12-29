@@ -2327,7 +2327,11 @@ int main (int argc, char* argv[]) {
                           maxDayErrorOutstandingShareData,
                           quarterlyTTMAnalysis,
                           financialRatios);
-      
+
+      //
+      // Metrics related to William Priest's 
+      //  Free-cash-flow and Shareholder yield screener
+      //
 
       DataStructures::AnalysisDates analysisDatesYearly;
       bool validDates= 
@@ -2344,7 +2348,7 @@ int main (int argc, char* argv[]) {
           allowRepeatedDates);  
 
       DataStructures::DividendInfo dividendInfo;
-      int yearsToAverageTTMLessDividends=3;
+      int yearsToAverageFCFLessDividends=3;
 
       NumericalFunctions::extractDividendInfo(
                             fundamentalData,
@@ -2352,11 +2356,39 @@ int main (int argc, char* argv[]) {
                             analysisDatesYearly,
                             Y,
                             A,
-                            maxDayErrorTTM,
-                            yearsToAverageTTMLessDividends,
-                            quarterlyTTMAnalysis,
+                            yearsToAverageFCFLessDividends,
                             dividendInfo);
       
+
+    DataStructures::MetricGrowthDataSet dividendsPaidGrowthModel, 
+                                        dividendsPaidGrowthModelAvg;
+
+      empGrowthSettings.includeTimeUnitInAddress=true;
+      empGrowthSettings.calcOneGrowthRateForAllData=false;      
+      empGrowthSettings.growthIntervalInYears         = growthIntervalInYears;    
+
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
+        CF,
+        Y,
+        "dividendsPaid",
+        dividendsPaidGrowthModel,
+        empGrowthSettings);
+
+      empGrowthSettings.calcOneGrowthRateForAllData=true;    
+      empGrowthSettings.growthIntervalInYears      = growthIntervalInYearsAll;    
+
+      NumericalFunctions::extractFundamentalDataMetricGrowthRates(
+        fundamentalData,
+        FIN,
+        CF,
+        Y,
+        "dividendsPaid",
+        dividendsPaidGrowthModelAvg,
+        empGrowthSettings);
+                            
+
       //=======================================================================
       //
       // Create and set the first values in annualMilestones
@@ -2833,6 +2865,33 @@ int main (int argc, char* argv[]) {
           termValues.push_back(financialRatios.pe[idxFR]);  
                                             
         }
+
+        //======================================================================
+        // Write data needed to implement William Priest's dividend info
+        // screener
+        //======================================================================
+
+        bool validDividendInfo = dividendInfo.datesNumerical.size()>0;
+
+        if(validDividendInfo){
+          int idxDI = DateFunctions::getIndexClosestToDate(dateRecent,
+                                        dividendInfo.datesNumerical);
+
+          int idxDIG = DateFunctions::getIndexClosestToDate(dateRecent,
+                                      dividendsPaidGrowthModel.datesNumerical);
+
+          termNames.push_back("PriestDividendMetrics_dividendYield");
+          termNames.push_back("PriestDividendMetrics_dividendYieldGrowth");
+          termNames.push_back("PriestDividendMetrics_freeCashFlowTrailingYield");
+          termNames.push_back("PriestDividendMetrics_freeCashFlowLessDividendsTrailingYield");
+
+          termValues.push_back(dividendInfo.dividendYield[idxDI]);
+          termValues.push_back(dividendsPaidGrowthModel.metricGrowthRate[idxDIG]);
+          termValues.push_back(dividendInfo.freeCashFlowTrailingYield[idxDI]);
+          termValues.push_back(dividendInfo.freeCashFlowLessDividendsTrailingYield[idxDI]);
+           
+        }
+
         //======================================================================
         //Evaluate the metrics
         //  At the moment residual cash flow and the company's valuation are
@@ -3404,25 +3463,14 @@ int main (int argc, char* argv[]) {
         = annualMilestones.yearsWithADividend;
       annualMilestoneReport["years_with_dividend_increase"] 
         = annualMilestones.yearsWithADividendIncrease;
-
+      annualMilestoneReport["fraction_of_years_with_a_dividend"]
+        = dividendInfo.fractionOfYearsWithDividends;
+      annualMilestoneReport["fraction_of_years_with_a_dividend_increase"]
+        = dividendInfo.fractionOfYearsWithDividendIncreases;
+      
       analysis["annual_milestones"] = annualMilestoneReport;
 
-
-             
-      //if(empiricalGrowthData.datesNumerical.size()>0){
-      //  double dateRange= empiricalGrowthData.datesNumerical.front()
-      //                  -empiricalGrowthData.datesNumerical.back(); 
-      //  if(dateRange < 0){
-      //    indexRecentDate = empiricalGrowthData.datesNumerical.size()-1;
-      //  }
-      //  
-      //  dateRange= empiricalGrowthDataAll.datesNumerical.front()
-      //            -empiricalGrowthDataAll.datesNumerical.back(); 
-      //  if(dateRange < 0){
-      //    indexRecentDateAll = empiricalGrowthDataAll.datesNumerical.size()-1;
-      //  }
-      //}
-
+            
       //
       // growth of equity
       //   equityGrowthModel   

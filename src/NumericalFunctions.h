@@ -668,41 +668,63 @@ class NumericalFunctions {
               const DataStructures::AnalysisDates &analysisDates,
               const char *timePeriod,
               const char *timePeriodOS,
-              int maximumDayErrorTTM,
-              int yearsToAverageTTMLessDividends,
-              bool quarterlyTTMAnalysis,              
+              int yearsToAverageFCFLessDividends,
               DataStructures::DividendInfo &dividendInfoUpd)
     {
 
-      if(!std::strcmp(timePeriod,Y) || !std::strcmp(timePeriodOS,Y)){
+      if(std::strcmp(timePeriod,Y)!=0 || std::strcmp(timePeriodOS,A)!=0){
         std::cout << "Error: extractDividendInfo can only be applied to yearly "
                      "data. Set the fields analysisDates, timePeriod, "
                      "timePeriodOS appropriately"
                   << std::endl;
         std::abort();                  
       }
+      if(yearsToAverageFCFLessDividends < 1){
+        std::cout << "Error: yearsToAverageFCFLessDividends must be >= 1. "
+                  << "William Priest uses 3 years, so this should be a good"
+                  << "place to start."
+                  << std::endl;
+      }
 
-      bool setNansToMissingValue = false;
-      bool ignoreNans=true;
+      bool setNansToMissingValue    = false;
+      bool ignoreNans               = true;
       bool includeTimeUnitInAddress = true;
-      int countDividend = 0;
-      int countEntry = 0;
 
-      for(size_t indexDate = 0; indexDate <analysisDates.common.size(); 
+      int count = 0;
+      int countDividendIncrease=0;
+      int countDividendCancelled=0;
+      int countFcfPositive = 0;
+      int countFcfLessDividendsPositive=0;
+
+      double meanDividendYield = 0;
+      double meanFreeCashFlowYield = 0;
+      double meanFreeCashFlowLessDividendsYield = 0;
+
+      dividendInfoUpd.clear();
+
+      double previousDividend = 0;
+
+      size_t indexDateMax = analysisDates.common.size()
+                           -static_cast<size_t>(yearsToAverageFCFLessDividends);
+
+      for(size_t indexDate = 0; indexDate < indexDateMax; 
                               ++indexDate){
 
-        std::string date     = analysisDates.common[indexDate];
-        double datesNumerical = DateFunctions::convertToFractionalYear(date);
+        std::string date              
+          = analysisDates.common[indexDate];        
+        double dateNumerical          
+          = DateFunctions::convertToFractionalYear(date);
+
+        std::string datePrevious      
+          = analysisDates.common[indexDate+1];        
+        double dateNumericalPrevious  
+          = DateFunctions::convertToFractionalYear(datePrevious);
 
 
         int indexHistoricalData = analysisDates.indicesHistorical[indexDate];
 
-        // Go and get dividendsPaid, the stock price, freeCashFlow
-        // etc.
 
-        //When there are no dividends paid EOD often sets this field to null,
-        //so here, I must change the default value on ignoreNans to true to  
-        //replace any null value with 0.
+        // Go and get dividendsPaid, the stock price, freeCashFlow
         double dividendsPaid = JsonFunctions::getJsonFloat(
           fundamentalData[FIN][CF][timePeriod][date]["dividendsPaid"],
           setNansToMissingValue);
@@ -713,20 +735,178 @@ class NumericalFunctions {
 
         double freeCashFlow = JsonFunctions::getJsonFloat(
           fundamentalData[FIN][CF][timePeriod][date]["freeCashFlow"],
-         setNansToMissingValue);
+          setNansToMissingValue);
 
+
+        //
+        // Evaluate all yield values for this year
+        //
         double stockPrice = 
           JsonFunctions::getJsonFloat(
             historicalData[indexHistoricalData]["adjusted_close"],
             setNansToMissingValue);
 
-        double dividendYield = dividendsPaid/stockPrice;
+        double outstandingShares = 
+          FinancialAnalysisFunctions::getOutstandingSharesClosestToDate(
+              fundamentalData,
+              date,
+              timePeriodOS);
+                  
+        double dividendYield = 
+                  (dividendsPaid/outstandingShares)/stockPrice;
+        double freeCashFlowYield = 
+                  (freeCashFlow/outstandingShares)/stockPrice;
+        double freeCashFlowLessDividendsYield = 
+                  ((freeCashFlow-dividendsPaid)/outstandingShares)/stockPrice;
 
-        if(dividendsPaid > 0.){
-          ++countDividend;
+        meanDividendYield += dividendYield;
+        meanFreeCashFlowYield += freeCashFlowYield;
+        meanFreeCashFlowLessDividendsYield += freeCashFlowLessDividendsYield;
+
+
+        //
+        // Get the trailing average of dividends paid and free cash flow
+        //
+        double dividendsTrailing = 0.;
+        double freeCashFlowTrailing = 0.;
+
+        for(size_t j=0; 
+            j < static_cast<size_t>(yearsToAverageFCFLessDividends); ++j){
+
+          std::string dateEntry = analysisDates.common[indexDate+j];               
+
+          double dividendsPaidEntry = JsonFunctions::getJsonFloat(
+            fundamentalData[FIN][CF][timePeriod][dateEntry]["dividendsPaid"],
+            setNansToMissingValue);
+
+          if(std::isnan(dividendsPaidEntry)){
+            dividendsPaidEntry=0.;
+          }              
+
+          dividendsTrailing += dividendsPaidEntry;
+
+
+          double freeCashFlowEntry = JsonFunctions::getJsonFloat(
+            fundamentalData[FIN][CF][timePeriod][dateEntry]["freeCashFlow"],
+            setNansToMissingValue);
+
+          if(std::isnan(freeCashFlowEntry)){
+            freeCashFlowEntry=0.;
+          }              
+
+          freeCashFlowTrailing += freeCashFlowEntry;
+
         }
-        ++countEntry;
+
+        double freeCashFlowLessDividendsTrailing = freeCashFlowTrailing
+                                                  -dividendsTrailing;
+
+        //
+        // Evaluate the trailing average of fcf, dividends, and fcf-dividends
+        //                                                  
+        double freeCashFlowAvg = freeCashFlowTrailing
+                        /static_cast<double>(yearsToAverageFCFLessDividends);
+
+        double dividendsAvg = dividendsTrailing
+                        /static_cast<double>(yearsToAverageFCFLessDividends);
+
+        double freeCashFlowLessDividendsAvg = freeCashFlowAvg-dividendsAvg;
+
+
+        //
+        // Check the previous dividend to see if there was an increase
+        //
+        double dividendsPaidPrevious = JsonFunctions::getJsonFloat(
+          fundamentalData[FIN][CF][timePeriod][datePrevious]["dividendsPaid"],
+          setNansToMissingValue);
+
+        if(std::isnan(dividendsPaidPrevious)){
+          dividendsPaidPrevious=0.;
+        }
+
+
+        //
+        // Evaluate all of the trailing average yield values
+        //
+
+        double freeCashFlowYieldAverage = 
+            (freeCashFlowAvg)/outstandingShares)/stockPrice;
+
+        double freeCashFlowLessDividendsYieldAverage = 
+          (freeCashFlowLessDividendsAvg/outstandingShares)/stockPrice;
+
+        //
+        // Update the vector fields of dividendInfoUpd
+        //
+        dividendInfoUpd.dates.push_back(date);
+        dividendInfoUpd.datesNumerical.push_back(dateNumerical);
+        dividendInfoUpd.dividendsPaid.push_back(dividendsPaid);
+
+        dividendInfoUpd.stockPrice.push_back(stockPrice);
+        dividendInfoUpd.dividendYield.push_back(dividendYield);
+
+        dividendInfoUpd.freeCashFlowTrailing.push_back(freeCashFlowTrailing);
+        dividendInfoUpd.dividendsTrailing.push_back(dividendsTrailing);
+        dividendInfoUpd.freeCashFlowLessDividendsTrailing.push_back(
+                                      freeCashFlowLessDividendsTrailing);
+
+        dividendInfoUpd.freeCashFlowYieldAverage.push_back(
+                                      freeCashFlowYieldAverage);
+        dividendInfoUpd.freeCashFlowLessDividendsYieldAverage.push_back(
+                                      freeCashFlowLessDividendsYieldAverage);
+
+        //
+        // Update the counts
+        //
+        if(dividendsPaid > 0.){
+          ++dividendInfoUpd.yearsWithADividend;
+        }else{
+          ++countDividendCancelled;
+        }
+        if(dividendsPaid > dividendsPaidPrevious && dividendsPaidPrevious > 0){
+          ++countDividendIncrease;
+        }
+        if(freeCashFlowYieldAverage > 0.){
+          ++countFcfPositive;
+        }
+        if(freeCashFlowLessDividendsYieldAverage > 0.){
+          ++countFcfLessDividendsPositive;
+        }
+        ++count;
       }
+
+      dividendInfoUpd.fractionOfYearsWithDividendIncreases = 
+        static_cast<double>(countDividendIncrease)
+        /static_cast<double>(count);
+
+      dividendInfoUpd.fractionOfYearsWithDividends = 
+        static_cast<double>(count-countDividendCancelled)
+        /static_cast<double>(count);
+
+      dividendInfoUpd.fractionOfYearsWithCancelledDividends = 
+        static_cast<double>(countDividendCancelled)
+        /static_cast<double>(count);
+
+      dividendInfoUpd.fractionOfYearsWithPositiveFreeCashFlowTrailing = 
+        static_cast<double>(countFcfPositive)
+        /static_cast<double>(count);
+
+      dividendInfoUpd.fractionOfYearsWithPositiveFreeCashFlowLessDividendsTrailing = 
+        static_cast<double>(countFcfLessDividendsPositive)
+        /static_cast<double>(count);
+
+
+      dividendInfoUpd.dividendYieldAverage = meanDividendYield 
+                                            /static_cast<double>(count); 
+
+      dividendInfoUpd.freeCashFlowYieldAverage = meanFreeCashFlowYield 
+                                            /static_cast<double>(count); 
+
+      dividendInfoUpd.freeCashFlowLessDividendsYieldAverage = 
+                                        meanFreeCashFlowLessDividendsYield 
+                                        /static_cast<double>(count); 
+
+      bool here=true;
 
     };
     //==========================================================================

@@ -204,11 +204,41 @@ class DataStructures {
       std::vector< double > dividendsPaid;
       std::vector< double > stockPrice;
       std::vector< double > dividendYield;
-      std::vector< double > freeCashFlow;
-      std::vector< double > freeCashFlowLessDividends;
+      std::vector< double > freeCashFlowTrailing;
+      std::vector< double > dividendsTrailing;
+      std::vector< double > freeCashFlowLessDividendsTrailing;
+      std::vector< double > freeCashFlowYieldAverage;
+      std::vector< double > freeCashFlowLessDividendsYieldAverage;
       int yearsWithADividend;      
       double fractionOfYearsWithDividendIncreases;
-      double fractionOfYearsWithCancelledDividends;      
+      double fractionOfYearsWithDividends; 
+      double fractionOfYearsWithCancelledDividends; 
+      double fractionOfYearsWithPositiveFreeCashFlowTrailing;
+      double fractionOfYearsWithPositiveFreeCashFlowLessDividendsTrailing;
+      double dividendYieldAverage;
+      double freeCashFlowYieldAverage;
+      double freeCashFlowLessDividendsYieldAverage;
+      void clear(){
+        dates.clear();
+        datesNumerical.clear();
+        dividendsPaid.clear();
+        stockPrice.clear();
+        dividendYield.clear();
+        freeCashFlowTrailing.clear();
+        dividendsTrailing.clear();
+        freeCashFlowLessDividendsTrailing.clear();
+        freeCashFlowYieldAverage.clear();
+        freeCashFlowLessDividendsYieldAverage.clear();
+        yearsWithADividend=0;
+        fractionOfYearsWithDividendIncreases=0;
+        fractionOfYearsWithDividends=0;
+        fractionOfYearsWithCancelledDividends=0;
+        fractionOfYearsWithPositiveFreeCashFlowTrailing=0;
+        fractionOfYearsWithPositiveFreeCashFlowLessDividendsTrailing=0;
+        dividendYieldAverage=0;
+        freeCashFlowYieldAverage=0;
+        freeCashFlowLessDividendsYieldAverage=0;
+      };
     };
 
 
