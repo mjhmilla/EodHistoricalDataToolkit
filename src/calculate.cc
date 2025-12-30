@@ -2880,19 +2880,27 @@ int main (int argc, char* argv[]) {
           termNames.push_back("PriestDividendMetrics_dividendYield");
           termNames.push_back("PriestDividendMetrics_dividendYieldGrowth");
           termNames.push_back("PriestDividendMetrics_dividendYieldGrowthAvg");
+          termNames.push_back("PriestDividendMetrics_dividendPayoutRatio");
+          termNames.push_back("PriestDividendMetrics_dividendPayoutRatioTrailingAverage");
           termNames.push_back("PriestDividendMetrics_freeCashFlowGrowth");
           termNames.push_back("PriestDividendMetrics_freeCashFlowGrowthAvg");
           termNames.push_back("PriestDividendMetrics_freeCashFlowYieldTrailingAverage");
           termNames.push_back("PriestDividendMetrics_freeCashFlowLessDividendsYieldTrailingAverage");
+          termNames.push_back("PriestDividendMetrics_dividendFreeCashFlowRatio");
+          termNames.push_back("PriestDividendMetrics_dividendFreeCashFlowRatioTrailingAverage");
 
           termValues.push_back(dividendInfo.dividendYield[idxDI]);
           termValues.push_back(dividendsPaidGrowthModel.metricGrowthRate[idxDIG]);
           termValues.push_back(dividendsPaidGrowthModelAvg.metricGrowthRate[0]);
+          termValues.push_back(dividendInfo.dividendPayoutRatio[idxDI]);
+          termValues.push_back(dividendInfo.dividendPayoutRatioTrailingAverage[idxDI]);
           termValues.push_back(fcfGrowthModel.metricGrowthRate[idxFCFG]);
           termValues.push_back(fcfGrowthModelAvg.metricGrowthRate[0]);
           termValues.push_back(dividendInfo.freeCashFlowYieldTrailingAverage[idxDI]);
           termValues.push_back(dividendInfo.freeCashFlowLessDividendsYieldTrailingAverage[idxDI]);
-           
+          termValues.push_back(dividendInfo.dividendFreeCashFlowRatio[idxDI]);
+          termValues.push_back(dividendInfo.dividendFreeCashFlowRatioTrailingAverage[idxDI]);
+
         }
 
         //======================================================================
@@ -3454,6 +3462,10 @@ int main (int argc, char* argv[]) {
         = dividendInfo.fractionOfYearsWithDividends;
       annualMilestoneReport["fraction_of_years_with_a_dividend_increases"]
         = dividendInfo.fractionOfYearsWithDividendIncreases;
+      annualMilestoneReport["mean_dividend_payout_ratio"]
+        = dividendInfo.meanDividendPayoutRatio;
+      annualMilestoneReport["mean_dividend_freecashflow_ratio"]
+        = dividendInfo.meanDividendFreeCashFlowRatio;
       annualMilestoneReport["mean_dividend_yield"]
         = dividendInfo.meanDividendYield;
       annualMilestoneReport["mean_freecashflow_yield"]

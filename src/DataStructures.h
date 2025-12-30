@@ -204,11 +204,16 @@ class DataStructures {
       std::vector< double > dividendsPaid;
       std::vector< double > stockPrice;
       std::vector< double > dividendYield;
+      std::vector< double > dividendPayoutRatio;
+      std::vector< double > dividendFreeCashFlowRatio;
       std::vector< double > freeCashFlowTrailing;
       std::vector< double > dividendsTrailing;
       std::vector< double > freeCashFlowLessDividendsTrailing;
       std::vector< double > freeCashFlowYieldTrailingAverage;
       std::vector< double > freeCashFlowLessDividendsYieldTrailingAverage;
+      std::vector< double > dividendPayoutRatioTrailingAverage;
+      std::vector< double > dividendFreeCashFlowRatioTrailingAverage;
+
       int yearsWithADividend;      
       double fractionOfYearsWithDividendIncreases;
       double fractionOfYearsWithDividends; 
@@ -218,17 +223,23 @@ class DataStructures {
       double meanDividendYield;
       double meanFreeCashFlowYield;
       double meanFreeCashFlowLessDividendsYield;
+      double meanDividendPayoutRatio;
+      double meanDividendFreeCashFlowRatio;
       void clear(){
         dates.clear();
         datesNumerical.clear();
         dividendsPaid.clear();
         stockPrice.clear();
         dividendYield.clear();
+        dividendPayoutRatio.clear();
+        dividendFreeCashFlowRatio.clear();
         freeCashFlowTrailing.clear();
         dividendsTrailing.clear();
         freeCashFlowLessDividendsTrailing.clear();
         freeCashFlowYieldTrailingAverage.clear();
         freeCashFlowLessDividendsYieldTrailingAverage.clear();
+        dividendPayoutRatioTrailingAverage.clear();
+        dividendFreeCashFlowRatioTrailingAverage.clear();
         yearsWithADividend=0;
         fractionOfYearsWithDividendIncreases=0;
         fractionOfYearsWithDividends=0;
@@ -238,6 +249,8 @@ class DataStructures {
         meanDividendYield=0;
         meanFreeCashFlowYield=0;
         meanFreeCashFlowLessDividendsYield=0;
+        meanDividendPayoutRatio=0;
+        meanDividendFreeCashFlowRatio=0;
       };
     };
 

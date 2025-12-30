@@ -699,6 +699,8 @@ class NumericalFunctions {
       double meanDividendYield = 0;
       double meanFreeCashFlowYield = 0;
       double meanFreeCashFlowLessDividendsYield = 0;
+      double meanDividendPayoutRatio = 0;
+      double meanDividendFreeCashFlowRatio = 0;
 
       dividendInfoUpd.clear();
 
@@ -737,7 +739,13 @@ class NumericalFunctions {
           fundamentalData[FIN][CF][timePeriod][date]["freeCashFlow"],
           setNansToMissingValue);
 
+        double netIncome = JsonFunctions::getJsonFloat(
+          fundamentalData[FIN][CF][timePeriod][date]["netIncome"],
+          setNansToMissingValue);
 
+        
+        double dividendPayoutRatio = dividendsPaid/netIncome;
+        double dividendFreeCashFlowRatio = dividendsPaid/freeCashFlow;
         //
         // Evaluate all yield values for this year
         //
@@ -759,16 +767,28 @@ class NumericalFunctions {
         double freeCashFlowLessDividendsYield = 
                   ((freeCashFlow-dividendsPaid)/outstandingShares)/stockPrice;
 
-        meanDividendYield += dividendYield;
-        meanFreeCashFlowYield += freeCashFlowYield;
-        meanFreeCashFlowLessDividendsYield += freeCashFlowLessDividendsYield;
-
+        if(!std::isnan(dividendYield)){
+          meanDividendYield                   += dividendYield;
+        }
+        if(!std::isnan(freeCashFlowYield)){
+          meanFreeCashFlowYield               += freeCashFlowYield;
+        }
+        if(!std::isnan(freeCashFlowLessDividendsYield)){
+          meanFreeCashFlowLessDividendsYield  += freeCashFlowLessDividendsYield;
+        }
+        if(!std::isnan(dividendPayoutRatio)){
+          meanDividendPayoutRatio             += dividendPayoutRatio;
+        }
+        if(!std::isnan(dividendFreeCashFlowRatio)){
+          meanDividendFreeCashFlowRatio       += dividendFreeCashFlowRatio;
+        }
 
         //
         // Get the trailing average of dividends paid and free cash flow
         //
-        double dividendsTrailing = 0.;
-        double freeCashFlowTrailing = 0.;
+        double dividendsTrailing                  = 0.;
+        double freeCashFlowTrailing               = 0.;
+        double netIncomeTrailing                  = 0.;
 
         for(size_t j=0; 
             j < static_cast<size_t>(yearsToAverageFCFLessDividends); ++j){
@@ -785,6 +805,11 @@ class NumericalFunctions {
 
           dividendsTrailing += dividendsPaidEntry;
 
+          double netIncomeEntry = JsonFunctions::getJsonFloat(
+            fundamentalData[FIN][CF][timePeriod][dateEntry]["netIncome"],
+            setNansToMissingValue);
+
+          netIncomeTrailing += netIncomeEntry;
 
           double freeCashFlowEntry = JsonFunctions::getJsonFloat(
             fundamentalData[FIN][CF][timePeriod][dateEntry]["freeCashFlow"],
@@ -801,6 +826,11 @@ class NumericalFunctions {
         double freeCashFlowLessDividendsTrailing = freeCashFlowTrailing
                                                   -dividendsTrailing;
 
+        double dividendPayoutRatioTrailing = dividendsTrailing 
+                                           / netIncomeTrailing;   
+                                           
+        double dividendFreeCashFlowRatioTrailing = dividendsTrailing
+                                              / freeCashFlowTrailing;                                           
         //
         // Evaluate the trailing average of fcf, dividends, and fcf-dividends
         //                                                  
@@ -844,11 +874,18 @@ class NumericalFunctions {
 
         dividendInfoUpd.stockPrice.push_back(stockPrice);
         dividendInfoUpd.dividendYield.push_back(dividendYield);
+        dividendInfoUpd.dividendPayoutRatio.push_back(dividendPayoutRatio);
+        dividendInfoUpd.dividendFreeCashFlowRatio.push_back(dividendFreeCashFlowRatio);
 
         dividendInfoUpd.freeCashFlowTrailing.push_back(freeCashFlowTrailing);
         dividendInfoUpd.dividendsTrailing.push_back(dividendsTrailing);
         dividendInfoUpd.freeCashFlowLessDividendsTrailing.push_back(
                                       freeCashFlowLessDividendsTrailing);
+
+        dividendInfoUpd.dividendPayoutRatioTrailingAverage.push_back(
+                                      dividendPayoutRatioTrailing);
+        dividendInfoUpd.dividendFreeCashFlowRatioTrailingAverage.push_back(
+                                      dividendFreeCashFlowRatioTrailing);
 
         dividendInfoUpd.freeCashFlowYieldTrailingAverage.push_back(
                                       freeCashFlowYieldTrailingAverageEntry);
@@ -905,6 +942,13 @@ class NumericalFunctions {
       dividendInfoUpd.meanFreeCashFlowLessDividendsYield = 
                                         meanFreeCashFlowLessDividendsYield 
                                         /static_cast<double>(count); 
+
+      dividendInfoUpd.meanDividendPayoutRatio = meanDividendPayoutRatio 
+                                            /static_cast<double>(count); 
+
+      dividendInfoUpd.meanDividendFreeCashFlowRatio 
+                  = meanDividendFreeCashFlowRatio 
+                    /static_cast<double>(count); 
 
     };
     //==========================================================================
