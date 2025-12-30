@@ -829,10 +829,10 @@ class NumericalFunctions {
         // Evaluate all of the trailing average yield values
         //
 
-        double freeCashFlowYieldAverage = 
-            (freeCashFlowAvg)/outstandingShares)/stockPrice;
+        double freeCashFlowYieldTrailingAverageEntry = 
+            (freeCashFlowAvg/outstandingShares)/stockPrice;
 
-        double freeCashFlowLessDividendsYieldAverage = 
+        double freeCashFlowLessDividendsYieldTrailingAverageEntry = 
           (freeCashFlowLessDividendsAvg/outstandingShares)/stockPrice;
 
         //
@@ -850,10 +850,10 @@ class NumericalFunctions {
         dividendInfoUpd.freeCashFlowLessDividendsTrailing.push_back(
                                       freeCashFlowLessDividendsTrailing);
 
-        dividendInfoUpd.freeCashFlowYieldAverage.push_back(
-                                      freeCashFlowYieldAverage);
-        dividendInfoUpd.freeCashFlowLessDividendsYieldAverage.push_back(
-                                      freeCashFlowLessDividendsYieldAverage);
+        dividendInfoUpd.freeCashFlowYieldTrailingAverage.push_back(
+                                      freeCashFlowYieldTrailingAverageEntry);
+        dividendInfoUpd.freeCashFlowLessDividendsYieldTrailingAverage.push_back(
+                            freeCashFlowLessDividendsYieldTrailingAverageEntry);
 
         //
         // Update the counts
@@ -866,10 +866,10 @@ class NumericalFunctions {
         if(dividendsPaid > dividendsPaidPrevious && dividendsPaidPrevious > 0){
           ++countDividendIncrease;
         }
-        if(freeCashFlowYieldAverage > 0.){
+        if(freeCashFlowYieldTrailingAverageEntry > 0.){
           ++countFcfPositive;
         }
-        if(freeCashFlowLessDividendsYieldAverage > 0.){
+        if(freeCashFlowLessDividendsYieldTrailingAverageEntry > 0.){
           ++countFcfLessDividendsPositive;
         }
         ++count;
@@ -880,7 +880,7 @@ class NumericalFunctions {
         /static_cast<double>(count);
 
       dividendInfoUpd.fractionOfYearsWithDividends = 
-        static_cast<double>(count-countDividendCancelled)
+        static_cast<double>(dividendInfoUpd.yearsWithADividend)
         /static_cast<double>(count);
 
       dividendInfoUpd.fractionOfYearsWithCancelledDividends = 
@@ -896,17 +896,15 @@ class NumericalFunctions {
         /static_cast<double>(count);
 
 
-      dividendInfoUpd.dividendYieldAverage = meanDividendYield 
+      dividendInfoUpd.meanDividendYield = meanDividendYield 
                                             /static_cast<double>(count); 
 
-      dividendInfoUpd.freeCashFlowYieldAverage = meanFreeCashFlowYield 
+      dividendInfoUpd.meanFreeCashFlowYield = meanFreeCashFlowYield 
                                             /static_cast<double>(count); 
 
-      dividendInfoUpd.freeCashFlowLessDividendsYieldAverage = 
+      dividendInfoUpd.meanFreeCashFlowLessDividendsYield = 
                                         meanFreeCashFlowLessDividendsYield 
                                         /static_cast<double>(count); 
-
-      bool here=true;
 
     };
     //==========================================================================

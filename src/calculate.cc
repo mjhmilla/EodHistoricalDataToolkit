@@ -26,16 +26,10 @@ struct AnnualMilestoneDataSet{
   double yearsSinceIPO;
   double yearsOnRecord;
   double yearsOfPositiveValueCreation; //ROIC - CC > 0
-  double yearsWithADividend;
-  double yearsWithADividendIncrease;
-  double lastDividend;
     AnnualMilestoneDataSet():
       yearsSinceIPO(0),
       yearsOnRecord(0),
-      yearsOfPositiveValueCreation(0),
-      yearsWithADividend(0),
-      yearsWithADividendIncrease(0),
-      lastDividend(0){};
+      yearsOfPositiveValueCreation(0){};
 };
 
 //============================================================================
@@ -2880,15 +2874,24 @@ int main (int argc, char* argv[]) {
           int idxDIG = DateFunctions::getIndexClosestToDate(dateRecent,
                                       dividendsPaidGrowthModel.datesNumerical);
 
+          int idxFCFG = DateFunctions::getIndexClosestToDate(dateRecent,
+                                      fcfGrowthModel.datesNumerical);
+
           termNames.push_back("PriestDividendMetrics_dividendYield");
           termNames.push_back("PriestDividendMetrics_dividendYieldGrowth");
-          termNames.push_back("PriestDividendMetrics_freeCashFlowTrailingYield");
-          termNames.push_back("PriestDividendMetrics_freeCashFlowLessDividendsTrailingYield");
+          termNames.push_back("PriestDividendMetrics_dividendYieldGrowthAvg");
+          termNames.push_back("PriestDividendMetrics_freeCashFlowGrowth");
+          termNames.push_back("PriestDividendMetrics_freeCashFlowGrowthAvg");
+          termNames.push_back("PriestDividendMetrics_freeCashFlowYieldTrailingAverage");
+          termNames.push_back("PriestDividendMetrics_freeCashFlowLessDividendsYieldTrailingAverage");
 
           termValues.push_back(dividendInfo.dividendYield[idxDI]);
           termValues.push_back(dividendsPaidGrowthModel.metricGrowthRate[idxDIG]);
-          termValues.push_back(dividendInfo.freeCashFlowTrailingYield[idxDI]);
-          termValues.push_back(dividendInfo.freeCashFlowLessDividendsTrailingYield[idxDI]);
+          termValues.push_back(dividendsPaidGrowthModelAvg.metricGrowthRate[0]);
+          termValues.push_back(fcfGrowthModel.metricGrowthRate[idxFCFG]);
+          termValues.push_back(fcfGrowthModelAvg.metricGrowthRate[0]);
+          termValues.push_back(dividendInfo.freeCashFlowYieldTrailingAverage[idxDI]);
+          termValues.push_back(dividendInfo.freeCashFlowLessDividendsYieldTrailingAverage[idxDI]);
            
         }
 
@@ -3420,20 +3423,6 @@ int main (int argc, char* argv[]) {
           if((excessReturnOnInvestedCapital)>0){
             ++annualMilestones.yearsOfPositiveValueCreation;
           }
-
-          double dividendsPaid = 
-            JsonFunctions::getJsonFloat(
-              fundamentalData[FIN][CF][Y][date.c_str()]["dividendsPaid"],false);
-          if(std::isnan(dividendsPaid)){
-            dividendsPaid = 0;
-          }
-          if(dividendsPaid > 0){
-            ++annualMilestones.yearsWithADividend;
-          }
-          if(dividendsPaid > annualMilestones.lastDividend){
-            ++annualMilestones.yearsWithADividendIncrease;
-          }
-          annualMilestones.lastDividend=dividendsPaid;
         }
 
 
@@ -3460,17 +3449,36 @@ int main (int argc, char* argv[]) {
       annualMilestoneReport["years_value_created"] 
         = annualMilestones.yearsOfPositiveValueCreation;
       annualMilestoneReport["years_with_dividend"] 
-        = annualMilestones.yearsWithADividend;
-      annualMilestoneReport["years_with_dividend_increase"] 
-        = annualMilestones.yearsWithADividendIncrease;
+        = dividendInfo.yearsWithADividend;
       annualMilestoneReport["fraction_of_years_with_a_dividend"]
         = dividendInfo.fractionOfYearsWithDividends;
-      annualMilestoneReport["fraction_of_years_with_a_dividend_increase"]
+      annualMilestoneReport["fraction_of_years_with_a_dividend_increases"]
         = dividendInfo.fractionOfYearsWithDividendIncreases;
-      
+      annualMilestoneReport["mean_dividend_yield"]
+        = dividendInfo.meanDividendYield;
+      annualMilestoneReport["mean_freecashflow_yield"]
+        = dividendInfo.meanFreeCashFlowYield;
+      annualMilestoneReport["mean_freecashflow_less_dividend_yield"]
+        = dividendInfo.meanFreeCashFlowLessDividendsYield;
+
+        
       analysis["annual_milestones"] = annualMilestoneReport;
 
-            
+        
+      //
+      // dividend growth
+      //      
+      nlohmann::ordered_json dividendGrowthModelJson;
+      NumericalFunctions::appendMetricGrowthModelRecent(
+        dividendGrowthModelJson,
+        dividendsPaidGrowthModel,"");
+      
+      nlohmann::ordered_json dividendGrowthModelAvgJson;
+      if(dividendsPaidGrowthModelAvg.datesNumerical.size()>0){
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+          dividendGrowthModelAvgJson,
+          dividendsPaidGrowthModelAvg.model[0],"");
+      }
       //
       // growth of equity
       //   equityGrowthModel   
@@ -3658,6 +3666,8 @@ int main (int argc, char* argv[]) {
       //
 
       analysis["metric_data"]                     = metricAnalysisJson;
+      analysis["dividends_paid_growth_model_avg"] = dividendGrowthModelAvgJson;
+      analysis["dividends_paid_growth_model_recent"] = dividendGrowthModelJson;
       analysis["equity_growth_model_avg"]         = equityGrowthModelAvgJson;
       analysis["equity_growth_model_recent"]      = equityGrowthModelJson;
       analysis["eps_growth_model_avg"]            = epsGrowthModelAvgJson;

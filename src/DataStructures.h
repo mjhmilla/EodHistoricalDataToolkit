@@ -207,17 +207,17 @@ class DataStructures {
       std::vector< double > freeCashFlowTrailing;
       std::vector< double > dividendsTrailing;
       std::vector< double > freeCashFlowLessDividendsTrailing;
-      std::vector< double > freeCashFlowYieldAverage;
-      std::vector< double > freeCashFlowLessDividendsYieldAverage;
+      std::vector< double > freeCashFlowYieldTrailingAverage;
+      std::vector< double > freeCashFlowLessDividendsYieldTrailingAverage;
       int yearsWithADividend;      
       double fractionOfYearsWithDividendIncreases;
       double fractionOfYearsWithDividends; 
       double fractionOfYearsWithCancelledDividends; 
       double fractionOfYearsWithPositiveFreeCashFlowTrailing;
       double fractionOfYearsWithPositiveFreeCashFlowLessDividendsTrailing;
-      double dividendYieldAverage;
-      double freeCashFlowYieldAverage;
-      double freeCashFlowLessDividendsYieldAverage;
+      double meanDividendYield;
+      double meanFreeCashFlowYield;
+      double meanFreeCashFlowLessDividendsYield;
       void clear(){
         dates.clear();
         datesNumerical.clear();
@@ -227,17 +227,17 @@ class DataStructures {
         freeCashFlowTrailing.clear();
         dividendsTrailing.clear();
         freeCashFlowLessDividendsTrailing.clear();
-        freeCashFlowYieldAverage.clear();
-        freeCashFlowLessDividendsYieldAverage.clear();
+        freeCashFlowYieldTrailingAverage.clear();
+        freeCashFlowLessDividendsYieldTrailingAverage.clear();
         yearsWithADividend=0;
         fractionOfYearsWithDividendIncreases=0;
         fractionOfYearsWithDividends=0;
         fractionOfYearsWithCancelledDividends=0;
         fractionOfYearsWithPositiveFreeCashFlowTrailing=0;
         fractionOfYearsWithPositiveFreeCashFlowLessDividendsTrailing=0;
-        dividendYieldAverage=0;
-        freeCashFlowYieldAverage=0;
-        freeCashFlowLessDividendsYieldAverage=0;
+        meanDividendYield=0;
+        meanFreeCashFlowYield=0;
+        meanFreeCashFlowLessDividendsYield=0;
       };
     };
 
