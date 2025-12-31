@@ -2308,7 +2308,9 @@ int main (int argc, char* argv[]) {
         revenueGrowthModelAvg,
         empGrowthSettings);
 
+      //
       //MarketCapitalizationSummaryData
+      //
       DataStructures::FinancialRatios financialRatios;
       
       NumericalFunctions::extractFinancialRatios(
@@ -2354,7 +2356,7 @@ int main (int argc, char* argv[]) {
                             dividendInfo);
       
 
-    DataStructures::MetricGrowthDataSet dividendsPaidGrowthModel, 
+      DataStructures::MetricGrowthDataSet dividendsPaidGrowthModel, 
                                         dividendsPaidGrowthModelAvg;
 
       empGrowthSettings.includeTimeUnitInAddress=true;
@@ -2381,7 +2383,83 @@ int main (int argc, char* argv[]) {
         "dividendsPaid",
         dividendsPaidGrowthModelAvg,
         empGrowthSettings);
-                            
+
+      //=======================================================================
+      // Fit models to revenue vs free cash flow
+      //=======================================================================
+      struct XYModel{
+        std::vector< std::string> date;
+        std::vector<std::string> dateModel;
+        std::vector< double > x;
+        std::vector< double > y;
+        int interval;
+        std::vector< DataStructures::EmpiricalGrowthModel> model;
+      };
+
+      XYModel revenueFcfModel,revenueFcfModelAvg;
+      revenueFcfModel.interval    = growthIntervalInYears;
+      revenueFcfModelAvg.interval = growthIntervalInYearsAll;
+
+      //Populate the x and y data
+
+      for(int i=0; i< analysisDatesYearly.common.size();++i){
+        std::string date = analysisDatesYearly.common[i];
+        double revenue = JsonFunctions::getJsonFloat(
+                          fundamentalData[FIN][IS][Y][date]["totalRevenue"],
+                          false);
+        double fcf     = JsonFunctions::getJsonFloat(
+                          fundamentalData[FIN][CF][Y][date]["freeCashFlow"],
+                          false);
+        if(!std::isnan(revenue) && !std::isnan(fcf)){
+          revenueFcfModel.date.push_back(date);
+          revenueFcfModel.x.push_back(revenue);
+          revenueFcfModel.y.push_back(fcf);
+          revenueFcfModelAvg.date.push_back(date);
+          revenueFcfModelAvg.x.push_back(revenue);
+          revenueFcfModelAvg.y.push_back(fcf);
+          if(revenueFcfModelAvg.dateModel.size()==0){
+            revenueFcfModelAvg.dateModel.push_back(date);
+          }
+        }
+      }
+      //
+      //Fit a single model to all of the data for the average
+      //
+      DataStructures::EmpiricalGrowthModel modelTemp;
+      NumericalFunctions::fitLinearGrowthModel(revenueFcfModelAvg.x,
+                                               revenueFcfModelAvg.y,
+                                               false,
+                                               modelTemp);
+      revenueFcfModelAvg.model.push_back(modelTemp);   
+      //
+      //Fit models to the trailing sub intervals for the recent data
+      //
+      int imax = analysisDatesYearly.common.size()-growthIntervalInYears;
+      for(int i=0; i< imax;++i){
+        std::vector< std::string > dateV;
+        std::vector<double > xV, yV;
+        for(int j=0; j<growthIntervalInYears; ++j){
+          int k = i+j;
+          std::string date = analysisDatesYearly.common[k];
+          double revenue = JsonFunctions::getJsonFloat(
+                            fundamentalData[FIN][IS][Y][date]["totalRevenue"],
+                            false);
+          double fcf     = JsonFunctions::getJsonFloat(
+                            fundamentalData[FIN][CF][Y][date]["freeCashFlow"],
+                            false);
+          if(!std::isnan(revenue) && !std::isnan(fcf)){
+            dateV.push_back(date);
+            xV.push_back(revenue);
+            yV.push_back(fcf);
+          }          
+        }
+        if(dateV.size()>0 && xV.size()>0 && yV.size()>0){
+          DataStructures::EmpiricalGrowthModel modelTemp;
+          NumericalFunctions::fitLinearGrowthModel(xV,yV,false,modelTemp);        
+          revenueFcfModel.dateModel.push_back(dateV[0]);
+          revenueFcfModel.model.push_back(modelTemp);
+        }
+      }
 
       //=======================================================================
       //
@@ -3165,7 +3243,7 @@ int main (int argc, char* argv[]) {
     
         //Valuation (discounted cash flow)
         double presentValue = FinancialAnalysisFunctions::
-            calcPriceToValueUsingDiscountedCashflowModel(  
+            calcPriceToValueUsingDamodaranDiscountedCashflowModel(  
               fundamentalData,
               dateSet,
               timePeriod.c_str(),
@@ -3221,7 +3299,7 @@ int main (int argc, char* argv[]) {
             //Valuation (discounted cash flow) using empirical growth
             double presentValueEmpirical = 
             FinancialAnalysisFunctions::
-                calcPriceToValueUsingDiscountedCashflowModel(  
+                calcPriceToValueUsingDamodaranDiscountedCashflowModel(  
                   fundamentalData,
                   dateSet,
                   timePeriod.c_str(),
@@ -3273,7 +3351,7 @@ int main (int argc, char* argv[]) {
             //Valuation (discounted cash flow) using empirical growth
             double presentValueEmpiricalAvg = 
               FinancialAnalysisFunctions::
-                calcPriceToValueUsingDiscountedCashflowModel(  
+                calcPriceToValueUsingDamodaranDiscountedCashflowModel(  
                   fundamentalData,
                   dateSet,
                   timePeriod.c_str(),

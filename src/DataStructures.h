@@ -198,6 +198,10 @@ class DataStructures {
       
     };
     //==========================================================================
+    //struct RelationshipDataSet{
+
+    //};
+    //==========================================================================
     struct DividendInfo{
       std::vector< std::string > dates;
       std::vector< double > datesNumerical;

@@ -2524,7 +2524,7 @@ class FinancialAnalysisFunctions {
         return shareHolderYield;
     }
     //==========================================================================
-    static double calcPriceToValueUsingDiscountedCashflowModel(
+    static double calcPriceToValueUsingDamodaranDiscountedCashflowModel(
                     const nlohmann::ordered_json &jsonData, 
                     const DateFunctions::DateSetTTM &dateSet,
                     const char *timeUnit,   
