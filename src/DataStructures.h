@@ -164,6 +164,7 @@ class DataStructures {
       std::vector< EmpiricalGrowthModel > model;
     };
 
+
     //==========================================================================
     struct SummaryStatistics{
       std::vector< double > percentiles;
@@ -180,6 +181,17 @@ class DataStructures {
         name(""){
         };
     };
+    //==========================================================================
+    struct EmpiricalRelationModel{
+        std::vector< std::string> date;
+        std::vector<std::string> dateModel;
+        std::vector< double > x;
+        std::vector< double > y;
+        int interval;
+        std::vector< DataStructures::EmpiricalGrowthModel> model;
+        EmpiricalRelationModel():interval(0),model(){};
+      };
+
     //==========================================================================
     struct FinancialRatios{
       std::vector< std::string > dates;

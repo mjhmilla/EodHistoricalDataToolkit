@@ -2387,16 +2387,9 @@ int main (int argc, char* argv[]) {
       //=======================================================================
       // Fit models to revenue vs free cash flow
       //=======================================================================
-      struct XYModel{
-        std::vector< std::string> date;
-        std::vector<std::string> dateModel;
-        std::vector< double > x;
-        std::vector< double > y;
-        int interval;
-        std::vector< DataStructures::EmpiricalGrowthModel> model;
-      };
 
-      XYModel revenueFcfModel,revenueFcfModelAvg;
+
+      DataStructures::EmpiricalRelationModel revenueFcfModel,revenueFcfModelAvg;
       revenueFcfModel.interval    = growthIntervalInYears;
       revenueFcfModelAvg.interval = growthIntervalInYearsAll;
 
@@ -3392,12 +3385,40 @@ int main (int argc, char* argv[]) {
             termValues);  
 
 
+          
         //
         // Price-to-Value using free-cash-flow per share and
         // free-cash-flow yield 
         //
+        parentName="priceToValueRevenueToFcf_";
+        NumericalFunctions::
+          calcPriceToValueUsingDiscountedFreeCashFlow(
+            dateSet,
+            revenueGrowthModel,
+            revenueFcfModel,
+            marketCapitalization,
+            discountRate,
+            numberOfYearsOfGrowthForDcmValuation,
+            appendTermRecord,
+            setNansToMissingValue,
+            parentName,
+            termNames,
+            termValues);  
 
-
+        parentName="priceToValueRevenueToFcfAvg_";
+        NumericalFunctions::
+          calcPriceToValueUsingDiscountedFreeCashFlow(
+            dateSet,
+            revenueGrowthModelAvg,
+            revenueFcfModelAvg,
+            marketCapitalization,
+            discountRate,
+            numberOfYearsOfGrowthForDcmValuation,
+            appendTermRecord,
+            setNansToMissingValue,
+            parentName,
+            termNames,
+            termValues);              
         //
         // Equity growth
         //
@@ -3679,6 +3700,24 @@ int main (int argc, char* argv[]) {
       }
 
       //
+      // Append revenue to fcf model
+      //
+      //
+
+      nlohmann::ordered_json revenueFcfModelJson;
+      if(revenueFcfModel.dateModel.size()>0){
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+          revenueFcfModelJson,
+          revenueFcfModel.model[0],"");
+      }
+
+      nlohmann::ordered_json revenueFcfModelAvgJson;
+      if(revenueFcfModelAvg.dateModel.size()>0){
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+          revenueFcfModelAvgJson,
+          revenueFcfModelAvg.model[0],"");
+      }
+      //
       // Pricing model
       //
             
@@ -3773,6 +3812,8 @@ int main (int argc, char* argv[]) {
       analysis["atoi_growth_model_recent"]  = atoiGrowthModelRecentJson;
       analysis["price_growth_model"]        = priceGrowthModelJson;
 
+      analysis["revenue_to_fcf_model_avg"]    = revenueFcfModelAvgJson;
+      analysis["revenue_to_fcf_model_recent"] = revenueFcfModelJson;
 
       std::string outputFilePath(analyseFolder);
       std::string outputFileName(fileName.c_str());    

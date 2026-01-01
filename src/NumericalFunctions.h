@@ -402,6 +402,18 @@ class NumericalFunctions {
       }
     };
     //==========================================================================
+    static double evaluateLinearGrowthModel(double x, 
+                    const DataStructures::EmpiricalGrowthModel &model){
+     
+      double w0=  model.parameters[0];
+      double y0=  model.parameters[1];
+      double dydw=  model.parameters[2];                      
+
+      double w = x-w0;
+      double y = y0 + dydw*w;
+      return y;
+    }
+    //==========================================================================
     static void fitLinearGrowthModel(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
@@ -2012,7 +2024,167 @@ class NumericalFunctions {
       }     
 
     };
+    //==========================================================================
+    static double calcRelativeError(double a, double b){
+      double relError = 0.5*(a-b)/(a+b);
+      return relError;
+    };
+    //==========================================================================
+    static void calcPriceToValueUsingDiscountedFreeCashFlow(
+            const DateFunctions::DateSetTTM &dateSet,
+            const DataStructures::MetricGrowthDataSet &revenueGrowthModel,
+            const DataStructures::EmpiricalRelationModel &revenueToFcfModel,
+            double marketCapitalization,
+            double discountRate,
+            int numberOfYearsForTerminalValuation,
+            bool appendTermRecord,
+            bool setNansToMissingValue,
+            const std::string &parentName,
+            std::vector< std::string> &termNames,
+            std::vector< double > &termValues)                                      
+    {
 
+      
+      bool validDateSet            = dateSet.dates.size() > 0;
+      bool validRevenueGrowthModel = revenueGrowthModel.model.size() > 0;
+      bool validRevenueToFcfModel  = revenueToFcfModel.model.size() > 0;
+
+      if(validDateSet && validRevenueGrowthModel && validRevenueToFcfModel){
+        double dateNumRecent = 
+          DateFunctions::convertToFractionalYear(dateSet.dates[0]);
+
+        int idxRGM = DateFunctions::getIndexClosestToDate(
+                                  dateNumRecent,
+                                  revenueGrowthModel.datesNumerical);
+
+
+        //Get the current, 25%, 50% and 75% revenue growth rates
+        double revenue0 = revenueGrowthModel.metricValue[idxRGM];
+
+        std::vector<std::string> nameMod;
+        nameMod.push_back("");
+
+        std::vector< double > revenueGrowthVariation;
+        revenueGrowthVariation.push_back(
+            revenueGrowthModel.metricGrowthRate[idxRGM]);
+
+        DataStructures::SummaryStatistics revenueGrowthStats;
+        extractSummaryStatistics(revenueGrowthModel.metricGrowthRate,
+                                 revenueGrowthStats);
+
+        double relGrowthDiff = calcRelativeError(
+                                    revenueGrowthModel.metricGrowthRate[idxRGM],
+                                    revenueGrowthStats.percentiles[P25]);      
+
+        if(std::abs(relGrowthDiff) > 0.01){
+          revenueGrowthVariation.push_back(revenueGrowthStats.percentiles[P25]);
+          nameMod.push_back("_P25");
+        }                           
+        
+        relGrowthDiff = calcRelativeError(
+                                    revenueGrowthStats.percentiles[P25],
+                                    revenueGrowthStats.percentiles[P50]);
+
+        if(std::abs(relGrowthDiff) > 0.01){
+          revenueGrowthVariation.push_back(revenueGrowthStats.percentiles[P50]);
+          nameMod.push_back("_P50");
+        }
+
+        relGrowthDiff = calcRelativeError(
+                                    revenueGrowthStats.percentiles[P50],
+                                    revenueGrowthStats.percentiles[P75]);
+
+
+        if(std::abs(relGrowthDiff) > 0.01){
+          revenueGrowthVariation.push_back(revenueGrowthStats.percentiles[P75]);
+          nameMod.push_back("_P75");
+        }
+
+
+        if(appendTermRecord){
+          termNames.push_back(parentName+"marketCapitalization");
+          termValues.push_back(marketCapitalization);
+
+          termNames.push_back(parentName+"discountRate");
+          termValues.push_back(discountRate);
+
+          termNames.push_back(parentName+"years");
+          termValues.push_back(numberOfYearsForTerminalValuation);
+
+          termNames.push_back(parentName+"revenue");
+          termValues.push_back(revenue0);
+
+          for(int i=0; i<revenueGrowthVariation.size();++i){
+            termNames.push_back(parentName+"revenueGrowth"+nameMod[i]);
+            termValues.push_back(revenueGrowthVariation[i]);
+          }
+        }
+
+        //Get the most recent revenue to free cash flow model
+        std::vector<double> datesModelNum;
+        for(size_t i=0; i<revenueToFcfModel.dateModel.size();++i){
+          double dateNum = DateFunctions::convertToFractionalYear(
+                              revenueToFcfModel.dateModel[i]);
+          datesModelNum.push_back(dateNum);                              
+        }
+
+        int idxR2F = DateFunctions::getIndexClosestToDate(
+                                      dateNumRecent,datesModelNum);
+
+        if(appendTermRecord){
+            termNames.push_back(parentName+"revenueToFcfModel_x0");
+            termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[0]);
+            termNames.push_back(parentName+"revenueToFcfModel_y0");
+            termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[1]);
+            termNames.push_back(parentName+"revenueToFcfModel_dydx");
+            termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[2]);
+        }
+                                      
+        //Evaluate the present value of the annual free-cash-flow over 
+        //the next number of years at the desired discount rate;
+        for(int i=0;i<revenueGrowthVariation.size();++i){
+          double revenueGrowth = revenueGrowthVariation[i];
+          double cumFcf = 0;
+          for(int j=0; j< numberOfYearsForTerminalValuation; ++j){
+            double dateNum = dateNumRecent + static_cast<double>(j);
+            
+            double revenue = revenue0*std::pow(1.0+revenueGrowth,j);
+
+            double fcf = NumericalFunctions::evaluateLinearGrowthModel(
+                                    revenue,
+                                    revenueToFcfModel.model[idxR2F]);
+            double discountFactor = std::pow(1.0+discountRate,j);
+            double discountedFcf = (fcf/discountFactor);
+            cumFcf += discountedFcf;
+            if(appendTermRecord){
+              std::stringstream ss;
+              ss << j;
+              termNames.push_back(parentName+"revenue"+nameMod[i]+"_"+ss.str());
+              termNames.push_back(parentName+"fcf"+nameMod[i]+"_"+ss.str());
+              termNames.push_back(parentName+"discount_factor"+nameMod[i]+"_"+ss.str());
+              termNames.push_back(parentName+"fcf_present_value"+nameMod[i]+"_"+ss.str());
+
+              termValues.push_back(revenue);
+              termValues.push_back(fcf);
+              termValues.push_back(discountFactor);
+              termValues.push_back(discountedFcf);
+            }
+          }
+          double priceToValue = marketCapitalization/cumFcf;
+          if(appendTermRecord){
+            termNames.push_back(parentName+"cumulative_fcf_present_value"+nameMod[i]);
+            termValues.push_back(cumFcf);
+            termNames.push_back(parentName+"price_to_value"+nameMod[i]);
+            termValues.push_back(priceToValue);
+          }
+        }
+
+
+      }
+
+
+
+    };
     //==========================================================================
     static void calcPriceToValueUsingEarningsPerShareGrowth(
                     const DateFunctions::DateSetTTM &dateSet,
@@ -2208,7 +2380,8 @@ class NumericalFunctions {
           cumPresentValue[i] = 0.;
           for (int j=1; j <= numberOfYearsForTerminalValuation;++j){
             double eps = eps0*std::pow(1.0+growthVariation[i],j);
-            double dividend = eps*dividendYieldVariation[i];
+            double sharePrice = eps * peVariation[i];
+            double dividend = sharePrice*dividendYieldVariation[i];
             double discountFactor= std::pow(1.0+discountRate,j);
             double presentValue = (dividend) / discountFactor;
 
@@ -2290,6 +2463,7 @@ class NumericalFunctions {
         const std::string nameToPrepend)
     {
       if(growthModel.validFitting){
+          
           std::string fieldName = nameToPrepend+"modelType";
           jsonStruct[fieldName] = growthModel.modelType;
 
@@ -2322,35 +2496,76 @@ class NumericalFunctions {
           }
 
           fieldName = nameToPrepend+"yCyclicNormDataPercentilesRecent";
-          jsonStruct[fieldName] = 
-            growthModel.yCyclicNormDataPercentiles[indexRecent];
+          if(growthModel.yCyclicNormDataPercentiles.size()>0){
+            jsonStruct[fieldName] = 
+              growthModel.yCyclicNormDataPercentiles[indexRecent];
+          }else{
+              jsonStruct[fieldName] = std::nan("1");
+          }
 
-          fieldName = nameToPrepend+"parameters";  
-          jsonStruct[fieldName] = growthModel.parameters;
+          fieldName = nameToPrepend+"parameters"; 
+          if(growthModel.parameters.size() > 0){ 
+            jsonStruct[fieldName] = growthModel.parameters;
+          }else{
+            jsonStruct[fieldName] = std::nan("1");
+          }
 
           fieldName = nameToPrepend+"x";
-          jsonStruct[fieldName] = growthModel.x;
+          if(growthModel.x.size()>0){
+            jsonStruct[fieldName] = growthModel.x;
+          }else{
+            jsonStruct[fieldName] = std::nan("1");
+          }
           
           fieldName = nameToPrepend+"y";
-          jsonStruct[fieldName] = growthModel.y;
+          if(growthModel.y.size()>0){
+            jsonStruct[fieldName] = growthModel.y;
+          }else{
+            jsonStruct[fieldName] = std::nan("1");
+          }
+
 
           fieldName = nameToPrepend+"yTrendline";
-          jsonStruct[fieldName] = growthModel.yTrendline;
+          if(growthModel.yTrendline.size()>0){
+            jsonStruct[fieldName] = growthModel.yTrendline;
+          }else{
+            jsonStruct[fieldName] = std::nan("1");
+          }
 
           fieldName = nameToPrepend+"yCyclic";
-          jsonStruct[fieldName] = growthModel.yCyclic;
+          if(growthModel.yCyclic.size()>0){
+            jsonStruct[fieldName] = growthModel.yCyclic;
+          }else{
+            jsonStruct[fieldName] = std::nan("1");
+          }
 
           fieldName = nameToPrepend+"yCyclicData";
-          jsonStruct[fieldName] = growthModel.yCyclicData;
+          if(growthModel.yCyclicData.size()>0){
+            jsonStruct[fieldName] = growthModel.yCyclicData;
+          }else{
+            jsonStruct[fieldName] = std::nan("1");
+          }
 
           fieldName = nameToPrepend+"yCyclicNorm";
-          jsonStruct[fieldName] = growthModel.yCyclicNorm;
+          if(growthModel.yCyclicNorm.size()>0){
+            jsonStruct[fieldName] = growthModel.yCyclicNorm;
+          }else{
+            jsonStruct[fieldName] = std::nan("1");
+          }
 
           fieldName = nameToPrepend+"yCyclicNormData";
-          jsonStruct[fieldName] = growthModel.yCyclicNormData;
+          if(growthModel.yCyclicNormData.size()>0){
+            jsonStruct[fieldName] = growthModel.yCyclicNormData;
+          }else{
+            jsonStruct[fieldName] = std::nan("1");
+          }
 
           fieldName = nameToPrepend+"yCyclicNormDataPercentiles";
-          jsonStruct[fieldName] = growthModel.yCyclicNormDataPercentiles;
+          if(growthModel.yCyclicNormDataPercentiles.size()>0){
+            jsonStruct[fieldName] = growthModel.yCyclicNormDataPercentiles;
+          }else{
+            jsonStruct[fieldName] = std::nan("1");
+          }
         }
     };
     //==========================================================================
