@@ -2036,7 +2036,7 @@ class NumericalFunctions {
             const DataStructures::EmpiricalRelationModel &revenueToFcfModel,
             double marketCapitalization,
             double discountRate,
-            int numberOfYearsForTerminalValuation,
+            int numberOfYearsOfGrowth,
             bool appendTermRecord,
             bool setNansToMissingValue,
             const std::string &parentName,
@@ -2108,8 +2108,8 @@ class NumericalFunctions {
           termNames.push_back(parentName+"discountRate");
           termValues.push_back(discountRate);
 
-          termNames.push_back(parentName+"years");
-          termValues.push_back(numberOfYearsForTerminalValuation);
+          termNames.push_back(parentName+"years_of_growth");
+          termValues.push_back(numberOfYearsOfGrowth);
 
           termNames.push_back(parentName+"revenue");
           termValues.push_back(revenue0);
@@ -2145,18 +2145,19 @@ class NumericalFunctions {
         for(int i=0;i<revenueGrowthVariation.size();++i){
           double revenueGrowth = revenueGrowthVariation[i];
           double cumFcf = 0;
-          for(int j=0; j< numberOfYearsForTerminalValuation; ++j){
+          double fcf = 0;
+          for(int j=0; j< numberOfYearsOfGrowth; ++j){
             double dateNum = dateNumRecent + static_cast<double>(j);
             
             double revenue = revenue0*std::pow(1.0+revenueGrowth,j);
 
-            double fcf = NumericalFunctions::evaluateLinearGrowthModel(
+            fcf = NumericalFunctions::evaluateLinearGrowthModel(
                                     revenue,
                                     revenueToFcfModel.model[idxR2F]);
             double discountFactor = std::pow(1.0+discountRate,j);
             double discountedFcf = (fcf/discountFactor);
             cumFcf += discountedFcf;
-            if(appendTermRecord){
+            if(appendTermRecord){  
               std::stringstream ss;
               ss << j;
               termNames.push_back(parentName+"revenue"+nameMod[i]+"_"+ss.str());
@@ -2170,10 +2171,22 @@ class NumericalFunctions {
               termValues.push_back(discountedFcf);
             }
           }
-          double priceToValue = marketCapitalization/cumFcf;
+          //Assume that the company continues to produce the same free cash flow
+          //for eternity. The value of this fcf is the sum of the geometric
+          //series Sn = sum_{i=1}^{n} a*(r^i) which is a/(1-r). Here r=1-discountRate
+          //
+          double r = (1-discountRate);
+          double cumFcfTerminal = fcf*(1.0/(1.0-r));
+
+          double totalFcf = cumFcf + cumFcfTerminal;
+
+          double priceToValue = marketCapitalization/totalFcf;
+
           if(appendTermRecord){
             termNames.push_back(parentName+"cumulative_fcf_present_value"+nameMod[i]);
             termValues.push_back(cumFcf);
+            termNames.push_back(parentName+"terminal_fcf_present_value"+nameMod[i]);
+            termValues.push_back(cumFcfTerminal);
             termNames.push_back(parentName+"price_to_value"+nameMod[i]);
             termValues.push_back(priceToValue);
           }
