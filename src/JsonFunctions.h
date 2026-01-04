@@ -490,9 +490,76 @@ class JsonFunctions {
         }
         return smallestDayError;
     };
-
+ 
 //==============================================================================
-    static void extractDataSeries(
+    static void extractConvertToDataSeries(
+          const nlohmann::ordered_json &jsonData,
+          const std::vector<std::string> &addressToData,
+          const char* fieldName,
+          bool isArray,
+          std::vector<double> &dataSeries)
+    {
+      dataSeries.clear();
+
+      nlohmann::ordered_json jsonElement;
+
+      bool isElementValid = false;
+
+      if(addressToData.size()>0){
+        isElementValid = JsonFunctions::getJsonElement(
+                            jsonData, addressToData,jsonElement);
+      }else{
+        jsonElement = jsonData;
+        if(jsonElement.size()>0){
+          isElementValid=true;
+        }
+      }
+
+      if(isElementValid){
+        if(isArray){
+          JsonFunctions::getJsonFloatArray(jsonElement[fieldName],
+                                           dataSeries);
+        }else{
+          for(auto &el: jsonElement.items()){
+
+            //Get the type
+            nlohmann::json::value_t elementType = el.value()[fieldName].type();
+            double numData = std::nan("1");
+
+            if(    (elementType == nlohmann::json::value_t::number_integer)
+                || (elementType == nlohmann::json::value_t::number_unsigned)
+                || (elementType == nlohmann::json::value_t::number_float)){
+              
+              numData = JsonFunctions::getJsonFloat(el.value()[fieldName]);
+                  
+            }else if(elementType == nlohmann::json::value_t::string){
+              std::string stringEntry;
+              JsonFunctions::getJsonString(el.value()[fieldName],
+                              stringEntry);
+              if(DateFunctions::isDate(stringEntry)){
+                numData = DateFunctions::convertToFractionalYear(stringEntry);
+              }else{
+                numData = std::stod(stringEntry);
+              }
+            }else{
+              std::cout << "Error: only elements that are numbers, numbers "
+                        << "in string format, or dates can be converted to "
+                        << "a vector of floating point numbers in this"
+                        << " function." << std::endl;
+              std::abort();                        
+            }
+
+            if(JsonFunctions::isJsonFloatValid(numData)){
+              dataSeries.push_back(numData);
+            }
+          
+          }
+        }
+      }
+    
+    };
+//==============================================================================
+    static void extractDateDataSeries(
           const nlohmann::ordered_json &jsonData,
           const std::vector<std::string> &addressToTimeSeries,
           const char* dateFieldName,
@@ -554,6 +621,7 @@ class JsonFunctions {
       }
 
     };    
+
 
 };
 

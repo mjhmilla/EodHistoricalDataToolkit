@@ -2423,6 +2423,16 @@ int main (int argc, char* argv[]) {
                                                revenueFcfModelAvg.y,
                                                false,
                                                modelTemp);
+      std::vector< size_t > indexSortedA = 
+        NumericalFunctions::calcSortedVectorIndicies(modelTemp.x,true);
+      std::vector< double > xTmp(modelTemp.x.size()), yTmp(modelTemp.x.size());
+      for(size_t i=0; i< modelTemp.x.size();++i){
+        xTmp[i] = modelTemp.x[indexSortedA[i]];
+        yTmp[i] = modelTemp.y[indexSortedA[i]];
+      }
+      modelTemp.x = xTmp;
+      modelTemp.y = yTmp;
+
       revenueFcfModelAvg.model.push_back(modelTemp);   
       //
       //Fit models to the trailing sub intervals for the recent data
@@ -2449,6 +2459,18 @@ int main (int argc, char* argv[]) {
         if(dateV.size()>0 && xV.size()>0 && yV.size()>0){
           DataStructures::EmpiricalGrowthModel modelTemp;
           NumericalFunctions::fitLinearGrowthModel(xV,yV,false,modelTemp);        
+
+          std::vector< size_t > indexSortedB = 
+            NumericalFunctions::calcSortedVectorIndicies(modelTemp.x,true);
+          std::vector< double > xTmp(modelTemp.x.size()), yTmp(modelTemp.x.size());
+          for(size_t i=0; i< modelTemp.x.size();++i){
+            xTmp[i] = modelTemp.x[indexSortedB[i]];
+            yTmp[i] = modelTemp.y[indexSortedB[i]];
+          }
+          modelTemp.x = xTmp;
+          modelTemp.y = yTmp;
+
+
           revenueFcfModel.dateModel.push_back(dateV[0]);
           revenueFcfModel.model.push_back(modelTemp);
         }

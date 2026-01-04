@@ -1,0 +1,311 @@
+{
+    "filter":
+    {
+        "ROIC":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "returnOnInvestedFinancialCapitalLessCostOfCapital"
+            ],
+            "isDateSeries": true,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.10
+            ]
+        },
+        "yearsOfData":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "annual_milestones",
+                "years_reported"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                10.0
+            ]
+        },
+        "revenueGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "revenue_growth_model_avg",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.10
+            ]
+        },
+        "epsGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "eps_growth_model_avg",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.10
+            ]
+        },
+        "equityGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "equity_growth_model_avg",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.10
+            ]
+        },
+        "fcfGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "fcf_growth_model_avg",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.10
+            ]
+        },
+        "P/DCM-V-LB":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValue"
+            ],
+            "isDateSeries": true,
+            "condition": ">",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.001
+            ]
+        },        
+        "P/DCM-V-UB":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValue"
+            ],
+            "isDateSeries": true,
+            "condition": "<",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                2.00
+            ]
+        }        
+
+    },
+    "ranking":
+    {
+        "P/DCM-V Normalized":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValue"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "smallestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.75,
+                "lowerBound": -0.01,
+                "upperBound": 2.0,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },        
+        "ROIC":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "atoiEmpirical_ReturnOnInvestedCapital"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.10,
+                "lowerBound": -0.01,
+                "upperBound": 1.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "revenueGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "revenue_growth_model_recent",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.10,
+                "lowerBound": -0.01,
+                "upperBound": 1.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "epsGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "eps_growth_model_recent",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.10,
+                "lowerBound": -0.01,
+                "upperBound": 1.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "equityGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "equity_growth_model_recent",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.10,
+                "lowerBound": -0.01,
+                "upperBound": 1.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "fcfGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "fcf_growth_model_recent",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.10,
+                "lowerBound": -0.01,
+                "upperBound": 1.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        }
+    },
+    "weighting":
+    {
+        "folder": "calculateData",
+        "field":
+        [
+            "metric_data",
+            "costOfCapital_marketCapitalization"
+        ],
+        "isDateSeries": true
+    },
+    "report":
+    {
+        "number_of_tickers_per_report": 50,
+        "number_of_reports": 3,
+        "title": "The Frankfurt Borse: Phil Town's Big 5"
+    }
+}

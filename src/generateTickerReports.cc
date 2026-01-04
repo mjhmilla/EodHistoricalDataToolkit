@@ -278,58 +278,136 @@ void updatePlotArray(
     PlottingFunctions::convertCentimetersToPoints(plotHeightCm);     
 
   
-
+  std::vector< std::string > coordStringVector;
+  coordStringVector.push_back("_x");
+  coordStringVector.push_back("_y");
 
   for(auto &plotConfig : plotConfiguration["plots"].items()){
 
-    //Get the JsonMetaData
-    std::string jsonData;
     std::vector< JsonMetaData > jsonMetaDataVector;
-    JsonFunctions::getJsonString(plotConfig.value()["jsonData"], jsonData);  
+    bool isDateDataSeries=false;
+    for(size_t i=0; i<coordStringVector.size();++i){
+      std::string coordStr = coordStringVector[i]; 
+      std::string jsonData;
+
+      if(    coordStr.compare("_y") == 0 
+          && plotConfig.value().contains("jsonData_x") 
+          && plotConfig.value().contains("address_x")
+          && plotConfig.value().contains("fieldName_x")
+          && plotConfig.value().contains("fieldName_y")){
+        //The x and y fields have the values for jsonData and address. Copy 
+        //these over
+        size_t indexEnd = jsonMetaDataVector.size()-1;
+        JsonMetaData jsonMetaData(jsonMetaDataVector[indexEnd]);
+        
+        if(jsonMetaDataVector[indexEnd].fieldName.find("date") 
+            != std::string::npos){
+          isDateDataSeries=true;
+        }
+
+        //Update the field name because this does differ
+        std::string fieldName;
+        JsonFunctions::getJsonString(
+            plotConfig.value()["fieldName"+coordStr],fieldName);
+
+        jsonMetaData.fieldName = fieldName;
+
+        jsonMetaDataVector.push_back(jsonMetaData);
 
 
-    if(jsonData.compare("fundamentalData")==0){
-      JsonMetaData jsonMetaData(fundamentalData);
-      jsonMetaDataVector.push_back(jsonMetaData);
+
+      }else{
+
+        JsonFunctions::getJsonString(
+            plotConfig.value()["jsonData"+coordStr], jsonData);  
+
+        if(jsonData.compare("fundamentalData")==0){
+          JsonMetaData jsonMetaData(fundamentalData);
+          jsonMetaDataVector.push_back(jsonMetaData);
 
 
-    }else if(jsonData.compare("historicalData")==0){
-      JsonMetaData jsonMetaData(historicalData);
-      jsonMetaDataVector.push_back(jsonMetaData);
+        }else if(jsonData.compare("historicalData")==0){
+          JsonMetaData jsonMetaData(historicalData);
+          jsonMetaDataVector.push_back(jsonMetaData);
 
 
-    }else if(jsonData.compare("calculateData")==0){
-      JsonMetaData jsonMetaData(calculateData);
-      jsonMetaDataVector.push_back(jsonMetaData);
+        }else if(jsonData.compare("calculateData")==0){
+          JsonMetaData jsonMetaData(calculateData);
+          jsonMetaDataVector.push_back(jsonMetaData);
 
+        }else{
+          std::cout << "Error: jsonData type not recognized. The field jsonData"
+                    << coordStr << " "
+                    << "needs to be in the set [fundamentalData, historicalData, "
+                    << "calculateData] but instead this was passed in: "
+                    << jsonData
+                    << std::endl;
+          std::abort();                
+        }
+
+        size_t indexEnd = jsonMetaDataVector.size()-1;
+        jsonMetaDataVector[indexEnd].address.clear();
+        for(auto &addressItem : plotConfig.value()["address"+coordStr].items()){
+          std::string fieldName;
+          JsonFunctions::getJsonString(addressItem.value(),fieldName);
+          jsonMetaDataVector[indexEnd].address.push_back(fieldName);
+        }
+        std::string fieldName;
+        JsonFunctions::getJsonString(plotConfig.value()["fieldName"+coordStr],fieldName);
+        jsonMetaDataVector[indexEnd].fieldName = fieldName;
+
+        jsonMetaDataVector[indexEnd].isArray = 
+          JsonFunctions::getJsonBool(plotConfig.value()["isArray"]);
+      }
+
+    }
+
+    //Get the data
+    std::vector<double> xTmp;
+    std::vector<double> yTmp;
+
+    if(isDateDataSeries){
+
+      //If the data consists of date-data pairs, then use the specialized 
+      //function that I've written to handle this very common case. Note that
+      //all dates are converted to numerical values. So 2024-06-01 will turn
+      //into something pretty close to 2024.5 where the 0.5 is the fraction of
+      //the year converted using the day number.
+      JsonFunctions::extractDateDataSeries(
+          jsonMetaDataVector[0].jsonData,
+          jsonMetaDataVector[0].address,
+          jsonMetaDataVector[0].fieldName.c_str(),
+          jsonMetaDataVector[1].fieldName.c_str(),
+          jsonMetaDataVector[0].isArray,
+          xTmp,
+          yTmp);
+
+      if(xTmp.size()==0 && yTmp.size()==0){
+        xTmp=xEmpty;
+        yTmp=yEmpty;
+      }else{
+        xEmpty[0]=*std::min_element(xTmp.begin(),xTmp.end());
+        xEmpty[1]=*std::max_element(xTmp.begin(),xTmp.end());
+      }     
     }else{
-      std::cout << "Error: jsonData type not recognized. The field jsonData "
-                << "needs to be in the set [fundamentalData, historicalData, "
-                << "calculateData] but instead this was passed in: "
-                << jsonData
-                << std::endl;
-      std::abort();                
+      //If this is not a date-data pair, then first figure out what type each
+      //data is, convert it to a number, and store it in xTmp and yTmp. If it 
+      //is a string that contains '-' then its a date - convert the date to 
+      //a number
+      JsonFunctions::extractConvertToDataSeries(
+          jsonMetaDataVector[0].jsonData,
+          jsonMetaDataVector[0].address,
+          jsonMetaDataVector[0].fieldName.c_str(),
+          jsonMetaDataVector[0].isArray,
+          xTmp);
+      JsonFunctions::extractConvertToDataSeries(
+          jsonMetaDataVector[1].jsonData,
+          jsonMetaDataVector[1].address,
+          jsonMetaDataVector[1].fieldName.c_str(),
+          jsonMetaDataVector[1].isArray,
+          yTmp);
     }
-
-    size_t indexEnd = jsonMetaDataVector.size()-1;
-    jsonMetaDataVector[indexEnd].address.clear();
-    for(auto &addressItem : plotConfig.value()["address"].items()){
-      std::string fieldName;
-      JsonFunctions::getJsonString(addressItem.value(),fieldName);
-      jsonMetaDataVector[indexEnd].address.push_back(fieldName);
-    }
-    std::string fieldName;
-    JsonFunctions::getJsonString(plotConfig.value()["fieldName"],fieldName);
-    jsonMetaDataVector[indexEnd].fieldName = fieldName;
-
-    std::string dateName;
-    JsonFunctions::getJsonString(plotConfig.value()["dateName"],dateName);
-    jsonMetaDataVector[indexEnd].dateName = dateName;
     
-    jsonMetaDataVector[indexEnd].isArray = 
-      JsonFunctions::getJsonBool(plotConfig.value()["isArray"]);
-
-
     //Get the LineSettings
     PlottingFunctions::LineSettings lineSettings;
     JsonFunctions::getJsonString(plotConfig.value()["lineColor"],
@@ -337,12 +415,11 @@ void updatePlotArray(
 
     JsonFunctions::getJsonString(plotConfig.value()["legendEntry"],
                                     lineSettings.name); 
+
     findReplaceKeywords(lineSettings.name,keywords,replacements);
 
     lineSettings.lineWidth = 
       JsonFunctions::getJsonFloat(plotConfig.value()["lineWidth"],false);
-
-
 
     //Get SubplotSettings
     PlottingFunctions::SubplotSettings subplotSettings;
@@ -390,7 +467,8 @@ void updatePlotArray(
 
     //Get Box and Whisker Settings
     PlottingFunctions::BoxAndWhiskerSettings boxWhiskerSettings;
-    tmp = JsonFunctions::getJsonFloat(plotConfig.value()["boxWhiskerPosition"],false);
+    tmp = JsonFunctions::getJsonFloat(
+        plotConfig.value()["boxWhiskerPosition"],false);
     if(tmp >= 0){
       boxWhiskerSettings.xOffsetFromStart=tmp;
     }else{
@@ -402,25 +480,7 @@ void updatePlotArray(
 
     boxWhiskerSettings.currentValueColour = lineSettings.colour;
 
-    std::vector<double> xTmp;
-    std::vector<double> yTmp;
 
-    JsonFunctions::extractDataSeries(
-        jsonMetaDataVector[indexEnd].jsonData,
-        jsonMetaDataVector[indexEnd].address,
-        jsonMetaDataVector[indexEnd].dateName.c_str(),
-        jsonMetaDataVector[indexEnd].fieldName.c_str(),
-        jsonMetaDataVector[indexEnd].isArray,
-        xTmp,
-        yTmp);
-
-    if(xTmp.size()==0 && yTmp.size()==0){
-      xTmp=xEmpty;
-      yTmp=yEmpty;
-    }else{
-      xEmpty[0]=*std::min_element(xTmp.begin(),xTmp.end());
-      xEmpty[1]=*std::max_element(xTmp.begin(),xTmp.end());
-    } 
 
 
     if(xTmp.size()>0 && yTmp.size()>0){
@@ -496,15 +556,10 @@ void updatePlotArray(
         axisSettings[indexRow][indexColumn].yMin =yMinConfig;
       }
 
-      bool here=false;
-      if(fieldName.compare("yCyclicNormData")==0){
-        here=true;
-      }
 
       PlottingFunctions::updatePlot(
           xTmp,
           yTmp,
-          jsonMetaDataVector[indexEnd].fieldName,
           plotSettingsUpd,
           lineSettings,
           axisSettings[indexRow][indexColumn],
@@ -513,7 +568,7 @@ void updatePlotArray(
           true,
           verbose);
 
-      here=false;
+
   
     }
   }
@@ -1077,9 +1132,9 @@ bool generateLaTeXReport(
       << ReportingFunctions::formatJsonEntry(JsonFunctions::getJsonFloat(
           calculateData["annual_milestones"]["years_with_dividend"],true))
       << "\\\\" << std::endl;      
-    latexReport << "Years with a dividend increase & "
+    latexReport << "Fraction of years with a dividend increase & "
       << ReportingFunctions::formatJsonEntry(JsonFunctions::getJsonFloat(
-          calculateData["annual_milestones"]["years_with_dividend_increase"],true))
+          calculateData["annual_milestones"]["fraction_of_years_with_a_dividend_increases"],true))
       << "\\\\" << std::endl;      
 
 

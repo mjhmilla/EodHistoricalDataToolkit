@@ -76,6 +76,10 @@ class DateFunctions {
       };
     };
   //==============================================================================
+    static bool isDate(const std::string &dateStr){
+      return  (dateStr.find("-") != std::string::npos);
+    }
+  //==============================================================================
     static double convertToFractionalYear(const std::string &dateStr){
       double date = std::nan("1");
 

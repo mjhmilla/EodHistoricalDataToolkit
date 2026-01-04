@@ -1,0 +1,163 @@
+{
+    "filter":
+    {
+        "SvenCarlinsList":
+        {
+            "folder": "fundamentalData",
+            "field":
+            [
+                "General",
+                "PrimaryTicker"
+            ],
+            "isDateSeries": false,
+            "condition": "==",
+            "operator": "||",
+            "valueType": "string",
+            "values":
+            [
+                "AD.AS",
+                "BABA.US",
+                "ACOMO.AS",
+                "ADM.US",
+                "ABF.LSE",
+                "BRK-A.US",
+                "RIO.LSE",
+                "0941.HK",
+                "0001.HK",
+                "CKN.LSE",
+                "0142.HK",
+                "FLOW.AS",
+                "GLCNF.US",
+                "LBTYA.US",
+                "LUN.TO",
+                "MAERSK-A.CO",
+                "N3Y.F",
+                "NTR.TO",
+                "MOS.US",
+                "RUI.PA",
+                "LIGHT.AS",
+                "SIRI.US",
+                "F34.SG"
+            ]
+        }
+    },
+    "ranking":
+    {
+        "P/DCM-V":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValueEmpiricalAvg"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "smallestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.75,
+                "lowerBound": -0.01,
+                "upperBound": 10.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 4.5,
+                "addPlot": true
+            }
+        },
+        "rCF/EV":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "residualCashFlowToEnterpriseValue"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 0.5,
+            "plotSettings":
+            {
+                "threshold": 0.05,
+                "lowerBound": -0.01,
+                "upperBound": 0.25,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 4.5,
+                "addPlot": true
+            }
+        },
+        "ROIC-CC":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "returnOnInvestedFinancialCapitalLessCostOfCapital"
+            ],
+            "isDateSeries": true,
+            "measure": "p25",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 0.5,
+            "plotSettings":
+            {
+                "threshold": 0.15,
+                "lowerBound": -0.01,
+                "upperBound": null,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 4.5,
+                "addPlot": true
+            }
+        },
+        "Mkt-Cap":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "costOfCapital_marketCapitalization"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 0.0,
+            "plotSettings":
+            {
+                "threshold": 50000000,
+                "lowerBound": -0.01,
+                "upperBound": 5.0E+12,
+                "logarithmic": true,
+                "width": 18.0,
+                "height": 4.5,
+                "addPlot": true
+            }
+        }
+    },
+    "weighting":
+    {
+        "folder": "calculateData",
+        "field":
+        [
+            "metric_data",
+            "costOfCapital_marketCapitalization"
+        ],
+        "isDateSeries": true
+    },
+    "report":
+    {
+        "number_of_tickers_per_report": 50,
+        "number_of_reports": 1,
+        "title": "Sven Carlin's list (1/4/2025)"
+    }
+}

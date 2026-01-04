@@ -1,0 +1,184 @@
+{
+    "filter":
+    {
+        "yearsOfData":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "annual_milestones",
+                "years_reported"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                10.0
+            ]
+        },
+        "empFittingValidAvg":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "atoi_growth_model_avg",
+                "validFitting"
+            ],
+            "isDateSeries": false,
+            "condition": "==",
+            "operator": "",
+            "valueType": "bool",
+            "values":
+            [
+                true
+            ]
+        },
+        "empFittingValidRecent":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "atoi_growth_model_recent",
+                "validFitting"
+            ],
+            "isDateSeries": false,
+            "condition": "==",
+            "operator": "",
+            "valueType": "bool",
+            "values":
+            [
+                true
+            ]
+        },
+        "expModel":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "atoiEmpiricalAvg_ModelType"
+            ],
+            "isDateSeries": true,
+            "condition": "==",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                1.0
+            ]
+        },
+        "dividend":
+        {
+            "folder": "fundamentalData",
+            "field":
+            [
+                "Highlights",
+                "DividendYield"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.04
+            ]
+        }
+    },
+    "ranking":
+    {
+        "P/DCM-V Empirical-Avg":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValueEmpiricalAvg"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "smallestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.75,
+                "lowerBound": -0.01,
+                "upperBound": 5.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "expModelGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "atoiEmpiricalAvg_growth"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.10,
+                "lowerBound": -0.01,
+                "upperBound": 1.51,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "dividends":
+        {
+            "folder": "fundamentalData",
+            "field":
+            [
+                "Highlights",
+                "DividendYield"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.10,
+                "lowerBound": -0.01,
+                "upperBound": 1.51,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        }
+    },
+    "weighting":
+    {
+        "folder": "calculateData",
+        "field":
+        [
+            "metric_data",
+            "costOfCapital_marketCapitalization"
+        ],
+        "isDateSeries": true
+    },
+    "report":
+    {
+        "number_of_tickers_per_report": 50,
+        "number_of_reports": 3,
+        "title": "The Frankfurt Borse: Dividends"
+    }
+}

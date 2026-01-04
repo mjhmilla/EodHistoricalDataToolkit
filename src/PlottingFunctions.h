@@ -308,7 +308,6 @@ public:
   static void updatePlot(
       const std::vector< double > &xV,
       const std::vector< double > &yV,
-      const std::string &dataName,
       const PlottingFunctions::PlotSettings &plotSettings,    
       const LineSettings &lineSettings,
       AxisSettings &axisSettingsUpd,
@@ -342,7 +341,7 @@ public:
 
 
       DataStructures::SummaryStatistics metricSummaryStatistics;
-      metricSummaryStatistics.name=dataName;
+      //metricSummaryStatistics.name=dataName;
       bool validSummaryStats = 
         NumericalFunctions::extractSummaryStatistics(yV,
                   metricSummaryStatistics);
