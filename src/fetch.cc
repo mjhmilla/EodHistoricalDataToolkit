@@ -252,7 +252,7 @@ int main (int argc, char* argv[]) {
       std::string primaryTickerName("");
       std::string fileName = singleTickerNameToFetch;
       fileName.append(".json");
-      JsonFunctions::getPrimaryTickerName(fundamentalDataFolder, 
+      FinancialAnalysisFunctions::getPrimaryTickerName(fundamentalDataFolder, 
                                           fileName,
                                           primaryTickerName);
       if(primaryTickerName.compare(singleTickerNameToFetch) != 0){
@@ -379,7 +379,7 @@ int main (int argc, char* argv[]) {
         if( ((fileExists && gapFillPartialDownload) || successTickerDownload) 
             && fundamentalDataFolder.size() > 0){
           std::string primaryEodTickerName("");
-          JsonFunctions::getPrimaryTickerName(fundamentalDataFolder, 
+          FinancialAnalysisFunctions::getPrimaryTickerName(fundamentalDataFolder, 
                                         eodFileName, primaryEodTickerName);
 
           //If this is not the primary ticker, then we need to download the 

@@ -1678,7 +1678,7 @@ int main (int argc, char* argv[]) {
     if( foundExtension != std::string::npos ){
         std::string primaryTickerName("");
         
-        JsonFunctions::getPrimaryTickerName(fundamentalFolder, 
+        FinancialAnalysisFunctions::getPrimaryTickerName(fundamentalFolder, 
                                             fileName,
                                             primaryTickerName);
 

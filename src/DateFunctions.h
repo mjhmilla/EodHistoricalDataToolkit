@@ -13,6 +13,7 @@
 
 #include "date.h"
 
+const char *DefaultDateFormat = "%Y-%m-%d";
 
 
 class DateFunctions {
@@ -76,11 +77,12 @@ class DateFunctions {
       };
     };
   //==============================================================================
-    static bool isDate(const std::string &dateStr){
-      return  (dateStr.find("-") != std::string::npos);
+    static bool isDate(const std::string &dateStr, const char* dateChar="-"){
+      return  (dateStr.find(dateChar) != std::string::npos);
     }
   //==============================================================================
-    static double convertToFractionalYear(const std::string &dateStr){
+    static double convertToFractionalYear(const std::string &dateStr,
+                                          const char* format="%Y-%m-%d"){
       double date = std::nan("1");
 
       if(dateStr.size() > 0){
@@ -89,11 +91,11 @@ class DateFunctions {
 
         std::istringstream dateStrStreamA(dateStr);
         dateStrStreamA.exceptions(std::ios::failbit);
-        dateStrStreamA >> date::parse("%Y-%m-%d",dateDay);
+        dateStrStreamA >> date::parse(format,dateDay);
 
         std::istringstream dateStrStreamB(dateStr);
         dateStrStreamB.exceptions(std::ios::failbit);
-        dateStrStreamB >> date::parse("%Y-%m-%d",dateYmd);
+        dateStrStreamB >> date::parse(format,dateYmd);
 
         int year = int(dateYmd.year());
         std::string dateStrFirstOfYear(dateStr.substr(0,4));
@@ -101,14 +103,14 @@ class DateFunctions {
 
         std::istringstream dateStrStreamC(dateStrFirstOfYear);
         dateStrStreamC.exceptions(std::ios::failbit);      
-        dateStrStreamC >> date::parse("%Y-%m-%d",dateDayFirstOfYear);
+        dateStrStreamC >> date::parse(format,dateDayFirstOfYear);
 
         std::string dateStrLastOfYear(dateStr.substr(0,4));
         dateStrLastOfYear.append("-12-31");
 
         std::istringstream dateStrStreamD(dateStrLastOfYear);
         dateStrStreamD.exceptions(std::ios::failbit);      
-        dateStrStreamD >> date::parse("%Y-%m-%d",dateDayLastOfYear);
+        dateStrStreamD >> date::parse(format,dateDayLastOfYear);
 
         //Adding 1 here because Jan 1 otherwise doesn't count as a day.
         

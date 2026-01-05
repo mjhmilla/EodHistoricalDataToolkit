@@ -29,6 +29,19 @@ class JsonFunctions {
     //
     static constexpr double MISSING_VALUE = 0.000001;
 
+    enum StringConversion{
+      StringToFloat = 0,
+      StringToNumericalDate,
+      STRING_CONVERSION
+    };
+
+    struct StringConversionSettings{
+      StringConversion typeOfConversion;
+      const char* dateFormat;
+      StringConversionSettings(StringConversion type, const char* format):
+        typeOfConversion(type),
+        dateFormat(format){};
+    };
 //==============================================================================
 //From:
 //https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
@@ -131,37 +144,49 @@ class JsonFunctions {
 
 //==============================================================================
     static bool doesFieldExist(const nlohmann::ordered_json &jsonTable,
-                               std::vector< std::string > &fields){
-      bool fieldExists = true;                                
-      for(size_t i=0; i<fields.size();++i){
-        switch(i){
-          case 0:{
-            fieldExists = jsonTable.contains(fields[0]);
-          }break;
-          case 1:{
-            if(fieldExists){
-              fieldExists = jsonTable[fields[0]].contains(fields[1]);
+                               const std::vector< std::string > &fields){
+      bool fieldExists = false;
+      if(fields.size()>0){   
+
+        fieldExists = true;
+
+        for(size_t i=0; i<fields.size();++i){
+
+          if(fieldExists){            
+            //Check each parent until the final field is reached
+            //Why? If one of the children (e.g. fields[1]) doesn't exist 
+            //nlohmann::json will throw an exception 
+            //(e.g. jsonTable[fields[0]][fields[1]].contains ..)
+            switch(i){
+              case 0:{
+                fieldExists = jsonTable.contains(fields[0]);
+              }break;
+              case 1:{
+                if(fieldExists){
+                  fieldExists = jsonTable[fields[0]].contains(fields[1]);
+                }
+              }break;          
+              case 2:{
+                if(fieldExists){
+                  fieldExists = jsonTable[fields[0]][fields[1]].contains(fields[2]);
+                }
+              }break;          
+              case 3:{
+                if(fieldExists){
+                  fieldExists = jsonTable[fields[0]][fields[1]]
+                                                    [fields[2]].contains(fields[3]);
+                }
+              }break;          
+              case 4:{
+                if(fieldExists){
+                  fieldExists = jsonTable[fields[0]][fields[1]]
+                                        [fields[2]][fields[3]].contains(fields[4]);
+                }
+              }break;        
+              default:
+                fieldExists=false;  
             }
-          }break;          
-          case 2:{
-            if(fieldExists){
-              fieldExists = jsonTable[fields[0]][fields[1]].contains(fields[2]);
-            }
-          }break;          
-          case 3:{
-            if(fieldExists){
-              fieldExists = jsonTable[fields[0]][fields[1]]
-                                                [fields[2]].contains(fields[3]);
-            }
-          }break;          
-          case 4:{
-            if(fieldExists){
-              fieldExists = jsonTable[fields[0]][fields[1]]
-                                     [fields[2]][fields[3]].contains(fields[4]);
-            }
-          }break;        
-          default:
-            fieldExists=false;  
+          }
         }
       }
       return fieldExists;
@@ -225,13 +250,12 @@ class JsonFunctions {
       if(fieldsExist){
         switch( fields.size() ){
           case 1:{
-                value = getJsonFloat(
-                          jsonTable[fields[0]],
-                          setNansToMissingValue);
+              value = getJsonFloat(
+                        jsonTable[fields[0]],
+                        setNansToMissingValue);
             }
             break;
           case 2:{
-
               value = getJsonFloat(
                         jsonTable[fields[0]][fields[1]],
                         setNansToMissingValue);
@@ -267,31 +291,34 @@ class JsonFunctions {
                                std::vector< std::string > &fields,
                                std::string &stringUpd){
     
-      switch( fields.size() ){
-        case 1:{
-            getJsonString(  jsonTable[fields[0]],
-                            stringUpd);
+      bool fieldsExist = doesFieldExist(jsonTable,fields);
+      if(fieldsExist){
+        switch( fields.size() ){
+          case 1:{
+              getJsonString(  jsonTable[fields[0]],
+                              stringUpd);
+            }
+            break;
+          case 2:{
+              getJsonString(  jsonTable[fields[0]][fields[1]],
+                              stringUpd);
+            }
+            break;
+          case 3:{
+              getJsonString(  jsonTable[fields[0]][fields[1]][fields[2]],
+                              stringUpd);
+            }
+            break;
+          case 4:{
+              getJsonString(  jsonTable[fields[0]][fields[1]][fields[2]][fields[3]],
+                              stringUpd);
+            }
+            break;
+          default: {
+            stringUpd = "";          
           }
-          break;
-        case 2:{
-            getJsonString(  jsonTable[fields[0]][fields[1]],
-                            stringUpd);
-          }
-          break;
-        case 3:{
-            getJsonString(  jsonTable[fields[0]][fields[1]][fields[2]],
-                            stringUpd);
-          }
-          break;
-        case 4:{
-            getJsonString(  jsonTable[fields[0]][fields[1]][fields[2]][fields[3]],
-                            stringUpd);
-          }
-          break;
-        default: {
-          stringUpd = "";          
-        }
-      };            
+        }; 
+      }           
     };    
 
 //==============================================================================
@@ -300,74 +327,45 @@ class JsonFunctions {
                     const std::vector< std::string > &fields,
                     nlohmann::ordered_json &jsonElement){
     
-      bool validElement = false;
-      switch( fields.size() ){
-        case 1:{
-            validElement=jsonTable.contains(fields[0]);
+      
+      bool validElement = doesFieldExist(jsonTable,fields);
 
-            if(validElement){
+      if(validElement){
+        switch( fields.size() ){
+          case 1:{
               jsonElement = jsonTable[fields[0]];
-            }
-          }
-          break;
-        case 2:{
-            validElement=jsonTable.contains(fields[0]);
-            if(validElement){
-              validElement = jsonTable[fields[0]].contains(fields[1]);
-            }
-
-            if(validElement){
+          } break;
+          case 2:{
               jsonElement = jsonTable[fields[0]][fields[1]];
-            }
-          }
-          break;
-        case 3:{
-            validElement=jsonTable.contains(fields[0]);
-            if(validElement){
-              validElement = jsonTable[fields[0]].contains(fields[1]);
-            }
-            if(validElement){
-              validElement = jsonTable[fields[0]][fields[1]].contains(fields[2]);
-            }
-
-            if(validElement){
+          } break;
+          case 3:{
               jsonElement = jsonTable[fields[0]][fields[1]][fields[2]];
-            }
+          } break;
+          case 4:{
+            jsonElement = 
+              jsonTable[fields[0]][fields[1]][fields[2]][fields[3]];
+          }break;
+          default: {
+            validElement=false;          
           }
-          break;
-        case 4:{
-            validElement=jsonTable.contains(fields[0]);
-            if(validElement){
-              validElement = jsonTable[fields[0]].contains(fields[1]);
-            }
-            if(validElement){
-              validElement = 
-                jsonTable[fields[0]][fields[1]].contains(fields[2]);
-            }
-            if(validElement){
-              validElement = 
-                jsonTable[fields[0]][fields[1]][fields[2]].contains(fields[3]);
-            }
-           
-
-            if(validElement){
-              jsonElement = 
-                jsonTable[fields[0]][fields[1]][fields[2]][fields[3]];
-            }
-          }
-          break;
-        default: {
-          validElement=false;          
-        }
-      };
-
-      if(!validElement){
-        bool here=true;
+        };
       }
+
+
 
       return validElement;            
     };
 
+//==============================================================================
+    static void getJsonStringArray(const nlohmann::ordered_json &jsonEntry,
+                               std::vector< std::string > &data){
+      if(  jsonEntry.is_null()){
+        data.clear();
+      }else{
+          data = jsonEntry.get<std::vector<std::string> >();
+      }
+
+    };    
 //==============================================================================
     static void getJsonFloatArray(const nlohmann::ordered_json &jsonEntry,
                                std::vector< double > &data){
@@ -427,38 +425,7 @@ class JsonFunctions {
       }                            
     };
 
-//==============================================================================
-    static void getPrimaryTickerName(const std::string &folder, 
-                              const std::string &fileName, 
-                              std::string &updPrimaryTickerName){
 
-      //Create the path and file name                          
-      std::stringstream ss;
-      ss << folder << fileName;
-      std::string filePathName = ss.str();
-      
-      using json = nlohmann::ordered_json;
-      std::ifstream jsonFileStream(filePathName.c_str());
-
-      try{
-        json jsonData = json::parse(jsonFileStream);  
-
-        if( jsonData.contains("General") ){
-          if(jsonData["General"].contains("PrimaryTicker")){
-            if(jsonData["General"]["PrimaryTicker"].is_null() == false){
-              updPrimaryTickerName = 
-                jsonData["General"]["PrimaryTicker"].get<std::string>();
-            }
-          }
-        }
-      }catch (json::parse_error& ex){
-        std::cerr << "Parse error while reading " 
-                << fileName
-                << " at byte " 
-                << ex.byte << std::endl;
-      };
-
-    };
 
 //==============================================================================
     static int findClosestDate(const nlohmann::ordered_json &jsonTable,
@@ -490,9 +457,142 @@ class JsonFunctions {
         }
         return smallestDayError;
     };
- 
 //==============================================================================
-    static void extractConvertToDataSeries(
+    static nlohmann::json::value_t getDataType(         
+          const nlohmann::ordered_json &jsonData,
+          const std::vector<std::string> &address,
+          const char* fieldName,
+          bool isArray)
+    {
+      nlohmann::json::value_t dataType = nlohmann::json::value_t::null; 
+
+      nlohmann::ordered_json jsonElement;
+
+      bool isElementValid = false;
+
+      if(address.size()>0){
+        isElementValid = JsonFunctions::getJsonElement(
+                            jsonData, address,jsonElement);
+      }else{
+        jsonElement = jsonData;
+        if(jsonElement.size()>0){
+          isElementValid=true;
+        }
+      }      
+      if(isArray){
+        dataType = jsonElement[fieldName].type();
+      }else{
+        for(auto &el: jsonElement.items()){
+          dataType = el.value()[fieldName].type();
+          if(dataType != nlohmann::json::value_t::null){
+            break;
+          }
+        }          
+      }
+      return dataType;
+
+    };
+//==============================================================================
+    static void extractStringConvertToFloatSeries(
+          const nlohmann::ordered_json &jsonData,
+          const std::vector<std::string> &addressToData,
+          const char* fieldName,
+          const StringConversionSettings& settings,
+          std::vector<double> &dataSeries)
+    {
+      dataSeries.clear();
+
+      nlohmann::ordered_json jsonElement;
+
+      bool isElementValid = false;
+
+      if(addressToData.size()>0){
+        isElementValid = JsonFunctions::getJsonElement(
+                            jsonData, addressToData,jsonElement);
+      }else{
+        jsonElement = jsonData;
+        if(jsonElement.size()>0){
+          isElementValid=true;
+        }
+      }
+            
+      if(isElementValid){
+          int count = 0;
+          for(auto &el: jsonElement.items()){
+            std::string stringData;
+            JsonFunctions::getJsonString(el.value()[fieldName],stringData);
+
+            double value = std::nan("1");
+            switch(settings.typeOfConversion){
+              case StringConversion::StringToFloat:{
+                value = std::nan("1");
+                if(stringData.size()>0){
+                  value = std::stod(stringData);
+                }
+              }; break;
+              case StringConversion::StringToNumericalDate:{
+                value = DateFunctions::convertToFractionalYear(stringData,
+                                            settings.dateFormat);
+              }; break;              
+              default:{
+                std::cout << "Error: unrecognized value in "
+                          << "settings.typeOfConversion"
+                          << std::endl;
+                std::abort();
+              }
+            };
+            dataSeries.push_back(value);
+          }          
+      }
+    };
+
+    
+//==============================================================================
+    static void extractStringSeries(
+          const nlohmann::ordered_json &jsonData,
+          const std::vector<std::string> &addressToData,
+          const char* fieldName,
+          bool isArray,
+          std::vector<std::string> &stringSeries,
+          int numberOfItems = -1)
+    {
+      stringSeries.clear();
+
+      nlohmann::ordered_json jsonElement;
+
+      bool isElementValid = false;
+
+      if(addressToData.size()>0){
+        isElementValid = JsonFunctions::getJsonElement(
+                            jsonData, addressToData,jsonElement);
+      }else{
+        jsonElement = jsonData;
+        if(jsonElement.size()>0){
+          isElementValid=true;
+        }
+      }
+            
+      if(isElementValid){
+        if(isArray){
+          JsonFunctions::getJsonStringArray(jsonElement[fieldName],
+                                           stringSeries);
+        }else{
+          int count = 0;
+          for(auto &el: jsonElement.items()){
+            std::string stringData;
+            JsonFunctions::getJsonString(el.value()[fieldName],stringData);
+            stringSeries.push_back(stringData);            
+            ++count;
+            if(count > numberOfItems && numberOfItems != -1){
+              break;
+            }
+          }          
+        }
+      }
+    };
+
+//==============================================================================
+    static void extractFloatSeries(
           const nlohmann::ordered_json &jsonData,
           const std::vector<std::string> &addressToData,
           const char* fieldName,
@@ -514,113 +614,24 @@ class JsonFunctions {
           isElementValid=true;
         }
       }
-
+            
       if(isElementValid){
         if(isArray){
           JsonFunctions::getJsonFloatArray(jsonElement[fieldName],
                                            dataSeries);
         }else{
           for(auto &el: jsonElement.items()){
-
-            //Get the type
-            nlohmann::json::value_t elementType = el.value()[fieldName].type();
-            double numData = std::nan("1");
-
-            if(    (elementType == nlohmann::json::value_t::number_integer)
-                || (elementType == nlohmann::json::value_t::number_unsigned)
-                || (elementType == nlohmann::json::value_t::number_float)){
-              
-              numData = JsonFunctions::getJsonFloat(el.value()[fieldName]);
-                  
-            }else if(elementType == nlohmann::json::value_t::string){
-              std::string stringEntry;
-              JsonFunctions::getJsonString(el.value()[fieldName],
-                              stringEntry);
-              if(DateFunctions::isDate(stringEntry)){
-                numData = DateFunctions::convertToFractionalYear(stringEntry);
-              }else{
-                numData = std::stod(stringEntry);
-              }
-            }else{
-              std::cout << "Error: only elements that are numbers, numbers "
-                        << "in string format, or dates can be converted to "
-                        << "a vector of floating point numbers in this"
-                        << " function." << std::endl;
-              std::abort();                        
-            }
-
-            if(JsonFunctions::isJsonFloatValid(numData)){
-              dataSeries.push_back(numData);
-            }
-          
-          }
+            double numData = JsonFunctions::getJsonFloat(el.value()[fieldName]);
+            //if(JsonFunctions::isJsonFloatValid(numData)){
+            dataSeries.push_back(numData);
+            //}
+          }          
         }
       }
-    
+
     };
-//==============================================================================
-    static void extractDateDataSeries(
-          const nlohmann::ordered_json &jsonData,
-          const std::vector<std::string> &addressToTimeSeries,
-          const char* dateFieldName,
-          const char* floatFieldName,
-          bool isArray,
-          std::vector<double> &dateSeries,
-          std::vector<double> &floatSeries){
 
-      dateSeries.clear();
-      floatSeries.clear();
-      std::vector< double > tmpFloatSeries;
-
-      nlohmann::ordered_json jsonElement;
-
-      bool isElementValid = false;
-
-      if(addressToTimeSeries.size()>0){
-        isElementValid = JsonFunctions::getJsonElement(
-                            jsonData, addressToTimeSeries,jsonElement);
-      }else{
-        jsonElement = jsonData;
-        if(jsonElement.size()>0){
-          isElementValid=true;
-        }
-      }
-
-      if(isElementValid){
-        if(isArray){
-          JsonFunctions::getJsonFloatArray(jsonElement[dateFieldName],
-                                           dateSeries);
-          JsonFunctions::getJsonFloatArray(jsonElement[floatFieldName],
-                                           floatSeries);
-        }else{
-          for(auto &el: jsonElement.items()){
-
-            double floatData = 
-              JsonFunctions::getJsonFloat(el.value()[floatFieldName]);
-
-            if(JsonFunctions::isJsonFloatValid(floatData)){
-          
-              tmpFloatSeries.push_back(floatData);
-
-              std::string dateEntryStr;
-              JsonFunctions::getJsonString(el.value()[dateFieldName],
-                              dateEntryStr); 
-
-              double timeData = 
-                DateFunctions::convertToFractionalYear(dateEntryStr);
-              dateSeries.push_back(timeData);
-            }
-          
-          }
-
-          std::vector< size_t > indicesSorted = sort_indices(dateSeries);
-          for(size_t i=0; i<indicesSorted.size();++i){
-            floatSeries.push_back( tmpFloatSeries[ indicesSorted[i] ] );
-          }
-        }
-      }
-
-    };    
+    
 
 
 };

@@ -202,6 +202,69 @@ void formatJsonFieldAsLabel(std::string &nameUpd){
   ReportingFunctions::convertCamelCaseToSpacedText(nameUpd);
 }
 
+//==============================================================================
+void extractDataVector(const JsonMetaData &jsonMetaData,
+                      std::vector< double >& dataUpd)
+{
+  nlohmann::json::value_t dataType = 
+    JsonFunctions::getDataType( jsonMetaData.jsonData, 
+                                jsonMetaData.address,
+                                jsonMetaData.fieldName.c_str(),
+                                jsonMetaData.isArray);
+
+  //If the data is a series of numbers                                
+  if(    (dataType == nlohmann::json::value_t::number_float) 
+      || (dataType == nlohmann::json::value_t::number_integer)
+      || (dataType == nlohmann::json::value_t::number_unsigned)
+      || (dataType == nlohmann::json::value_t::array)
+      || (dataType == nlohmann::json::value_t::null)){
+    JsonFunctions::extractFloatSeries(jsonMetaData.jsonData,
+                                      jsonMetaData.address,
+                                      jsonMetaData.fieldName.c_str(),
+                                      jsonMetaData.isArray,
+                                      dataUpd);
+  }else if(dataType == nlohmann::json::value_t::string){
+    //Get one element. Check to see if it is a date
+    std::vector< std::string > stringTest;
+    JsonFunctions::extractStringSeries(jsonMetaData.jsonData,
+                                      jsonMetaData.address,
+                                      jsonMetaData.fieldName.c_str(),
+                                      jsonMetaData.isArray,
+                                      stringTest,
+                                      1);
+      
+
+    if(DateFunctions::isDate(stringTest[0])){
+
+      JsonFunctions::StringConversionSettings settings(
+          JsonFunctions::StringConversion::StringToNumericalDate,
+          DefaultDateFormat);   
+      
+      JsonFunctions::extractStringConvertToFloatSeries(
+                        jsonMetaData.jsonData,
+                        jsonMetaData.address,
+                        jsonMetaData.fieldName.c_str(),
+                        settings,
+                        dataUpd);
+
+    }else{
+      JsonFunctions::StringConversionSettings settings(
+          JsonFunctions::StringConversion::StringToFloat,
+          DefaultDateFormat);   
+      
+      JsonFunctions::extractStringConvertToFloatSeries(
+                        jsonMetaData.jsonData,
+                        jsonMetaData.address,
+                        jsonMetaData.fieldName.c_str(),
+                        settings,
+                        dataUpd);                                          
+    }  
+  }else{
+    std::cout << "Error: Unrecognized json type"
+              << std::endl;
+    std::abort();
+  }                              
+};
 
 //==============================================================================
 void updatePlotArray(
@@ -290,6 +353,11 @@ void updatePlotArray(
       std::string coordStr = coordStringVector[i]; 
       std::string jsonData;
 
+      // In the case where both fieldName_x and fieldName_y share the same
+      // json object and address, the code below makes will just copy over
+      // the json object and address from the _x JsonMetadata to the _y 
+      // JsonMetadata. This saves the person writing the plot config file
+      // from having to perfectly copy over these fields.
       if(    coordStr.compare("_y") == 0 
           && plotConfig.value().contains("jsonData_x") 
           && plotConfig.value().contains("address_x")
@@ -362,52 +430,43 @@ void updatePlotArray(
 
     }
 
+
+
+    if(jsonMetaDataVector.size() != 2){
+      std::cout << "Error: expected to find x and y data in " 
+                << plotConfig.key().c_str()
+                << " but instead found only " 
+                << jsonMetaDataVector.size()
+                << " valid series."
+                << std::endl;
+      std::abort();
+    }
+
     //Get the data
     std::vector<double> xTmp;
     std::vector<double> yTmp;
 
-    if(isDateDataSeries){
+    extractDataVector(jsonMetaDataVector[0],xTmp);
+    extractDataVector(jsonMetaDataVector[1],yTmp);    
 
-      //If the data consists of date-data pairs, then use the specialized 
-      //function that I've written to handle this very common case. Note that
-      //all dates are converted to numerical values. So 2024-06-01 will turn
-      //into something pretty close to 2024.5 where the 0.5 is the fraction of
-      //the year converted using the day number.
-      JsonFunctions::extractDateDataSeries(
-          jsonMetaDataVector[0].jsonData,
-          jsonMetaDataVector[0].address,
-          jsonMetaDataVector[0].fieldName.c_str(),
-          jsonMetaDataVector[1].fieldName.c_str(),
-          jsonMetaDataVector[0].isArray,
-          xTmp,
-          yTmp);
-
-      if(xTmp.size()==0 && yTmp.size()==0){
-        xTmp=xEmpty;
-        yTmp=yEmpty;
-      }else{
-        xEmpty[0]=*std::min_element(xTmp.begin(),xTmp.end());
-        xEmpty[1]=*std::max_element(xTmp.begin(),xTmp.end());
-      }     
-    }else{
-      //If this is not a date-data pair, then first figure out what type each
-      //data is, convert it to a number, and store it in xTmp and yTmp. If it 
-      //is a string that contains '-' then its a date - convert the date to 
-      //a number
-      JsonFunctions::extractConvertToDataSeries(
-          jsonMetaDataVector[0].jsonData,
-          jsonMetaDataVector[0].address,
-          jsonMetaDataVector[0].fieldName.c_str(),
-          jsonMetaDataVector[0].isArray,
-          xTmp);
-      JsonFunctions::extractConvertToDataSeries(
-          jsonMetaDataVector[1].jsonData,
-          jsonMetaDataVector[1].address,
-          jsonMetaDataVector[1].fieldName.c_str(),
-          jsonMetaDataVector[1].isArray,
-          yTmp);
+    if(xTmp.size() != yTmp.size()){
+      std::cout << "Error: x and y data series do not have matching sizes"
+                << std::endl;
+      std::abort();
     }
-    
+
+    //Remove nan values
+    size_t i=0;
+    while(i < xTmp.size()){
+      if(std::isnan(xTmp[i]) || std::isnan(yTmp[i])){
+        xTmp.erase(xTmp.begin()+i);
+        yTmp.erase(yTmp.begin()+i);
+      }else{
+        ++i;
+      }
+    }
+
+
     //Get the LineSettings
     PlottingFunctions::LineSettings lineSettings;
     JsonFunctions::getJsonString(plotConfig.value()["lineColor"],

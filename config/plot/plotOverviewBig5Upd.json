@@ -552,7 +552,7 @@
             "fieldName_x": "date",
             "fieldName_y": "longTermDebt",            
             "isArray": false,
-            "legendEntry": "EOD-quarterly",
+            "legendEntry": "EOD-quarterly-long",
             "lineColor": "grey",
             "lineWidth": 0.5,
             "xAxisLabel": "Years",
@@ -579,7 +579,7 @@
             "fieldName_x": "date",
             "fieldName_y": "longTermDebt",            
             "isArray": false,
-            "legendEntry": "EOD-annual",
+            "legendEntry": "EOD-annual-long",
             "lineColor": "black",
             "lineWidth": 0.5,
             "xAxisLabel": "Years",
@@ -591,6 +591,6 @@
             "useLogScale": false,
             "boxWhiskerColor": "grey40",
             "boxWhiskerPosition": -0.5
-        }
+        }       
     }
 }

@@ -142,6 +142,37 @@ class FinancialAnalysisFunctions {
 
     };
     //==========================================================================
+    static void getPrimaryTickerName(const std::string &folder, 
+                              const std::string &fileName, 
+                              std::string &updPrimaryTickerName){
+
+      //Create the path and file name                          
+      std::stringstream ss;
+      ss << folder << fileName;
+      std::string filePathName = ss.str();
+      
+      using json = nlohmann::ordered_json;
+      std::ifstream jsonFileStream(filePathName.c_str());
+
+      try{
+        json jsonData = json::parse(jsonFileStream);  
+
+        if( jsonData.contains("General") ){
+          if(jsonData["General"].contains("PrimaryTicker")){
+            if(jsonData["General"]["PrimaryTicker"].is_null() == false){
+              updPrimaryTickerName = 
+                jsonData["General"]["PrimaryTicker"].get<std::string>();
+            }
+          }
+        }
+      }catch (json::parse_error& ex){
+        std::cerr << "Parse error while reading " 
+                << fileName
+                << " at byte " 
+                << ex.byte << std::endl;
+      };
+
+    };    
     static void getIsinCountryCodes(const std::string& isin, 
                             const nlohmann::ordered_json &exchangeList,
                             std::string &isinCountryISO2,
