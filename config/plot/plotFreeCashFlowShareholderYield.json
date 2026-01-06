@@ -48,7 +48,7 @@
             "fieldName_x": "date",
             "fieldName_y": "priceToValueRevenueToFcf_price_to_value_P25",                        
             "isArray": false,
-            "legendEntry": "25$^{th}$ Rev. Gr.",
+            "legendEntry": "25^{th} Rev. Gr.",
             "lineColor": "red",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
@@ -73,7 +73,7 @@
             "fieldName_x": "date",            
             "fieldName_y": "priceToValueRevenueToFcf_price_to_value_P50",
             "isArray": false,
-            "legendEntry": "50$^{th}$ Rev. Gr.",
+            "legendEntry": "50^{th} Rev. Gr.",
             "lineColor": "magenta",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
@@ -98,7 +98,7 @@
             "fieldName_x": "date",            
             "fieldName_y": "priceToValueRevenueToFcf_price_to_value_P75",
             "isArray": false,
-            "legendEntry": "75$^{th}$ Rev. Gr.",
+            "legendEntry": "75^{th} Rev. Gr.",
             "lineColor": "blue",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
@@ -146,7 +146,7 @@
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey20",
-            "boxWhiskerPosition": -0.5
+            "boxWhiskerPositionPercentage": -0.05
         },
         "revenueVsFcfModel":
         {
@@ -171,7 +171,7 @@
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "blue",
-            "boxWhiskerPosition": -0.5
+            "boxWhiskerPositionPercentage": -0.05
         }
     }
 }

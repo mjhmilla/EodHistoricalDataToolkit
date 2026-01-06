@@ -40,11 +40,13 @@ public:
     double xOffsetFromEnd;
     std::string boxWhiskerColour;
     std::string currentValueColour;
+    int indexOfMostRecentData;
     BoxAndWhiskerSettings():
       xOffsetFromStart(std::nan("1")),
       xOffsetFromEnd(std::nan("1")),  
       boxWhiskerColour("blue"),
-      currentValueColour("black"){};
+      currentValueColour("black"),
+      indexOfMostRecentData(-1){};
   };
 
 
@@ -289,27 +291,29 @@ public:
       .lineWidth(settings.lineWidth)
       .labelNone();
 
-  xLine[0] = x-xWidth;
-  xLine[1] = x+xWidth;
-  yLine[0] = summary.current;
-  yLine[1] = summary.current;
+  if(!std::isnan(summary.current)){
+    xLine[0] = x-xWidth;
+    xLine[1] = x+xWidth;
+    yLine[0] = summary.current;
+    yLine[1] = summary.current;
 
-  plotUpd.drawCurve(xLine,yLine)
-      .lineColor("gray100")
-      .lineWidth(settings.lineWidth*2)
-      .labelNone();
+    plotUpd.drawCurve(xLine,yLine)
+        .lineColor("gray100")
+        .lineWidth(settings.lineWidth*2)
+        .labelNone();
 
-   
-  xLine[0] = x-xWidth;
-  xLine[1] = x+xWidth;
-  yLine[0] = summary.current;
-  yLine[1] = summary.current;
+    
+    xLine[0] = x-xWidth;
+    xLine[1] = x+xWidth;
+    yLine[0] = summary.current;
+    yLine[1] = summary.current;
 
-  plotUpd.drawCurve(xLine,yLine)
-      .lineColor(currentColor)
-      .lineWidth(settings.lineWidth)
-      .lineType(currentLineType)      
-      .labelNone();
+    plotUpd.drawCurve(xLine,yLine)
+        .lineColor(currentColor)
+        .lineWidth(settings.lineWidth)
+        .lineType(currentLineType)      
+        .labelNone();
+  }
 
   };
 
@@ -355,7 +359,12 @@ public:
       bool validSummaryStats = 
         NumericalFunctions::extractSummaryStatistics(yV,
                   metricSummaryStatistics);
-      metricSummaryStatistics.current = yV[yV.size()-1];
+      if(boxAndWhiskerSettings.indexOfMostRecentData >= 0){                  
+        metricSummaryStatistics.current 
+          = yV[boxAndWhiskerSettings.indexOfMostRecentData];
+      }else{
+        metricSummaryStatistics.current = std::nan("1");
+      }
 
       if(lineSettings.lineWidth > 0){
         plotMetricUpd.drawCurve(xSci,ySci)
@@ -373,8 +382,9 @@ public:
           .label(pointSettings.name);
       }
 
-      std::vector< double > xRange,yRange;
+      std::vector< double > xDataRange, xRange,yRange;
       PlottingFunctions::getDataRange(xV,xRange,1.0);
+      xDataRange=xRange;
       PlottingFunctions::getDataRange(yV,yRange,
                 std::numeric_limits< double >::lowest());
       if(yRange[0] > 0){
@@ -414,19 +424,23 @@ public:
 
       plotMetricUpd.legend().atTopLeft();   
 
+      double xWidthBoxAndWhisker = (xDataRange[1]-xDataRange[0])*(1/50.0);
       if(validSummaryStats){
-        double xPos = xRange[1]+1;
+
+        double xPosBoxAndWhisker = xRange[1]+xWidthBoxAndWhisker;
+
         if(!std::isnan(boxAndWhiskerSettings.xOffsetFromStart)){
-        xPos = xRange[0]+boxAndWhiskerSettings.xOffsetFromStart;
+        xPosBoxAndWhisker = xRange[0]+boxAndWhiskerSettings.xOffsetFromStart;
         }
         if(!std::isnan(boxAndWhiskerSettings.xOffsetFromEnd)){
-        xPos = xRange[1]+boxAndWhiskerSettings.xOffsetFromEnd;      
+        xPosBoxAndWhisker = xRange[1]+boxAndWhiskerSettings.xOffsetFromEnd;      
         }
+
 
         PlottingFunctions::drawBoxAndWhisker(
           plotMetricUpd,
-          xPos,
-          0.5,
+          xPosBoxAndWhisker,
+          xWidthBoxAndWhisker,
           metricSummaryStatistics,
           boxAndWhiskerSettings.boxWhiskerColour.c_str(),
           boxAndWhiskerSettings.currentValueColour.c_str(),
@@ -436,10 +450,10 @@ public:
       }
 
       if(!std::isnan(boxAndWhiskerSettings.xOffsetFromStart)){
-        xRange[0] += (boxAndWhiskerSettings.xOffsetFromStart-1);
+        xRange[0] += (boxAndWhiskerSettings.xOffsetFromStart-xWidthBoxAndWhisker);
       }
       if(!std::isnan(boxAndWhiskerSettings.xOffsetFromEnd)){
-        xRange[1] += (boxAndWhiskerSettings.xOffsetFromEnd+1);      
+        xRange[1] += (boxAndWhiskerSettings.xOffsetFromEnd+xWidthBoxAndWhisker);      
       }
 
       //Update the axis so that the axis grow to include all data

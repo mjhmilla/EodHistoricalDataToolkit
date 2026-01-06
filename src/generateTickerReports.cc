@@ -24,14 +24,22 @@
 #include "ReportingFunctions.h"
 #include "PlottingFunctions.h"
 
+//==============================================================================
+enum DataType{
+  DateData = 0,
+  NumericalData,
+  DATA_TYPE
+};
 
 //==============================================================================
 struct JsonMetaData{
   //std::string ticker;
   const nlohmann::ordered_json& jsonData;
+  std::string jsonDataName;
   std::vector<std::string> address;
   std::string fieldName;
   std::string dateName;
+  DataType type;
   bool isArray;
   JsonMetaData(const nlohmann::ordered_json &jsonTable)
     :jsonData(jsonTable){};
@@ -203,15 +211,16 @@ void formatJsonFieldAsLabel(std::string &nameUpd){
 }
 
 //==============================================================================
-void extractDataVector(const JsonMetaData &jsonMetaData,
+DataType extractDataVector(const JsonMetaData &jsonMetaData,
                       std::vector< double >& dataUpd)
 {
+  DataType typeOfData = DataType::DATA_TYPE;
   nlohmann::json::value_t dataType = 
     JsonFunctions::getDataType( jsonMetaData.jsonData, 
                                 jsonMetaData.address,
                                 jsonMetaData.fieldName.c_str(),
                                 jsonMetaData.isArray);
-
+  
   //If the data is a series of numbers                                
   if(    (dataType == nlohmann::json::value_t::number_float) 
       || (dataType == nlohmann::json::value_t::number_integer)
@@ -223,6 +232,8 @@ void extractDataVector(const JsonMetaData &jsonMetaData,
                                       jsonMetaData.fieldName.c_str(),
                                       jsonMetaData.isArray,
                                       dataUpd);
+    typeOfData = DataType::NumericalData;
+
   }else if(dataType == nlohmann::json::value_t::string){
     //Get one element. Check to see if it is a date
     std::vector< std::string > stringTest;
@@ -246,7 +257,7 @@ void extractDataVector(const JsonMetaData &jsonMetaData,
                         jsonMetaData.fieldName.c_str(),
                         settings,
                         dataUpd);
-
+      typeOfData = DataType::DateData;
     }else{
       JsonFunctions::StringConversionSettings settings(
           JsonFunctions::StringConversion::StringToFloat,
@@ -257,13 +268,16 @@ void extractDataVector(const JsonMetaData &jsonMetaData,
                         jsonMetaData.address,
                         jsonMetaData.fieldName.c_str(),
                         settings,
-                        dataUpd);                                          
+                        dataUpd);     
+      typeOfData = DataType::NumericalData;                                     
     }  
   }else{
     std::cout << "Error: Unrecognized json type"
               << std::endl;
     std::abort();
-  }                              
+  }
+  
+  return typeOfData;
 };
 
 //==============================================================================
@@ -393,16 +407,19 @@ void updatePlotArray(
 
         if(jsonData.compare("fundamentalData")==0){
           JsonMetaData jsonMetaData(fundamentalData);
+          jsonMetaData.jsonDataName = std::string("fundamentalData");
           jsonMetaDataVector.push_back(jsonMetaData);
-
+          
 
         }else if(jsonData.compare("historicalData")==0){
           JsonMetaData jsonMetaData(historicalData);
+          jsonMetaData.jsonDataName = std::string("historicalData");
           jsonMetaDataVector.push_back(jsonMetaData);
 
 
         }else if(jsonData.compare("calculateData")==0){
           JsonMetaData jsonMetaData(calculateData);
+          jsonMetaData.jsonDataName = std::string("calculateData");
           jsonMetaDataVector.push_back(jsonMetaData);
 
         }else{
@@ -456,20 +473,22 @@ void updatePlotArray(
     std::vector<double> xDate;
     std::vector<double> yTmp;
     std::vector<double> yDate;
-    
+
+    DataType xDataType = extractDataVector(jsonMetaDataVector[0],xTmp);
+    DataType yDataType =  extractDataVector(jsonMetaDataVector[1],yTmp);    
+
+
     if(jsonMetaDataVector[0].dateName.size()>0){
       JsonMetaData jmd(jsonMetaDataVector[0]);
       jmd.fieldName=jsonMetaDataVector[0].dateName;
-      extractDataVector(jmd,xDate);
+      DataType typeOfDataTmp = extractDataVector(jmd,xDate);
     }
     if(jsonMetaDataVector[1].dateName.size()>0){
       JsonMetaData jmd(jsonMetaDataVector[1]);
       jmd.fieldName=jsonMetaDataVector[1].dateName;
-      extractDataVector(jmd,yDate);
+      DataType typeOfDataTmp = extractDataVector(jmd,yDate);
     }
 
-    extractDataVector(jsonMetaDataVector[0],xTmp);
-    extractDataVector(jsonMetaDataVector[1],yTmp);    
 
     if(xDate.size() > 0 && yDate.size() > 0 && xTmp.size() != yTmp.size()){
       
@@ -513,8 +532,15 @@ void updatePlotArray(
     size_t i=0;
     while(i < xTmp.size()){
       if(std::isnan(xTmp[i]) || std::isnan(yTmp[i])){
-        xTmp.erase(xTmp.begin()+i);
+        xTmp.erase(xTmp.begin()+i);        
         yTmp.erase(yTmp.begin()+i);
+        
+        if(xDate.size()>0){
+          xDate.erase(xDate.begin()+i);
+        }
+        if(yDate.size()>0){
+          yDate.erase(yDate.begin()+i);
+        }
       }else{
         ++i;
       }
@@ -603,32 +629,25 @@ void updatePlotArray(
     }
 
 
+    if(xTmp.size()>0 && yTmp.size()>0 && xTmp.size()==yTmp.size()){
+      //
+      // get the index of the most recent data.
+      //
+      int indexOfMostRecentData=-1;
+      if(xDate.size()>0){
+        auto iter = std::max_element(xDate.rbegin(), xDate.rend()).base();
+        indexOfMostRecentData = std::distance(xDate.begin(), std::prev(iter));
 
-    //Get Box and Whisker Settings
-    PlottingFunctions::BoxAndWhiskerSettings boxWhiskerSettings;
-    tmp = JsonFunctions::getJsonFloat(
-        plotConfig.value()["boxWhiskerPosition"],false);
-    if(tmp >= 0){
-      boxWhiskerSettings.xOffsetFromStart=tmp;
-    }else{
-      boxWhiskerSettings.xOffsetFromEnd = std::abs(tmp);
-    }
+      }else if(xDataType == DataType::DateData){
+        auto iter = std::max_element(xTmp.rbegin(), xTmp.rend()).base();
+        indexOfMostRecentData = std::distance(xTmp.begin(), std::prev(iter));
 
-    JsonFunctions::getJsonString(plotConfig.value()["boxWhiskerColor"],
-                                 boxWhiskerSettings.boxWhiskerColour);
-
-    if(addLine){                                 
-      boxWhiskerSettings.currentValueColour = lineSettings.colour;
-    }else if(addPoints){
-      boxWhiskerSettings.currentValueColour = pointSettings.colour;
-    }else{
-      boxWhiskerSettings.currentValueColour = "cyan";
-    }
-
-
-
-
-    if(xTmp.size()>0 && yTmp.size()>0){
+      }else if(yDataType == DataType::DateData){
+        auto iter = std::max_element(yTmp.rbegin(), yTmp.rend()).base();
+        indexOfMostRecentData = std::distance(yTmp.begin(), std::prev(iter));
+        
+      }
+    
       //
       // update the axes as necessary
       //
@@ -700,6 +719,47 @@ void updatePlotArray(
         axisSettings[indexRow][indexColumn].isYMinFixed=true;  
         axisSettings[indexRow][indexColumn].yMin =yMinConfig;
       }
+
+      //
+      //Get Box and Whisker Settings
+      //
+      PlottingFunctions::BoxAndWhiskerSettings boxWhiskerSettings;
+
+      boxWhiskerSettings.indexOfMostRecentData=indexOfMostRecentData;
+      
+      if(plotConfig.value().contains("boxWhiskerPosition")){
+        tmp = JsonFunctions::getJsonFloat(
+            plotConfig.value()["boxWhiskerPosition"],false);
+
+        if(tmp >= 0){
+          boxWhiskerSettings.xOffsetFromStart=tmp;
+        }else{
+          boxWhiskerSettings.xOffsetFromEnd = std::abs(tmp);
+        }      
+      }
+
+      if(plotConfig.value().contains("boxWhiskerPositionPercentage")){
+        tmp = JsonFunctions::getJsonFloat(
+            plotConfig.value()["boxWhiskerPositionPercentage"],false);
+
+        if(tmp >= 0){
+          boxWhiskerSettings.xOffsetFromStart=tmp*(xMaxData-xMinData);
+        }else{
+          boxWhiskerSettings.xOffsetFromEnd = std::abs(tmp)*(xMaxData-xMinData);
+        }      
+      }
+
+
+      JsonFunctions::getJsonString(plotConfig.value()["boxWhiskerColor"],
+                                  boxWhiskerSettings.boxWhiskerColour);
+
+      if(addLine){                                 
+        boxWhiskerSettings.currentValueColour = lineSettings.colour;
+      }else if(addPoints){
+        boxWhiskerSettings.currentValueColour = pointSettings.colour;
+      }else{
+        boxWhiskerSettings.currentValueColour = "cyan";
+      }      
 
 
       PlottingFunctions::updatePlot(
