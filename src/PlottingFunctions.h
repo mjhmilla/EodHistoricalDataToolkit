@@ -22,8 +22,17 @@ public:
 
   struct LineSettings{
     std::string colour;
-    std::string name;
+    std::string name;    
     double lineWidth;
+    LineSettings():colour(""),name(""),lineWidth(-1){};
+  };
+
+  struct PointSettings{
+    std::string colour;
+    std::string name;    
+    double pointSize;
+    int pointType;
+    PointSettings():colour(""),name(""),pointSize(-1),pointType(-1){};
   };
 
   struct BoxAndWhiskerSettings{
@@ -310,6 +319,7 @@ public:
       const std::vector< double > &yV,
       const PlottingFunctions::PlotSettings &plotSettings,    
       const LineSettings &lineSettings,
+      const PointSettings &pointSettings,
       AxisSettings &axisSettingsUpd,
       const BoxAndWhiskerSettings &boxAndWhiskerSettings,
       sciplot::Plot2D &plotMetricUpd,
@@ -347,11 +357,21 @@ public:
                   metricSummaryStatistics);
       metricSummaryStatistics.current = yV[yV.size()-1];
 
-      plotMetricUpd.drawCurve(xSci,ySci)
-        .label(lineSettings.name)
-        .lineColor(lineSettings.colour)
-        .lineWidth(lineSettings.lineWidth);
-      
+      if(lineSettings.lineWidth > 0){
+        plotMetricUpd.drawCurve(xSci,ySci)
+          .label(lineSettings.name)
+          .lineColor(lineSettings.colour)
+          .lineWidth(lineSettings.lineWidth);
+      }
+      if(pointSettings.pointSize > 0){
+        plotMetricUpd.drawPoints(xSci,ySci)
+          .label(pointSettings.name)
+          .pointType(pointSettings.pointType)
+          .pointSize(pointSettings.pointSize)
+          .lineColor(pointSettings.colour)
+          .lineWidth(pointSettings.pointSize)
+          .label(pointSettings.name);
+      }
 
       std::vector< double > xRange,yRange;
       PlottingFunctions::getDataRange(xV,xRange,1.0);

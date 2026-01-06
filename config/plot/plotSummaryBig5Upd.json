@@ -48,7 +48,7 @@
             "isArray": true,
             "legendEntry": "@PrimaryTickerLaTeX - trend",
             "lineColor": "magenta",
-            "lineWidth": 1.0,
+            "lineWidth": 1.0,                     
             "xAxisLabel": "Years",
             "yAxisLabel": "Adjusted Close (@CurrencyCodeLaTeX)",
             "xMin": null,

@@ -468,17 +468,43 @@ void updatePlotArray(
 
 
     //Get the LineSettings
-    PlottingFunctions::LineSettings lineSettings;
-    JsonFunctions::getJsonString(plotConfig.value()["lineColor"],
-                                    lineSettings.colour);
+    bool addLine = plotConfig.value().contains("lineWidth");
+    PlottingFunctions::LineSettings lineSettings;        
+    if(addLine){
+      JsonFunctions::getJsonString(plotConfig.value()["lineColor"],
+                                      lineSettings.colour);
 
-    JsonFunctions::getJsonString(plotConfig.value()["legendEntry"],
-                                    lineSettings.name); 
+      JsonFunctions::getJsonString(plotConfig.value()["legendEntry"],
+                                      lineSettings.name); 
 
-    findReplaceKeywords(lineSettings.name,keywords,replacements);
+      lineSettings.lineWidth = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["lineWidth"],false);
 
-    lineSettings.lineWidth = 
-      JsonFunctions::getJsonFloat(plotConfig.value()["lineWidth"],false);
+      findReplaceKeywords(lineSettings.name,keywords,replacements);
+    }
+
+    bool addPoints = plotConfig.value().contains("pointSize");
+    PlottingFunctions::PointSettings pointSettings;        
+    if(addPoints){
+      JsonFunctions::getJsonString(plotConfig.value()["pointColor"],
+                                   pointSettings.colour);
+
+      JsonFunctions::getJsonString(plotConfig.value()["legendEntry"],
+                                   pointSettings.name); 
+
+      pointSettings.pointSize = 
+        JsonFunctions::getJsonFloat(plotConfig.value()["pointSize"],false);
+      
+      pointSettings.pointType = static_cast<int>(
+          JsonFunctions::getJsonFloat(plotConfig.value()["pointType"],false)
+        );
+    
+
+      findReplaceKeywords(pointSettings.name,keywords,replacements);
+    }
+
+
+
 
     //Get SubplotSettings
     PlottingFunctions::SubplotSettings subplotSettings;
@@ -537,7 +563,13 @@ void updatePlotArray(
     JsonFunctions::getJsonString(plotConfig.value()["boxWhiskerColor"],
                                  boxWhiskerSettings.boxWhiskerColour);
 
-    boxWhiskerSettings.currentValueColour = lineSettings.colour;
+    if(addLine){                                 
+      boxWhiskerSettings.currentValueColour = lineSettings.colour;
+    }else if(addPoints){
+      boxWhiskerSettings.currentValueColour = pointSettings.colour;
+    }else{
+      boxWhiskerSettings.currentValueColour = "cyan";
+    }
 
 
 
@@ -621,6 +653,7 @@ void updatePlotArray(
           yTmp,
           plotSettingsUpd,
           lineSettings,
+          pointSettings,
           axisSettings[indexRow][indexColumn],
           boxWhiskerSettings,
           matrixOfPlots[subplotSettings.indexRow][subplotSettings.indexColumn],
