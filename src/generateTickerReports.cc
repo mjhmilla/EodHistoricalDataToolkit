@@ -362,7 +362,9 @@ void updatePlotArray(
           && plotConfig.value().contains("jsonData_x") 
           && plotConfig.value().contains("address_x")
           && plotConfig.value().contains("fieldName_x")
-          && plotConfig.value().contains("fieldName_y")){
+          && plotConfig.value().contains("fieldName_y")
+          && !plotConfig.value().contains("jsonData_y")
+          && !plotConfig.value().contains("address_y")){
         //The x and y fields have the values for jsonData and address. Copy 
         //these over
         size_t indexEnd = jsonMetaDataVector.size()-1;
@@ -426,6 +428,13 @@ void updatePlotArray(
 
         jsonMetaDataVector[indexEnd].isArray = 
           JsonFunctions::getJsonBool(plotConfig.value()["isArray"]);
+
+        if(plotConfig.value().contains("dateName"+coordStr)){
+          std::string dateName;
+          JsonFunctions::getJsonString(plotConfig.value()["dateName"+coordStr],
+                                      dateName);
+          jsonMetaDataVector[indexEnd].dateName = dateName;
+        }
       }
 
     }
@@ -444,10 +453,55 @@ void updatePlotArray(
 
     //Get the data
     std::vector<double> xTmp;
+    std::vector<double> xDate;
     std::vector<double> yTmp;
+    std::vector<double> yDate;
+    
+    if(jsonMetaDataVector[0].dateName.size()>0){
+      JsonMetaData jmd(jsonMetaDataVector[0]);
+      jmd.fieldName=jsonMetaDataVector[0].dateName;
+      extractDataVector(jmd,xDate);
+    }
+    if(jsonMetaDataVector[1].dateName.size()>0){
+      JsonMetaData jmd(jsonMetaDataVector[1]);
+      jmd.fieldName=jsonMetaDataVector[1].dateName;
+      extractDataVector(jmd,yDate);
+    }
 
     extractDataVector(jsonMetaDataVector[0],xTmp);
     extractDataVector(jsonMetaDataVector[1],yTmp);    
+
+    if(xDate.size() > 0 && yDate.size() > 0 && xTmp.size() != yTmp.size()){
+      
+      std::vector< double > xTmpUpd;
+      std::vector< double > yTmpUpd;
+
+      size_t jPrev =0;
+      for(size_t i = 0; i < xDate.size(); ++i){
+        size_t j=jPrev;
+        double dateErr = 1.0;
+        bool found = false;
+        while(!found && j < yDate.size()){
+          dateErr = xDate[i]-yDate[j];                    
+          if(std::abs(dateErr) > 0.05){
+            found = false;
+            ++j;
+          }else{
+            found=true;
+          }
+        }
+        jPrev=j;
+        if(found){
+          xTmpUpd.push_back(xTmp[i]);
+          yTmpUpd.push_back(yTmp[j]);
+        }
+      }
+      xTmp.clear();
+      yTmp.clear();
+      xTmp = xTmpUpd;
+      yTmp = yTmpUpd;
+
+    }
 
     if(xTmp.size() != yTmp.size()){
       std::cout << "Error: x and y data series do not have matching sizes"
@@ -717,8 +771,7 @@ bool generateLaTeXReport(
     const nlohmann::ordered_json &fundamentalData,
     const nlohmann::ordered_json &historicalData,
     const nlohmann::ordered_json &calculateData,
-    const char* plotFileName,
-    const char* plotDebuggingFileName,
+    const std::vector< std::string > &plotFileNames,
     const char* outputReportPath,
     bool replaceNansWithMissingData,
     bool verbose)
@@ -1024,28 +1077,16 @@ bool generateLaTeXReport(
 
     latexReport << std::endl;
 
-
-    latexReport << "\\includegraphics{" 
-                <<      plotFileName << "}\\\\" << std::endl;
-    latexReport << companyNameString
-                << " (" << primaryTickerString <<") "
-                << tickerMetaData.country << " ( \\url{" << webURL << "} )\\\\"
-                << std::endl;
-    latexReport << std::endl;
-    latexReport << "\\break"          << std::endl;
-    //latexReport << "\\newpage"        << std::endl;
-
-
-    latexReport << "\\includegraphics{" 
-                <<      plotDebuggingFileName << "}\\\\" << std::endl;
-    latexReport << companyNameString
-                << " (" << primaryTickerString <<") "
-                << tickerMetaData.country << " ( \\url{" << webURL << "} )"
-                << " Detailed data\\\\" << std::endl;                
-    latexReport << std::endl;
-    
-    latexReport << "\\break"          << std::endl;
-    //latexReport << "\\newpage"        << std::endl;
+    for(auto &el : plotFileNames){
+      latexReport << "\\includegraphics{" 
+                  <<      el << "}\\\\" << std::endl;
+      latexReport << companyNameString
+                  << " (" << primaryTickerString <<") "
+                  << tickerMetaData.country << " ( \\url{" << webURL << "} )\\\\"
+                  << std::endl;
+      latexReport << std::endl;
+      latexReport << "\\break"          << std::endl;
+    }
 
 
     latexReport << "\\begin{multicols}{2}" << std::endl;
@@ -1556,10 +1597,10 @@ int main (int argc, char* argv[]) {
   std::string calculateDataFolder;
   std::string fundamentalFolder;
   std::string historicalFolder;
+  std::string jsonConfigurationFilePath;
   std::string plotSummaryConfigurationFilePath;  
   std::string plotOverviewConfigurationFilePath;  
   std::string reportFolder;
-  std::string dateOfTable;
 
   std::string singleFileToEvaluate;
 
@@ -1607,10 +1648,12 @@ int main (int argc, char* argv[]) {
       false,"","string");
     cmd.add(singleFileToEvaluateInput);    
 
-    TCLAP::ValueArg<std::string> dateOfTableInput("d","date", 
-      "Date used to produce the dicounted cash flow model detailed output.",
-      false,"","string");
-    cmd.add(dateOfTableInput);
+    TCLAP::ValueArg<std::string> jsonConfigurationFilePathInput("c",
+      "json_configuration_file", 
+      "The path to the json file that contains configuration data for "
+      "generateTickerReports",
+      true,"","string");
+    cmd.add(jsonConfigurationFilePathInput);    
 
     TCLAP::ValueArg<std::string> plotSummaryConfigurationFilePathInput("s",
       "summary_plot_configuration", 
@@ -1637,6 +1680,7 @@ int main (int argc, char* argv[]) {
 
     singleFileToEvaluate     = singleFileToEvaluateInput.getValue();
     exchangeCode             = exchangeCodeInput.getValue();  
+    jsonConfigurationFilePath = jsonConfigurationFilePathInput.getValue();
     plotSummaryConfigurationFilePath 
                             = plotSummaryConfigurationFilePathInput.getValue();      
     plotOverviewConfigurationFilePath 
@@ -1645,7 +1689,6 @@ int main (int argc, char* argv[]) {
     fundamentalFolder        = fundamentalFolderInput.getValue();
     historicalFolder         = historicalFolderInput.getValue();    
     reportFolder             = reportFolderOutput.getValue();
-    dateOfTable              = dateOfTableInput.getValue();
     gapFill                  = gapFillInput.getValue();
     verbose                  = verboseInput.getValue();
 
@@ -1656,10 +1699,7 @@ int main (int argc, char* argv[]) {
       std::cout << "  Single file name to evaluate" << std::endl;
       std::cout << "    " << singleFileToEvaluate << std::endl;
 
-      if(dateOfTable.length()>0){
-        std::cout << "  Date used to calculate tabular output" << std::endl;
-        std::cout << "    " << dateOfTable << std::endl;
-      }
+
 
       std::cout << "  Calculate Data Input Folder" << std::endl;
       std::cout << "    " << calculateDataFolder << std::endl;
@@ -1672,6 +1712,9 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  Report Folder" << std::endl;
       std::cout << "    " << reportFolder << std::endl;  
+
+      std::cout << "  Json Configuration File" << std::endl;
+      std::cout << "    " << jsonConfigurationFilePath << std::endl;   
 
       std::cout << "  Summary Plot Configuration File" << std::endl;
       std::cout << "    " << plotSummaryConfigurationFilePath << std::endl;   
@@ -1691,9 +1734,46 @@ int main (int argc, char* argv[]) {
 
   bool replaceNansWithMissingData = true;
 
-  //PlottingFunctions::PlotSettings plotSettings;
-  //std::vector< std::vector < std::string > > subplotMetricNames;
-  //readConfigurationFile(plotSummaryConfigurationFilePath,subplotMetricNames);
+  //Load the configuration file
+  nlohmann::ordered_json config;
+  bool loadedConfig = 
+    JsonFunctions::loadJsonFile(jsonConfigurationFilePath,
+                                config,
+                                verbose);
+
+  std::filesystem::path configFilePath(jsonConfigurationFilePath);
+  std::filesystem::path configPath(configFilePath.parent_path());
+
+  std::vector< nlohmann::ordered_json > plotSetConfig;
+  //std::vector< std::filesystem::path > plotConfigFilePath;
+
+  for( auto &plotItem : config["plots"].items()){
+    std::filesystem::path plotItemConfigFilePath(configPath);
+    for( auto &pathItem : plotItem.value()["localPath"].items()){
+      std::string folderName;
+      JsonFunctions::getJsonString(pathItem.value(),folderName);
+      plotItemConfigFilePath.append(folderName);
+    }
+    std::string fileName;
+    JsonFunctions::getJsonString(plotItem.value()["fileName"],fileName);
+    plotItemConfigFilePath.append(fileName);
+
+    nlohmann::ordered_json plotItemConfig;
+    bool loadedPlotData = 
+      JsonFunctions::loadJsonFile(plotItemConfigFilePath.string(),
+                                  plotItemConfig, 
+                                  verbose);
+    if(!loadedConfig){
+      std::cout << "Error: could not load " 
+                << plotItemConfigFilePath.string()
+                << " that appears in "
+                << jsonConfigurationFilePath
+                << std::endl;
+      std::abort();
+    }else{
+      plotSetConfig.push_back(plotItemConfig);
+    }                                         
+  }
 
   //Load the summary plot configuration
   nlohmann::ordered_json summaryPlotConfig;
@@ -1855,6 +1935,46 @@ int main (int argc, char* argv[]) {
         if(!isTickerProcessed 
           && tickerMetaData.companyName.length() > 0){
 
+          std::vector< std::string > pathToPlots;
+          for(auto &plotItemConfig : plotSetConfig){
+            //std::filesystem::path outputPlotFilePath = outputFolderPath;                  
+            PlottingFunctions::PlotSettings plotSettings;
+            std::vector< std::vector< sciplot::Plot2D >> plots;
+
+            updatePlotArray(
+              plots,
+              plotSettings,
+              tickerMetaData,
+              fundamentalData,
+              historicalData,
+              calculateData,
+              plotItemConfig,
+              keywords,
+              replacements,
+              verbose);
+
+            std::string title;
+            JsonFunctions::getJsonString( plotItemConfig["settings"]["title"],
+                                          title);
+            findReplaceKeywords(title, keywords,replacements);                                        
+
+            std::string plotFileName;
+            JsonFunctions::getJsonString( plotItemConfig["settings"]["fileName"],
+                                          plotFileName);                                        
+            findReplaceKeywords(plotFileName, keywords,replacements); 
+
+            std::filesystem::path outputPlotFilePath(outputFolderPath);          
+            outputPlotFilePath.append(plotFileName);
+
+            PlottingFunctions::writePlot(
+                      plots,
+                      plotSettings,
+                      title,
+                      outputPlotFilePath.c_str()); 
+
+            pathToPlots.push_back(outputPlotFilePath);                               
+          }
+          /*
           std::filesystem::path outputPlotFilePath = outputFolderPath;                  
           PlottingFunctions::PlotSettings plotSettingsSummary;
           std::vector< std::vector< sciplot::Plot2D >> summaryPlots;
@@ -1924,7 +2044,7 @@ int main (int argc, char* argv[]) {
                     plotSettingsOverview,
                     titleOverview,
                     outputOverviewPlotFilePath.c_str());
-
+          */
 
           std::filesystem::path outputReportFilePath = outputFolderPath;
           std::string reportFileName(tickerFolderName);
@@ -1939,8 +2059,7 @@ int main (int argc, char* argv[]) {
               fundamentalData,
               historicalData,
               calculateData,
-              plotSummaryFileName.c_str(),
-              plotOverviewFileName.c_str(),
+              pathToPlots,
               outputReportFilePath.c_str(),    
               replaceNansWithMissingData,
               false); 

@@ -1,0 +1,29 @@
+{
+    "plots":
+    {
+        "0":
+        {
+            "localPath":
+            [
+                "plot"
+            ],
+            "fileName": "plotOverviewBig5Upd.json"
+        },
+        "1":
+        {
+            "localPath":
+            [
+                "plot"
+            ],
+            "fileName": "plotSummaryBig5Upd.json"
+        },
+        "2":
+        {
+            "localPath":
+            [
+                "plot"
+            ],
+            "fileName": "plotFreeCashFlowShareholderYield.json"
+        }
+    }
+}
