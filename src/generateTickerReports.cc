@@ -320,8 +320,8 @@ void updatePlotArray(
   //which causes sciplot to plot a blank.
   std::vector< double > xEmpty;
   std::vector< double > yEmpty;
-  double xDelta=0.01;
-  double yDelta=0.01;
+  double xDelta=0.0; //Set to 0.01 before so that the axis were widened a bit
+  double yDelta=0.0;
 
   xEmpty.push_back(std::numeric_limits<double>::infinity());
   xEmpty.push_back(-std::numeric_limits<double>::infinity());
@@ -644,9 +644,16 @@ void updatePlotArray(
 
       }else if(yDataType == DataType::DateData){
         auto iter = std::max_element(yTmp.rbegin(), yTmp.rend()).base();
-        indexOfMostRecentData = std::distance(yTmp.begin(), std::prev(iter));
-        
+        indexOfMostRecentData = std::distance(yTmp.begin(), std::prev(iter));        
       }
+
+      DataStructures::SummaryStatistics metricSummaryStatistics;
+      bool validSummaryStats = 
+        NumericalFunctions::extractSummaryStatistics(yTmp,
+                            metricSummaryStatistics);
+      metricSummaryStatistics.current = std::nan("1");
+      metricSummaryStatistics.current = yTmp[indexOfMostRecentData];
+
     
       //
       // update the axes as necessary
@@ -665,6 +672,7 @@ void updatePlotArray(
         JsonFunctions::getJsonFloat(plotConfig.value()["yMax"], false);
       double yMinConfig = 
         JsonFunctions::getJsonFloat(plotConfig.value()["yMin"], false);
+      
 
       if(std::isnan(xMaxConfig)){
         axisSettings[indexRow][indexColumn].isXMaxFixed=false;
@@ -676,8 +684,13 @@ void updatePlotArray(
         }
       }else{
         axisSettings[indexRow][indexColumn].isXMaxFixed=true;  
-        axisSettings[indexRow][indexColumn].xMax = xMaxConfig;
+        axisSettings[indexRow][indexColumn].xMax = xMaxConfig;        
       }
+      if(xDataType != DataType::DateData){
+        axisSettings[indexRow][indexColumn].xMax
+          = NumericalFunctions::roundToNearest(
+              axisSettings[indexRow][indexColumn].xMax, 3);
+      }     
 
       if(std::isnan(xMinConfig)){
         axisSettings[indexRow][indexColumn].isXMinFixed=false;
@@ -687,24 +700,34 @@ void updatePlotArray(
           axisSettings[indexRow][indexColumn].xMin = 
             std::min(axisSettings[indexRow][indexColumn].xMin,xMinData);
         }
-      }else{
+      }else{      
         axisSettings[indexRow][indexColumn].isXMinFixed=true;  
-        axisSettings[indexRow][indexColumn].xMin =xMinConfig;
+        axisSettings[indexRow][indexColumn].xMin =xMinConfig;        
       }
+      if(xDataType != DataType::DateData){
+        axisSettings[indexRow][indexColumn].xMin 
+          = NumericalFunctions::roundToNearest(
+              axisSettings[indexRow][indexColumn].xMin, 3);
+      }        
 
       if(std::isnan(yMaxConfig)){
         axisSettings[indexRow][indexColumn].isYMaxFixed=false;
         if(std::isnan(axisSettings[indexRow][indexColumn].yMax)){
           axisSettings[indexRow][indexColumn].yMax = yMaxData+yDelta;
-        }else{
+        }else{          
           axisSettings[indexRow][indexColumn].yMax = 
-            std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData)
-            +yDelta;
+            std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData+yDelta);
         }
       }else{
         axisSettings[indexRow][indexColumn].isYMaxFixed=true;  
         axisSettings[indexRow][indexColumn].yMax = yMaxConfig;
       }
+      if(yDataType != DataType::DateData){
+        axisSettings[indexRow][indexColumn].yMax 
+          = NumericalFunctions::roundToNearest(
+              axisSettings[indexRow][indexColumn].yMax, 3);
+      }
+
 
       if(std::isnan(yMinConfig)){
         axisSettings[indexRow][indexColumn].isYMinFixed=false;
@@ -712,20 +735,39 @@ void updatePlotArray(
           axisSettings[indexRow][indexColumn].yMin = yMinData-yDelta;
         }else{
           axisSettings[indexRow][indexColumn].yMin = 
-            std::min(axisSettings[indexRow][indexColumn].yMin,yMinData)
-            -yDelta;
+            std::min(axisSettings[indexRow][indexColumn].yMin,yMinData-yDelta);
         }
       }else{
         axisSettings[indexRow][indexColumn].isYMinFixed=true;  
         axisSettings[indexRow][indexColumn].yMin =yMinConfig;
       }
+      if(yDataType != DataType::DateData){
+        axisSettings[indexRow][indexColumn].yMin 
+          = NumericalFunctions::roundToNearest(
+              axisSettings[indexRow][indexColumn].yMin, 3);
+      }
 
+
+      if(!std::isnan(xMaxData) && !std::isnan(xMinData)){
+          if(xDataType==DataType::DateData){
+            plotSettingsUpd.xticMinimumIncrement = 
+              std::round((axisSettings[indexRow][indexColumn].xMax
+                        - axisSettings[indexRow][indexColumn].xMin)/5.0);
+          }else{
+            plotSettingsUpd.xticMinimumIncrement = 
+              std::round((axisSettings[indexRow][indexColumn].xMax
+                        - axisSettings[indexRow][indexColumn].xMin)/2.0);
+            //plotSettingsUpd.xticMinimumIncrement = 
+            //  NumericalFunctions::roundToNearest(
+            //      plotSettingsUpd.xticMinimumIncrement, 3);
+               
+          }
+      }      
       //
       //Get Box and Whisker Settings
       //
       PlottingFunctions::BoxAndWhiskerSettings boxWhiskerSettings;
 
-      boxWhiskerSettings.indexOfMostRecentData=indexOfMostRecentData;
       
       if(plotConfig.value().contains("boxWhiskerPosition")){
         tmp = JsonFunctions::getJsonFloat(
@@ -762,9 +804,11 @@ void updatePlotArray(
       }      
 
 
+
       PlottingFunctions::updatePlot(
           xTmp,
           yTmp,
+          metricSummaryStatistics,
           plotSettingsUpd,
           lineSettings,
           pointSettings,

@@ -233,7 +233,23 @@ class NumericalFunctions {
       return (1.0 - (numerator/denominator));
 
     };
-
+    //==========================================================================
+    static double roundToNearest(double value, int nearestLeadingDigit){
+      double valueRounded = value;
+      if(std::abs(value) > 0){
+        double valueSign = (value < 0)? -1.0 : 1.0;
+        double valueAbs = std::abs(value);
+        double vLog10 = std::floor(std::log10(valueAbs));
+        if(vLog10 > nearestLeadingDigit){
+          double den    = vLog10 - (static_cast<double>(nearestLeadingDigit)-1.0);
+          valueRounded = std::round(valueAbs / std::pow(10.0, den));
+          valueRounded = valueRounded * valueSign * std::pow(10.0,den);
+        }else{
+          valueRounded = value;
+        }
+      }
+      return valueRounded;
+    }
     //==========================================================================
     static void fitCyclicalModel(
                   const std::vector< double > &x,

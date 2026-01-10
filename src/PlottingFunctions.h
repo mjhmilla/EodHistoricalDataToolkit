@@ -40,13 +40,11 @@ public:
     double xOffsetFromEnd;
     std::string boxWhiskerColour;
     std::string currentValueColour;
-    int indexOfMostRecentData;
     BoxAndWhiskerSettings():
       xOffsetFromStart(std::nan("1")),
       xOffsetFromEnd(std::nan("1")),  
       boxWhiskerColour("blue"),
-      currentValueColour("black"),
-      indexOfMostRecentData(-1){};
+      currentValueColour("black"){};
   };
 
 
@@ -321,6 +319,7 @@ public:
   static void updatePlot(
       const std::vector< double > &xV,
       const std::vector< double > &yV,
+      const DataStructures::SummaryStatistics &metricSummaryStatistics,
       const PlottingFunctions::PlotSettings &plotSettings,    
       const LineSettings &lineSettings,
       const PointSettings &pointSettings,
@@ -353,18 +352,6 @@ public:
         }
       }
 
-
-      DataStructures::SummaryStatistics metricSummaryStatistics;
-      //metricSummaryStatistics.name=dataName;
-      bool validSummaryStats = 
-        NumericalFunctions::extractSummaryStatistics(yV,
-                  metricSummaryStatistics);
-      if(boxAndWhiskerSettings.indexOfMostRecentData >= 0){                  
-        metricSummaryStatistics.current 
-          = yV[boxAndWhiskerSettings.indexOfMostRecentData];
-      }else{
-        metricSummaryStatistics.current = std::nan("1");
-      }
 
       if(lineSettings.lineWidth > 0){
         plotMetricUpd.drawCurve(xSci,ySci)
@@ -425,7 +412,7 @@ public:
       plotMetricUpd.legend().atTopLeft();   
 
       double xWidthBoxAndWhisker = (xDataRange[1]-xDataRange[0])*(1/50.0);
-      if(validSummaryStats){
+      if(!std::isnan(metricSummaryStatistics.median)){
 
         double xPosBoxAndWhisker = xRange[1]+xWidthBoxAndWhisker;
 
@@ -461,7 +448,7 @@ public:
       axisSettingsUpd.xMax = std::max(xRange[1],axisSettingsUpd.xMax);
       axisSettingsUpd.yMin = std::min(yRange[0],axisSettingsUpd.yMin);
       axisSettingsUpd.yMax = std::max(yRange[1],axisSettingsUpd.yMax);
-
+      
 
       plotMetricUpd.xrange(
         static_cast<sciplot::StringOrDouble>(xRange[0]),
@@ -471,10 +458,12 @@ public:
         static_cast<sciplot::StringOrDouble>(yRange[0]),
         static_cast<sciplot::StringOrDouble>(yRange[1]));
 
+      /*
       if((xRange[1]-xRange[0])<5.0){
         plotMetricUpd.xtics().increment(plotSettings.xticMinimumIncrement);
-      }
+      }*/
 
+      /*
       if((xRange[1]-xRange[0]) > 10){
         double xSpan = (xRange[1]-xRange[0]);
         double increment = 1;
@@ -486,11 +475,12 @@ public:
           increment += 5.0;
         }
         }
-
         plotMetricUpd.xtics().increment(increment);
+      }*/
 
+      if(!std::isnan(plotSettings.xticMinimumIncrement)){
+        plotMetricUpd.xtics().increment(plotSettings.xticMinimumIncrement);        
       }
-
 
       PlottingFunctions::configurePlot( plotMetricUpd,
                         axisSettingsUpd.xAxisName,
