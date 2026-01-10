@@ -2971,8 +2971,8 @@ int main (int argc, char* argv[]) {
                                       fcfGrowthModel.datesNumerical);
 
           termNames.push_back("PriestDividendMetrics_dividendYield");
-          termNames.push_back("PriestDividendMetrics_dividendYieldGrowth");
-          termNames.push_back("PriestDividendMetrics_dividendYieldGrowthAvg");
+          termNames.push_back("PriestDividendMetrics_dividendsPaidGrowth");
+          termNames.push_back("PriestDividendMetrics_dividendsPaidGrowthAvg");
           termNames.push_back("PriestDividendMetrics_dividendPayoutRatio");
           termNames.push_back("PriestDividendMetrics_dividendPayoutRatioTrailingAverage");
           termNames.push_back("PriestDividendMetrics_freeCashFlowGrowth");

@@ -749,10 +749,11 @@ void updatePlotArray(
 
 
       if(!std::isnan(xMaxData) && !std::isnan(xMinData)){
-          if(xDataType==DataType::DateData){
-            plotSettingsUpd.xticMinimumIncrement = 
-              std::round((axisSettings[indexRow][indexColumn].xMax
-                        - axisSettings[indexRow][indexColumn].xMin)/5.0);
+          if(xDataType==DataType::DateData 
+              || (xMaxData < 2050 && xMinData > 1930 )){
+            plotSettingsUpd.xticMinimumIncrement = 5; 
+              //std::round((axisSettings[indexRow][indexColumn].xMax
+              //          - axisSettings[indexRow][indexColumn].xMin)/5.0);
           }else{
             plotSettingsUpd.xticMinimumIncrement = 
               std::round((axisSettings[indexRow][indexColumn].xMax

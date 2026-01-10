@@ -1,7 +1,7 @@
 {
     "settings":
     {
-        "rows": 1,
+        "rows": 5,
         "columns": 2,
         "plotWidthCm": 9.0,
         "plotHeightCm": 4.75,
@@ -20,7 +20,7 @@
             [
                 "metric_data"
             ],
-            "fieldName_x": "date",            
+            "fieldName_x": "date",
             "fieldName_y": "priceToValueRevenueToFcf_price_to_value",
             "isArray": false,
             "legendEntry": "Present",
@@ -46,7 +46,7 @@
                 "metric_data"
             ],
             "fieldName_x": "date",
-            "fieldName_y": "priceToValueRevenueToFcf_price_to_value_P25",                        
+            "fieldName_y": "priceToValueRevenueToFcf_price_to_value_P25",
             "isArray": false,
             "legendEntry": "25^{th} Rev. Gr.",
             "lineColor": "red",
@@ -70,7 +70,7 @@
             [
                 "metric_data"
             ],
-            "fieldName_x": "date",            
+            "fieldName_x": "date",
             "fieldName_y": "priceToValueRevenueToFcf_price_to_value_P50",
             "isArray": false,
             "legendEntry": "50^{th} Rev. Gr.",
@@ -95,7 +95,7 @@
             [
                 "metric_data"
             ],
-            "fieldName_x": "date",            
+            "fieldName_x": "date",
             "fieldName_y": "priceToValueRevenueToFcf_price_to_value_P75",
             "isArray": false,
             "legendEntry": "75^{th} Rev. Gr.",
@@ -131,7 +131,7 @@
                 "Cash_Flow",
                 "yearly"
             ],
-            "dateName_y": "date",            
+            "dateName_y": "date",
             "fieldName_y": "freeCashFlow",
             "isArray": false,
             "legendEntry": "Data",
@@ -157,7 +157,7 @@
             [
                 "revenue_to_fcf_model_avg"
             ],
-            "fieldName_x": "x",            
+            "fieldName_x": "x",
             "fieldName_y": "y",
             "isArray": true,
             "legendEntry": "Model",
@@ -172,6 +172,485 @@
             "useLogScale": false,
             "boxWhiskerColor": "blue",
             "boxWhiskerPositionPercentage": -0.05
+        },
+        "revenueGrowth":
+        {
+            "row": 1,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "revenueEmpiricalModel_growth",
+            "isArray": false,
+            "legendEntry": "Emp",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Revenue Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "revenueGrowthAvg":
+        {
+            "row": 1,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "revenueEmpiricalModelAvg_growth",
+            "isArray": false,
+            "legendEntry": "Emp",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Revenue Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },
+        "revenue":
+        {
+            "row": 1,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "revenueEmpiricalModel_value",
+            "isArray": false,
+            "legendEntry": "Fin",
+            "lineColor": "grey20",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Revenue (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey20",
+            "boxWhiskerPosition": -0.5
+        },
+        "revenueEmpirical":
+        {
+            "row": 1,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "revenue_growth_model_recent"
+            ],
+            "fieldName_x": "x",
+            "fieldName_y": "yTrendline",
+            "isArray": true,
+            "legendEntry": "Emp",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Revenue (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "revenueEmpiricalAvg":
+        {
+            "row": 1,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "revenue_growth_model_avg"
+            ],
+            "fieldName_x": "x",
+            "fieldName_y": "yTrendline",
+            "isArray": true,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Revenue (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },
+        "fcfGrowthAvg":
+        {
+            "row": 2,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",            
+            "fieldName_y": "fcfEmpiricalModelAvg_growth",
+            "isArray": false,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "FCF Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },
+        "fcfGrowth":
+        {
+            "row": 2,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",                        
+            "fieldName_y": "fcfEmpiricalModel_growth",
+            "isArray": false,
+            "legendEntry": "Emp",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "FCF Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "fcf":
+        {
+            "row": 2,
+            "column": 1,
+            "jsonData_x": "fundamentalData",
+            "address_x":
+            [
+                "Financials",
+                "Cash_Flow",
+                "yearly"
+            ],
+            "fieldName_x": "date",            
+            "fieldName_y": "freeCashFlow",
+            "isArray": false,
+            "legendEntry": "Fin",
+            "lineColor": "grey20",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "FCF (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey20",
+            "boxWhiskerPosition": -0.5
+        },
+        "fcfEmpiricalAvg":
+        {
+            "row": 2,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "fcf_growth_model_avg"
+            ],
+            "fieldName_x": "x",            
+            "fieldName_y": "yTrendline",
+            "isArray": true,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "FCF (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },
+        "fcfEmpirical":
+        {
+            "row": 2,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "fcf_growth_model_recent"
+            ],
+            "fieldName_x": "x",            
+            "fieldName_y": "yTrendline",
+            "isArray": true,
+            "legendEntry": "Emp",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "FCF (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "dividendsPaidGrowth":
+        {
+            "row": 3,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",            
+            "fieldName_y": "PriestDividendMetrics_dividendsPaidGrowth",
+            "isArray": false,
+            "legendEntry": "Emp",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Dividends Paid Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },        
+        "dividendsPaidGrowthAvg":
+        {
+            "row": 3,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_y": "PriestDividendMetrics_dividendsPaidGrowthAvg",
+            "fieldName_x": "date",
+            "isArray": false,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Dividends Paid Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },
+        "dividendsPaid":
+        {
+            "row": 3,
+            "column": 1,
+            "jsonData_x": "fundamentalData",
+            "address_x":
+            [
+                "Financials",
+                "Cash_Flow",
+                "yearly"
+            ],
+            "fieldName_y": "dividendsPaid",
+            "fieldName_x": "date",
+            "isArray": false,
+            "legendEntry": "Fin",
+            "lineColor": "grey20",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Dividends Paid (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey20",
+            "boxWhiskerPosition": -0.5
+        },
+        "dividendsPaidEmpirical":
+        {
+            "row": 3,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "dividends_paid_growth_model_recent"
+            ],
+            "fieldName_y": "yTrendline",
+            "fieldName_x": "x",
+            "isArray": true,
+            "legendEntry": "Emp",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Dividends Paid (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "dividendsPaidEmpiricalAvg":
+        {
+            "row": 3,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "dividends_paid_growth_model_avg"
+            ],
+            "fieldName_y": "yTrendline",
+            "fieldName_x": "x",
+            "isArray": true,
+            "legendEntry": "Emp Avg",
+            "lineColor": "orange",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Dividends Paid (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },
+        "dividendYield":
+        {
+            "row": 4,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "PriestDividendMetrics_dividendYield",
+            "isArray": false,
+            "legendEntry": "Dividend Y",
+            "lineColor": "blue",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Yield",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "blue",
+            "boxWhiskerPosition": -0.5
+        },
+        "shareholderYield":
+        {
+            "row": 4,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "shareholderYield",
+            "isArray": false,
+            "legendEntry": "Shareholder Y",
+            "lineColor": "magenta",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Yield",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "magenta",
+            "boxWhiskerPosition": -0.5
+        },
+        "dividendToFCF":
+        {
+            "row": 4,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "PriestDividendMetrics_dividendFreeCashFlowRatio",
+            "isArray": false,
+            "legendEntry": "Dividend/FCF",
+            "lineColor": "blue",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Dividend Payout Ratio",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "blue",
+            "boxWhiskerPosition": -0.5
+        },
+        "dividendToEarnings":
+        {
+            "row": 4,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "PriestDividendMetrics_dividendPayoutRatio",
+            "isArray": false,
+            "legendEntry": "Dividend/Earnings",
+            "lineColor": "magenta",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Dividend Payout Ratios",
+            "xMin": null,
+            "xMax": null,
+            "yMin": null,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "magenta",
+            "boxWhiskerPosition": -0.5
         }
     }
 }
