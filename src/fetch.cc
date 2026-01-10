@@ -226,7 +226,7 @@ int main (int argc, char* argv[]) {
       std::cout << "  Output Folder" << std::endl;
       std::cout << "    " << outputFolder << std::endl;
 
-      if(tickerFileListPath.length()==0){
+      if(singleTickerNameToFetch.length()>0){
         std::cout << "  Name of single ticker to fetch" << std::endl;
         std::cout << "    " << singleTickerNameToFetch << std::endl;
       }
@@ -255,7 +255,8 @@ int main (int argc, char* argv[]) {
       FinancialAnalysisFunctions::getPrimaryTickerName(fundamentalDataFolder, 
                                           fileName,
                                           primaryTickerName);
-      if(primaryTickerName.compare(singleTickerNameToFetch) != 0){
+      if(primaryTickerName.compare(singleTickerNameToFetch) != 0 
+         && primaryTickerName.length() > 0){
         tickerNames.push_back(primaryTickerName);
       }                                            
     }

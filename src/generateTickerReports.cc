@@ -1703,8 +1703,8 @@ int main (int argc, char* argv[]) {
   std::string fundamentalFolder;
   std::string historicalFolder;
   std::string jsonConfigurationFilePath;
-  std::string plotSummaryConfigurationFilePath;  
-  std::string plotOverviewConfigurationFilePath;  
+  //std::string plotSummaryConfigurationFilePath;  
+  //std::string plotOverviewConfigurationFilePath;  
   std::string reportFolder;
 
   std::string singleFileToEvaluate;
@@ -1760,17 +1760,17 @@ int main (int argc, char* argv[]) {
       true,"","string");
     cmd.add(jsonConfigurationFilePathInput);    
 
-    TCLAP::ValueArg<std::string> plotSummaryConfigurationFilePathInput("s",
-      "summary_plot_configuration", 
-      "The path to the json file that defines the summary plot.",
-      true,"","string");
-    cmd.add(plotSummaryConfigurationFilePathInput);    
+    //TCLAP::ValueArg<std::string> plotSummaryConfigurationFilePathInput("s",
+    //  "summary_plot_configuration", 
+    //  "The path to the json file that defines the summary plot.",
+    //  true,"","string");
+    //cmd.add(plotSummaryConfigurationFilePathInput);    
 
-    TCLAP::ValueArg<std::string> plotOverviewConfigurationFilePathInput("r",
-      "overview_plot_configuration", 
-      "The path to the json file that defines the overview plot.",
-      true,"","string");
-    cmd.add(plotOverviewConfigurationFilePathInput);        
+    //TCLAP::ValueArg<std::string> plotOverviewConfigurationFilePathInput("r",
+    //  "overview_plot_configuration", 
+    //  "The path to the json file that defines the overview plot.",
+    //  true,"","string");
+    //cmd.add(plotOverviewConfigurationFilePathInput);        
 
     TCLAP::SwitchArg gapFillInput("g","gapfill",
       "Generate ticker reports that appear in calculate data but not"
@@ -1786,10 +1786,10 @@ int main (int argc, char* argv[]) {
     singleFileToEvaluate     = singleFileToEvaluateInput.getValue();
     exchangeCode             = exchangeCodeInput.getValue();  
     jsonConfigurationFilePath = jsonConfigurationFilePathInput.getValue();
-    plotSummaryConfigurationFilePath 
-                            = plotSummaryConfigurationFilePathInput.getValue();      
-    plotOverviewConfigurationFilePath 
-                            = plotOverviewConfigurationFilePathInput.getValue();      
+    //plotSummaryConfigurationFilePath 
+    //                        = plotSummaryConfigurationFilePathInput.getValue();      
+    //plotOverviewConfigurationFilePath 
+    //                        = plotOverviewConfigurationFilePathInput.getValue();      
     calculateDataFolder      = calculateDataFolderInput.getValue();
     fundamentalFolder        = fundamentalFolderInput.getValue();
     historicalFolder         = historicalFolderInput.getValue();    
@@ -1821,11 +1821,11 @@ int main (int argc, char* argv[]) {
       std::cout << "  Json Configuration File" << std::endl;
       std::cout << "    " << jsonConfigurationFilePath << std::endl;   
 
-      std::cout << "  Summary Plot Configuration File" << std::endl;
-      std::cout << "    " << plotSummaryConfigurationFilePath << std::endl;   
+      //std::cout << "  Summary Plot Configuration File" << std::endl;
+      //std::cout << "    " << plotSummaryConfigurationFilePath << std::endl;   
 
-      std::cout << "  Overview Plot Configuration File" << std::endl;
-      std::cout << "    " << plotOverviewConfigurationFilePath << std::endl;                
+      //std::cout << "  Overview Plot Configuration File" << std::endl;
+      //std::cout << "    " << plotOverviewConfigurationFilePath << std::endl;                
 
       std::cout << "  Gapfill mode " << std::endl;
       std::cout << "    " << gapFill << std::endl;      
@@ -1881,6 +1881,7 @@ int main (int argc, char* argv[]) {
   }
 
   //Load the summary plot configuration
+  /*
   nlohmann::ordered_json summaryPlotConfig;
   bool loadedSummaryPlotData = 
     JsonFunctions::loadJsonFile(plotSummaryConfigurationFilePath,
@@ -1905,6 +1906,7 @@ int main (int argc, char* argv[]) {
     std::cout << plotOverviewConfigurationFilePath << std::endl;
     std::abort();
   }
+  */
 
 
 
