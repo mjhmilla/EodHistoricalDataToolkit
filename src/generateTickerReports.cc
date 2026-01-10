@@ -283,6 +283,7 @@ DataType extractDataVector(const JsonMetaData &jsonMetaData,
 //==============================================================================
 void updatePlotArray(
         std::vector< std::vector < sciplot::Plot2D >> &matrixOfPlots,
+        std::vector< std::vector < bool >> &isPlotDirty,
         PlottingFunctions::PlotSettings &plotSettingsUpd,        
         const TickerMetaData &tickerMetaData,
         const nlohmann::ordered_json &fundamentalData,
@@ -307,11 +308,18 @@ void updatePlotArray(
   if(matrixOfPlots.size() != nrows){
     matrixOfPlots.resize(nrows);
     axisSettings.resize(nrows);
+    isPlotDirty.resize(nrows);
   }
   for(size_t i=0; i < nrows; ++i){
     if(matrixOfPlots[i].size() != ncols){
       matrixOfPlots[i].resize(ncols);
       axisSettings[i].resize(ncols);
+      isPlotDirty[i].resize(ncols);
+    }    
+  }
+  for(size_t i=0; i<nrows; ++i){
+    for(size_t j=0; j<ncols; ++j){
+      isPlotDirty[i][j]=false;
     }
   }
 
@@ -629,7 +637,9 @@ void updatePlotArray(
     }
 
 
-    if(xTmp.size()>0 && yTmp.size()>0 && xTmp.size()==yTmp.size()){
+    if(xTmp.size()!=0 && yTmp.size() != 0 && xTmp.size()==yTmp.size()){
+
+    
       //
       // get the index of the most recent data.
       //
@@ -751,7 +761,8 @@ void updatePlotArray(
       if(!std::isnan(xMaxData) && !std::isnan(xMinData)){
           if(xDataType==DataType::DateData 
               || (xMaxData < 2050 && xMinData > 1930 )){
-            plotSettingsUpd.xticMinimumIncrement = 5; 
+            plotSettingsUpd.xticMinimumIncrement = 
+              std::max(1.0,std::round((xMaxData-xMinData)/8));
               //std::round((axisSettings[indexRow][indexColumn].xMax
               //          - axisSettings[indexRow][indexColumn].xMin)/5.0);
           }else{
@@ -819,7 +830,7 @@ void updatePlotArray(
           true,
           verbose);
 
-
+      isPlotDirty[indexRow][indexColumn]=true;
   
     }
   }
@@ -2047,9 +2058,10 @@ int main (int argc, char* argv[]) {
             //std::filesystem::path outputPlotFilePath = outputFolderPath;                  
             PlottingFunctions::PlotSettings plotSettings;
             std::vector< std::vector< sciplot::Plot2D >> plots;
-
+            std::vector< std::vector< bool > > isPlotDirty;
             updatePlotArray(
               plots,
+              isPlotDirty,
               plotSettings,
               tickerMetaData,
               fundamentalData,
@@ -2059,6 +2071,23 @@ int main (int argc, char* argv[]) {
               keywords,
               replacements,
               verbose);
+            
+            //Populate empty plots with some dummy numbers. Otherwise gnuplot
+            //will not generate the plot
+            for(size_t i=0; i<isPlotDirty.size();++i){
+              for(size_t j=0; j<isPlotDirty[i].size();++j){
+                if(!isPlotDirty[i][j]){
+                  sciplot::Vec xTmp(2);
+                  sciplot::Vec yTmp(2);
+                  xTmp[0]=0.;
+                  xTmp[1]=1.;
+                  yTmp[0]=0.;
+                  yTmp[1]=1.;
+                  plots[i][j].drawPoints(xTmp,yTmp).label("No Data");
+                }
+              }
+            }
+
 
             std::string title;
             JsonFunctions::getJsonString( plotItemConfig["settings"]["title"],
@@ -2081,77 +2110,6 @@ int main (int argc, char* argv[]) {
 
             pathToPlots.push_back(outputPlotFilePath);                               
           }
-          /*
-          std::filesystem::path outputPlotFilePath = outputFolderPath;                  
-          PlottingFunctions::PlotSettings plotSettingsSummary;
-          std::vector< std::vector< sciplot::Plot2D >> summaryPlots;
-
-          updatePlotArray(
-            summaryPlots,
-            plotSettingsSummary,
-            tickerMetaData,
-            fundamentalData,
-            historicalData,
-            calculateData,
-            summaryPlotConfig,
-            keywords,
-            replacements,
-            verbose);
-
-          std::string titleSummary;
-          JsonFunctions::getJsonString( summaryPlotConfig["settings"]["title"],
-                                        titleSummary);
-          findReplaceKeywords(titleSummary, keywords,replacements);                                        
-
-          std::string plotSummaryFileName;
-          JsonFunctions::getJsonString( summaryPlotConfig["settings"]["fileName"],
-                                        plotSummaryFileName);                                        
-          findReplaceKeywords(plotSummaryFileName, keywords,replacements); 
-
-          std::filesystem::path outputSummaryPlotFilePath = outputFolderPath;          
-          outputSummaryPlotFilePath.append(plotSummaryFileName);
-
-          PlottingFunctions::writePlot(
-                    summaryPlots,
-                    plotSettingsSummary,
-                    titleSummary,
-                    outputSummaryPlotFilePath.c_str());
-
-
-          PlottingFunctions::PlotSettings plotSettingsOverview;
-          std::vector< std::vector< sciplot::Plot2D >> overviewPlots;
-
-          updatePlotArray(
-            overviewPlots,
-            plotSettingsOverview,
-            tickerMetaData,
-            fundamentalData,
-            historicalData,
-            calculateData,
-            overviewPlotConfig,
-            keywords,
-            replacements,
-            verbose);
-
-          std::string titleOverview;
-          JsonFunctions::getJsonString( overviewPlotConfig["settings"]["title"],
-                                        titleOverview);
-          findReplaceKeywords(titleOverview, keywords, replacements); 
-
-          std::string plotOverviewFileName;
-          JsonFunctions::getJsonString( overviewPlotConfig["settings"]["fileName"],
-                                        plotOverviewFileName);                                        
-          findReplaceKeywords(plotOverviewFileName, keywords, replacements); 
-
-          std::filesystem::path outputOverviewPlotFilePath = outputFolderPath;          
-          outputOverviewPlotFilePath.append(plotOverviewFileName);
-
-          PlottingFunctions::writePlot(
-                    overviewPlots,
-                    plotSettingsOverview,
-                    titleOverview,
-                    outputOverviewPlotFilePath.c_str());
-          */
 
           std::filesystem::path outputReportFilePath = outputFolderPath;
           std::string reportFileName(tickerFolderName);
