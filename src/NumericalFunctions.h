@@ -1338,22 +1338,11 @@ class NumericalFunctions {
                   const DataStructures::EmpiricalGrowthSettings &settings)
     {
 
-      bool forceZeroSlopeOnLinearModel =false;    
-
-
-
-      //A value of 0.1 means a 10% preference for an exponential model
-      //over a linear model. In this case the exponential model will still
-      //be chosen even if its R2 value is 0.1 lower than the linear model.
-      double preferenceForAnExponentialModel = 
-        settings.exponentialModelR2Preference;  
 
       std::vector < double > dateNumV;    //Fractional year
       std::vector < std::string > dateV;  //string yer
       std::vector < double > valueV;       //after tax operating income 
 
-      double maxYearError = settings.maxDateErrorInDays
-                          / DateFunctions::DAYS_PER_YEAR;
 
       std::vector < std::string > metricDatesV;
       std::vector < double > metricDatesNumV;
@@ -1411,21 +1400,55 @@ class NumericalFunctions {
             }
           }                                                       
         //}
-
       }
 
+      extractTimeSeriesGrowthRates(    
+        dateV,              
+        dateNumV,
+        valueV,
+        metricGrowthRateUpd,
+        settings);
+    };
+
+//==========================================================================
+    static void extractTimeSeriesGrowthRates(    
+                  const std::vector< std::string > &dateV,              
+                  const std::vector< double > &dateNumV,
+                  const std::vector< double > &valueV,
+                  DataStructures::MetricGrowthDataSet &metricGrowthRateUpd,
+                  const DataStructures::EmpiricalGrowthSettings &settings)
+    {   
+      if(dateV.size()!=dateNumV.size() || dateV.size()!=valueV.size()){
+        std::cout << "Error : dateV, dateNumV, and valueV must all have the "
+                  << "same size."
+                  << std::endl;
+        std::abort();
+      }
+
+      bool forceZeroSlopeOnLinearModel =false;    
+
+      double maxYearError = settings.maxDateErrorInDays
+                          / DateFunctions::DAYS_PER_YEAR;     
+                          
+
+      //A value of 0.1 means a 10% preference for an exponential model
+      //over a linear model. In this case the exponential model will still
+      //be chosen even if its R2 value is 0.1 lower than the linear model.
+      double preferenceForAnExponentialModel = 
+        settings.exponentialModelR2Preference;  
+                                  
       //
       // Extract the growth values for an interval of length 
       // growthIntervalInYears
       //
       int indexDate = -1;
       //validDate=true;
-      int indexDateMax = static_cast<int>(dateV.size());
+      int indexDateMax = static_cast<int>(dateNumV.size());
 
       //(indexDate+1) < indexLastCommonDate 
 
       while(     indexDate < indexDateMax 
-              && dateV.size() >= 2
+              && dateNumV.size() >= 2
               && ((settings.calcOneGrowthRateForAllData && indexDate == -1) 
                     || !settings.calcOneGrowthRateForAllData)){
 
@@ -1609,7 +1632,7 @@ class NumericalFunctions {
             //
             if(valueSubV.size() > 0 && dateSubV.size() > 0){
 
-              metricGrowthRateUpd.dates.push_back(dateV[indexDate]);
+              metricGrowthRateUpd.dates.push_back(dateV[indexDate]);              
               metricGrowthRateUpd.datesNumerical.push_back(dateNumV[indexDate]);
               metricGrowthRateUpd.metricGrowthRate.push_back(
                 empModel.annualGrowthRateOfTrendline);

@@ -2355,7 +2355,37 @@ int main (int argc, char* argv[]) {
                             yearsToAverageFCFLessDividends,
                             dividendInfo);
       
+      //
+      // Dividends Yield Growth
+      //                            
+      DataStructures::MetricGrowthDataSet dividendsYieldGrowthModel, 
+                                        dividendsYieldGrowthModelAvg;
 
+      empGrowthSettings.includeTimeUnitInAddress    = true;
+      empGrowthSettings.calcOneGrowthRateForAllData = false;      
+      empGrowthSettings.growthIntervalInYears       = growthIntervalInYears;    
+
+      NumericalFunctions::extractTimeSeriesGrowthRates(
+                              dividendInfo.dates,
+                              dividendInfo.datesNumerical,
+                              dividendInfo.dividendYield,
+                              dividendsYieldGrowthModel,
+                              empGrowthSettings);
+
+      empGrowthSettings.calcOneGrowthRateForAllData=true;    
+      empGrowthSettings.growthIntervalInYears      = growthIntervalInYearsAll;                                 
+
+      NumericalFunctions::extractTimeSeriesGrowthRates(
+                              dividendInfo.dates,
+                              dividendInfo.datesNumerical,
+                              dividendInfo.dividendYield,
+                              dividendsYieldGrowthModelAvg,
+                              empGrowthSettings);
+      
+
+      //
+      // Dividends Paid Growth
+      //                            
       DataStructures::MetricGrowthDataSet dividendsPaidGrowthModel, 
                                         dividendsPaidGrowthModelAvg;
 
@@ -2964,6 +2994,9 @@ int main (int argc, char* argv[]) {
           int idxDI = DateFunctions::getIndexClosestToDate(dateRecent,
                                         dividendInfo.datesNumerical);
 
+          int idxDYG = DateFunctions::getIndexClosestToDate(dateRecent,
+                                      dividendsYieldGrowthModel.datesNumerical);
+
           int idxDIG = DateFunctions::getIndexClosestToDate(dateRecent,
                                       dividendsPaidGrowthModel.datesNumerical);
 
@@ -2971,6 +3004,8 @@ int main (int argc, char* argv[]) {
                                       fcfGrowthModel.datesNumerical);
 
           termNames.push_back("PriestDividendMetrics_dividendYield");
+          termNames.push_back("PriestDividendMetrics_dividendYieldGrowth");
+          termNames.push_back("PriestDividendMetrics_dividendYieldGrowthAvg");
           termNames.push_back("PriestDividendMetrics_dividendsPaidGrowth");
           termNames.push_back("PriestDividendMetrics_dividendsPaidGrowthAvg");
           termNames.push_back("PriestDividendMetrics_dividendPayoutRatio");
@@ -2983,6 +3018,8 @@ int main (int argc, char* argv[]) {
           termNames.push_back("PriestDividendMetrics_dividendFreeCashFlowRatioTrailingAverage");
 
           termValues.push_back(dividendInfo.dividendYield[idxDI]);
+          termValues.push_back(dividendsYieldGrowthModel.metricGrowthRate[idxDYG]);
+          termValues.push_back(dividendsYieldGrowthModelAvg.metricGrowthRate[0]);
           termValues.push_back(dividendsPaidGrowthModel.metricGrowthRate[idxDIG]);
           termValues.push_back(dividendsPaidGrowthModelAvg.metricGrowthRate[0]);
           termValues.push_back(dividendInfo.dividendPayoutRatio[idxDI]);
@@ -3589,6 +3626,8 @@ int main (int argc, char* argv[]) {
         = dividendInfo.meanDividendFreeCashFlowRatio;
       annualMilestoneReport["mean_dividend_yield"]
         = dividendInfo.meanDividendYield;
+      annualMilestoneReport["mean_dividend_yield_growth"]
+        = dividendsYieldGrowthModelAvg.model[0].annualGrowthRateOfTrendline;
       annualMilestoneReport["mean_freecashflow_yield"]
         = dividendInfo.meanFreeCashFlowYield;
       annualMilestoneReport["mean_freecashflow_less_dividend_yield"]
@@ -3612,6 +3651,22 @@ int main (int argc, char* argv[]) {
           dividendGrowthModelAvgJson,
           dividendsPaidGrowthModelAvg.model[0],"");
       }
+
+      //
+      // dividend yield growth
+      //      
+      nlohmann::ordered_json dividendYieldGrowthModelJson;
+      NumericalFunctions::appendMetricGrowthModelRecent(
+        dividendYieldGrowthModelJson,
+        dividendsYieldGrowthModel,"");
+      
+      nlohmann::ordered_json dividendYieldGrowthModelAvgJson;
+      if(dividendsYieldGrowthModelAvg.datesNumerical.size()>0){
+        NumericalFunctions::appendEmpiricalGrowthModelRecent(
+          dividendYieldGrowthModelAvgJson,
+          dividendsYieldGrowthModelAvg.model[0],"");
+      }
+
       //
       // growth of equity
       //   equityGrowthModel   
@@ -3817,6 +3872,8 @@ int main (int argc, char* argv[]) {
       //
 
       analysis["metric_data"]                     = metricAnalysisJson;
+      analysis["dividend_yield_growth_model"]     = dividendYieldGrowthModelJson;
+      analysis["dividend_yield_growth_model_avg"] = dividendYieldGrowthModelAvgJson;
       analysis["dividends_paid_growth_model_avg"] = dividendGrowthModelAvgJson;
       analysis["dividends_paid_growth_model_recent"] = dividendGrowthModelJson;
       analysis["equity_growth_model_avg"]         = equityGrowthModelAvgJson;

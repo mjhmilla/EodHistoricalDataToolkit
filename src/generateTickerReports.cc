@@ -691,7 +691,7 @@ void updatePlotArray(
         }else{
           axisSettings[indexRow][indexColumn].xMax = 
             std::max(axisSettings[indexRow][indexColumn].xMax,xMaxData);
-        }
+        }        
       }else{
         axisSettings[indexRow][indexColumn].isXMaxFixed=true;  
         axisSettings[indexRow][indexColumn].xMax = xMaxConfig;        
@@ -719,6 +719,22 @@ void updatePlotArray(
           = NumericalFunctions::roundToNearest(
               axisSettings[indexRow][indexColumn].xMin, 3);
       }        
+
+      double xRange = axisSettings[indexRow][indexColumn].xMax
+                    - axisSettings[indexRow][indexColumn].xMin;
+                                  
+      if(xDataType == DataType::DateData){
+        double xTic   = std::round(xRange/8.0);
+        plotSettingsUpd.xticMinimumIncrement = std::max(1.0,xTic);
+      }else{
+        double xTic = std::nan("1");
+        if(std::abs(axisSettings[indexRow][indexColumn].xMax) > 10000 ){
+          xTic = std::round(xRange/3.0);
+        }else{
+          xTic = std::round(xRange/8.0);
+        }
+        plotSettingsUpd.xticMinimumIncrement = xTic;
+      }
 
       if(std::isnan(yMaxConfig)){
         axisSettings[indexRow][indexColumn].isYMaxFixed=false;
@@ -758,23 +774,6 @@ void updatePlotArray(
       }
 
 
-      if(!std::isnan(xMaxData) && !std::isnan(xMinData)){
-          if(xDataType==DataType::DateData 
-              || (xMaxData < 2050 && xMinData > 1930 )){
-            plotSettingsUpd.xticMinimumIncrement = 
-              std::max(1.0,std::round((xMaxData-xMinData)/8));
-              //std::round((axisSettings[indexRow][indexColumn].xMax
-              //          - axisSettings[indexRow][indexColumn].xMin)/5.0);
-          }else{
-            plotSettingsUpd.xticMinimumIncrement = 
-              std::round((axisSettings[indexRow][indexColumn].xMax
-                        - axisSettings[indexRow][indexColumn].xMin)/2.0);
-            //plotSettingsUpd.xticMinimumIncrement = 
-            //  NumericalFunctions::roundToNearest(
-            //      plotSettingsUpd.xticMinimumIncrement, 3);
-               
-          }
-      }      
       //
       //Get Box and Whisker Settings
       //
@@ -970,6 +969,13 @@ bool generateLaTeXReport(
   metric.fieldNames.push_back("DividendYield");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.label.clear();
+  metric.fileName.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularMetrics.push_back(metric);
+
 
   metric.fieldNames.clear();
   metric.fileName = "calculateData";
