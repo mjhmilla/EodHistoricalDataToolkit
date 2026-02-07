@@ -1745,7 +1745,7 @@ bool generateLaTeXReport(
 
       //Shareholder yield table
       int tableId = 1;
-      ReportingFunctions::appendShareholderValueTable(
+      tableId=ReportingFunctions::appendShareholderValueTable(
                               latexReport,
                               tickerMetaData.primaryTicker,
                               calculateData["metric_data"],
@@ -1756,7 +1756,7 @@ bool generateLaTeXReport(
                               verbose);
                               
       jsonTableName = "priceToValueRevenueToFcf";
-      ReportingFunctions::appendPriceToValueUsingFreeCashFlowTable(
+      tableId=ReportingFunctions::appendPriceToValueUsingFreeCashFlowTable(
                               latexReport,
                               tickerMetaData.primaryTicker,
                               calculateData["metric_data"],
