@@ -2226,6 +2226,8 @@ class NumericalFunctions {
             termValues.push_back(cumFcf);
             termNames.push_back(parentName+"terminal_fcf_present_value"+nameMod[i]);
             termValues.push_back(cumFcfTerminal);
+            termNames.push_back(parentName+"present_value"+nameMod[i]);
+            termValues.push_back(totalFcf);
             termNames.push_back(parentName+"price_to_value"+nameMod[i]);
             termValues.push_back(priceToValue);
           }

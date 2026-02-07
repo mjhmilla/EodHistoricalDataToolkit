@@ -964,9 +964,33 @@ bool generateLaTeXReport(
 
   metric.fieldNames.clear();
   metric.fileName = "fundamentalData";
-  metric.label="Dividend Yield";
+  metric.label="Dividend yield";
   metric.fieldNames.push_back("Highlights");
   metric.fieldNames.push_back("DividendYield");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Dividend yield growth (avg)";
+  metric.fieldNames.push_back("metric_data");
+  metric.fieldNames.push_back("PriestDividendMetrics_dividendYieldGrowthAvg");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Dividends paid / Free cash flow (avg)";
+  metric.fieldNames.push_back("metric_data");
+  metric.fieldNames.push_back("PriestDividendMetrics_dividendFreeCashFlowRatioTrailingAverage");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Free cash flow growth (avg)";
+  metric.fieldNames.push_back("metric_data");
+  metric.fieldNames.push_back("PriestDividendMetrics_freeCashFlowGrowthAvg");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
@@ -1244,6 +1268,14 @@ bool generateLaTeXReport(
       if(entryMetric.fileName.compare("calculateData")==0){
         double value = JsonFunctions::getJsonFloat(calculateData,
                           entryMetric.fieldNames,false);
+
+        if(!JsonFunctions::isJsonFloatValid(value) 
+          && entryMetric.fieldNames.size()==2){
+            auto &el = calculateData[entryMetric.fieldNames[0]].front(); 
+            std::vector< std::string > lastField;
+            lastField.push_back(entryMetric.fieldNames[1]);
+            value = JsonFunctions::getJsonFloat(el,lastField,false);
+        } 
 
         latexReport << entryMetric.label  
                     << " & " << value << "\\\\" << std::endl;  
@@ -1696,6 +1728,46 @@ bool generateLaTeXReport(
                               verbose);
     }
     
+    //==========================================================================
+    // William Priest metrics from: free cash flow and shareholder yield
+    //==========================================================================
+    jsonTableName="shareholderYield";
+    if(calculateData["metric_data"][date].contains(jsonTableName)){
+
+      latexReport << "\\break"          << std::endl;
+      latexReport << "\\newpage"        << std::endl;
+
+
+      latexReport << "\\begin{center}" << std::endl;
+      latexReport << "\\Large{\\underline{V. William Priest Inspired Report}} \\\\" 
+                  << std::endl;                  
+      latexReport << "\\end{center}" << std::endl;    
+
+      //Shareholder yield table
+      int tableId = 1;
+      ReportingFunctions::appendShareholderValueTable(
+                              latexReport,
+                              tickerMetaData.primaryTicker,
+                              calculateData["metric_data"],
+                              date,
+                              jsonTableName,
+                              isDateMostRecent,
+                              tableId,
+                              verbose);
+                              
+      jsonTableName = "priceToValueRevenueToFcf";
+      ReportingFunctions::appendPriceToValueUsingFreeCashFlowTable(
+                              latexReport,
+                              tickerMetaData.primaryTicker,
+                              calculateData["metric_data"],
+                              date,
+                              jsonTableName,
+                              isDateMostRecent,
+                              tableId,
+                              verbose);
+      
+    }
+
   }
   latexReport << "\\end{multicols}" << std::endl;
   latexReport.close();

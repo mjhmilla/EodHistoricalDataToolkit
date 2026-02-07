@@ -2446,7 +2446,6 @@ class FinancialAnalysisFunctions {
         double changeInOutstandingShares = outstandingShares
                                  - outstandingSharesPrevious;
 
-
         //
         // Eod currently does not record how much money has been spent on
         // share buy backs. So here I'm going to estimate this value by
@@ -2479,8 +2478,8 @@ class FinancialAnalysisFunctions {
         }
         sharePriceAvg /= static_cast<double>(sharePriceCount);
 
-        double costOfChangeInOutandingShares = 
-          sharePriceAvg*changeInOutstandingShares;
+        //double costOfChangeInOutandingShares = 
+        //  sharePriceAvg*changeInOutstandingShares;
 
         //
         // Debt paid
@@ -2507,14 +2506,14 @@ class FinancialAnalysisFunctions {
         //
         // Yield values
         //
-
-        double shareHolderYield = (dividendsPaid
-                                  -(costOfChangeInOutandingShares+changeInDebt)
-                                  )/marketCap;
-
         double dividendYield      = dividendsPaid/marketCap;
-        double shareBuybackYield  = -costOfChangeInOutandingShares/marketCap;
         double debtPaybackYield   = -changeInDebt/marketCap;
+        double shareBuyBackYield = -changeInOutstandingShares
+                                  /outstandingSharesPrevious;
+
+        double shareHolderYield = dividendYield
+                                + debtPaybackYield
+                                + shareBuyBackYield;
 
         //
         // Append 
@@ -2522,30 +2521,32 @@ class FinancialAnalysisFunctions {
         if(appendTermRecord){
           std::string resultName(parentCategoryName);
           resultName.append("shareholderYield_");            
-          termNames.push_back(resultName + "dividendsPaid");
-          termNames.push_back(resultName + "changeInOutstandingShares");
-          termNames.push_back(resultName + "averageStockPrice");
-          termNames.push_back(resultName + "costOfChangeInOutstandingShares");
-          termNames.push_back(resultName + "changeInDebt");
+          termNames.push_back(resultName + "sharePrice");
           termNames.push_back(resultName + "outstandingShares");
-          termNames.push_back(resultName + "stockPrice");
           termNames.push_back(resultName + "marketCapitalization");
+
+          termNames.push_back(resultName + "dividendsPaid");
           termNames.push_back(resultName + "dividendYield");
+
+          termNames.push_back(resultName + "changeInOutstandingShares");
           termNames.push_back(resultName + "shareBuybackYield");
+
+          termNames.push_back(resultName + "changeInDebt");
           termNames.push_back(resultName + "debtPaybackYield");
 
           termNames.push_back(parentCategoryName + "shareholderYield");
 
-          termValues.push_back(dividendsPaid);
-          termValues.push_back(changeInOutstandingShares);
-          termValues.push_back(sharePriceAvg);
-          termValues.push_back(costOfChangeInOutandingShares);
-          termValues.push_back(changeInDebt);
-          termValues.push_back(outstandingShares);
           termValues.push_back(stockPrice);
+          termValues.push_back(outstandingShares);
           termValues.push_back(marketCap);
+
+          termValues.push_back(dividendsPaid);
           termValues.push_back(dividendYield);
-          termValues.push_back(shareBuybackYield);
+
+          termValues.push_back(changeInOutstandingShares);
+          termValues.push_back(shareBuyBackYield);
+
+          termValues.push_back(changeInDebt);
           termValues.push_back(debtPaybackYield);
 
           termValues.push_back(shareHolderYield);
