@@ -421,14 +421,17 @@ class NumericalFunctions {
     static double evaluateLinearGrowthModel(double x, 
                     const DataStructures::EmpiricalGrowthModel &model){
      
-      double w0=  model.parameters[0];
-      double y0=  model.parameters[1];
-      double dydw=  model.parameters[2];                      
+      double y  = std::nan("1");
+      if(model.parameters.size()==3){                      
+        double w0=  model.parameters[0];
+        double y0=  model.parameters[1];
+        double dydw=  model.parameters[2];                      
 
-      double w = x-w0;
-      double y = y0 + dydw*w;
+        double w = x-w0;
+        y = y0 + dydw*w;
+      }
       return y;
-    }
+    };
     //==========================================================================
     static void fitLinearGrowthModel(
                   const std::vector< double > &x,
@@ -464,13 +467,20 @@ class NumericalFunctions {
 
 
         }else{
+          try{
           auto [y0Fit, dydwFit, r2Fit] = 
             boost::math::statistics::
             simple_ordinary_least_squares_with_R_squared(w,y);        
 
-          y0Mdl     = static_cast<double>(y0Fit);
-          dydwMdl   = static_cast<double>(dydwFit);
-          y1Mdl     = y0Mdl + dydwMdl*modelUpd.duration;
+            y0Mdl     = static_cast<double>(y0Fit);
+            dydwMdl   = static_cast<double>(dydwFit);
+            y1Mdl     = y0Mdl + dydwMdl*modelUpd.duration;
+
+          }catch(const std::domain_error& ex){
+            y0Mdl   = std::nan("1");
+            dydwMdl = std::nan("1");
+            y1Mdl   = std::nan("1");
+          }
 
         }
             
@@ -734,10 +744,13 @@ class NumericalFunctions {
 
       double previousDividend = 0;
 
-      size_t indexDateMax = analysisDates.common.size()
+      int indexDateMax = analysisDates.common.size()
                            -static_cast<size_t>(yearsToAverageFCFLessDividends);
 
-      for(size_t indexDate = 0; indexDate < indexDateMax; 
+      if(indexDateMax<0){
+        bool here=true;
+      }                           
+      for(int indexDate = 0; indexDate < indexDateMax; 
                               ++indexDate){
 
         std::string date              
@@ -819,7 +832,9 @@ class NumericalFunctions {
         double netIncomeTrailing                  = 0.;
 
         for(size_t j=0; 
-            j < static_cast<size_t>(yearsToAverageFCFLessDividends); ++j){
+            j < static_cast<size_t>(yearsToAverageFCFLessDividends) 
+            && (j+indexDate) < analysisDates.common.size(); ++j){
+
 
           std::string dateEntry = analysisDates.common[indexDate+j];               
 
@@ -830,6 +845,7 @@ class NumericalFunctions {
           if(std::isnan(dividendsPaidEntry)){
             dividendsPaidEntry=0.;
           }              
+          
 
           dividendsTrailing += dividendsPaidEntry;
 
@@ -850,6 +866,7 @@ class NumericalFunctions {
           freeCashFlowTrailing += freeCashFlowEntry;
 
         }
+        
 
         double freeCashFlowLessDividendsTrailing = freeCashFlowTrailing
                                                   -dividendsTrailing;
@@ -940,44 +957,45 @@ class NumericalFunctions {
         ++count;
       }
 
-      dividendInfoUpd.fractionOfYearsWithDividendIncreases = 
-        static_cast<double>(countDividendIncrease)
-        /static_cast<double>(count);
+      if(count >= 1){
+        dividendInfoUpd.fractionOfYearsWithDividendIncreases = 
+          static_cast<double>(countDividendIncrease)
+          /static_cast<double>(count);
 
-      dividendInfoUpd.fractionOfYearsWithDividends = 
-        static_cast<double>(dividendInfoUpd.yearsWithADividend)
-        /static_cast<double>(count);
+        dividendInfoUpd.fractionOfYearsWithDividends = 
+          static_cast<double>(dividendInfoUpd.yearsWithADividend)
+          /static_cast<double>(count);
 
-      dividendInfoUpd.fractionOfYearsWithCancelledDividends = 
-        static_cast<double>(countDividendCancelled)
-        /static_cast<double>(count);
+        dividendInfoUpd.fractionOfYearsWithCancelledDividends = 
+          static_cast<double>(countDividendCancelled)
+          /static_cast<double>(count);
 
-      dividendInfoUpd.fractionOfYearsWithPositiveFreeCashFlowTrailing = 
-        static_cast<double>(countFcfPositive)
-        /static_cast<double>(count);
+        dividendInfoUpd.fractionOfYearsWithPositiveFreeCashFlowTrailing = 
+          static_cast<double>(countFcfPositive)
+          /static_cast<double>(count);
 
-      dividendInfoUpd.fractionOfYearsWithPositiveFreeCashFlowLessDividendsTrailing = 
-        static_cast<double>(countFcfLessDividendsPositive)
-        /static_cast<double>(count);
+        dividendInfoUpd.fractionOfYearsWithPositiveFreeCashFlowLessDividendsTrailing = 
+          static_cast<double>(countFcfLessDividendsPositive)
+          /static_cast<double>(count);
 
 
-      dividendInfoUpd.meanDividendYield = meanDividendYield 
-                                            /static_cast<double>(count); 
+        dividendInfoUpd.meanDividendYield = meanDividendYield 
+                                              /static_cast<double>(count); 
 
-      dividendInfoUpd.meanFreeCashFlowYield = meanFreeCashFlowYield 
-                                            /static_cast<double>(count); 
+        dividendInfoUpd.meanFreeCashFlowYield = meanFreeCashFlowYield 
+                                              /static_cast<double>(count); 
 
-      dividendInfoUpd.meanFreeCashFlowLessDividendsYield = 
-                                        meanFreeCashFlowLessDividendsYield 
-                                        /static_cast<double>(count); 
+        dividendInfoUpd.meanFreeCashFlowLessDividendsYield = 
+                                          meanFreeCashFlowLessDividendsYield 
+                                          /static_cast<double>(count); 
 
-      dividendInfoUpd.meanDividendPayoutRatio = meanDividendPayoutRatio 
-                                            /static_cast<double>(count); 
+        dividendInfoUpd.meanDividendPayoutRatio = meanDividendPayoutRatio 
+                                              /static_cast<double>(count); 
 
-      dividendInfoUpd.meanDividendFreeCashFlowRatio 
-                  = meanDividendFreeCashFlowRatio 
-                    /static_cast<double>(count); 
-
+        dividendInfoUpd.meanDividendFreeCashFlowRatio 
+                    = meanDividendFreeCashFlowRatio 
+                      /static_cast<double>(count); 
+      }
     };
     //==========================================================================
     static void extractFinancialRatios(
@@ -2171,12 +2189,26 @@ class NumericalFunctions {
                                       dateNumRecent,datesModelNum);
 
         if(appendTermRecord){
+          bool added = false;
+          if(idxR2F >= 0){
+            if(revenueToFcfModel.model[idxR2F].parameters.size()==3){
+              added=true;
+              termNames.push_back(parentName+"revenueToFcfModel_x0");
+              termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[0]);
+              termNames.push_back(parentName+"revenueToFcfModel_y0");
+              termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[1]);
+              termNames.push_back(parentName+"revenueToFcfModel_dydx");
+              termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[2]);
+            }
+          }
+          if(!added){
             termNames.push_back(parentName+"revenueToFcfModel_x0");
-            termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[0]);
+            termValues.push_back(std::nan("1"));
             termNames.push_back(parentName+"revenueToFcfModel_y0");
-            termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[1]);
+            termValues.push_back(std::nan("1"));
             termNames.push_back(parentName+"revenueToFcfModel_dydx");
-            termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[2]);
+            termValues.push_back(std::nan("1"));
+          }
         }
                                       
         //Evaluate the present value of the annual free-cash-flow over 
@@ -2189,10 +2221,14 @@ class NumericalFunctions {
             double dateNum = dateNumRecent + static_cast<double>(j);
             
             double revenue = revenue0*std::pow(1.0+revenueGrowth,j);
+            fcf = std::nan("1");
 
-            fcf = NumericalFunctions::evaluateLinearGrowthModel(
-                                    revenue,
-                                    revenueToFcfModel.model[idxR2F]);
+            if(idxR2F<revenueToFcfModel.model.size()){
+              fcf = NumericalFunctions::evaluateLinearGrowthModel(
+                                        revenue,
+                                        revenueToFcfModel.model[idxR2F]);
+            }
+
             double discountFactor = std::pow(1.0+discountRate,j);
             double discountedFcf = (fcf/discountFactor);
             cumFcf += discountedFcf;

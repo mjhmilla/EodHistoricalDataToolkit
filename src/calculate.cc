@@ -3017,19 +3017,63 @@ int main (int argc, char* argv[]) {
           termNames.push_back("PriestDividendMetrics_dividendFreeCashFlowRatio");
           termNames.push_back("PriestDividendMetrics_dividendFreeCashFlowRatioTrailingAverage");
 
-          termValues.push_back(dividendInfo.dividendYield[idxDI]);
-          termValues.push_back(dividendsYieldGrowthModel.metricGrowthRate[idxDYG]);
-          termValues.push_back(dividendsYieldGrowthModelAvg.metricGrowthRate[0]);
-          termValues.push_back(dividendsPaidGrowthModel.metricGrowthRate[idxDIG]);
-          termValues.push_back(dividendsPaidGrowthModelAvg.metricGrowthRate[0]);
-          termValues.push_back(dividendInfo.dividendPayoutRatio[idxDI]);
-          termValues.push_back(dividendInfo.dividendPayoutRatioTrailingAverage[idxDI]);
-          termValues.push_back(fcfGrowthModel.metricGrowthRate[idxFCFG]);
-          termValues.push_back(fcfGrowthModelAvg.metricGrowthRate[0]);
-          termValues.push_back(dividendInfo.freeCashFlowYieldTrailingAverage[idxDI]);
-          termValues.push_back(dividendInfo.freeCashFlowLessDividendsYieldTrailingAverage[idxDI]);
-          termValues.push_back(dividendInfo.dividendFreeCashFlowRatio[idxDI]);
-          termValues.push_back(dividendInfo.dividendFreeCashFlowRatioTrailingAverage[idxDI]);
+          if(idxDI >=0){
+            termValues.push_back(dividendInfo.dividendYield[idxDI]);
+          }else{
+            termValues.push_back(std::nan("1"));
+          }
+          if(idxDYG >= 0){
+            termValues.push_back(dividendsYieldGrowthModel.metricGrowthRate[idxDYG]);
+          }else{
+            termValues.push_back(std::nan("1"));
+          }
+          if(dividendsYieldGrowthModelAvg.metricGrowthRate.size()>=1){
+            termValues.push_back(dividendsYieldGrowthModelAvg.metricGrowthRate[0]);
+          }else{
+            termValues.push_back(std::nan("1"));
+          }
+          if(idxDIG >= 0){
+            termValues.push_back(dividendsPaidGrowthModel.metricGrowthRate[idxDIG]);
+          }else{
+            termValues.push_back(std::nan("1"));
+          }
+          if(dividendsPaidGrowthModelAvg.metricGrowthRate.size()>=1){
+            termValues.push_back(dividendsPaidGrowthModelAvg.metricGrowthRate[0]);
+          }else{
+            termValues.push_back(std::nan("1"));
+          }
+          if(idxDI >= 0){
+            termValues.push_back(dividendInfo.dividendPayoutRatio[idxDI]);            
+          }else{
+            termValues.push_back(std::nan("1"));
+          }
+          if(idxDI >= 0){
+            termValues.push_back(dividendInfo.dividendPayoutRatioTrailingAverage[idxDI]);
+          }else{
+            termValues.push_back(std::nan("1"));
+          }
+          if(idxFCFG >= 0){
+            termValues.push_back(fcfGrowthModel.metricGrowthRate[idxFCFG]);
+          }else{
+            termValues.push_back(std::nan("1"));
+          }
+          if(fcfGrowthModelAvg.metricGrowthRate.size()>=1){
+            termValues.push_back(fcfGrowthModelAvg.metricGrowthRate[0]);
+          }else{
+            termValues.push_back(std::nan("1"));            
+          }
+          if(idxDI >= 0){
+            termValues.push_back(dividendInfo.freeCashFlowYieldTrailingAverage[idxDI]);            
+            termValues.push_back(dividendInfo.freeCashFlowLessDividendsYieldTrailingAverage[idxDI]);
+            termValues.push_back(dividendInfo.dividendFreeCashFlowRatio[idxDI]);
+            termValues.push_back(dividendInfo.dividendFreeCashFlowRatioTrailingAverage[idxDI]);
+
+          }else{
+            termValues.push_back(std::nan("1"));            
+            termValues.push_back(std::nan("1"));            
+            termValues.push_back(std::nan("1"));            
+            termValues.push_back(std::nan("1"));            
+          }
 
         }
 
@@ -3626,8 +3670,13 @@ int main (int argc, char* argv[]) {
         = dividendInfo.meanDividendFreeCashFlowRatio;
       annualMilestoneReport["mean_dividend_yield"]
         = dividendInfo.meanDividendYield;
-      annualMilestoneReport["mean_dividend_yield_growth"]
-        = dividendsYieldGrowthModelAvg.model[0].annualGrowthRateOfTrendline;
+      if(dividendsYieldGrowthModelAvg.model.size()>=1){
+        annualMilestoneReport["mean_dividend_yield_growth"]
+          = dividendsYieldGrowthModelAvg.model[0].annualGrowthRateOfTrendline;
+      }else{
+        annualMilestoneReport["mean_dividend_yield_growth"]
+          = std::nan("1");
+      }
       annualMilestoneReport["mean_freecashflow_yield"]
         = dividendInfo.meanFreeCashFlowYield;
       annualMilestoneReport["mean_freecashflow_less_dividend_yield"]

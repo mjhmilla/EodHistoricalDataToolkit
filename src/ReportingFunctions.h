@@ -1404,7 +1404,7 @@ static int appendPriceToValueUsingFreeCashFlowTable(
                     << " \\\\" << std::endl; 
 
         latexReport << "\\hline \\multicolumn{2}{c}{" 
-                    << "Model: $y=dydx*(x-x_0)+y_0$ } \\\\" 
+                    << "Model: $y=dydx\\,(x-x_0)+y_0$ } \\\\" 
                     << std::endl; 
         latexReport << "\\multicolumn{2}{c}{" 
                     << "x: revenue, y: free-cash-flow } \\\\" 
@@ -1479,7 +1479,7 @@ static int appendPriceToValueUsingFreeCashFlowTable(
                             << " \\\\" << std::endl;              
             }
             latexReport << "\\hline \\multicolumn{2}{c}{" 
-                        << "$A_"<<tableId<<"^i = B_"<<tableId<<"\\,(1+A_"<<tableId<<")^i $ } \\\\" 
+                        << "$A_"<<tableId<<"^i = B_"<<tableId<<"\\,(1+A_"<<tableId<<")^{i-1} $ } \\\\" 
                         << std::endl; 
             latexReport << "\\multicolumn{2}{c}{" 
                         << "$B_"<<tableId<<"^i = dydx(A_"<<tableId<<"^i-x_0)+y_0$ } \\\\" 
@@ -1495,9 +1495,9 @@ static int appendPriceToValueUsingFreeCashFlowTable(
             int tableIdPrev = tableId;
             ++tableId;
 
-            latexReport << "\\end{tabular}" << std::endl;
+            //latexReport << "\\end{tabular}" << std::endl;
 
-            latexReport << "\\begin{tabular}{l l}" << std::endl;
+            //latexReport << "\\begin{tabular}{l l}" << std::endl;
             latexReport << "\\hline $A_{"<<tableId<<"}$. Present value FCF (growth) & "
                         << formatJsonEntry(JsonFunctions::getJsonFloat(
                             calculateData[date][jsonTableName+"_cumulative_fcf_present_value"+caseMod[idxC]],true))
