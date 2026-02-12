@@ -1,0 +1,202 @@
+{
+    "filter":
+    {
+        "yearsOfData":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "annual_milestones",
+                "years_reported"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                10.0
+            ]
+        },
+        "shareholderYield":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "shareholderyield"
+            ],
+            "isDateSeries": true,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        },
+        "dividendYield":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "PriestDividendMetrics_dividendYield"
+            ],
+            "isDateSeries": true,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        },
+        "dividendYieldGrowthAvg":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "PriestDividendMetrics_dividendYieldGrowthAvg"
+            ],
+            "isDateSeries": true,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.01
+            ]
+        },
+        "dividendYieldGrowthRecent":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "PriestDividendMetrics_dividendYieldGrowth"
+            ],
+            "isDateSeries": true,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.01
+            ]
+        },
+        "dividendToFcf":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "PriestDividendMetrics_dividendFreeCashFlowRatio"
+            ],
+            "isDateSeries": true,
+            "condition": "<=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.75
+            ]
+        },
+        "dividendToFcfAvg":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "PriestDividendMetrics_dividendFreeCashFlowRatioTrailingAverage"
+            ],
+            "isDateSeries": true,
+            "condition": "<=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.75
+            ]
+        },
+        "fcfGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metrics",
+                "PriestDividendMetrics_freeCashFlowGrowth"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        },
+        "fcfGrowthAvg":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metrics",
+                "PriestDividendMetrics_freeCashFlowGrowthAvg"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        }
+    },
+    "ranking":
+    {
+        "P/FCF-V":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValueRevenueToFcf_price_to_value"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "smallestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.75,
+                "lowerBound": -0.01,
+                "upperBound": 2.0,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        }
+    },
+    "weighting":
+    {
+        "folder": "calculateData",
+        "field":
+        [
+            "metric_data",
+            "costOfCapital_marketCapitalization"
+        ],
+        "isDateSeries": true
+    },
+    "report":
+    {
+        "number_of_tickers_per_report": 50,
+        "number_of_reports": 3,
+        "title": "The Frankfurt Borse: William Priest Ranking"
+    }
+}

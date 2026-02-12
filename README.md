@@ -160,6 +160,7 @@ Files that cannot include SPDX commands in the header are have their licensing i
     - data/equityRiskPremiumByCountryDefault.csv
     - data/equityRiskPremiumByCountryDefault.json
     - data/equityRiskPremiumByCountry.json
+    
 - ctryprem.xlsx is not included in this repository but was used.
     - Source: https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html
     - File: https://www.stern.nyu.edu/~adamodar/pc/datasets/ctryprem.xlsx
