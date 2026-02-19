@@ -1328,6 +1328,10 @@ class FinancialAnalysisFunctions {
           interestCover = meanInterestCover;
         }
 
+        if(!JsonFunctions::isJsonFloatValid(interestCover)){
+          return std::nan("1");
+        }
+
         double defaultSpread = std::nan("1");
         if(setNansToMissingValue){
           defaultSpread = JsonFunctions::MISSING_VALUE;
