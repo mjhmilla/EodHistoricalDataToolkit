@@ -372,7 +372,11 @@ class JsonFunctions {
       if(  jsonEntry.is_null()){
         data.clear();
       }else{
+        try{
           data = jsonEntry.get<std::vector<double> >();
+        }catch(nlohmann::json_abi_v3_12_0::detail::type_error &e){
+          data.clear();
+        }
       }
 
     };

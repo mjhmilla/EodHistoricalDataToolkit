@@ -530,307 +530,317 @@ void updatePlotArray(
 
     }
 
+    bool validData=true;
     if(xTmp.size() != yTmp.size()){
-      std::cout << "Error: x and y data series do not have matching sizes"
-                << std::endl;
-      std::abort();
+      validData=false;
     }
 
     //Remove nan values
-    size_t i=0;
-    while(i < xTmp.size()){
-      if(std::isnan(xTmp[i]) || std::isnan(yTmp[i])){
-        xTmp.erase(xTmp.begin()+i);        
-        yTmp.erase(yTmp.begin()+i);
-        
-        if(xDate.size()>0){
-          xDate.erase(xDate.begin()+i);
+    if(validData){
+      size_t i=0;
+      while(i < xTmp.size()){
+        if(std::isnan(xTmp[i]) || std::isnan(yTmp[i])){
+          xTmp.erase(xTmp.begin()+i);        
+          yTmp.erase(yTmp.begin()+i);
+          
+          if(xDate.size()>0){
+            xDate.erase(xDate.begin()+i);
+          }
+          if(yDate.size()>0){
+            yDate.erase(yDate.begin()+i);
+          }
+        }else{
+          ++i;
         }
-        if(yDate.size()>0){
-          yDate.erase(yDate.begin()+i);
-        }
-      }else{
-        ++i;
       }
     }
 
-
-    //Get the LineSettings
-    bool addLine = plotConfig.value().contains("lineWidth");
-    PlottingFunctions::LineSettings lineSettings;        
-    if(addLine){
-      JsonFunctions::getJsonString(plotConfig.value()["lineColor"],
-                                      lineSettings.colour);
-
-      JsonFunctions::getJsonString(plotConfig.value()["legendEntry"],
-                                      lineSettings.name); 
-
-      lineSettings.lineWidth = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["lineWidth"],false);
-
-      findReplaceKeywords(lineSettings.name,keywords,replacements);
+    if(xTmp.size() != yTmp.size() || xTmp.size()==0 || yTmp.size()==0){
+      validData=false;
     }
-
-    bool addPoints = plotConfig.value().contains("pointSize");
-    PlottingFunctions::PointSettings pointSettings;        
-    if(addPoints){
-      JsonFunctions::getJsonString(plotConfig.value()["pointColor"],
-                                   pointSettings.colour);
-
-      JsonFunctions::getJsonString(plotConfig.value()["legendEntry"],
-                                   pointSettings.name); 
-
-      pointSettings.pointSize = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["pointSize"],false);
-      
-      pointSettings.pointType = static_cast<int>(
-          JsonFunctions::getJsonFloat(plotConfig.value()["pointType"],false)
-        );
-    
-
-      findReplaceKeywords(pointSettings.name,keywords,replacements);
+    if(xDate.size() != yDate.size() || xDate.size()==0 || yDate.size()==0){
+      validData=false;
     }
 
 
+    if(validData){
+      //Get the LineSettings
+      bool addLine = plotConfig.value().contains("lineWidth");
+      PlottingFunctions::LineSettings lineSettings;        
+      if(addLine){
+        JsonFunctions::getJsonString(plotConfig.value()["lineColor"],
+                                        lineSettings.colour);
 
+        JsonFunctions::getJsonString(plotConfig.value()["legendEntry"],
+                                        lineSettings.name); 
 
-    //Get SubplotSettings
-    PlottingFunctions::SubplotSettings subplotSettings;
+        lineSettings.lineWidth = 
+          JsonFunctions::getJsonFloat(plotConfig.value()["lineWidth"],false);
 
-    tmp = JsonFunctions::getJsonFloat(plotConfig.value()["row"],false);
-    subplotSettings.indexRow = static_cast<size_t>(tmp);
-    size_t indexRow = subplotSettings.indexRow;
-
-    tmp = JsonFunctions::getJsonFloat(plotConfig.value()["column"],false);
-    subplotSettings.indexColumn = static_cast<size_t>(tmp);
-    size_t indexColumn = subplotSettings.indexColumn;
-
-    if(indexRow == 0 && indexColumn ==1){
-      bool here=true;
-    }
-
-    //Get the AxisSettings
-    std::string xAxisLabel, yAxisLabel;
-    JsonFunctions::getJsonString(plotConfig.value()["xAxisLabel"],
-                                 axisSettings[indexRow][indexColumn].xAxisName);        
-    
-    findReplaceKeywords(axisSettings[indexRow][indexColumn].xAxisName,
-                        keywords,replacements);
-                                 
-    JsonFunctions::getJsonString(plotConfig.value()["yAxisLabel"],
-                                 axisSettings[indexRow][indexColumn].yAxisName);  
-
-    findReplaceKeywords(axisSettings[indexRow][indexColumn].yAxisName,
-                        keywords,replacements);
-
-    //Only update the axis if the values have not been already set
-    if( std::isnan(axisSettings[indexRow][indexColumn].xMin) ){
-      double xMin = JsonFunctions::getJsonFloat(plotConfig.value()["xMin"],false);
-      axisSettings[indexRow][indexColumn].xMin = xMin;
-
-      if(std::isnan(xMin)){
-        axisSettings[indexRow][indexColumn].isXMinFixed=false;  
-      }else{
-        axisSettings[indexRow][indexColumn].isXMinFixed=true;  
+        findReplaceKeywords(lineSettings.name,keywords,replacements);
       }
+
+      bool addPoints = plotConfig.value().contains("pointSize");
+      PlottingFunctions::PointSettings pointSettings;        
+      if(addPoints){
+        JsonFunctions::getJsonString(plotConfig.value()["pointColor"],
+                                    pointSettings.colour);
+
+        JsonFunctions::getJsonString(plotConfig.value()["legendEntry"],
+                                    pointSettings.name); 
+
+        pointSettings.pointSize = 
+          JsonFunctions::getJsonFloat(plotConfig.value()["pointSize"],false);
         
-    }
-
-
-    if(xTmp.size()!=0 && yTmp.size() != 0 && xTmp.size()==yTmp.size()){
-
-    
-      //
-      // get the index of the most recent data.
-      //
-      int indexOfMostRecentData=-1;
-      if(xDate.size()>0){
-        auto iter = std::max_element(xDate.rbegin(), xDate.rend()).base();
-        indexOfMostRecentData = std::distance(xDate.begin(), std::prev(iter));
-
-      }else if(xDataType == DataType::DateData){
-        auto iter = std::max_element(xTmp.rbegin(), xTmp.rend()).base();
-        indexOfMostRecentData = std::distance(xTmp.begin(), std::prev(iter));
-
-      }else if(yDataType == DataType::DateData){
-        auto iter = std::max_element(yTmp.rbegin(), yTmp.rend()).base();
-        indexOfMostRecentData = std::distance(yTmp.begin(), std::prev(iter));        
-      }
-
-      DataStructures::SummaryStatistics metricSummaryStatistics;
-      bool validSummaryStats = 
-        NumericalFunctions::extractSummaryStatistics(yTmp,
-                            metricSummaryStatistics);
-      metricSummaryStatistics.current = std::nan("1");
-      metricSummaryStatistics.current = yTmp[indexOfMostRecentData];
-
-    
-      //
-      // update the axes as necessary
-      //
-      double xMaxData = *std::max_element(xTmp.begin(),xTmp.end());
-      double xMinData = *std::min_element(xTmp.begin(),xTmp.end());
-      double yMaxData = *std::max_element(yTmp.begin(),yTmp.end());
-      double yMinData = *std::min_element(yTmp.begin(),yTmp.end());
-
-
-      double xMaxConfig = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["xMax"], false);
-      double xMinConfig = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["xMin"], false);
-      double yMaxConfig = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["yMax"], false);
-      double yMinConfig = 
-        JsonFunctions::getJsonFloat(plotConfig.value()["yMin"], false);
+        pointSettings.pointType = static_cast<int>(
+            JsonFunctions::getJsonFloat(plotConfig.value()["pointType"],false)
+          );
       
 
-      if(std::isnan(xMaxConfig)){
-        axisSettings[indexRow][indexColumn].isXMaxFixed=false;
-        if(std::isnan(axisSettings[indexRow][indexColumn].xMax)){
-          axisSettings[indexRow][indexColumn].xMax = xMaxData+xDelta;
-        }else{
-          axisSettings[indexRow][indexColumn].xMax = 
-            std::max(axisSettings[indexRow][indexColumn].xMax,xMaxData);
-        }        
-      }else{
-        axisSettings[indexRow][indexColumn].isXMaxFixed=true;  
-        axisSettings[indexRow][indexColumn].xMax = xMaxConfig;        
+        findReplaceKeywords(pointSettings.name,keywords,replacements);
       }
-      if(xDataType != DataType::DateData){
-        axisSettings[indexRow][indexColumn].xMax
-          = NumericalFunctions::roundToNearest(
-              axisSettings[indexRow][indexColumn].xMax, 3);
-      }     
 
-      if(std::isnan(xMinConfig)){
-        axisSettings[indexRow][indexColumn].isXMinFixed=false;
-        if(std::isnan(axisSettings[indexRow][indexColumn].xMin)){
-          axisSettings[indexRow][indexColumn].xMin = xMinData-xDelta;
-        }else{
-          axisSettings[indexRow][indexColumn].xMin = 
-            std::min(axisSettings[indexRow][indexColumn].xMin,xMinData);
-        }
-      }else{      
-        axisSettings[indexRow][indexColumn].isXMinFixed=true;  
-        axisSettings[indexRow][indexColumn].xMin =xMinConfig;        
+
+
+
+      //Get SubplotSettings
+      PlottingFunctions::SubplotSettings subplotSettings;
+
+      tmp = JsonFunctions::getJsonFloat(plotConfig.value()["row"],false);
+      subplotSettings.indexRow = static_cast<size_t>(tmp);
+      size_t indexRow = subplotSettings.indexRow;
+
+      tmp = JsonFunctions::getJsonFloat(plotConfig.value()["column"],false);
+      subplotSettings.indexColumn = static_cast<size_t>(tmp);
+      size_t indexColumn = subplotSettings.indexColumn;
+
+      if(indexRow == 0 && indexColumn ==1){
+        bool here=true;
       }
-      if(xDataType != DataType::DateData){
-        axisSettings[indexRow][indexColumn].xMin 
-          = NumericalFunctions::roundToNearest(
-              axisSettings[indexRow][indexColumn].xMin, 3);
-      }        
 
-      double xRange = axisSettings[indexRow][indexColumn].xMax
-                    - axisSettings[indexRow][indexColumn].xMin;
+      //Get the AxisSettings
+      std::string xAxisLabel, yAxisLabel;
+      JsonFunctions::getJsonString(plotConfig.value()["xAxisLabel"],
+                                  axisSettings[indexRow][indexColumn].xAxisName);        
+      
+      findReplaceKeywords(axisSettings[indexRow][indexColumn].xAxisName,
+                          keywords,replacements);
                                   
-      if(xDataType == DataType::DateData){
-        double xTic   = std::round(xRange/8.0);
-        plotSettingsUpd.xticMinimumIncrement = std::max(1.0,xTic);
-      }else{
-        double xTic = std::nan("1");
-        if(std::abs(axisSettings[indexRow][indexColumn].xMax) > 10000 ){
-          xTic = std::round(xRange/3.0);
+      JsonFunctions::getJsonString(plotConfig.value()["yAxisLabel"],
+                                  axisSettings[indexRow][indexColumn].yAxisName);  
+
+      findReplaceKeywords(axisSettings[indexRow][indexColumn].yAxisName,
+                          keywords,replacements);
+
+      //Only update the axis if the values have not been already set
+      if( std::isnan(axisSettings[indexRow][indexColumn].xMin) ){
+        double xMin = JsonFunctions::getJsonFloat(plotConfig.value()["xMin"],false);
+        axisSettings[indexRow][indexColumn].xMin = xMin;
+
+        if(std::isnan(xMin)){
+          axisSettings[indexRow][indexColumn].isXMinFixed=false;  
         }else{
-          xTic = std::round(xRange/8.0);
+          axisSettings[indexRow][indexColumn].isXMinFixed=true;  
         }
-        plotSettingsUpd.xticMinimumIncrement = xTic;
-      }
-
-      if(std::isnan(yMaxConfig)){
-        axisSettings[indexRow][indexColumn].isYMaxFixed=false;
-        if(std::isnan(axisSettings[indexRow][indexColumn].yMax)){
-          axisSettings[indexRow][indexColumn].yMax = yMaxData+yDelta;
-        }else{          
-          axisSettings[indexRow][indexColumn].yMax = 
-            std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData+yDelta);
-        }
-      }else{
-        axisSettings[indexRow][indexColumn].isYMaxFixed=true;  
-        axisSettings[indexRow][indexColumn].yMax = yMaxConfig;
-      }
-      if(yDataType != DataType::DateData){
-        axisSettings[indexRow][indexColumn].yMax 
-          = NumericalFunctions::roundToNearest(
-              axisSettings[indexRow][indexColumn].yMax, 3);
+          
       }
 
 
-      if(std::isnan(yMinConfig)){
-        axisSettings[indexRow][indexColumn].isYMinFixed=false;
-        if(std::isnan(axisSettings[indexRow][indexColumn].yMin)){
-          axisSettings[indexRow][indexColumn].yMin = yMinData-yDelta;
-        }else{
-          axisSettings[indexRow][indexColumn].yMin = 
-            std::min(axisSettings[indexRow][indexColumn].yMin,yMinData-yDelta);
-        }
-      }else{
-        axisSettings[indexRow][indexColumn].isYMinFixed=true;  
-        axisSettings[indexRow][indexColumn].yMin =yMinConfig;
-      }
-      if(yDataType != DataType::DateData){
-        axisSettings[indexRow][indexColumn].yMin 
-          = NumericalFunctions::roundToNearest(
-              axisSettings[indexRow][indexColumn].yMin, 3);
-      }
-
-
-      //
-      //Get Box and Whisker Settings
-      //
-      PlottingFunctions::BoxAndWhiskerSettings boxWhiskerSettings;
+      if(xTmp.size()!=0 && yTmp.size() != 0 && xTmp.size()==yTmp.size()){
 
       
-      if(plotConfig.value().contains("boxWhiskerPosition")){
-        tmp = JsonFunctions::getJsonFloat(
-            plotConfig.value()["boxWhiskerPosition"],false);
+        //
+        // get the index of the most recent data.
+        //
+        int indexOfMostRecentData=-1;
+        if(xDate.size()>0){
+          auto iter = std::max_element(xDate.rbegin(), xDate.rend()).base();
+          indexOfMostRecentData = std::distance(xDate.begin(), std::prev(iter));
 
-        if(tmp >= 0){
-          boxWhiskerSettings.xOffsetFromStart=tmp;
+        }else if(xDataType == DataType::DateData){
+          auto iter = std::max_element(xTmp.rbegin(), xTmp.rend()).base();
+          indexOfMostRecentData = std::distance(xTmp.begin(), std::prev(iter));
+
+        }else if(yDataType == DataType::DateData){
+          auto iter = std::max_element(yTmp.rbegin(), yTmp.rend()).base();
+          indexOfMostRecentData = std::distance(yTmp.begin(), std::prev(iter));        
+        }
+
+        DataStructures::SummaryStatistics metricSummaryStatistics;
+        bool validSummaryStats = 
+          NumericalFunctions::extractSummaryStatistics(yTmp,
+                              metricSummaryStatistics);
+        metricSummaryStatistics.current = std::nan("1");
+        metricSummaryStatistics.current = yTmp[indexOfMostRecentData];
+
+      
+        //
+        // update the axes as necessary
+        //
+        double xMaxData = *std::max_element(xTmp.begin(),xTmp.end());
+        double xMinData = *std::min_element(xTmp.begin(),xTmp.end());
+        double yMaxData = *std::max_element(yTmp.begin(),yTmp.end());
+        double yMinData = *std::min_element(yTmp.begin(),yTmp.end());
+
+
+        double xMaxConfig = 
+          JsonFunctions::getJsonFloat(plotConfig.value()["xMax"], false);
+        double xMinConfig = 
+          JsonFunctions::getJsonFloat(plotConfig.value()["xMin"], false);
+        double yMaxConfig = 
+          JsonFunctions::getJsonFloat(plotConfig.value()["yMax"], false);
+        double yMinConfig = 
+          JsonFunctions::getJsonFloat(plotConfig.value()["yMin"], false);
+        
+
+        if(std::isnan(xMaxConfig)){
+          axisSettings[indexRow][indexColumn].isXMaxFixed=false;
+          if(std::isnan(axisSettings[indexRow][indexColumn].xMax)){
+            axisSettings[indexRow][indexColumn].xMax = xMaxData+xDelta;
+          }else{
+            axisSettings[indexRow][indexColumn].xMax = 
+              std::max(axisSettings[indexRow][indexColumn].xMax,xMaxData);
+          }        
         }else{
-          boxWhiskerSettings.xOffsetFromEnd = std::abs(tmp);
-        }      
-      }
+          axisSettings[indexRow][indexColumn].isXMaxFixed=true;  
+          axisSettings[indexRow][indexColumn].xMax = xMaxConfig;        
+        }
+        if(xDataType != DataType::DateData){
+          axisSettings[indexRow][indexColumn].xMax
+            = NumericalFunctions::roundToNearest(
+                axisSettings[indexRow][indexColumn].xMax, 3);
+        }     
 
-      if(plotConfig.value().contains("boxWhiskerPositionPercentage")){
-        tmp = JsonFunctions::getJsonFloat(
-            plotConfig.value()["boxWhiskerPositionPercentage"],false);
+        if(std::isnan(xMinConfig)){
+          axisSettings[indexRow][indexColumn].isXMinFixed=false;
+          if(std::isnan(axisSettings[indexRow][indexColumn].xMin)){
+            axisSettings[indexRow][indexColumn].xMin = xMinData-xDelta;
+          }else{
+            axisSettings[indexRow][indexColumn].xMin = 
+              std::min(axisSettings[indexRow][indexColumn].xMin,xMinData);
+          }
+        }else{      
+          axisSettings[indexRow][indexColumn].isXMinFixed=true;  
+          axisSettings[indexRow][indexColumn].xMin =xMinConfig;        
+        }
+        if(xDataType != DataType::DateData){
+          axisSettings[indexRow][indexColumn].xMin 
+            = NumericalFunctions::roundToNearest(
+                axisSettings[indexRow][indexColumn].xMin, 3);
+        }        
 
-        if(tmp >= 0){
-          boxWhiskerSettings.xOffsetFromStart=tmp*(xMaxData-xMinData);
+        double xRange = axisSettings[indexRow][indexColumn].xMax
+                      - axisSettings[indexRow][indexColumn].xMin;
+                                    
+        if(xDataType == DataType::DateData){
+          double xTic   = std::round(xRange/8.0);
+          plotSettingsUpd.xticMinimumIncrement = std::max(1.0,xTic);
         }else{
-          boxWhiskerSettings.xOffsetFromEnd = std::abs(tmp)*(xMaxData-xMinData);
+          double xTic = std::nan("1");
+          if(std::abs(axisSettings[indexRow][indexColumn].xMax) > 10000 ){
+            xTic = std::round(xRange/3.0);
+          }else{
+            xTic = std::round(xRange/8.0);
+          }
+          plotSettingsUpd.xticMinimumIncrement = xTic;
+        }
+
+        if(std::isnan(yMaxConfig)){
+          axisSettings[indexRow][indexColumn].isYMaxFixed=false;
+          if(std::isnan(axisSettings[indexRow][indexColumn].yMax)){
+            axisSettings[indexRow][indexColumn].yMax = yMaxData+yDelta;
+          }else{          
+            axisSettings[indexRow][indexColumn].yMax = 
+              std::max(axisSettings[indexRow][indexColumn].yMax,yMaxData+yDelta);
+          }
+        }else{
+          axisSettings[indexRow][indexColumn].isYMaxFixed=true;  
+          axisSettings[indexRow][indexColumn].yMax = yMaxConfig;
+        }
+        if(yDataType != DataType::DateData){
+          axisSettings[indexRow][indexColumn].yMax 
+            = NumericalFunctions::roundToNearest(
+                axisSettings[indexRow][indexColumn].yMax, 3);
+        }
+
+
+        if(std::isnan(yMinConfig)){
+          axisSettings[indexRow][indexColumn].isYMinFixed=false;
+          if(std::isnan(axisSettings[indexRow][indexColumn].yMin)){
+            axisSettings[indexRow][indexColumn].yMin = yMinData-yDelta;
+          }else{
+            axisSettings[indexRow][indexColumn].yMin = 
+              std::min(axisSettings[indexRow][indexColumn].yMin,yMinData-yDelta);
+          }
+        }else{
+          axisSettings[indexRow][indexColumn].isYMinFixed=true;  
+          axisSettings[indexRow][indexColumn].yMin =yMinConfig;
+        }
+        if(yDataType != DataType::DateData){
+          axisSettings[indexRow][indexColumn].yMin 
+            = NumericalFunctions::roundToNearest(
+                axisSettings[indexRow][indexColumn].yMin, 3);
+        }
+
+
+        //
+        //Get Box and Whisker Settings
+        //
+        PlottingFunctions::BoxAndWhiskerSettings boxWhiskerSettings;
+
+        
+        if(plotConfig.value().contains("boxWhiskerPosition")){
+          tmp = JsonFunctions::getJsonFloat(
+              plotConfig.value()["boxWhiskerPosition"],false);
+
+          if(tmp >= 0){
+            boxWhiskerSettings.xOffsetFromStart=tmp;
+          }else{
+            boxWhiskerSettings.xOffsetFromEnd = std::abs(tmp);
+          }      
+        }
+
+        if(plotConfig.value().contains("boxWhiskerPositionPercentage")){
+          tmp = JsonFunctions::getJsonFloat(
+              plotConfig.value()["boxWhiskerPositionPercentage"],false);
+
+          if(tmp >= 0){
+            boxWhiskerSettings.xOffsetFromStart=tmp*(xMaxData-xMinData);
+          }else{
+            boxWhiskerSettings.xOffsetFromEnd = std::abs(tmp)*(xMaxData-xMinData);
+          }      
+        }
+
+
+        JsonFunctions::getJsonString(plotConfig.value()["boxWhiskerColor"],
+                                    boxWhiskerSettings.boxWhiskerColour);
+
+        if(addLine){                                 
+          boxWhiskerSettings.currentValueColour = lineSettings.colour;
+        }else if(addPoints){
+          boxWhiskerSettings.currentValueColour = pointSettings.colour;
+        }else{
+          boxWhiskerSettings.currentValueColour = "cyan";
         }      
+
+
+
+        PlottingFunctions::updatePlot(
+            xTmp,
+            yTmp,
+            metricSummaryStatistics,
+            plotSettingsUpd,
+            lineSettings,
+            pointSettings,
+            axisSettings[indexRow][indexColumn],
+            boxWhiskerSettings,
+            matrixOfPlots[subplotSettings.indexRow][subplotSettings.indexColumn],
+            true,
+            verbose);
+
+        isPlotDirty[indexRow][indexColumn]=true;
+          
       }
-
-
-      JsonFunctions::getJsonString(plotConfig.value()["boxWhiskerColor"],
-                                  boxWhiskerSettings.boxWhiskerColour);
-
-      if(addLine){                                 
-        boxWhiskerSettings.currentValueColour = lineSettings.colour;
-      }else if(addPoints){
-        boxWhiskerSettings.currentValueColour = pointSettings.colour;
-      }else{
-        boxWhiskerSettings.currentValueColour = "cyan";
-      }      
-
-
-
-      PlottingFunctions::updatePlot(
-          xTmp,
-          yTmp,
-          metricSummaryStatistics,
-          plotSettingsUpd,
-          lineSettings,
-          pointSettings,
-          axisSettings[indexRow][indexColumn],
-          boxWhiskerSettings,
-          matrixOfPlots[subplotSettings.indexRow][subplotSettings.indexColumn],
-          true,
-          verbose);
-
-      isPlotDirty[indexRow][indexColumn]=true;
-  
     }
   }
 
@@ -1266,21 +1276,29 @@ bool generateLaTeXReport(
 
       bool fieldExists = false;
       if(entryMetric.fileName.compare("calculateData")==0){
+
         double value = JsonFunctions::getJsonFloat(calculateData,
                           entryMetric.fieldNames,false);
 
         if(!JsonFunctions::isJsonFloatValid(value) 
           && entryMetric.fieldNames.size()==2){
-            auto &el = calculateData[entryMetric.fieldNames[0]].front(); 
-            std::vector< std::string > lastField;
-            lastField.push_back(entryMetric.fieldNames[1]);
-            value = JsonFunctions::getJsonFloat(el,lastField,false);
+
+            try{
+              auto &el = calculateData[entryMetric.fieldNames[0]].front(); 
+              std::vector< std::string > lastField;
+              lastField.push_back(entryMetric.fieldNames[1]);
+              value = JsonFunctions::getJsonFloat(el,lastField,false);
+              fieldExists=true;
+            }catch(nlohmann::json_abi_v3_12_0::detail::invalid_iterator &e){
+              fieldExists=false;
+            }
+            
         } 
 
         latexReport << entryMetric.label  
                     << " & " << value << "\\\\" << std::endl;  
 
-        fieldExists=true;
+        
       }
 
       if(entryMetric.fileName.compare("historicalData")==0){
@@ -1617,8 +1635,43 @@ bool generateLaTeXReport(
     tableTitle ="Price to DCM-Value (Empirical)";
     jsonTableName = "priceToValueEmpirical";
 
-    if(calculateData["metric_data"][date].contains(jsonTableName+"_riskFreeRate")){
-      tableId = ReportingFunctions::appendValuationTable(
+    if(!calculateData["metric_data"].is_null()){
+      if(calculateData["metric_data"][date].contains(jsonTableName+"_riskFreeRate")){
+        tableId = ReportingFunctions::appendValuationTable(
+                                        latexReport,
+                                        tickerMetaData.primaryTicker,
+                                        calculateData["metric_data"],
+                                        date,
+                                        tableId,
+                                        tableTitle,
+                                        jsonTableName,
+                                        isDateMostRecent,
+                                        verbose);
+
+        std::string nameToPrepend("empirical_");
+        std::string empTableTitle="Empirically Estimated Growth (recent)";
+        ReportingFunctions::appendEmpiricalGrowthTable(
+                                    latexReport,
+                                    tickerMetaData.primaryTicker,
+                                    calculateData["metric_data"],
+                                    date,
+                                    nameToPrepend,
+                                    empTableTitle,
+                                    isDateMostRecent,
+                                    verbose);
+
+
+        latexReport << "\\break" << std::endl;
+        latexReport << "\\newpage" << std::endl;
+        ++tableId;      
+      }
+    }
+    tableTitle ="Price to DCM-Value (Empirical Avg.)";
+    jsonTableName = "priceToValueEmpiricalAvg";
+
+    if(!calculateData["metric_data"].is_null()){
+      if(calculateData["metric_data"][date].contains(jsonTableName+"_riskFreeRate")){
+        tableId=ReportingFunctions::appendValuationTable(
                                       latexReport,
                                       tickerMetaData.primaryTicker,
                                       calculateData["metric_data"],
@@ -1629,52 +1682,19 @@ bool generateLaTeXReport(
                                       isDateMostRecent,
                                       verbose);
 
-      std::string nameToPrepend("empirical_");
-      std::string empTableTitle="Empirically Estimated Growth (recent)";
-      ReportingFunctions::appendEmpiricalGrowthTable(
-                                  latexReport,
-                                  tickerMetaData.primaryTicker,
-                                  calculateData["metric_data"],
-                                  date,
-                                  nameToPrepend,
-                                  empTableTitle,
-                                  isDateMostRecent,
-                                  verbose);
-
-
-      latexReport << "\\break" << std::endl;
-      latexReport << "\\newpage" << std::endl;
-      ++tableId;      
+        std::string nameToPrepend="empiricalAvg_";
+        std::string empTableTitle="Empirically Estimated Growth (avg. of all)";      
+        ReportingFunctions::appendEmpiricalGrowthTable(
+                              latexReport,
+                              tickerMetaData.primaryTicker,
+                              calculateData["metric_data"],
+                              date,
+                              nameToPrepend,
+                              empTableTitle,
+                              isDateMostRecent,
+                              verbose);
+      }
     }
-
-    tableTitle ="Price to DCM-Value (Empirical Avg.)";
-    jsonTableName = "priceToValueEmpiricalAvg";
-
-    if(calculateData["metric_data"][date].contains(jsonTableName+"_riskFreeRate")){
-      tableId=ReportingFunctions::appendValuationTable(
-                                    latexReport,
-                                    tickerMetaData.primaryTicker,
-                                    calculateData["metric_data"],
-                                    date,
-                                    tableId,
-                                    tableTitle,
-                                    jsonTableName,
-                                    isDateMostRecent,
-                                    verbose);
-
-      std::string nameToPrepend="empiricalAvg_";
-      std::string empTableTitle="Empirically Estimated Growth (avg. of all)";      
-      ReportingFunctions::appendEmpiricalGrowthTable(
-                            latexReport,
-                            tickerMetaData.primaryTicker,
-                            calculateData["metric_data"],
-                            date,
-                            nameToPrepend,
-                            empTableTitle,
-                            isDateMostRecent,
-                            verbose);
-    }
-
     latexReport << "\\break"          << std::endl;
     latexReport << "\\newpage"        << std::endl;
    
@@ -1711,61 +1731,65 @@ bool generateLaTeXReport(
     }
 
     jsonTableName="priceToValueEpsGrowth";
-    if(calculateData["metric_data"][date].contains(jsonTableName+"_equityGrowth")){
+    if(!calculateData["metric_data"].is_null()){
+      if(calculateData["metric_data"][date].contains(jsonTableName+"_equityGrowth")){
 
-      latexReport << "\\begin{center}" << std::endl;
-      latexReport << "\\Large{\\underline{IV. Investor Earnings Valuation Tables}} \\\\" 
-                  << std::endl;                  
-      latexReport << "\\end{center}" << std::endl;
+        latexReport << "\\begin{center}" << std::endl;
+        latexReport << "\\Large{\\underline{IV. Investor Earnings Valuation Tables}} \\\\" 
+                    << std::endl;                  
+        latexReport << "\\end{center}" << std::endl;
 
-      ReportingFunctions::appendEarningPerShareGrowthValuationTable(
-                              latexReport,
-                              tickerMetaData.primaryTicker,
-                              calculateData["metric_data"],
-                              date,
-                              jsonTableName,
-                              isDateMostRecent,
-                              verbose);
+        ReportingFunctions::appendEarningPerShareGrowthValuationTable(
+                                latexReport,
+                                tickerMetaData.primaryTicker,
+                                calculateData["metric_data"],
+                                date,
+                                jsonTableName,
+                                isDateMostRecent,
+                                verbose);
+      }
     }
     
     //==========================================================================
     // William Priest metrics from: free cash flow and shareholder yield
     //==========================================================================
     jsonTableName="shareholderYield";
-    if(calculateData["metric_data"][date].contains(jsonTableName)){
+    if(!calculateData["metric_data"].is_null()){
+      if(calculateData["metric_data"][date].contains(jsonTableName)){
 
-      latexReport << "\\break"          << std::endl;
-      latexReport << "\\newpage"        << std::endl;
+        latexReport << "\\break"          << std::endl;
+        latexReport << "\\newpage"        << std::endl;
 
 
-      latexReport << "\\begin{center}" << std::endl;
-      latexReport << "\\Large{\\underline{V. William Priest Inspired Report}} \\\\" 
-                  << std::endl;                  
-      latexReport << "\\end{center}" << std::endl;    
+        latexReport << "\\begin{center}" << std::endl;
+        latexReport << "\\Large{\\underline{V. William Priest Inspired Report}} \\\\" 
+                    << std::endl;                  
+        latexReport << "\\end{center}" << std::endl;    
 
-      //Shareholder yield table
-      int tableId = 1;
-      tableId=ReportingFunctions::appendShareholderValueTable(
-                              latexReport,
-                              tickerMetaData.primaryTicker,
-                              calculateData["metric_data"],
-                              date,
-                              jsonTableName,
-                              isDateMostRecent,
-                              tableId,
-                              verbose);
-                              
-      jsonTableName = "priceToValueRevenueToFcf";
-      tableId=ReportingFunctions::appendPriceToValueUsingFreeCashFlowTable(
-                              latexReport,
-                              tickerMetaData.primaryTicker,
-                              calculateData["metric_data"],
-                              date,
-                              jsonTableName,
-                              isDateMostRecent,
-                              tableId,
-                              verbose);
-      
+        //Shareholder yield table
+        int tableId = 1;
+        tableId=ReportingFunctions::appendShareholderValueTable(
+                                latexReport,
+                                tickerMetaData.primaryTicker,
+                                calculateData["metric_data"],
+                                date,
+                                jsonTableName,
+                                isDateMostRecent,
+                                tableId,
+                                verbose);
+                                
+        jsonTableName = "priceToValueRevenueToFcf";
+        tableId=ReportingFunctions::appendPriceToValueUsingFreeCashFlowTable(
+                                latexReport,
+                                tickerMetaData.primaryTicker,
+                                calculateData["metric_data"],
+                                date,
+                                jsonTableName,
+                                isDateMostRecent,
+                                tableId,
+                                verbose);
+        
+      }
     }
 
   }

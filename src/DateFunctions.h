@@ -77,8 +77,22 @@ class DateFunctions {
       };
     };
   //==============================================================================
-    static bool isDate(const std::string &dateStr, const char* dateChar="-"){
-      return  (dateStr.find(dateChar) != std::string::npos);
+    static bool isDate(const std::string &dateStr, 
+                       const char* format="%Y-%m-%d"){
+
+      if(dateStr.length()==0){
+        return false;
+      }
+                        
+      try{
+        date::sys_days dateDay;
+        std::istringstream dateStrStreamA(dateStr);
+        dateStrStreamA.exceptions(std::ios::failbit);
+        dateStrStreamA >> date::parse(format,dateDay);
+      }catch(std::iostream::failure &e){
+        return false;
+      }
+      return true;      
     }
   //==============================================================================
     static double convertToFractionalYear(const std::string &dateStr,

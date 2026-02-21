@@ -2133,29 +2133,18 @@ class NumericalFunctions {
                                     revenueGrowthModel.metricGrowthRate[idxRGM],
                                     revenueGrowthStats.percentiles[P25]);      
 
-        if(std::abs(relGrowthDiff) > 0.01){
-          revenueGrowthVariation.push_back(revenueGrowthStats.percentiles[P25]);
-          nameMod.push_back("_P25");
-        }                           
+        revenueGrowthVariation.push_back(revenueGrowthStats.percentiles[P25]);
+        nameMod.push_back("_P25");
+                       
         
-        relGrowthDiff = calcRelativeError(
-                                    revenueGrowthStats.percentiles[P25],
-                                    revenueGrowthStats.percentiles[P50]);
 
-        if(std::abs(relGrowthDiff) > 0.01){
-          revenueGrowthVariation.push_back(revenueGrowthStats.percentiles[P50]);
-          nameMod.push_back("_P50");
-        }
-
-        relGrowthDiff = calcRelativeError(
-                                    revenueGrowthStats.percentiles[P50],
-                                    revenueGrowthStats.percentiles[P75]);
+        revenueGrowthVariation.push_back(revenueGrowthStats.percentiles[P50]);
+        nameMod.push_back("_P50");
 
 
-        if(std::abs(relGrowthDiff) > 0.01){
-          revenueGrowthVariation.push_back(revenueGrowthStats.percentiles[P75]);
-          nameMod.push_back("_P75");
-        }
+
+        revenueGrowthVariation.push_back(revenueGrowthStats.percentiles[P75]);
+        nameMod.push_back("_P75");
 
 
         if(appendTermRecord){
