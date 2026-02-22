@@ -558,9 +558,9 @@ void updatePlotArray(
     if(xTmp.size() != yTmp.size() || xTmp.size()==0 || yTmp.size()==0){
       validData=false;
     }
-    if(xDate.size() != yDate.size() || xDate.size()==0 || yDate.size()==0){
-      validData=false;
-    }
+    //if(xDate.size() != yDate.size() || xDate.size()==0 || yDate.size()==0){
+    //  validData=false;
+    //}
 
 
     if(validData){
