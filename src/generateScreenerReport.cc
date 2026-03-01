@@ -464,12 +464,29 @@ void generateScreenerLaTeXReport(
     std::string tickerLabel(metricDataSet.ticker[j]);
     ReportingFunctions::sanitizeLabelForLaTeX(tickerLabel,true);
 
+    std::string companyName(metricDataSet.companyName[j]);
+    ReportingFunctions::sanitizeLabelForLaTeX(companyName,true);
+
+    std::string countryIso(metricDataSet.countryIso[j]);
+    ReportingFunctions::sanitizeLabelForLaTeX(countryIso,true);
+
+    std::string gicSector(metricDataSet.gicSector[j]);
+    ReportingFunctions::sanitizeLabelForLaTeX(gicSector,true);
+
+    std::string gicGroup(metricDataSet.gicGroup[j]);
+    ReportingFunctions::sanitizeLabelForLaTeX(gicGroup,true);
+
     //          << "---" << stream.str() 
 
     latexReport << "\\item " << "\\ref{" << tickerLabel << "} "
                 <<  tickerString 
-                << "---" << metricDataSet.metricRankSum[j] 
-                << std::endl;
+                << "---" 
+                << metricDataSet.metricRankSum[j] << "\\\\" << std::endl
+                << companyName  << "\\\\" << std::endl
+                << countryIso   << "\\\\" << std::endl
+                << gicSector    << "\\\\" << std::endl
+                << gicGroup     << "\\\\" << std::endl;
+
   }
   latexReport << "\\end{enumerate}" << std::endl;
   latexReport << "\\end{multicols}" << std::endl;
@@ -879,12 +896,17 @@ int main (int argc, char* argv[]) {
         fundamentalDataPath.append(filteredTickers[i]);
         nlohmann::ordered_json fundamentalData;
         bool loadedFundamentalData=false;
-        if(useFundamentalData){
-          loadedFundamentalData = 
-            JsonFunctions::loadJsonFile(fundamentalDataPath,
-                                        fundamentalData,
-                                        verbose);     
-        }
+
+        //fundamentalData is always loaded as of 1/3/2026 so that meta data
+        //can be extracted and put into the metricDataSet. This is used
+        //later for the report
+        //
+        //if(useFundamentalData){
+        loadedFundamentalData = 
+          JsonFunctions::loadJsonFile(fundamentalDataPath,
+                                      fundamentalData,
+                                      verbose);     
+        //}
 
         std::string historicalDataPath = historicalFolder;
         historicalDataPath.append(filteredTickers[i]);
@@ -924,7 +946,7 @@ int main (int argc, char* argv[]) {
                                 maxTargetDateErrorInDays,
                                 metricDataSet,                        
                                 verbose);
-        
+
         if(verbose && !appendedMetricData){
           std::cout << "Skipping: " 
                     << filteredTickers[i] 

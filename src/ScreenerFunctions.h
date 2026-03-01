@@ -21,6 +21,10 @@ class ScreenerFunctions {
 
     struct MetricSummaryDataSet{
       std::string name;
+      std::vector< std::string > companyName;
+      std::vector< std::string > countryIso;
+      std::vector< std::string > gicSector;
+      std::vector< std::string > gicGroup;
       std::vector< std::string > ticker;
       std::vector< std::vector < date::sys_days > > date;  
       std::vector< std::vector< double > > metric;
@@ -498,7 +502,25 @@ class ScreenerFunctions {
 
         }
         if(inputsAreValid){
+          //Get the additional meta data
+          std::string countryIso("");
+          std::string companyName("");
+          std::string gicSector("");
+          std::string gicGroup("");
+
+          JsonFunctions::getJsonString(fundamentalData["General"]["CountryIso"],
+                                       countryIso);
+          JsonFunctions::getJsonString(fundamentalData["General"]["Name"],
+                                       companyName);
+          JsonFunctions::getJsonString(fundamentalData["General"]["GicSector"],
+                                       gicSector);
+          JsonFunctions::getJsonString(fundamentalData["General"]["GicGroup"],
+                                       gicGroup);
+
           metricDataSetUpd.ticker.push_back(tickerFileName);
+          metricDataSetUpd.companyName.push_back(companyName);
+          metricDataSetUpd.gicSector.push_back(gicSector);
+          metricDataSetUpd.gicGroup.push_back(gicGroup);
           metricDataSetUpd.date.push_back(dateVector);
           metricDataSetUpd.metric.push_back(metricVector);
           metricDataSetUpd.summaryStatistics.push_back(percentileVector);

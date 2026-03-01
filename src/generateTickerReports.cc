@@ -1241,7 +1241,7 @@ bool generateLaTeXReport(
                   << tickerMetaData.country << " ( \\url{" << webURL << "} )\\\\"
                   << std::endl;
       latexReport << std::endl;
-      latexReport << "\\break"          << std::endl;
+      //latexReport << "\\break"          << std::endl;
     }
 
 
