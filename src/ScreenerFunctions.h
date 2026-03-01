@@ -508,7 +508,7 @@ class ScreenerFunctions {
           std::string gicSector("");
           std::string gicGroup("");
 
-          JsonFunctions::getJsonString(fundamentalData["General"]["CountryIso"],
+          JsonFunctions::getJsonString(fundamentalData["General"]["CountryISO"],
                                        countryIso);
           JsonFunctions::getJsonString(fundamentalData["General"]["Name"],
                                        companyName);
@@ -518,6 +518,7 @@ class ScreenerFunctions {
                                        gicGroup);
 
           metricDataSetUpd.ticker.push_back(tickerFileName);
+          metricDataSetUpd.countryIso.push_back(countryIso);
           metricDataSetUpd.companyName.push_back(companyName);
           metricDataSetUpd.gicSector.push_back(gicSector);
           metricDataSetUpd.gicGroup.push_back(gicGroup);

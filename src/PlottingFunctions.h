@@ -94,8 +94,8 @@ public:
     PlotSettings():
       fontName("Times"),
       axisLabelFontSize(12.0),
-      axisTickFontSize(12.0),
-      legendFontSize(12.0),
+      axisTickFontSize(8.0),
+      legendFontSize(8.0),
       titleFontSize(14.0),
       lineWidth(1),
       axisLineWidth(1.0),

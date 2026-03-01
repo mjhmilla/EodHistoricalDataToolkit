@@ -48,7 +48,8 @@ static void sanitizeFolderName(std::string &folderName,
 };
 //==============================================================================
 static void sanitizeLabelForLaTeX(std::string &stringForLatex,
-                                  bool stripExtension=false){
+                                  bool stripExtension=false,
+                                  bool stripSpace=true){
 
   if(stripExtension){
     size_t idx = stringForLatex.find_last_of('.');
@@ -59,7 +60,9 @@ static void sanitizeLabelForLaTeX(std::string &stringForLatex,
 
   std::string charactersToDelete("");  
   charactersToDelete.append("\'");
-  charactersToDelete.append(" ");
+  if(stripSpace){
+    charactersToDelete.append(" ");
+  }
   charactersToDelete.append("&");
   charactersToDelete.append("$");
   charactersToDelete.append("#");

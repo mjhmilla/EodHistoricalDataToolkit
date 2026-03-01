@@ -438,7 +438,7 @@ void generateScreenerLaTeXReport(
   }
 
   // Add the list of companies
-  latexReport << "\\begin{multicols}{3}" << std::endl;
+  latexReport << "\\begin{multicols}{2}" << std::endl;
   latexReport << "\\raggedcolumns" << std::endl;
   latexReport << "\\begin{enumerate}" << std::endl;
   latexReport << "\\setcounter{enumi}{" << indexTickerStart <<"}" << std::endl;  
@@ -465,16 +465,16 @@ void generateScreenerLaTeXReport(
     ReportingFunctions::sanitizeLabelForLaTeX(tickerLabel,true);
 
     std::string companyName(metricDataSet.companyName[j]);
-    ReportingFunctions::sanitizeLabelForLaTeX(companyName,true);
+    ReportingFunctions::sanitizeLabelForLaTeX(companyName,true,false);
 
     std::string countryIso(metricDataSet.countryIso[j]);
-    ReportingFunctions::sanitizeLabelForLaTeX(countryIso,true);
+    ReportingFunctions::sanitizeLabelForLaTeX(countryIso,true,false);
 
     std::string gicSector(metricDataSet.gicSector[j]);
-    ReportingFunctions::sanitizeLabelForLaTeX(gicSector,true);
+    ReportingFunctions::sanitizeLabelForLaTeX(gicSector,true,false);
 
     std::string gicGroup(metricDataSet.gicGroup[j]);
-    ReportingFunctions::sanitizeLabelForLaTeX(gicGroup,true);
+    ReportingFunctions::sanitizeLabelForLaTeX(gicGroup,true,false);
 
     //          << "---" << stream.str() 
 
