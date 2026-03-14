@@ -467,8 +467,8 @@ void generateScreenerLaTeXReport(
     std::string companyName(metricDataSet.companyName[j]);
     ReportingFunctions::sanitizeLabelForLaTeX(companyName,true,false);
 
-    std::string countryIso(metricDataSet.countryIso[j]);
-    ReportingFunctions::sanitizeLabelForLaTeX(countryIso,true,false);
+    std::string country(metricDataSet.country[j]);
+    ReportingFunctions::sanitizeLabelForLaTeX(country,true,false);
 
     std::string gicSector(metricDataSet.gicSector[j]);
     ReportingFunctions::sanitizeLabelForLaTeX(gicSector,true,false);
@@ -483,7 +483,7 @@ void generateScreenerLaTeXReport(
                 << "---" 
                 << metricDataSet.metricRankSum[j] << "\\\\" << std::endl
                 << companyName  << "\\\\" << std::endl
-                << countryIso   << "\\\\" << std::endl
+                << country      << "\\\\" << std::endl
                 << gicSector    << "\\\\" << std::endl
                 << gicGroup     << "\\\\" << std::endl;
 

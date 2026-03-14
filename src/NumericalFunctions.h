@@ -2188,6 +2188,8 @@ class NumericalFunctions {
               termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[1]);
               termNames.push_back(parentName+"revenueToFcfModel_dydx");
               termValues.push_back(revenueToFcfModel.model[idxR2F].parameters[2]);
+              termNames.push_back(parentName+"revenueToFcfModel_r2");
+              termValues.push_back(revenueToFcfModel.model[idxR2F].r2);
             }
           }
           if(!added){
@@ -2196,6 +2198,8 @@ class NumericalFunctions {
             termNames.push_back(parentName+"revenueToFcfModel_y0");
             termValues.push_back(std::nan("1"));
             termNames.push_back(parentName+"revenueToFcfModel_dydx");
+            termValues.push_back(std::nan("1"));
+            termNames.push_back(parentName+"revenueToFcfModel_r2");
             termValues.push_back(std::nan("1"));
           }
         }

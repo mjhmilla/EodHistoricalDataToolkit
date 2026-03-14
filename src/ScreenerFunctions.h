@@ -22,7 +22,7 @@ class ScreenerFunctions {
     struct MetricSummaryDataSet{
       std::string name;
       std::vector< std::string > companyName;
-      std::vector< std::string > countryIso;
+      std::vector< std::string > country;
       std::vector< std::string > gicSector;
       std::vector< std::string > gicGroup;
       std::vector< std::string > ticker;
@@ -503,13 +503,14 @@ class ScreenerFunctions {
         }
         if(inputsAreValid){
           //Get the additional meta data
-          std::string countryIso("");
+          std::string country("");
           std::string companyName("");
           std::string gicSector("");
           std::string gicGroup("");
 
-          JsonFunctions::getJsonString(fundamentalData["General"]["CountryISO"],
-                                       countryIso);
+          JsonFunctions::getJsonString(
+              fundamentalData["General"]["AddressData"]["Country"],
+              country);
           JsonFunctions::getJsonString(fundamentalData["General"]["Name"],
                                        companyName);
           JsonFunctions::getJsonString(fundamentalData["General"]["GicSector"],
@@ -518,7 +519,7 @@ class ScreenerFunctions {
                                        gicGroup);
 
           metricDataSetUpd.ticker.push_back(tickerFileName);
-          metricDataSetUpd.countryIso.push_back(countryIso);
+          metricDataSetUpd.country.push_back(country);
           metricDataSetUpd.companyName.push_back(companyName);
           metricDataSetUpd.gicSector.push_back(gicSector);
           metricDataSetUpd.gicGroup.push_back(gicGroup);
