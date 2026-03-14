@@ -4,7 +4,7 @@
         "rows": 5,
         "columns": 2,
         "plotWidthCm": 9.0,
-        "plotHeightCm": 4.75,
+        "plotHeightCm": 4.5,
         "fileName": "fig_@PrimaryTicker_summary.pdf",
         "title": "@CompanyNameLaTeX Summary Plot",
         "caption": "@PrimaryTickerLaTeX (@URL) summary"
@@ -278,132 +278,6 @@
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
             "yAxisLabel": "Revenue (@CurrencyCodeLaTeX)",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "red",
-            "boxWhiskerPosition": -0.5
-        },
-        "epsGrowthAvg":
-        {
-            "row": 2,
-            "column": 0,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "epsEmpiricalModelAvg_growth",            
-            "isArray": false,
-            "legendEntry": "Emp Avg",
-            "lineColor": "orange",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "EPS Growth",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "orange",
-            "boxWhiskerPosition": -0.5
-        },
-        "epsGrowth":
-        {
-            "row": 2,
-            "column": 0,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "epsEmpiricalModel_growth",            
-            "isArray": false,
-            "legendEntry": "Emp",
-            "lineColor": "red",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "EPS Growth",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "red",
-            "boxWhiskerPosition": -0.5
-        },
-        "eps":
-        {
-            "row": 2,
-            "column": 1,
-            "jsonData_x": "fundamentalData",
-            "address_x":
-            [
-                "Earnings",
-                "Annual"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "epsActual",            
-            "isArray": false,
-            "legendEntry": "Fin",
-            "lineColor": "grey20",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "EPS",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "grey20",
-            "boxWhiskerPosition": -0.5
-        },
-        "epsEmpiricalAvg":
-        {
-            "row": 2,
-            "column": 1,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "eps_growth_model_avg"
-            ],
-            "fieldName_x": "x",
-            "fieldName_y": "yTrendline",            
-            "isArray": true,
-            "legendEntry": "Emp Avg",
-            "lineColor": "orange",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "EPS",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "orange",
-            "boxWhiskerPosition": -0.5
-        },
-        "epsEmpirical":
-        {
-            "row": 2,
-            "column": 1,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "eps_growth_model_recent"
-            ],
-            "fieldName_x": "x",
-            "fieldName_y": "yTrendline",            
-            "isArray": true,
-            "legendEntry": "Emp",
-            "lineColor": "red",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "EPS",
             "xMin": null,
             "xMax": null,
             "yMin": 0.0,

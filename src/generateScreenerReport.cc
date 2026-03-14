@@ -415,6 +415,8 @@ void generateScreenerLaTeXReport(
   latexReport << "\\usepackage{hyperref}"<<std::endl;
   latexReport << "\\usepackage{multicol}"<<std::endl;
   latexReport << "\\usepackage[usenames,dvipsnames,table]{xcolor}"<<std::endl;
+  latexReport << "\\usepackage[T1]{fontenc}"<<std::endl;
+  latexReport << "\\usepackage[utf8]{inputenc}"<<std::endl;
 
   // Add the opening figure
   std::string reportTitle;

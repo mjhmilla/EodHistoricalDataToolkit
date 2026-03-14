@@ -31,20 +31,26 @@ static void sanitizeFolderName(std::string &folderName,
 
   std::string charactersToDelete("");  
   charactersToDelete.append("\'");
-  charactersToDelete.append(" ");
 
   deleteCharacters(folderName,charactersToDelete);
 
-  std::string charactersToEscape("");
-  charactersToEscape.append("&");
-  charactersToEscape.append("$");
-  charactersToEscape.append("#");
-  charactersToEscape.append(".");
+  std::vector< std::string > charactersToFind;
+  charactersToFind.push_back("&");
+  charactersToFind.push_back("$");
+  charactersToFind.push_back("#");
+  charactersToFind.push_back(" ");
+  charactersToFind.push_back(".");
 
-  std::string replacementCharacter("_");
-  replaceSpecialCharacters(folderName,
-                           charactersToEscape,
-                           replacementCharacter);
+  std::vector< std::string > replacementCharacters;
+  replacementCharacters.push_back("_");
+  replacementCharacters.push_back("_");
+  replacementCharacters.push_back("_");
+  replacementCharacters.push_back("_");
+  replacementCharacters.push_back("_");
+
+  replaceSubstring(folderName,
+                   charactersToFind,
+                   replacementCharacters);
 };
 //==============================================================================
 static void sanitizeLabelForLaTeX(std::string &stringForLatex,
@@ -69,13 +75,15 @@ static void sanitizeLabelForLaTeX(std::string &stringForLatex,
 
   deleteCharacters(stringForLatex,charactersToDelete);
 
-  std::string charactersToEscape("");
-  charactersToEscape.append(".");
+  std::vector< std::string > substringToFind;
+  substringToFind.push_back(".");
 
-  std::string replacementCharacter("-");
-  replaceSpecialCharacters(stringForLatex,
-                           charactersToEscape,
-                           replacementCharacter);
+  std::vector< std::string > replacementSubstring;
+  replacementSubstring.push_back("-");
+
+  replaceSubstring(stringForLatex,
+                   substringToFind,
+                   replacementSubstring);
 };
 //==============================================================================
 
@@ -87,20 +95,53 @@ static void sanitizeStringForLaTeX(std::string &stringForLatex,
     if(idx != stringForLatex.npos){
       stringForLatex = stringForLatex.substr(0,idx);
     }
-  }                                    
+  }           
+  
+  //
+  // Caution: it is very easy to screw up this function if the 
+  //          order of operations below is changed. Here the order
+  //          needs to be carefully set so that any new special 
+  //          characters added on purpose are not escaped or replaced
+  //          by later edits.
+  //
+
+  std::string charactersToEscape("");
+  charactersToEscape.append("{");
+  charactersToEscape.append("}");
+
+  ReportingFunctions::escapeSpecialCharacters(  stringForLatex, 
+                                                charactersToEscape);
+
+  std::vector< std::string > stringsToFind;
+  stringsToFind.push_back("\\");
+  stringsToFind.push_back("~");
+  stringsToFind.push_back("^");
+
+  std::vector< std::string > replacementStrings;
+  replacementStrings.push_back("\\textbackslash{}");
+  replacementStrings.push_back("\\textasciitilde{}");
+  replacementStrings.push_back("\\textasciicircum{}"); 
+  
+  ReportingFunctions::replaceSubstring( stringForLatex, 
+                                        stringsToFind, 
+                                        replacementStrings);
 
   std::string charactersToDelete("");  
   charactersToDelete.append("\'");
 
   ReportingFunctions::deleteCharacters(stringForLatex,charactersToDelete);
 
-  std::string charactersToEscape("");
+  charactersToEscape.clear();
   charactersToEscape.append("&");
   charactersToEscape.append("$");
   charactersToEscape.append("#");
   charactersToEscape.append("_");
+  charactersToEscape.append("%");
 
-  ReportingFunctions::escapeSpecialCharacters(stringForLatex, charactersToEscape);
+  ReportingFunctions::escapeSpecialCharacters(  stringForLatex, 
+                                                charactersToEscape);
+
+
 
 };
 
@@ -120,19 +161,21 @@ static void convertCamelCaseToSpacedText(std::string &labelUpd){
 
 };
 //==============================================================================
-static void replaceSpecialCharacters(std::string &textUpd, 
-                            const std::string &charactersToReplace,
-                            const std::string &replacementString){
+static void replaceSubstring(
+              std::string &textUpd, 
+              const std::vector< std::string > &substringToReplace,
+              const std::vector< std::string > &replacementString){
 
-    for(size_t i=0; i<charactersToReplace.length();++i){
-      char charToReplace = charactersToReplace[i];
-      size_t idx = textUpd.find(charToReplace,0);
+    for(size_t i=0; i<substringToReplace.size();++i){
+      size_t idx = textUpd.find(substringToReplace[i],0);
       while(idx != std::string::npos){
         if(idx != std::string::npos){
-          textUpd.replace(idx, replacementString.length(),
-                               replacementString);
+          textUpd.replace(idx,substringToReplace[i].size(), 
+                              replacementString[i]);
+          //textUpd.replace(idx, replacementString[i].length(),
+          //                     replacementString[i]);
         }
-        idx = textUpd.find(charToReplace,idx+1);
+        idx = textUpd.find(substringToReplace[i],idx+replacementString[i].length());
       }
     }
 };

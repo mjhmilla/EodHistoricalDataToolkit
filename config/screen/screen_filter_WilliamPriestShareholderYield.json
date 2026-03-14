@@ -86,7 +86,7 @@
             "field":
             [
                 "metric_data",
-                "shareholderyield"
+                "shareholderYield"
             ],
             "isDateSeries": true,
             "measure": "recent",

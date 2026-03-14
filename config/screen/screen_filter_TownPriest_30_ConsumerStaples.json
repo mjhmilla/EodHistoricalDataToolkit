@@ -1,0 +1,335 @@
+{
+    "filter":
+    {
+        "GicSector":
+        {
+            "folder": "fundamentalData",
+            "field":
+            [
+                "General",
+                "GicSector"
+            ],
+            "isDateSeries": false,
+            "condition": "==",
+            "operator": "",
+            "valueType": "string",
+            "values":
+            [
+                "Consumer Staples"
+            ]
+        },
+        "ROIC":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "returnOnInvestedFinancialCapitalLessCostOfCapital"
+            ],
+            "isDateSeries": true,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        },
+        "yearsOfData":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "annual_milestones",
+                "years_reported"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                10.0
+            ]
+        },
+        "revenueGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "revenue_growth_model_avg",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        },
+        "equityGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "equity_growth_model_avg",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        },
+        "fcfGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "fcf_growth_model_avg",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        },
+        "P/DCM-V-LB":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValueRevenueToFcf_price_to_value"
+            ],
+            "isDateSeries": true,
+            "condition": ">",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.001
+            ]
+        },
+        "P/DCM-V-UB":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValueRevenueToFcf_price_to_value"
+            ],
+            "isDateSeries": true,
+            "condition": "<",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                10.00
+            ]
+        }
+    },
+    "ranking":
+    {
+        "P/DCM-V":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValueRevenueToFcf_price_to_value"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "smallestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.75,
+                "lowerBound": -0.01,
+                "upperBound": 5.0,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "ShareholderYield":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "shareholderYield"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.05,
+                "lowerBound": -0.10,
+                "upperBound": 0.50,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "Dividend":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "financialRatios_dividendYield"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.05,
+                "lowerBound": -0.10,
+                "upperBound": 0.50,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "ROIC":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "returnOnInvestedFinancialCapitalLessCostOfCapital"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.05,
+                "lowerBound": -0.01,
+                "upperBound": 1.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "revenueGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "revenue_growth_model_recent",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.05,
+                "lowerBound": -0.01,
+                "upperBound": 1.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "equityGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "equity_growth_model_recent",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.05,
+                "lowerBound": -0.01,
+                "upperBound": 1.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
+        "fcfGrowth":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "fcf_growth_model_recent",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.05,
+                "lowerBound": -0.01,
+                "upperBound": 1.01,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        }
+    },
+    "weighting":
+    {
+        "folder": "calculateData",
+        "field":
+        [
+            "metric_data",
+            "costOfCapital_marketCapitalization"
+        ],
+        "isDateSeries": true
+    },
+    "report":
+    {
+        "number_of_tickers_per_report": 50,
+        "number_of_reports": 3,
+        "title": "Phil Town's Big Five and William Priest's ShareholderYield and free-cashflow DCM"
+    }
+}

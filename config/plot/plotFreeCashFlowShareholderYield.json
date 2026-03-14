@@ -4,7 +4,7 @@
         "rows": 5,
         "columns": 2,
         "plotWidthCm": 9.0,
-        "plotHeightCm": 4.75,
+        "plotHeightCm": 4.5,
         "fileName": "fig_@PrimaryTicker_shareholderyield.pdf",
         "title": "@CompanyNameLaTeX Dividend and Shareholder yield plots",
         "caption": "@PrimaryTickerLaTeX (@URL) Plots inspired from W.Priest's book Free cash-flow and shareholder yield"

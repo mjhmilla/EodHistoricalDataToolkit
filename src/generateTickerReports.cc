@@ -176,7 +176,7 @@ void getFindAndReplacementVectors(const TickerMetaData &tickerMetaData,
   ReportingFunctions::sanitizeStringForLaTeX(currencyCodeLatex);
   ReportingFunctions::sanitizeStringForLaTeX(countryNameLatex);
 
-  ReportingFunctions::sanitizeFolderName(companyName);
+  ReportingFunctions::sanitizeFolderName(companyName,true);
   ReportingFunctions::sanitizeFolderName(primaryTicker);
   ReportingFunctions::sanitizeFolderName(currencyCode);
   ReportingFunctions::sanitizeFolderName(countryName);
@@ -1221,6 +1221,8 @@ bool generateLaTeXReport(
     std::string description;
     JsonFunctions::getJsonString(
         fundamentalData[GEN]["Description"],description);
+    //description.append(" Testing ~ one ^ two \\ three.");
+
     ReportingFunctions::sanitizeStringForLaTeX(description);
 
     std::string companyNameString(tickerMetaData.companyName);
@@ -1241,10 +1243,11 @@ bool generateLaTeXReport(
                   << tickerMetaData.country << " ( \\url{" << webURL << "} )\\\\"
                   << std::endl;
       latexReport << std::endl;
-      //latexReport << "\\break"          << std::endl;
+      
     }
 
-
+    latexReport << "\\break"          << std::endl;
+    
     latexReport << "\\begin{multicols}{2}" << std::endl;
     latexReport << "\\raggedcolumns" << std::endl;
 

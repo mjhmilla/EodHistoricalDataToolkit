@@ -4,7 +4,7 @@
         "rows": 5,
         "columns": 2,
         "plotWidthCm": 9.0,
-        "plotHeightCm": 4.75,
+        "plotHeightCm": 4.5,
         "fileName": "fig_@PrimaryTicker_overview.pdf",
         "title": "@CompanyNameLaTeX overview plot",
         "caption": "@PrimaryTickerLaTeX (@URL) overview"
