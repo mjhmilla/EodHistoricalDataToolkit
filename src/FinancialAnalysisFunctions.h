@@ -37,7 +37,8 @@ class FinancialAnalysisFunctions {
         const char* fieldName,        
         bool setNansToMissingValue,
         bool includeTimeUnitInAddress=true,
-        bool ignoreNans=false){
+        bool ignoreNans=false,
+        bool useAbsoluteValue=false){
 
 
       double value        = 0;
@@ -64,6 +65,9 @@ class FinancialAnalysisFunctions {
         }
         
         if(!std::isnan(value)){
+          if(useAbsoluteValue){
+            value = std::fabs(value);
+          }
           sumOfValues += value*dateSet.weights[i];
           ++numberOfEntries;
         }
@@ -914,6 +918,7 @@ class FinancialAnalysisFunctions {
         sumFundamentalDataOverDates(
           jsonData,FIN,CF,timeUnit,dateSet,"dividendsPaid",
           true);
+      dividendsPaid=std::fabs(dividendsPaid);          
 
       double retentionRatio =  
         (netIncome-dividendsPaid) / (netIncome);
@@ -2430,6 +2435,7 @@ class FinancialAnalysisFunctions {
           if(std::isnan(dividendsPaidEntry)){
             dividendsPaidEntry = 0.;
           }
+          dividendsPaidEntry = std::fabs(dividendsPaidEntry);
           dividendsPaid += dividendsPaidEntry * dateSet.weights[i];                              
         }
 

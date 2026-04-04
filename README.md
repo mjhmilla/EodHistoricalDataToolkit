@@ -131,6 +131,13 @@ The file defines the market and some aspects of the market report. For example, 
 
 The final market report will start with a summary plot for every ranking metric that shows an overview of every ticker in the market's historical dataset, plotted using box-and-whisker plots to avoid overwhelming the reader. These plots are followed by the ranked list of the companies along with their scores. Finally, the ticker reports for every company in the market are appended to this. Note that the report of a single market can be broken up into several reports: see the "report" section of filterSTU_rank3F.json for details.
 
+## Notes
+
+1. March 2026
+  - EOD uses data from several sources to create the fundamental data.
+  - Some data sources treat dividendsPaid as a negative number while others assign it a positive number. While either sign convention is valid, switching between sign conventions is not.
+  - Within the EodHistoricalDataTookit care is taken to always take the absolute value of dividendsPaid prior to using it in analysis.
+  - When editing the plot configuration files in config/plot make sure that one of the sources of dividendsPaid from the calculate file is used rather than the fundamental data file: dividendsPaid in the calculate file will always be positive, while in the fundamental data file there is no guarantee of the correct sign.
 
 ## Licensing
 

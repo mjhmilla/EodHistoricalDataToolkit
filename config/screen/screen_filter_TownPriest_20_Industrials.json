@@ -165,6 +165,31 @@
                 "addPlot": true
             }
         },
+        "RevenueToFreeCashFlowR2":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "priceToValueRevenueToFcf_revenueToFcfModel_r2"
+            ],
+            "isDateSeries": true,
+            "measure": "recent",
+            "direction": "biggestIsBest",
+            "lowerBound": 0,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": 0.75,
+                "lowerBound": -0.01,
+                "upperBound": 5.0,
+                "logarithmic": false,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },         
         "ShareholderYield":
         {
             "folder": "calculateData",

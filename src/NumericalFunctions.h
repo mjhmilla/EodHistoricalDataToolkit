@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <string>
+#include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
 #include <sstream>
@@ -775,6 +776,12 @@ class NumericalFunctions {
         if(std::isnan(dividendsPaid)){
           dividendsPaid=0.;
         }
+        // 2026/3/26 
+        // M.Millard noticed that dividendsPaid was negative in the plots of 
+        // EVD.XETRA. Upon asking EOD about the sign change I was told that 
+        // this sign change is to be ignored: some of their data providers mark 
+        // dividendsPaid as a negative, while others treat it as a positive.
+        dividendsPaid = std::fabs(dividendsPaid);
 
         double freeCashFlow = JsonFunctions::getJsonFloat(
           fundamentalData[FIN][CF][timePeriod][date]["freeCashFlow"],
@@ -845,7 +852,12 @@ class NumericalFunctions {
           if(std::isnan(dividendsPaidEntry)){
             dividendsPaidEntry=0.;
           }              
-          
+          // 2026/3/26 
+          // M.Millard noticed that dividendsPaid was negative in the plots of 
+          // EVD.XETRA. Upon asking EOD about the sign change I was told that 
+          // this sign change is to be ignored: some of their data providers mark 
+          // dividendsPaid as a negative, while others treat it as a positive.
+          dividendsPaidEntry = std::fabs(dividendsPaidEntry);          
 
           dividendsTrailing += dividendsPaidEntry;
 
@@ -898,6 +910,12 @@ class NumericalFunctions {
         if(std::isnan(dividendsPaidPrevious)){
           dividendsPaidPrevious=0.;
         }
+        // 2026/3/26 
+        // M.Millard noticed that dividendsPaid was negative in the plots of 
+        // EVD.XETRA. Upon asking EOD about the sign change I was told that 
+        // this sign change is to be ignored: some of their data providers mark 
+        // dividendsPaid as a negative, while others treat it as a positive.
+        dividendsPaidPrevious = std::fabs(dividendsPaidPrevious);        
 
 
         //
@@ -1218,12 +1236,13 @@ class NumericalFunctions {
 
           includeTimeUnit = true;
           ignoreNans      = true;
+          bool useAbsoluteValue= true;
 
           double dividendsPaidTTM=
             FinancialAnalysisFunctions::sumFundamentalDataOverDates(
               fundamentalData,FIN,CF,timePeriod.c_str(),dateSetTTM,
               "dividendsPaid",setNansToMissingValue,
-              includeTimeUnit, ignoreNans);
+              includeTimeUnit, ignoreNans,useAbsoluteValue);
 
           double epsGaapTTM = (netIncomeTTM-dividendsPaidTTM)/outstandingShares; 
           double peGaapTTM = marketCapitalization/(netIncomeTTM-dividendsPaidTTM);          
@@ -1271,12 +1290,13 @@ class NumericalFunctions {
 
           includeTimeUnit = true;
           ignoreNans      = true;
+          useAbsoluteValue= true;
 
           double dividendsPaidPreviousTTM=
             FinancialAnalysisFunctions::sumFundamentalDataOverDates(
               fundamentalData,FIN,CF,timePeriod.c_str(),dateSetPrevTTM,
               "dividendsPaid",setNansToMissingValue,
-              includeTimeUnit, ignoreNans);
+              includeTimeUnit, ignoreNans, useAbsoluteValue);
 
           includeTimeUnit = true;
           ignoreNans      = false;
@@ -1400,7 +1420,7 @@ class NumericalFunctions {
             value = 
               JsonFunctions::getJsonFloat(fundamentalData[reportChapter]
                   [reportSection][timePeriod][date][fieldName],
-                  setNansToMissingValue);
+                  setNansToMissingValue);                  
           }else{
             value = 
               JsonFunctions::getJsonFloat(fundamentalData[reportChapter]
@@ -1411,7 +1431,10 @@ class NumericalFunctions {
 
           if(JsonFunctions::isJsonFloatValid(value)){
             bool dateEntryValid = JsonFunctions::isJsonFloatValid(dateNum);
-            if(dateEntryValid){          
+            if(dateEntryValid){ 
+              if(strcmp(fieldName,"dividendsPaid")==0){
+                value = std::fabs(value);
+              }              
               dateV.push_back(date);
               dateNumV.push_back(dateNum);
               valueV.push_back(value);

@@ -479,14 +479,12 @@
         {
             "row": 3,
             "column": 1,
-            "jsonData_x": "fundamentalData",
+            "jsonData_x": "calculateData",
             "address_x":
             [
-                "Financials",
-                "Cash_Flow",
-                "yearly"
+                "metric_data"
             ],
-            "fieldName_y": "dividendsPaid",
+            "fieldName_y": "shareholderYield_dividendsPaid",
             "fieldName_x": "date",
             "isArray": false,
             "legendEntry": "Fin",
