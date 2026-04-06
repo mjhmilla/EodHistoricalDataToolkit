@@ -1391,8 +1391,12 @@ class NumericalFunctions {
           JsonFunctions::getJsonString(el["date"],date);
           double dateNum = DateFunctions::convertToFractionalYear(date);
 
-          metricDatesV.push_back(date);
-          metricDatesNumV.push_back(dateNum);
+          if(  dateNum >= settings.oldestValidDate 
+            && dateNum <= settings.newestValidDate){
+            metricDatesV.push_back(date);
+            metricDatesNumV.push_back(dateNum);
+          }
+
         }
       }else{
         for(auto &el : fundamentalData[reportChapter][reportSection]){
@@ -1400,8 +1404,11 @@ class NumericalFunctions {
           JsonFunctions::getJsonString(el["date"],date);
           double dateNum = DateFunctions::convertToFractionalYear(date);
 
-          metricDatesV.push_back(date);
-          metricDatesNumV.push_back(dateNum);
+          if(  dateNum >= settings.oldestValidDate 
+            && dateNum <= settings.newestValidDate){
+            metricDatesV.push_back(date);
+            metricDatesNumV.push_back(dateNum);
+          }
         }
       }
 

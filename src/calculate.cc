@@ -185,6 +185,65 @@ bool extractDatesOfClosestMatch(
   return validInput;
 };
 //============================================================================
+void extractOldestNewestReportedDates(
+              const nlohmann::ordered_json &fundamentalData,
+              DataStructures::DateSpan &dateSpan)
+{
+  dateSpan.oldestDate.assign("0");
+  dateSpan.newestDate.assign("0");
+  dateSpan.oldestDateNum = std::numeric_limits<double>::max();
+  dateSpan.newestDateNum =-std::numeric_limits<double>::max();
+
+  std::vector< std::string > finTable;
+  finTable.push_back(BAL);
+  finTable.push_back(CF);
+  finTable.push_back(IS);
+
+  std::vector< std::string> timePeriod;
+  timePeriod.push_back(Q);
+  timePeriod.push_back(Y);
+
+
+  for(size_t i=0; i<finTable.size();++i){
+    for( size_t j=0; j<timePeriod.size();++j){
+
+      std::string date;
+      JsonFunctions::getJsonString(
+        fundamentalData[FIN][finTable[i].c_str()]
+                            [timePeriod[j].c_str()].front()["date"],date);
+      double dateNum = DateFunctions::convertToFractionalYear(date);
+
+      if(dateNum < dateSpan.oldestDateNum){
+        dateSpan.oldestDateNum  = dateNum;
+        dateSpan.oldestDate     = date;
+      }
+      if(dateNum > dateSpan.newestDateNum){
+        dateSpan.newestDateNum   = dateNum;
+        dateSpan.newestDate      = date;
+      }
+
+
+      JsonFunctions::getJsonString(
+        fundamentalData[FIN][finTable[i].c_str()]
+                            [timePeriod[j].c_str()].back()["date"],date);
+      dateNum = DateFunctions::convertToFractionalYear(date);
+      if(dateNum < dateSpan.oldestDateNum){
+        dateSpan.oldestDateNum  = dateNum;
+        dateSpan.oldestDate     = date;
+      }
+      if(dateNum > dateSpan.newestDateNum){
+        dateSpan.newestDateNum   = dateNum;
+        dateSpan.newestDate      = date;
+      }
+
+
+    }
+  }
+
+
+};
+
+//============================================================================
 
 bool extractAnalysisDates(
       DataStructures::AnalysisDates &analysisDates,
@@ -2160,12 +2219,20 @@ int main (int argc, char* argv[]) {
       empGrowthSettings.calcOneGrowthRateForAllData   = false;        
       empGrowthSettings.includeTimeUnitInAddress      = true;
       empGrowthSettings.typeOfEmpiricalModel          = -1;
+      
+      DataStructures::DateSpan fundamentalDateSpan;
+     
+      extractOldestNewestReportedDates(fundamentalData,fundamentalDateSpan);
+      
+      empGrowthSettings.newestValidDate = fundamentalDateSpan.newestDateNum;
+      empGrowthSettings.oldestValidDate = fundamentalDateSpan.oldestDateNum;
 
       //I'm not fitting to all of the data any more, because I'm seeing this 
       //common case 
       //
       //- One growth model nicely fits data from the first half of 
       //  companies life
+
       //- Another growth model nicely fits data from the second half of a 
       //  companies life
       //- No single model fits the entire span well.

@@ -47,7 +47,14 @@ class DataStructures {
 
   public:
 
-
+    //============================================================================
+    struct DateSpan{
+      std::string newestDate;
+      std::string oldestDate;
+      double newestDateNum;
+      double oldestDateNum;      
+      DateSpan():newestDate(""),oldestDate(""),newestDateNum(-1),oldestDateNum(-1){};      
+    };
     //============================================================================
     struct AnalysisDates{
       std::vector< std::string > common;
@@ -153,6 +160,8 @@ class DataStructures {
       bool calcOneGrowthRateForAllData;
       bool includeTimeUnitInAddress;
       int typeOfEmpiricalModel;
+      double oldestValidDate;
+      double newestValidDate;
     };
 
     //==========================================================================
