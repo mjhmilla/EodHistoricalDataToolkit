@@ -2128,7 +2128,8 @@ class NumericalFunctions {
             bool setNansToMissingValue,
             const std::string &parentName,
             std::vector< std::string> &termNames,
-            std::vector< double > &termValues)                                      
+            std::vector< double > &termValues,
+            std::vector< DataStructures::PriceToValueSummary > &pvSummary)                                      
     {
 
       
@@ -2148,8 +2149,13 @@ class NumericalFunctions {
         //Get the current, 25%, 50% and 75% revenue growth rates
         double revenue0 = revenueGrowthModel.metricValue[idxRGM];
 
+        pvSummary.resize(4);
+        for(size_t i=0; i<pvSummary.size();++i){
+          pvSummary[i] = DataStructures::PriceToValueSummary();
+        }
         std::vector<std::string> nameMod;
         nameMod.push_back("");
+
 
         std::vector< double > revenueGrowthVariation;
         revenueGrowthVariation.push_back(
@@ -2280,6 +2286,13 @@ class NumericalFunctions {
 
           double priceToValue = marketCapitalization/totalFcf;
 
+          pvSummary[i].name     = parentName+"price_to_value"+nameMod[i];
+          pvSummary[i].numberOfShares = std::nan("1");
+          pvSummary[i].adjustedClosePrice = std::nan("1");
+          pvSummary[i].marketCapitalization = marketCapitalization;
+          pvSummary[i].priceToValue         = priceToValue;
+          pvSummary[i].date                 = dateSet.dates[0];
+
           if(appendTermRecord){
             termNames.push_back(parentName+"cumulative_fcf_present_value"+nameMod[i]);
             termValues.push_back(cumFcf);
@@ -2310,7 +2323,8 @@ class NumericalFunctions {
                     bool setNansToMissingValue,
                     const std::string &parentName,
                     std::vector< std::string> &termNames,
-                    std::vector< double > &termValues)                                      
+                    std::vector< double > &termValues,
+                    std::vector< DataStructures::PriceToValueSummary> &pvSummary)                                      
     {
 
       double dateNumRecent=
@@ -2319,7 +2333,8 @@ class NumericalFunctions {
       bool validFinancialRatios = financialRatios.datesNumerical.size() > 0;
       bool validEquityGrowthModel = equityGrowthModel.datesNumerical.size()>0;
 
-      if(validFinancialRatios && validEquityGrowthModel){
+      if(validFinancialRatios && validEquityGrowthModel)
+      {
         //Go get the corresponding financialRatio index
         int idxFR = DateFunctions::getIndexClosestToDate(
                         dateNumRecent,
@@ -2355,9 +2370,13 @@ class NumericalFunctions {
         std::vector<double> peVariation(4);
         std::vector< double > priceToValue(4);
 
+        pvSummary.resize(4);
+        for(size_t i=0; i<pvSummary.size();++i){
+          pvSummary[i] = DataStructures::PriceToValueSummary();
+        }
 
-
-        for(size_t i=0; i<cumPresentValue.size();++i){
+        for(size_t i=0; i<cumPresentValue.size();++i)
+        {
 
           std::string nameMod("");
           switch(i){
@@ -2559,12 +2578,19 @@ class NumericalFunctions {
           priceToValue[i] = 
             financialRatios.adjustedClosePrice[idxFR]/cumPresentValue[i];
 
+          pvSummary[i].date = dateSet.dates[0];
+          pvSummary[i].adjustedClosePrice 
+            = financialRatios.adjustedClosePrice[idxFR];
+          pvSummary[i].numberOfShares  
+            = financialRatios.outstandingShares[idxFR];
+          pvSummary[i].priceToValue = priceToValue[i];
+          pvSummary[i].name = parentName+"price_to_value"+nameMod;
+
           //Compute the price to value ratio
           if(appendTermRecord){
             termNames.push_back(parentName+"price_to_value"+nameMod);
             termValues.push_back(priceToValue[i]);
           }
-
         }
       }
     };
@@ -2879,7 +2905,71 @@ class NumericalFunctions {
 
     };   
 
+    //==========================================================================
 
+    static bool evaluateRecentPriceToValue(
+            const nlohmann::ordered_json &fundamentalData, 
+            const nlohmann::ordered_json &historicalData, 
+            double adjustedClosePrice,
+            double outstandingShares,
+            double priceToValue,
+            std::string &name,
+            DataStructures::RecentPriceToValue &pvUpd)
+    {
+      bool passed=true;
+      try{
+        int indexA = 0;
+        int indexB = historicalData.size()-1;
+        std::string dateA;
+        std::string dateB;
+        double dateANum;
+        double dateBNum;
+        JsonFunctions::getJsonString(historicalData[ indexA ]["date"],
+                                     dateA);
+        dateANum = DateFunctions::convertToFractionalYear(dateA);
+
+        JsonFunctions::getJsonString(historicalData[ indexB ]["date"],
+                                     dateB);
+        dateBNum = DateFunctions::convertToFractionalYear(dateB);
+
+        int index=0;        
+        if(dateANum > dateBNum){
+          index = indexA;
+          pvUpd.recentDate = dateA;
+        }else{
+          index = indexB;
+          pvUpd.recentDate = dateB;
+        }
+        
+
+        pvUpd.recentAdjustedClosePrice 
+          = JsonFunctions::getJsonFloat(
+                            historicalData[ index ]["adjusted_close"],
+                            false); 
+
+        pvUpd.recentNumberOfShares  
+          = FinancialAnalysisFunctions::getOutstandingSharesClosestToDate(
+                                          fundamentalData, 
+                                          pvUpd.recentDate,
+                                          Q);
+
+        pvUpd.adjustedClosePrice = adjustedClosePrice;
+        pvUpd.numberOfShares     = outstandingShares;
+
+        pvUpd.scaleFactor  = 
+          (pvUpd.recentNumberOfShares*pvUpd.recentAdjustedClosePrice)
+          /(pvUpd.numberOfShares*pvUpd.adjustedClosePrice);
+
+        pvUpd.priceToValue = priceToValue;
+        pvUpd.recentPriceToValue = pvUpd.priceToValue*pvUpd.scaleFactor; 
+        pvUpd.name=name;
+      }catch( std::invalid_argument const& ex){
+        std::cout << ex.what() << std::endl;
+        passed=false;
+      }
+      return passed;
+
+    };
 
 };
 

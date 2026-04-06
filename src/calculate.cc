@@ -2611,6 +2611,8 @@ int main (int argc, char* argv[]) {
       indexDate         = -1;
       bool validDateSet = true;
 
+      std::vector< DataStructures::RecentPriceToValue > recentPriceToValue;
+
       while( (indexDate+1) < indexLastCommonDate && validDateSet){
 
         ++indexDate;
@@ -3426,6 +3428,25 @@ int main (int argc, char* argv[]) {
               termNames,
               termValues);
 
+              
+
+        if(indexDate == 0){
+          //recentPriceToValue;
+          DataStructures::RecentPriceToValue pvUpd;
+          double priceToValue = presentValue / marketCapitalization;
+          bool success = NumericalFunctions::evaluateRecentPriceToValue(
+                                fundamentalData,
+                                historicalData,
+                                adjustedClosePrice,
+                                outstandingShares,
+                                priceToValue,
+                                parentName,
+                                pvUpd);
+          if(success){
+            recentPriceToValue.push_back(pvUpd);
+          }
+        }
+
         //
         // Empirical - recent average 
         //
@@ -3481,6 +3502,24 @@ int main (int argc, char* argv[]) {
                   parentName,
                   termNames,
                   termValues);
+
+            if(indexDate == 0){
+              //recentPriceToValue;
+              DataStructures::RecentPriceToValue pvUpd;
+              double priceToValue = presentValueEmpirical / marketCapitalization;
+              bool success = NumericalFunctions::evaluateRecentPriceToValue(
+                                    fundamentalData,
+                                    historicalData,
+                                    adjustedClosePrice,
+                                    outstandingShares,
+                                    priceToValue,
+                                    parentName,
+                                    pvUpd);
+              if(success){
+                recentPriceToValue.push_back(pvUpd);
+              }
+            }
+
           }
         }
 
@@ -3533,12 +3572,30 @@ int main (int argc, char* argv[]) {
                   parentName,
                   termNames,
                   termValues);
+
+            if(indexDate == 0){
+              //recentPriceToValue;
+              DataStructures::RecentPriceToValue pvUpd;
+              double priceToValue = presentValueEmpiricalAvg / marketCapitalization;
+              bool success = NumericalFunctions::evaluateRecentPriceToValue(
+                                    fundamentalData,
+                                    historicalData,
+                                    adjustedClosePrice,
+                                    outstandingShares,
+                                    priceToValue,
+                                    parentName,
+                                    pvUpd);
+              if(success){
+                recentPriceToValue.push_back(pvUpd);
+              }
+            }                  
           }
         }
 
         //
         // Price-to-Value using EPS and EPS growth
         //
+        std::vector< DataStructures::PriceToValueSummary > pvSummary;
         parentName="priceToValueEpsGrowth_";
         NumericalFunctions::
           calcPriceToValueUsingEarningsPerShareGrowth(
@@ -3552,14 +3609,32 @@ int main (int argc, char* argv[]) {
             setNansToMissingValue,
             parentName,
             termNames,
-            termValues);  
+            termValues,
+            pvSummary);  
 
-
+        if(indexDate == 0){
+          //recentPriceToValue;
+          for(size_t idxPV=0; idxPV < pvSummary.size();++idxPV){
+            DataStructures::RecentPriceToValue pvUpd;
+            bool success = NumericalFunctions::evaluateRecentPriceToValue(
+                                  fundamentalData,
+                                  historicalData,
+                                  pvSummary[idxPV].adjustedClosePrice,
+                                  pvSummary[idxPV].numberOfShares,
+                                  pvSummary[idxPV].priceToValue,
+                                  pvSummary[idxPV].name,
+                                  pvUpd);
+            if(success){
+              recentPriceToValue.push_back(pvUpd);
+            }
+          }
+        }
           
         //
         // Price-to-Value using free-cash-flow per share and
         // free-cash-flow yield 
         //
+
         parentName="priceToValueRevenueToFcf_";
         NumericalFunctions::
           calcPriceToValueUsingDiscountedFreeCashFlow(
@@ -3573,7 +3648,26 @@ int main (int argc, char* argv[]) {
             setNansToMissingValue,
             parentName,
             termNames,
-            termValues);  
+            termValues,
+            pvSummary);  
+            
+        if(indexDate == 0){
+          //recentPriceToValue;
+          for(size_t idxPV=0; idxPV < pvSummary.size();++idxPV){
+            DataStructures::RecentPriceToValue pvUpd;
+            bool success = NumericalFunctions::evaluateRecentPriceToValue(
+                                  fundamentalData,
+                                  historicalData,
+                                  adjustedClosePrice,
+                                  outstandingShares,
+                                  pvSummary[idxPV].priceToValue,
+                                  pvSummary[idxPV].name,
+                                  pvUpd);
+            if(success){
+              recentPriceToValue.push_back(pvUpd);
+            }
+          }
+        }
 
         parentName="priceToValueRevenueToFcfAvg_";
         NumericalFunctions::
@@ -3588,7 +3682,28 @@ int main (int argc, char* argv[]) {
             setNansToMissingValue,
             parentName,
             termNames,
-            termValues);              
+            termValues, 
+            pvSummary);
+        
+        if(indexDate == 0){
+          //The average contains the same value 4 times over
+          DataStructures::RecentPriceToValue pvUpd;
+          bool success = NumericalFunctions::evaluateRecentPriceToValue(
+                                fundamentalData,
+                                historicalData,
+                                adjustedClosePrice,
+                                outstandingShares,
+                                pvSummary[0].priceToValue,
+                                pvSummary[0].name,
+                                pvUpd);
+          if(success){
+            recentPriceToValue.push_back(pvUpd);
+          }
+        }
+
+        std::cout << "You are here" << std::endl;
+        std::abort();
+        
         //
         // Equity growth
         //

@@ -48,6 +48,42 @@ class DataStructures {
   public:
 
     //============================================================================
+    struct PriceToValueSummary{
+      std::string date;
+      double adjustedClosePrice;
+      double numberOfShares;
+      double marketCapitalization;      
+      double priceToValue;
+      std::string name;
+      PriceToValueSummary():date(""),
+                            adjustedClosePrice(std::nan("1")),
+                            numberOfShares(std::nan("1")),
+                            marketCapitalization(std::nan("1")),
+                            priceToValue(std::nan("1")){};
+    };
+
+
+    //============================================================================
+    struct RecentPriceToValue{
+      std::string recentDate;
+      double recentAdjustedClosePrice;
+      double recentNumberOfShares;
+      double adjustedClosePrice;
+      double numberOfShares;      
+      double scaleFactor;
+      double priceToValue;
+      double recentPriceToValue;
+      std::string name;
+      RecentPriceToValue():recentDate(""),
+                            recentAdjustedClosePrice(std::nan("1")),
+                            recentNumberOfShares(std::nan("1")),
+                            adjustedClosePrice(std::nan("1")),
+                            numberOfShares(std::nan("1")),
+                            scaleFactor(std::nan("1")),
+                            recentPriceToValue(std::nan("1")){};
+    };
+
+    //============================================================================
     struct DateSpan{
       std::string newestDate;
       std::string oldestDate;
