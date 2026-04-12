@@ -46,6 +46,34 @@ enum EmpiricalGrowthModelTypes{
 class DataStructures {
 
   public:
+    //============================================================================
+    struct ValuationMetricSummary{
+      std::string date;
+
+      double marketCapitalization;
+      double marketCapitalizationRecent;
+
+      double enterpriseValue;      
+      double enterpriseValueRecent;      
+
+      double acquirersMultiple;
+      double acquirersMultipleRecent;
+
+      double freeCashFlow;
+      double residualCashFlow;
+      double operatingIncome;
+
+      ValuationMetricSummary():date(""),
+                               marketCapitalization(std::nan("1")),
+                               marketCapitalizationRecent(std::nan("1")),
+                               enterpriseValue(std::nan("1")),
+                               enterpriseValueRecent(std::nan("1")),
+                               acquirersMultiple(std::nan("1")),
+                               acquirersMultipleRecent(std::nan("1")),
+                               freeCashFlow(std::nan("1")),
+                               residualCashFlow(std::nan("1")),
+                               operatingIncome(std::nan("1")){};
+    };
 
     //============================================================================
     struct PriceToValueSummary{

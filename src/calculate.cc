@@ -2612,6 +2612,7 @@ int main (int argc, char* argv[]) {
       bool validDateSet = true;
 
       std::vector< DataStructures::RecentPriceToValue > recentPriceToValue;
+      DataStructures::ValuationMetricSummary valuationMetricSummary; 
 
       while( (indexDate+1) < indexLastCommonDate && validDateSet){
 
@@ -3282,6 +3283,17 @@ int main (int argc, char* argv[]) {
           termValues.push_back(residualCashFlowToEnterpriseValue);
         }        
 
+        double acquirersMultiple = 
+          FinancialAnalysisFunctions::calcAcquirersMultiple(
+                                      enterpriseValue,
+                                      fundamentalData,
+                                      dateSet,
+                                      timePeriod.c_str(),
+                                      appendTermRecord,
+                                      setNansToMissingValue,
+                                      termNames,
+                                      termValues);
+
         double freeCashFlowToEquity=std::nan("1");
         if(previousTimePeriod.length()>0){
           freeCashFlowToEquity = FinancialAnalysisFunctions::
@@ -3384,6 +3396,8 @@ int main (int argc, char* argv[]) {
         termNames.push_back("afterTaxOperatingIncomeGrowth");
         termValues.push_back(afterTaxOperatingIncomeGrowth); 
 
+
+
         //William Price's shareholder yield
         parentName = "";
         double shareHolderYield =  
@@ -3405,7 +3419,14 @@ int main (int argc, char* argv[]) {
 
         parentName="priceToValue_";
 
-    
+        //Valuation metrics
+        std::cout << "You are here" << std::endl;
+        std::abort();
+        //if(indexDate ==0 ){
+
+        //}
+
+
         //Valuation (discounted cash flow)
         double presentValue = FinancialAnalysisFunctions::
             calcPriceToValueUsingDamodaranDiscountedCashflowModel(  
@@ -3434,13 +3455,14 @@ int main (int argc, char* argv[]) {
           //recentPriceToValue;
           DataStructures::RecentPriceToValue pvUpd;
           double priceToValue = presentValue / marketCapitalization;
+          std::string fieldName = parentName.substr(0,parentName.size()-1);
           bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                 fundamentalData,
                                 historicalData,
                                 adjustedClosePrice,
                                 outstandingShares,
                                 priceToValue,
-                                parentName,
+                                fieldName,
                                 pvUpd);
           if(success){
             recentPriceToValue.push_back(pvUpd);
@@ -3507,13 +3529,14 @@ int main (int argc, char* argv[]) {
               //recentPriceToValue;
               DataStructures::RecentPriceToValue pvUpd;
               double priceToValue = presentValueEmpirical / marketCapitalization;
+              std::string fieldName = parentName.substr(0,parentName.size()-1);
               bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                     fundamentalData,
                                     historicalData,
                                     adjustedClosePrice,
                                     outstandingShares,
                                     priceToValue,
-                                    parentName,
+                                    fieldName,
                                     pvUpd);
               if(success){
                 recentPriceToValue.push_back(pvUpd);
@@ -3577,13 +3600,14 @@ int main (int argc, char* argv[]) {
               //recentPriceToValue;
               DataStructures::RecentPriceToValue pvUpd;
               double priceToValue = presentValueEmpiricalAvg / marketCapitalization;
+              std::string fieldName = parentName.substr(0,parentName.size()-1);
               bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                     fundamentalData,
                                     historicalData,
                                     adjustedClosePrice,
                                     outstandingShares,
                                     priceToValue,
-                                    parentName,
+                                    fieldName,
                                     pvUpd);
               if(success){
                 recentPriceToValue.push_back(pvUpd);
@@ -3669,6 +3693,7 @@ int main (int argc, char* argv[]) {
           }
         }
 
+        
         parentName="priceToValueRevenueToFcfAvg_";
         NumericalFunctions::
           calcPriceToValueUsingDiscountedFreeCashFlow(
@@ -3701,9 +3726,7 @@ int main (int argc, char* argv[]) {
           }
         }
 
-        std::cout << "You are here" << std::endl;
-        std::abort();
-        
+              
         //
         // Equity growth
         //
@@ -3818,19 +3841,18 @@ int main (int argc, char* argv[]) {
         }
 
 
-
         
-
         metricAnalysisJson[date]= analysisEntry;        
         ++entryCount;
       }
+
+
 
 
       nlohmann::ordered_json stringDataReport;
       stringDataReport["home_country"] = homeRiskTable.CountryISO3;
       stringDataReport["firm_country"] = riskTable.CountryISO3;
 
-      analysis["country_data"] = stringDataReport;
 
 
       nlohmann::ordered_json annualMilestoneReport;
@@ -3865,9 +3887,45 @@ int main (int argc, char* argv[]) {
         = dividendInfo.meanFreeCashFlowLessDividendsYield;
 
         
-      analysis["annual_milestones"] = annualMilestoneReport;
 
-        
+      //
+      // Recent valuation
+      //
+      nlohmann::ordered_json recentPriceToValueJson;
+
+      if(recentPriceToValue.size()>0){
+        recentPriceToValueJson["price"] 
+          = recentPriceToValue[0].adjustedClosePrice;
+        recentPriceToValueJson["price_current"] 
+          = recentPriceToValue[0].recentAdjustedClosePrice;
+        recentPriceToValueJson["outstandingShares"] 
+          = recentPriceToValue[0].numberOfShares;
+        recentPriceToValueJson["outstandingShares_current"] 
+          = recentPriceToValue[0].recentNumberOfShares;
+        recentPriceToValueJson["scaleFactor"] 
+          = recentPriceToValue[0].scaleFactor;
+
+        double scaleFactor = recentPriceToValue[0].scaleFactor;
+        for(size_t i=0; i< recentPriceToValue.size();++i){
+          if(std::abs(scaleFactor-recentPriceToValue[i].scaleFactor) > 1e-6){
+            std::cerr << "Error: Every current valuation calculation should "
+                      << "use the same scale factor: price_current/price, where"
+                      << "price is the price used in the valuation."
+                      << std::endl;
+            std::abort();
+          }
+        }
+
+        for(size_t i =0; i  < recentPriceToValue.size();++i){
+          std::string fieldName = recentPriceToValue[i].name;
+          recentPriceToValueJson[fieldName] 
+            = recentPriceToValue[i].priceToValue;
+
+          fieldName.append("_current");
+          recentPriceToValueJson[fieldName] 
+            = recentPriceToValue[i].recentPriceToValue;
+        }
+      }        
       //
       // dividend growth
       //      
@@ -4101,7 +4159,9 @@ int main (int argc, char* argv[]) {
       //
       // Package all three into a single json object
       //
-
+      analysis["country_data"] = stringDataReport;
+      analysis["annual_milestones"] = annualMilestoneReport;
+      analysis["price_to_value_current"] = recentPriceToValueJson;
       analysis["metric_data"]                     = metricAnalysisJson;
       analysis["dividend_yield_growth_model"]     = dividendYieldGrowthModelJson;
       analysis["dividend_yield_growth_model_avg"] = dividendYieldGrowthModelAvgJson;

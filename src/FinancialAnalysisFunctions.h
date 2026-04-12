@@ -1940,6 +1940,39 @@ class FinancialAnalysisFunctions {
     };
 
     //==========================================================================
+    static double calcAcquirersMultiple(
+                    double enterpriseValue,
+                    const nlohmann::ordered_json &jsonData, 
+                    const DateFunctions::DateSetTTM &dateSet,
+                    const char *timeUnit,   
+                    bool appendTermRecord,
+                    bool setNansToMissingValue,
+                    std::vector< std::string> &termNames,
+                    std::vector< double > &termValues)                    
+    {
+
+      double operatingIncome = 
+        sumFundamentalDataOverDates(
+          jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
+          setNansToMissingValue);
+
+      double acquirersMultiple = enterpriseValue/operatingIncome;
+
+      if(appendTermRecord){
+        termNames.push_back("acquirersMultiple_operatingIncome");
+        termNames.push_back("acquirersMultiple_enterpriseValue");
+        termNames.push_back("acquirersMultiple");
+
+        termValues.push_back(operatingIncome);
+        termValues.push_back(enterpriseValue);
+        termValues.push_back(acquirersMultiple);
+      }
+
+      return acquirersMultiple;
+
+    };
+
+    //==========================================================================
     /**
      Warren Buffets definition for owners earnings is a bit more conservative
      than free-cash-flow-to-equity because the cash flow created by debt is
