@@ -3417,15 +3417,37 @@ int main (int argc, char* argv[]) {
                                         termNames,
                                         termValues);
 
-        parentName="priceToValue_";
 
         //Valuation metrics
-        std::cout << "You are here" << std::endl;
-        std::abort();
-        //if(indexDate ==0 ){
+        if(indexDate ==0 ){
 
-        //}
+          double freeCashFlow = 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,CF,timePeriod.c_str(),dateSet,
+              "freeCashFlow", setNansToMissingValue); 
 
+
+          double operatingIncome = 
+            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+              fundamentalData,FIN,IS,timePeriod.c_str(),dateSet,
+              "operatingIncome", setNansToMissingValue); 
+
+          valuationMetricSummary.date = date;
+          valuationMetricSummary.marketCapitalization=marketCapitalization;
+          valuationMetricSummary.enterpriseValue   = enterpriseValue;
+          valuationMetricSummary.freeCashFlow      = freeCashFlow;
+          valuationMetricSummary.operatingIncome   = operatingIncome;
+          valuationMetricSummary.acquirersMultiple = acquirersMultiple;
+          valuationMetricSummary.residualCashFlow  = residualCashFlow;
+
+          bool success=NumericalFunctions::evaluateRecentValuationMetrics(
+                                              fundamentalData,
+                                              historicalData,
+                                              valuationMetricSummary);
+          
+        }
+
+        parentName="priceToValue_";
 
         //Valuation (discounted cash flow)
         double presentValue = FinancialAnalysisFunctions::
@@ -3904,6 +3926,19 @@ int main (int argc, char* argv[]) {
           = recentPriceToValue[0].recentNumberOfShares;
         recentPriceToValueJson["scaleFactor"] 
           = recentPriceToValue[0].scaleFactor;
+
+        recentPriceToValueJson["enterpriseValue"] 
+          = valuationMetricSummary.enterpriseValue;  
+        recentPriceToValueJson["enterpriseValueRecent"] 
+          = valuationMetricSummary.enterpriseValueRecent;
+
+        recentPriceToValueJson["operatingIncome"] 
+          = valuationMetricSummary.operatingIncome;  
+
+        recentPriceToValueJson["acquirersMultiple"] 
+          = valuationMetricSummary.acquirersMultiple;  
+        recentPriceToValueJson["acquirersMultiple_current"] 
+          = valuationMetricSummary.acquirersMultipleRecent;  
 
         double scaleFactor = recentPriceToValue[0].scaleFactor;
         for(size_t i=0; i< recentPriceToValue.size();++i){

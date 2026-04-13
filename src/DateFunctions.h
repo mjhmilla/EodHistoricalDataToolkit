@@ -372,6 +372,16 @@ class DateFunctions {
       }
 
       //Trim excess data
+      for(size_t i=0; i<dateSetTTMUpd.weights.size();++i){
+        double days = dateSetTTMUpd.weights[i]*dateSetTTMUpd.days[i];
+        if(days < maximumTTMDateSetErrorInDays){
+          dateSetTTMUpd.weights.erase(dateSetTTMUpd.weights.begin()+i);
+          dateSetTTMUpd.days.erase(dateSetTTMUpd.days.begin()+i);
+          dateSetTTMUpd.dates.erase(dateSetTTMUpd.dates.begin()+i);
+        }
+      }
+
+      //Trim excess data
       while(dateSetTTMUpd.dates.size()>dateSetTTMUpd.weights.size()){
         dateSetTTMUpd.dates.pop_back();
         dateSetTTMUpd.days.pop_back();

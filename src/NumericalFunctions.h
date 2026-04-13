@@ -2904,7 +2904,70 @@ class NumericalFunctions {
       termValues.push_back(empiricalGrowthData.model[index].outlierCount); 
 
     };   
+    //==========================================================================
+    static bool evaluateRecentValuationMetrics(
+                  const nlohmann::ordered_json &fundamentalData, 
+                  const nlohmann::ordered_json &historicalData, 
+                  DataStructures::ValuationMetricSummary &valMetricUpd)
+    {
+      bool passed=true;
 
+      try{
+        int indexA = 0;
+        int indexB = historicalData.size()-1;
+        std::string dateA;
+        std::string dateB;
+        double dateANum;
+        double dateBNum;
+        JsonFunctions::getJsonString(historicalData[ indexA ]["date"],
+                                     dateA);
+        dateANum = DateFunctions::convertToFractionalYear(dateA);
+
+        JsonFunctions::getJsonString(historicalData[ indexB ]["date"],
+                                     dateB);
+        dateBNum = DateFunctions::convertToFractionalYear(dateB);
+
+        int index=0;        
+        if(dateANum > dateBNum){
+          index = indexA;
+          valMetricUpd.date = dateA;
+        }else{
+          index = indexB;
+          valMetricUpd.date = dateB;
+        }
+        
+
+        double recentAdjustedClosePrice 
+          = JsonFunctions::getJsonFloat(
+                            historicalData[ index ]["adjusted_close"],
+                            false); 
+
+        double recentNumberOfShares  
+          = FinancialAnalysisFunctions::getOutstandingSharesClosestToDate(
+                                          fundamentalData, 
+                                          valMetricUpd.date,
+                                          Q);
+        valMetricUpd.marketCapitalizationRecent 
+          = recentAdjustedClosePrice*recentNumberOfShares;
+
+        double deltaMarketCap = valMetricUpd.marketCapitalizationRecent
+                               -valMetricUpd.marketCapitalization;
+
+        valMetricUpd.enterpriseValueRecent = 
+            valMetricUpd.enterpriseValue
+            + deltaMarketCap;
+        
+        valMetricUpd.acquirersMultipleRecent =           
+            valMetricUpd.enterpriseValueRecent
+            /valMetricUpd.operatingIncome;
+          
+      }catch( std::invalid_argument const& ex){
+        std::cout << ex.what() << std::endl;
+        passed=false;
+      };
+      
+      return passed;
+    };
     //==========================================================================
 
     static bool evaluateRecentPriceToValue(
@@ -2966,7 +3029,7 @@ class NumericalFunctions {
       }catch( std::invalid_argument const& ex){
         std::cout << ex.what() << std::endl;
         passed=false;
-      }
+      };
       return passed;
 
     };
