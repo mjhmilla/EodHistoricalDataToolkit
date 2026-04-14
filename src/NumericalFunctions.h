@@ -2968,6 +2968,7 @@ class NumericalFunctions {
       
       return passed;
     };
+
     //==========================================================================
 
     static bool evaluateRecentPriceToValue(
@@ -3033,6 +3034,105 @@ class NumericalFunctions {
       return passed;
 
     };
+
+    //==========================================================================
+    static void fitRevenueToFreeCashFlowModels(
+                    const nlohmann::ordered_json &fundamentalData, 
+                    const DataStructures::AnalysisDates &analysisDatesYearly,
+                    double growthIntervalInYears,
+                    double growthIntervalInYearsAll,
+                    DataStructures::EmpiricalRelationModel &revenueFcfModel,
+                    DataStructures::EmpiricalRelationModel &revenueFcfModelAvg)
+    {
+      revenueFcfModel.interval    = growthIntervalInYears;
+      revenueFcfModelAvg.interval = growthIntervalInYearsAll;
+
+      //Populate the x and y data
+
+      for(int i=0; i< analysisDatesYearly.common.size();++i){
+        std::string date = analysisDatesYearly.common[i];
+        double revenue = JsonFunctions::getJsonFloat(
+                          fundamentalData[FIN][IS][Y][date]["totalRevenue"],
+                          false);
+        double fcf     = JsonFunctions::getJsonFloat(
+                          fundamentalData[FIN][CF][Y][date]["freeCashFlow"],
+                          false);
+        if(!std::isnan(revenue) && !std::isnan(fcf)){
+          revenueFcfModel.date.push_back(date);
+          revenueFcfModel.x.push_back(revenue);
+          revenueFcfModel.y.push_back(fcf);
+          revenueFcfModelAvg.date.push_back(date);
+          revenueFcfModelAvg.x.push_back(revenue);
+          revenueFcfModelAvg.y.push_back(fcf);
+          if(revenueFcfModelAvg.dateModel.size()==0){
+            revenueFcfModelAvg.dateModel.push_back(date);
+          }
+        }
+      }
+      //
+      //Fit a single model to all of the data for the average
+      //
+      DataStructures::EmpiricalGrowthModel modelTemp;
+      NumericalFunctions::fitLinearGrowthModel(revenueFcfModelAvg.x,
+                                               revenueFcfModelAvg.y,
+                                               false,
+                                               modelTemp);
+      std::vector< size_t > indexSortedA = 
+        NumericalFunctions::calcSortedVectorIndicies(modelTemp.x,true);
+      std::vector< double > xTmp(modelTemp.x.size()), yTmp(modelTemp.x.size());
+      for(size_t i=0; i< modelTemp.x.size();++i){
+        xTmp[i] = modelTemp.x[indexSortedA[i]];
+        yTmp[i] = modelTemp.y[indexSortedA[i]];
+      }
+      modelTemp.x = xTmp;
+      modelTemp.y = yTmp;
+
+      revenueFcfModelAvg.model.push_back(modelTemp);   
+      //
+      //Fit models to the trailing sub intervals for the recent data
+      //
+      int imax = analysisDatesYearly.common.size()-growthIntervalInYears;
+      for(int i=0; i< imax;++i){
+        std::vector< std::string > dateV;
+        std::vector<double > xV, yV;
+        for(int j=0; j<growthIntervalInYears; ++j){
+          int k = i+j;
+          std::string date = analysisDatesYearly.common[k];
+          double revenue = JsonFunctions::getJsonFloat(
+                            fundamentalData[FIN][IS][Y][date]["totalRevenue"],
+                            false);
+          double fcf     = JsonFunctions::getJsonFloat(
+                            fundamentalData[FIN][CF][Y][date]["freeCashFlow"],
+                            false);
+          if(!std::isnan(revenue) && !std::isnan(fcf)){
+            dateV.push_back(date);
+            xV.push_back(revenue);
+            yV.push_back(fcf);
+          }          
+        }
+        if(dateV.size()>0 && xV.size()>0 && yV.size()>0){
+          DataStructures::EmpiricalGrowthModel modelTemp;
+          NumericalFunctions::fitLinearGrowthModel(xV,yV,false,modelTemp);        
+
+          std::vector< size_t > indexSortedB = 
+            NumericalFunctions::calcSortedVectorIndicies(modelTemp.x,true);
+          std::vector< double > xTmp(modelTemp.x.size()), yTmp(modelTemp.x.size());
+          for(size_t i=0; i< modelTemp.x.size();++i){
+            xTmp[i] = modelTemp.x[indexSortedB[i]];
+            yTmp[i] = modelTemp.y[indexSortedB[i]];
+          }
+          modelTemp.x = xTmp;
+          modelTemp.y = yTmp;
+
+
+          revenueFcfModel.dateModel.push_back(dateV[0]);
+          revenueFcfModel.model.push_back(modelTemp);
+        }
+      }
+
+    };
+
+    
 
 };
 
