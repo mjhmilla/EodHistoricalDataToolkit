@@ -111,7 +111,7 @@ class DataStructures {
                             recentPriceToValue(std::nan("1")){};
     };
 
-    //============================================================================
+  //============================================================================
     struct DateSpan{
       std::string newestDate;
       std::string oldestDate;
@@ -135,6 +135,14 @@ class DataStructures {
       std::vector< unsigned int > indicesBond;
 
       std::vector< bool > isAnnualReport;
+
+      std::string recentCashFlowDate;
+      std::string recentIncomeStatementDate;
+      std::string recentBalanceSheetDate;
+      std::string recentEarningsHistoryDate;
+      std::string recentOutstandingSharesDate;
+      std::string recentHistoricalDate;
+      std::string recentBondDate;      
     };
 
     //==========================================================================

@@ -244,6 +244,39 @@ void extractOldestNewestReportedDates(
 };
 
 //============================================================================
+std::string extractMostRecentDate(std::vector< std::string > &vectorOfSortedDates)
+{
+  std::string recentDate("");
+
+  if(vectorOfSortedDates.size()>=2){
+    double dateA = 
+      DateFunctions::convertToFractionalYear(
+                      vectorOfSortedDates[0]);
+
+    double dateB = 
+      DateFunctions::convertToFractionalYear(
+                      vectorOfSortedDates[vectorOfSortedDates.size()-1]);
+    
+    if(!std::isnan(dateA) && !std::isnan(dateB)){
+      if(dateA > dateB){
+        recentDate = vectorOfSortedDates[0];
+      }else{
+        recentDate = vectorOfSortedDates[vectorOfSortedDates.size()-1];
+      }
+    }        
+  }else if(vectorOfSortedDates.size()==1){
+    double dateA = 
+      DateFunctions::convertToFractionalYear(vectorOfSortedDates[0]);
+    if(!std::isnan(dateA)){
+      recentDate = vectorOfSortedDates[0];
+    }
+  }
+
+  return recentDate;
+
+};
+
+//============================================================================
 
 bool extractAnalysisDates(
       DataStructures::AnalysisDates &analysisDates,
@@ -271,6 +304,15 @@ bool extractAnalysisDates(
   analysisDates.indicesOutstandingShares.clear();
   analysisDates.indicesHistorical.clear();
   analysisDates.indicesBond.clear();
+
+  analysisDates.recentCashFlowDate.clear();
+  analysisDates.recentIncomeStatementDate.clear();
+  analysisDates.recentBalanceSheetDate.clear();
+  analysisDates.recentEarningsHistoryDate.clear();
+  analysisDates.recentOutstandingSharesDate.clear();
+  analysisDates.recentHistoricalDate.clear();
+  analysisDates.recentBondDate.clear();
+
   analysisDates.durationInYears=0.;
 
   //Extract dates only the dates common to all financial reports
@@ -320,6 +362,10 @@ bool extractAnalysisDates(
       }      
     }
 
+    analysisDates.recentBalanceSheetDate    = extractMostRecentDate(datesBAL);
+    analysisDates.recentCashFlowDate        = extractMostRecentDate(datesCF);
+    analysisDates.recentIncomeStatementDate = extractMostRecentDate(datesIS);
+
     for(size_t i=0; i<datesBAL.size();++i){
       bool common = true;
     
@@ -365,6 +411,9 @@ bool extractAnalysisDates(
       analysisDates.outstandingShares.push_back(dateFormatted);
     }   
     validDates = (validDates && analysisDates.outstandingShares.size() > 0);
+
+    analysisDates.recentOutstandingSharesDate 
+      = extractMostRecentDate(analysisDates.outstandingShares);
   }
 
   if(validDates){
@@ -374,6 +423,8 @@ bool extractAnalysisDates(
       analysisDates.earningsHistory.push_back(date);
     }   
     validDates = (validDates && analysisDates.earningsHistory.size() > 0);
+    analysisDates.recentEarningsHistoryDate 
+      = extractMostRecentDate(analysisDates.earningsHistory);    
   }
 
 
@@ -384,11 +435,17 @@ bool extractAnalysisDates(
       analysisDates.historical.push_back(dateString);
     }  
     validDates = (validDates && analysisDates.historical.size() > 0);
-
+    
     for(auto& el : bondData.items()){
       analysisDates.bond.push_back(el.key());
     }
     validDates = (validDates && analysisDates.bond.size() > 0);
+
+    analysisDates.recentHistoricalDate 
+      = extractMostRecentDate(analysisDates.historical);
+
+    analysisDates.recentBondDate 
+      = extractMostRecentDate(analysisDates.bond);
   }
 
   
@@ -3355,7 +3412,6 @@ int main (int argc, char* argv[]) {
               fundamentalData,FIN,IS,timePeriod.c_str(),dateSet,
               "operatingIncome", setNansToMissingValue); 
 
-          valuationMetricSummary.date = date;
           valuationMetricSummary.marketCapitalization=marketCapitalization;
           valuationMetricSummary.enterpriseValue   = enterpriseValue;
           valuationMetricSummary.freeCashFlow      = freeCashFlow;
@@ -3399,6 +3455,7 @@ int main (int argc, char* argv[]) {
         if(indexDate == 0){
           //recentPriceToValue;
           DataStructures::RecentPriceToValue pvUpd;
+
           double priceToValue = presentValue / marketCapitalization;
           std::string fieldName = parentName.substr(0,parentName.size()-1);
           bool success = NumericalFunctions::evaluateRecentPriceToValue(
@@ -3792,6 +3849,14 @@ int main (int argc, char* argv[]) {
       }
 
 
+      nlohmann::ordered_json dataDatesReport;
+      dataDatesReport["cash_flow"]        = analysisDates.recentCashFlowDate;
+      dataDatesReport["income_statement"] = analysisDates.recentIncomeStatementDate;
+      dataDatesReport["balance_sheet"]    = analysisDates.recentBalanceSheetDate;
+      dataDatesReport["earnings"]         = analysisDates.recentEarningsHistoryDate;
+      dataDatesReport["outstanding_shares"]=analysisDates.recentOutstandingSharesDate;
+      dataDatesReport["historical_data"]   =analysisDates.recentHistoricalDate;
+      dataDatesReport["bond_rates"]        =analysisDates.recentBondDate;    
 
 
       nlohmann::ordered_json stringDataReport;
@@ -3839,6 +3904,8 @@ int main (int argc, char* argv[]) {
       nlohmann::ordered_json recentPriceToValueJson;
 
       if(recentPriceToValue.size()>0){
+        recentPriceToValueJson["date"]
+          = recentPriceToValue[0].recentDate;
         recentPriceToValueJson["price"] 
           = recentPriceToValue[0].adjustedClosePrice;
         recentPriceToValueJson["price_current"] 
@@ -4117,6 +4184,7 @@ int main (int argc, char* argv[]) {
       //
       // Package all three into a single json object
       //
+      analysis["data_recency"] = dataDatesReport;
       analysis["country_data"] = stringDataReport;
       analysis["annual_milestones"] = annualMilestoneReport;
       analysis["price_to_value_current"] = recentPriceToValueJson;
