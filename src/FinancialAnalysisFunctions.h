@@ -1940,8 +1940,10 @@ class FinancialAnalysisFunctions {
     };
 
     //==========================================================================
+    /*
     static double calcAcquirersMultiple(
                     double enterpriseValue,
+                    double operatingEarnings,
                     const nlohmann::ordered_json &jsonData, 
                     const DateFunctions::DateSetTTM &dateSet,
                     const char *timeUnit,   
@@ -1951,19 +1953,14 @@ class FinancialAnalysisFunctions {
                     std::vector< double > &termValues)                    
     {
 
-      double operatingIncome = 
-        sumFundamentalDataOverDates(
-          jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
-          setNansToMissingValue);
-
-      double acquirersMultiple = enterpriseValue/operatingIncome;
+      double acquirersMultiple = enterpriseValue/operatingEarnings;
 
       if(appendTermRecord){
-        termNames.push_back("acquirersMultiple_operatingIncome");
+        termNames.push_back("acquirersMultiple_operatingEarnings");
         termNames.push_back("acquirersMultiple_enterpriseValue");
         termNames.push_back("acquirersMultiple");
 
-        termValues.push_back(operatingIncome);
+        termValues.push_back(operatingEarnings);
         termValues.push_back(enterpriseValue);
         termValues.push_back(acquirersMultiple);
       }
@@ -1971,7 +1968,60 @@ class FinancialAnalysisFunctions {
       return acquirersMultiple;
 
     };
+    */
+    //==========================================================================
+    static double calcOperatingEarnings(
+                    const nlohmann::ordered_json &jsonData, 
+                    const DateFunctions::DateSetTTM &dateSet,
+                    const char *timeUnit,   
+                    bool appendTermRecord,
+                    bool setNansToMissingValue,
+                    std::vector< std::string> &termNames,
+                    std::vector< double > &termValues){
 
+      std::string parentName = "operatingEarnings";
+      
+      double totalRevenue = 
+        sumFundamentalDataOverDates(
+          jsonData,FIN,IS,timeUnit,dateSet,"totalRevenue",
+          setNansToMissingValue);
+
+      double costOfRevenue = 
+        sumFundamentalDataOverDates(
+          jsonData,FIN,IS,timeUnit,dateSet,"costOfRevenue",
+          setNansToMissingValue);
+
+      double sellingGeneralAdministrative = 
+        sumFundamentalDataOverDates(
+          jsonData,FIN,IS,timeUnit,dateSet,"sellingGeneralAdministrative",
+          true);
+
+      double depreciationAndAmortization = 
+        sumFundamentalDataOverDates(
+          jsonData,FIN,IS,timeUnit,dateSet,"depreciationAndAmortization",
+          true);
+
+      double operatingEarnings =  totalRevenue
+                                  - costOfRevenue
+                                  - sellingGeneralAdministrative
+                                  - depreciationAndAmortization;
+
+      if(appendTermRecord){
+        termNames.push_back(parentName+"_totalRevenue");
+        termNames.push_back(parentName+"_costOfRevenue");
+        termNames.push_back(parentName+"_sellingGeneralAdministrative");
+        termNames.push_back(parentName+"_depreciationAndAmortization");
+        termNames.push_back(parentName);
+
+        termValues.push_back(totalRevenue);
+        termValues.push_back(costOfRevenue);
+        termValues.push_back(sellingGeneralAdministrative);
+        termValues.push_back(depreciationAndAmortization);
+        termValues.push_back(operatingEarnings);
+      }
+
+      return operatingEarnings;
+    };
     //==========================================================================
     /**
      Warren Buffets definition for owners earnings is a bit more conservative

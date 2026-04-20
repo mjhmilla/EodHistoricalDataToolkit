@@ -2959,7 +2959,7 @@ class NumericalFunctions {
         
         valMetricUpd.acquirersMultipleRecent =           
             valMetricUpd.enterpriseValueRecent
-            /valMetricUpd.operatingIncome;
+            /valMetricUpd.operatingEarnings;
           
       }catch( std::invalid_argument const& ex){
         std::cout << ex.what() << std::endl;
@@ -3020,13 +3020,19 @@ class NumericalFunctions {
         pvUpd.adjustedClosePrice = adjustedClosePrice;
         pvUpd.numberOfShares     = outstandingShares;
 
-        pvUpd.scaleFactor  = 
-          (pvUpd.recentNumberOfShares*pvUpd.recentAdjustedClosePrice)
-          /(pvUpd.numberOfShares*pvUpd.adjustedClosePrice);
+        pvUpd.marketCapitalization = 
+          (pvUpd.numberOfShares*pvUpd.adjustedClosePrice);
+
+        pvUpd.recentMarketCapitalization = 
+          (pvUpd.recentNumberOfShares*pvUpd.recentAdjustedClosePrice);
+
+        pvUpd.scaleFactor  = pvUpd.recentMarketCapitalization
+                            /pvUpd.marketCapitalization;
 
         pvUpd.priceToValue = priceToValue;
         pvUpd.recentPriceToValue = pvUpd.priceToValue*pvUpd.scaleFactor; 
         pvUpd.name=name;
+        
       }catch( std::invalid_argument const& ex){
         std::cout << ex.what() << std::endl;
         passed=false;

@@ -61,7 +61,7 @@ class DataStructures {
 
       double freeCashFlow;
       double residualCashFlow;
-      double operatingIncome;
+      double operatingEarnings;
 
       ValuationMetricSummary():date(""),
                                marketCapitalization(std::nan("1")),
@@ -72,7 +72,7 @@ class DataStructures {
                                acquirersMultipleRecent(std::nan("1")),
                                freeCashFlow(std::nan("1")),
                                residualCashFlow(std::nan("1")),
-                               operatingIncome(std::nan("1")){};
+                               operatingEarnings(std::nan("1")){};
     };
 
     //============================================================================
@@ -95,9 +95,11 @@ class DataStructures {
     struct RecentPriceToValue{
       std::string recentDate;
       double recentAdjustedClosePrice;
-      double recentNumberOfShares;
+      double recentNumberOfShares;      
       double adjustedClosePrice;
       double numberOfShares;      
+      double marketCapitalization;
+      double recentMarketCapitalization;
       double scaleFactor;
       double priceToValue;
       double recentPriceToValue;
@@ -107,6 +109,8 @@ class DataStructures {
                             recentNumberOfShares(std::nan("1")),
                             adjustedClosePrice(std::nan("1")),
                             numberOfShares(std::nan("1")),
+                            marketCapitalization(std::nan("1")),
+                            recentMarketCapitalization(std::nan("1")),
                             scaleFactor(std::nan("1")),
                             recentPriceToValue(std::nan("1")){};
     };

@@ -3263,16 +3263,29 @@ int main (int argc, char* argv[]) {
           termValues.push_back(residualCashFlowToEnterpriseValue);
         }        
 
-        double acquirersMultiple = 
-          FinancialAnalysisFunctions::calcAcquirersMultiple(
-                                      enterpriseValue,
-                                      fundamentalData,
-                                      dateSet,
-                                      timePeriod.c_str(),
-                                      appendTermRecord,
-                                      setNansToMissingValue,
-                                      termNames,
-                                      termValues);
+        double operatingEarnings = 
+          FinancialAnalysisFunctions::calcOperatingEarnings(
+                                        fundamentalData, 
+                                        dateSet, 
+                                        timePeriod.c_str(),
+                                        appendTermRecord,
+                                        setNansToMissingValue,
+                                        termNames, 
+                                        termValues);
+          
+
+        double acquirersMultiple = enterpriseValue/operatingEarnings;
+        if(appendTermRecord){
+          termNames.push_back("acquirersMultiple_operatingEarnings");
+          termNames.push_back("acquirersMultiple_enterpriseValue");
+          termNames.push_back("acquirersMultiple");
+
+          termValues.push_back(operatingEarnings);
+          termValues.push_back(enterpriseValue);
+          termValues.push_back(acquirersMultiple);
+        }
+
+
 
         double freeCashFlowToEquity=std::nan("1");
         if(previousTimePeriod.length()>0){
@@ -3303,8 +3316,7 @@ int main (int argc, char* argv[]) {
 
 
         double retentionRatio = FinancialAnalysisFunctions::
-            calcRetentionRatio(
-                                 fundamentalData, 
+            calcRetentionRatio(  fundamentalData, 
                                  dateSet, 
                                  timePeriod.c_str(),
                                  appendTermRecord,
@@ -3406,16 +3418,10 @@ int main (int argc, char* argv[]) {
               fundamentalData,FIN,CF,timePeriod.c_str(),dateSet,
               "freeCashFlow", setNansToMissingValue); 
 
-
-          double operatingIncome = 
-            FinancialAnalysisFunctions::sumFundamentalDataOverDates(
-              fundamentalData,FIN,IS,timePeriod.c_str(),dateSet,
-              "operatingIncome", setNansToMissingValue); 
-
           valuationMetricSummary.marketCapitalization=marketCapitalization;
           valuationMetricSummary.enterpriseValue   = enterpriseValue;
           valuationMetricSummary.freeCashFlow      = freeCashFlow;
-          valuationMetricSummary.operatingIncome   = operatingIncome;
+          valuationMetricSummary.operatingEarnings = operatingEarnings;
           valuationMetricSummary.acquirersMultiple = acquirersMultiple;
           valuationMetricSummary.residualCashFlow  = residualCashFlow;
 
@@ -3459,13 +3465,13 @@ int main (int argc, char* argv[]) {
           double priceToValue = presentValue / marketCapitalization;
           std::string fieldName = parentName.substr(0,parentName.size()-1);
           bool success = NumericalFunctions::evaluateRecentPriceToValue(
-                                fundamentalData,
-                                historicalData,
-                                adjustedClosePrice,
-                                outstandingShares,
-                                priceToValue,
-                                fieldName,
-                                pvUpd);
+                                                  fundamentalData,
+                                                  historicalData,
+                                                  adjustedClosePrice,
+                                                  outstandingShares,
+                                                  priceToValue,
+                                                  fieldName,
+                                                  pvUpd);
           if(success){
             recentPriceToValue.push_back(pvUpd);
           }
@@ -3914,16 +3920,19 @@ int main (int argc, char* argv[]) {
           = recentPriceToValue[0].numberOfShares;
         recentPriceToValueJson["outstandingShares_current"] 
           = recentPriceToValue[0].recentNumberOfShares;
+        recentPriceToValueJson["marketCapitalization"] 
+          = recentPriceToValue[0].marketCapitalization;
+        recentPriceToValueJson["marketCapitalization_current"] 
+          = recentPriceToValue[0].recentMarketCapitalization;           
         recentPriceToValueJson["scaleFactor"] 
           = recentPriceToValue[0].scaleFactor;
-
         recentPriceToValueJson["enterpriseValue"] 
           = valuationMetricSummary.enterpriseValue;  
         recentPriceToValueJson["enterpriseValueRecent"] 
           = valuationMetricSummary.enterpriseValueRecent;
 
-        recentPriceToValueJson["operatingIncome"] 
-          = valuationMetricSummary.operatingIncome;  
+        recentPriceToValueJson["operatingEarnings"] 
+          = valuationMetricSummary.operatingEarnings;  
 
         recentPriceToValueJson["acquirersMultiple"] 
           = valuationMetricSummary.acquirersMultiple;  
