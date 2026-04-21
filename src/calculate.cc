@@ -3263,6 +3263,16 @@ int main (int argc, char* argv[]) {
           termValues.push_back(residualCashFlowToEnterpriseValue);
         }        
 
+        //
+        // The definition of EODs operatingIncome matches the definition of
+        // operatingEarnings in the book  'The Acquirer's Multiple' by 
+        // Tobias E. Carlisle
+        //
+        double operatingIncome = 
+          FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+            fundamentalData,FIN,IS,timePeriod.c_str(),dateSet,
+            "operatingIncome", setNansToMissingValue);        
+        /*
         double operatingEarnings = 
           FinancialAnalysisFunctions::calcOperatingEarnings(
                                         fundamentalData, 
@@ -3272,15 +3282,15 @@ int main (int argc, char* argv[]) {
                                         setNansToMissingValue,
                                         termNames, 
                                         termValues);
-          
+        */          
 
-        double acquirersMultiple = enterpriseValue/operatingEarnings;
+        double acquirersMultiple = enterpriseValue/operatingIncome;
         if(appendTermRecord){
-          termNames.push_back("acquirersMultiple_operatingEarnings");
+          termNames.push_back("acquirersMultiple_operatingIncome");
           termNames.push_back("acquirersMultiple_enterpriseValue");
           termNames.push_back("acquirersMultiple");
 
-          termValues.push_back(operatingEarnings);
+          termValues.push_back(operatingIncome);
           termValues.push_back(enterpriseValue);
           termValues.push_back(acquirersMultiple);
         }
@@ -3421,7 +3431,7 @@ int main (int argc, char* argv[]) {
           valuationMetricSummary.marketCapitalization=marketCapitalization;
           valuationMetricSummary.enterpriseValue   = enterpriseValue;
           valuationMetricSummary.freeCashFlow      = freeCashFlow;
-          valuationMetricSummary.operatingEarnings = operatingEarnings;
+          valuationMetricSummary.operatingIncome = operatingIncome;
           valuationMetricSummary.acquirersMultiple = acquirersMultiple;
           valuationMetricSummary.residualCashFlow  = residualCashFlow;
 
@@ -3931,8 +3941,8 @@ int main (int argc, char* argv[]) {
         recentPriceToValueJson["enterpriseValueRecent"] 
           = valuationMetricSummary.enterpriseValueRecent;
 
-        recentPriceToValueJson["operatingEarnings"] 
-          = valuationMetricSummary.operatingEarnings;  
+        recentPriceToValueJson["operatingIncome"] 
+          = valuationMetricSummary.operatingIncome;  
 
         recentPriceToValueJson["acquirersMultiple"] 
           = valuationMetricSummary.acquirersMultiple;  

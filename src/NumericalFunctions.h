@@ -2959,7 +2959,7 @@ class NumericalFunctions {
         
         valMetricUpd.acquirersMultipleRecent =           
             valMetricUpd.enterpriseValueRecent
-            /valMetricUpd.operatingEarnings;
+            /valMetricUpd.operatingIncome;
           
       }catch( std::invalid_argument const& ex){
         std::cout << ex.what() << std::endl;

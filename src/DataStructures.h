@@ -61,7 +61,7 @@ class DataStructures {
 
       double freeCashFlow;
       double residualCashFlow;
-      double operatingEarnings;
+      double operatingIncome;
 
       ValuationMetricSummary():date(""),
                                marketCapitalization(std::nan("1")),
@@ -72,7 +72,7 @@ class DataStructures {
                                acquirersMultipleRecent(std::nan("1")),
                                freeCashFlow(std::nan("1")),
                                residualCashFlow(std::nan("1")),
-                               operatingEarnings(std::nan("1")){};
+                               operatingIncome(std::nan("1")){};
     };
 
     //============================================================================

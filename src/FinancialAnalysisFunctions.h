@@ -1970,6 +1970,7 @@ class FinancialAnalysisFunctions {
     };
     */
     //==========================================================================
+    /*
     static double calcOperatingEarnings(
                     const nlohmann::ordered_json &jsonData, 
                     const DateFunctions::DateSetTTM &dateSet,
@@ -2022,6 +2023,7 @@ class FinancialAnalysisFunctions {
 
       return operatingEarnings;
     };
+    */
     //==========================================================================
     /**
      Warren Buffets definition for owners earnings is a bit more conservative
@@ -2380,7 +2382,10 @@ class FinancialAnalysisFunctions {
           std::vector< std::string> &termNames,
           std::vector< double > &termValues){
 
-      double debtBookValue = debtInfo.totalDebtEstimate;      
+      double debtBookValue = debtInfo.shortLongTermDebtTotal;      
+      if(!JsonFunctions::isJsonFloatValid(debtBookValue)){
+        debtBookValue = debtInfo.totalDebtEstimate;
+      }
       if(!JsonFunctions::isJsonFloatValid(debtBookValue)){
         debtBookValue = debtInfo.longTermDebtEstimate;
       }
@@ -2400,6 +2405,10 @@ class FinancialAnalysisFunctions {
         cashAndEquivalentsEntry=cash;       
       }
 
+      double minorityInterest = JsonFunctions::getJsonFloat(
+        fundamentalData[FIN][IS][timeUnit][dateSet.dates[0].c_str()]
+                       ["minorityInterest"],true);
+
       //From Investopedia: https://www.investopedia.com/terms/e/enterprisevalue.asp
       // EV = MC + Total Debt - C
       // EV: enterprise value
@@ -2407,11 +2416,20 @@ class FinancialAnalysisFunctions {
       // Total Debt: total debt
       // C: cash and equivalents
       //
+      // Total Debt: I'm willing to accept long term debt if short-long-term
+      //             debt, or totaldebt is not available
+      //
       // C: I'm willing to put in cash here if cashAndEquivalents is not
       //    available. I'm also willing to ignore this field if neither cash
       //    and cash equivalents are not available.
+      //
+      // Update: including miniority interest (partial ownership of other 
+      //         companies)
+      // EV = MC + Total Debt + miniority interest - C
+      //
       double enterpriseValue = marketCapitalization
                               + (debtBookValue) 
+                              + (minorityInterest)
                               - (cashAndEquivalentsEntry);
 
       
@@ -2431,6 +2449,7 @@ class FinancialAnalysisFunctions {
         termNames.push_back(parentCategoryName+"enterpriseValue_cashAndEquivalents");
         termNames.push_back(parentCategoryName+"enterpriseValue_cash");
         termNames.push_back(parentCategoryName+"enterpriseValue_marketCapitalization");
+        termNames.push_back(parentCategoryName+"enterpriseValue_minorityInterest");
         termNames.push_back(parentCategoryName+"enterpriseValue");
 
         termValues.push_back(debtBookValue);
@@ -2438,6 +2457,7 @@ class FinancialAnalysisFunctions {
         termValues.push_back(cashAndEquivalents);
         termValues.push_back(cash);
         termValues.push_back(marketCapitalization);
+        termValues.push_back(minorityInterest);
         termValues.push_back(enterpriseValue);      
       }
 
