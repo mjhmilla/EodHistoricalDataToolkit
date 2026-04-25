@@ -40,8 +40,8 @@
             "folder": "calculateData",
             "field":
             [
-                "metric_data",
-                "priceToValueRevenueToFcf_price_to_value"
+                "price_to_value_current",
+                "priceToValueRevenueToFcf_price_to_value_current"
             ],
             "isDateSeries": false,
             "condition": ">",
@@ -60,8 +60,8 @@
             "folder": "calculateData",
             "field":
             [
-                "metric_data",
-                "priceToValueRevenueToFcf_price_to_value"
+                "price_to_value_current",
+                "priceToValueRevenueToFcf_price_to_value_current"            
             ],
             "isDateSeries": false,
             "measure": "recent",

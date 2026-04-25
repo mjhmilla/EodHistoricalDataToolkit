@@ -2745,8 +2745,10 @@ class FinancialAnalysisFunctions {
           freeCashFlowToFirmVector[i]=0.;
         }else{
           afterTaxOperatingIncomeVector[i] = 
-            afterTaxOperatingIncomeVector[i-1]*(1.0+afterTaxOperatingIncomeGrowth);
-          reinvestmentVector[i]=
+            afterTaxOperatingIncomeVector[i-1]
+            *(1.0+afterTaxOperatingIncomeGrowth);
+          
+            reinvestmentVector[i]=
             afterTaxOperatingIncomeVector[i]*reinvestmentRate;
           freeCashFlowToFirmVector[i]=afterTaxOperatingIncomeVector[i]
                                      -reinvestmentVector[i];

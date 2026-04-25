@@ -1702,7 +1702,7 @@ int main (int argc, char* argv[]) {
   bool homeRiskTableFound=false;
 
   if(validRiskTable){
-    for(auto &riskEntry : riskByCountryData){
+    for(auto &riskEntry : riskByCountryData["data"]){
       std::string erpCountryISO3;
       JsonFunctions::getJsonString(riskEntry["CountryISO3"],
                                       erpCountryISO3);    
@@ -2018,7 +2018,7 @@ int main (int argc, char* argv[]) {
         double inflation = defaultInflationRate;
 
         if(validRiskTable){
-          for(auto &riskEntry : riskByCountryData){
+          for(auto &riskEntry : riskByCountryData["data"]){
             std::string erpCountryISO2;
             JsonFunctions::getJsonString(riskEntry["CountryISO2"],erpCountryISO2);
             if(countryISO2.compare(erpCountryISO2)==0){
@@ -3866,13 +3866,24 @@ int main (int argc, char* argv[]) {
 
 
       nlohmann::ordered_json dataDatesReport;
-      dataDatesReport["cash_flow"]        = analysisDates.recentCashFlowDate;
-      dataDatesReport["income_statement"] = analysisDates.recentIncomeStatementDate;
-      dataDatesReport["balance_sheet"]    = analysisDates.recentBalanceSheetDate;
-      dataDatesReport["earnings"]         = analysisDates.recentEarningsHistoryDate;
-      dataDatesReport["outstanding_shares"]=analysisDates.recentOutstandingSharesDate;
-      dataDatesReport["historical_data"]   =analysisDates.recentHistoricalDate;
-      dataDatesReport["bond_rates"]        =analysisDates.recentBondDate;    
+      dataDatesReport["cash_flow"]         = analysisDates.recentCashFlowDate;
+      dataDatesReport["income_statement"]  = analysisDates.recentIncomeStatementDate;
+      dataDatesReport["balance_sheet"]     = analysisDates.recentBalanceSheetDate;
+      dataDatesReport["earnings"]          = analysisDates.recentEarningsHistoryDate;
+      dataDatesReport["outstanding_shares"]= analysisDates.recentOutstandingSharesDate;
+      dataDatesReport["historical_data"]   = analysisDates.recentHistoricalDate;
+      dataDatesReport["bond_rates_usa"]    = analysisDates.recentBondDate;    
+
+      std::string defaultSpreadDate;
+      JsonFunctions::getJsonString(jsonDefaultSpread["US"]["access_date"],
+                                    defaultSpreadDate);
+      dataDatesReport["default_spread_usa"]= defaultSpreadDate;
+      
+      std::string riskByCountryDataDate;
+      JsonFunctions::getJsonString(riskByCountryData["compilation_date"],
+                                   riskByCountryDataDate);
+      dataDatesReport["country_risk"]= riskByCountryDataDate;
+      dataDatesReport["global_corporate_tax_rates_historical"]= "2023-12-31";
 
 
       nlohmann::ordered_json stringDataReport;
