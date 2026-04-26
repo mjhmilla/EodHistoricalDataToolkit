@@ -497,9 +497,10 @@ class FinancialAnalysisFunctions {
 
     //==========================================================================
     static double calcReturnOnCapitalDeployed( 
-                                    const nlohmann::ordered_json &jsonData, 
+                                    const DataStructures::DebtInfo &debtInfo,
+                                    const nlohmann::ordered_json &jsonData,                                     
                                     const DateFunctions::DateSetTTM &dateSet, 
-                                    const char *timeUnit,
+                                    const char *timeUnit,                                    
                                     bool appendTermRecord,
                                     const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
@@ -511,7 +512,12 @@ class FinancialAnalysisFunctions {
         JsonFunctions::getJsonFloat(
           jsonData[FIN][BAL][timeUnit][dateSet.dates[0].c_str()]
             ["longTermDebt"], 
-        setNansToMissingValue);     
+        setNansToMissingValue);   
+      
+      if(!JsonFunctions::isJsonFloatValid(longTermDebt)){
+        longTermDebt = debtInfo.longTermDebtEstimate;
+      }
+
 
       //Total shareholder equity is the money that would be left over if the 
       //company went out of business immediately. 
@@ -733,16 +739,12 @@ class FinancialAnalysisFunctions {
 
       return: operatingIncome * (1-taxRate)
 
-      It would be probably more accurate to subtract dividends and also
-      any stock buybacks. However, EOD doesn't have stock buy backs in its
-      reporting. While dividends are reported, Damodaran does not include this
-      in his definition of ROIC. For a company that does give out dividends
-      the ROIC will be artificially high (obviously they are not investing
-      the dividend) unless they cut the dividend. I expect that Damodaran has 
-      ignored dividends in the DCM he presented to keep the ROIC compatible 
-      with the definition of reinvestment rate (ROIC has afterTaxOperatingIncome
-      in the numerator, and the reinvestment rate has the afterTaxOperatingIncome
-      in the denominator)
+      Of course this definition has its own problems: companies that have little
+      debt and a lot of cash will have a completely skewed value for the 
+      invested capital. I'm switching to use return on capital deployed which
+      returns a sensible value regardless of a company's debt or cash level.
+      It also has the advantage that the fields it requires are well covere
+      by EOD.
 
      source:
       https://www.morganstanley.com/im/publication/insights/articles/article_returnoninvestedcapital.pdf 

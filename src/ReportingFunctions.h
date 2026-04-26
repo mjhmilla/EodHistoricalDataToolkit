@@ -1302,7 +1302,7 @@ static void appendReturnOnInvestedCapitalTableForValuation(std::ofstream &latexR
                 << formatJsonEntry(JsonFunctions::getJsonFloat(
                     calculateData[date]["returnOnInvestedFinancialCapital_afterTaxOperatingIncome"],true))
                 << " \\\\" << std::endl;           
-    latexReport << "\\multicolumn{2}{c}{ $D_6 = A_5\\,(1.0-J_1)$} \\\\" 
+    latexReport << "\\multicolumn{2}{c}{ $D_6 = A_5\\,(1.0-F_1)$} \\\\" 
                 << std::endl;                       
     latexReport << "$E_6$. Return on invested capital & "
                 << formatJsonEntry(JsonFunctions::getJsonFloat(

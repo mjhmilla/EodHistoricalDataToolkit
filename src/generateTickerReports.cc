@@ -891,6 +891,196 @@ void generateLaTeXReportWrapper(
 };
 
 //==============================================================================
+void writeTabularMetrics( std::ofstream &latexReport, 
+                          std::vector<JsonFieldAddress> &tabularMetrics,
+                          std::string &titleName,
+                          const nlohmann::ordered_json &fundamentalData,
+                          const nlohmann::ordered_json &historicalData,
+                          const nlohmann::ordered_json &calculateData,
+                          bool replaceNansWithMissingData){
+
+  latexReport << "\\begin{tabular}{l l}" << std::endl;
+  latexReport << "\\multicolumn{2}{c}{" << titleName << "} \\\\" << std::endl;
+
+  for(size_t  indexTabularMetrics=0; 
+                  indexTabularMetrics < tabularMetrics.size();
+                ++indexTabularMetrics)
+    {
+      JsonFieldAddress entryMetric = tabularMetrics[indexTabularMetrics];
+      std::string lastFieldName("");
+
+      if(entryMetric.fieldNames.size()>0){
+        lastFieldName = entryMetric.fieldNames.back();
+        ReportingFunctions::convertCamelCaseToSpacedText(lastFieldName);
+      }
+
+
+      bool fieldExists = false;
+      if(entryMetric.fileName.compare("calculateData")==0){
+
+        if(lastFieldName.length()>0){
+          fieldExists = JsonFunctions::doesFieldExist(calculateData, 
+                                                  entryMetric.fieldNames);
+          
+                                          
+        }
+
+        if(fieldExists){
+          switch(entryMetric.type){
+            case JSON_FIELD_TYPE::BOOL : {
+              bool value = JsonFunctions::getJsonBool(calculateData,
+                                entryMetric.fieldNames);
+
+              latexReport << entryMetric.label << " & " << value  
+                          << "\\\\" << std::endl;                          
+            }
+            break;
+            case JSON_FIELD_TYPE::FLOAT : {
+              double value = JsonFunctions::getJsonFloat(calculateData,
+                                            entryMetric.fieldNames, 
+                                            replaceNansWithMissingData);
+
+              latexReport << entryMetric.label << " & " 
+                          << ReportingFunctions::formatJsonEntry( value ) 
+                          << "\\\\" << std::endl;                          
+            }
+            break;
+            case JSON_FIELD_TYPE::STRING : {
+              std::string value;
+              JsonFunctions::getJsonString(calculateData,
+                                entryMetric.fieldNames, 
+                                value);
+
+              latexReport << entryMetric.label << " & " << value 
+                          << "\\\\" << std::endl;                          
+            }
+            break;
+            case JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE :{
+              latexReport  << " & \\\\" << std::endl;
+            }
+            break;
+          };
+        }        
+      }
+
+      if(entryMetric.fileName.compare("historicalData")==0){
+        double value=-1;
+        std::string todaysDate;
+        DateFunctions::getTodaysDate(todaysDate);
+
+        int closestDifferenceDays=std::numeric_limits<int>::infinity();
+        int indexStart=0;
+        int indexNext = 1;
+        int indexEnd = historicalData.size()-1;
+
+        std::string dateStart("");
+        JsonFunctions::getJsonString(historicalData.front()["date"],dateStart);
+        std::string dateEnd("");
+        JsonFunctions::getJsonString(historicalData.back()["date"],dateEnd);
+      
+        int differenceStart = 
+          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+              todaysDate,"%Y-%m-%d",dateStart,"%Y-%m-%d");
+
+        int differenceEnd = 
+          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+              todaysDate,"%Y-%m-%d",dateEnd,"%Y-%m-%d");
+
+        if(std::abs(differenceEnd) < std::abs(differenceStart)){
+          indexStart = historicalData.size()-1;
+          indexNext = -1;
+          indexEnd = 0;
+        }
+
+        int differenceBest = std::numeric_limits<int>::max();
+        std::string dateBest("");
+        int previousDifference = -1;
+
+        for(int index=indexStart; index != indexEnd;index=index+indexNext){
+          
+          std::string dateString("");
+          JsonFunctions::getJsonString(historicalData.at(index)["date"],dateString);
+          int differenceDays = 
+          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
+              todaysDate,"%Y-%m-%d",dateString,"%Y-%m-%d");
+
+          if(differenceDays >= 0 && differenceDays < differenceBest){
+            differenceBest = differenceDays;
+            dateBest=dateString;
+            value = JsonFunctions::getJsonFloat(
+                      historicalData.at(index)[entryMetric.fieldNames[0]],false);
+          }
+          if(previousDifference > -1 
+              && std::abs(previousDifference) < std::abs(differenceDays)){
+            break;
+          }
+          previousDifference = std::abs(differenceDays);
+
+        }  
+
+        latexReport << "Price (" << dateBest << ")" 
+                    << " & " << value << "\\\\" << std::endl;  
+        fieldExists=true;                        
+              
+      }
+
+      if(entryMetric.fileName.compare("fundamentalData")==0 
+        && lastFieldName.length()>0){
+
+        if(lastFieldName.length()>0){
+          fieldExists = JsonFunctions::doesFieldExist(fundamentalData, 
+                                                  entryMetric.fieldNames);
+        }
+
+        if(fieldExists){
+          switch(entryMetric.type){
+            case JSON_FIELD_TYPE::BOOL : {
+              bool value = JsonFunctions::getJsonBool(fundamentalData,
+                                entryMetric.fieldNames);
+
+              latexReport << entryMetric.label << " & " << value  
+                          << "\\\\" << std::endl;                          
+            }
+            break;
+            case JSON_FIELD_TYPE::FLOAT : {
+              double value = JsonFunctions::getJsonFloat(fundamentalData,
+                              entryMetric.fieldNames, 
+                              replaceNansWithMissingData);
+
+              latexReport << entryMetric.label << " & " 
+                          << ReportingFunctions::formatJsonEntry( value ) 
+                          << "\\\\" << std::endl;                          
+            }
+            break;
+            case JSON_FIELD_TYPE::STRING : {
+              std::string value;
+              JsonFunctions::getJsonString(fundamentalData,
+                                entryMetric.fieldNames, 
+                                value);
+
+              latexReport << entryMetric.label << " & " << value 
+                          << "\\\\" << std::endl;                          
+            }
+            break;
+            case JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE :{
+              latexReport  << " & \\\\" << std::endl;
+            }
+            break;
+          };
+        }
+      }
+
+      if(!fieldExists){
+        latexReport << lastFieldName << " & "  << "\\\\" << std::endl;
+      }
+
+    }
+    latexReport << "\\end{tabular}" << std::endl << std::endl;
+    
+    
+};
+
+//==============================================================================
 bool generateLaTeXReport(
     const TickerMetaData &tickerMetaData,
     const nlohmann::ordered_json &fundamentalData,
@@ -908,6 +1098,93 @@ bool generateLaTeXReport(
     std::cout << "Gerating LaTeX report for " 
               << tickerMetaData.primaryTicker  << std::endl; 
   }
+
+  std::vector< JsonFieldAddress > tabularDataSource;
+
+  JsonFieldAddress metricDataSource;
+  metricDataSource.fileName = "calculateData";
+  metricDataSource.label    = "Stock price (hist. data)";
+  metricDataSource.fieldNames.push_back("data_recency");
+  metricDataSource.fieldNames.push_back("historical_data");
+  metricDataSource.type = JSON_FIELD_TYPE::STRING;
+  tabularDataSource.push_back(metricDataSource);
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.label.clear();
+  metricDataSource.fileName.clear();
+  metricDataSource.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularDataSource.push_back(metricDataSource);
+
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.fileName = "calculateData";
+  metricDataSource.label    = "Income statement";
+  metricDataSource.fieldNames.push_back("data_recency");
+  metricDataSource.fieldNames.push_back("income_statement");
+  metricDataSource.type = JSON_FIELD_TYPE::STRING;
+  tabularDataSource.push_back(metricDataSource);
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.fileName = "calculateData";
+  metricDataSource.label    = "Balance sheet";
+  metricDataSource.fieldNames.push_back("data_recency");
+  metricDataSource.fieldNames.push_back("balance_sheet");
+  metricDataSource.type = JSON_FIELD_TYPE::STRING;
+  tabularDataSource.push_back(metricDataSource);
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.fileName = "calculateData";
+  metricDataSource.label    = "Cash flow statement";
+  metricDataSource.fieldNames.push_back("data_recency");
+  metricDataSource.fieldNames.push_back("cash_flow");
+  metricDataSource.type = JSON_FIELD_TYPE::STRING;
+  tabularDataSource.push_back(metricDataSource);
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.fileName = "calculateData";
+  metricDataSource.label    = "Earning statement";
+  metricDataSource.fieldNames.push_back("data_recency");
+  metricDataSource.fieldNames.push_back("earnings");
+  metricDataSource.type = JSON_FIELD_TYPE::STRING;
+  tabularDataSource.push_back(metricDataSource);
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.fileName = "calculateData";
+  metricDataSource.label    = "Outstanding shares";
+  metricDataSource.fieldNames.push_back("data_recency");
+  metricDataSource.fieldNames.push_back("outstanding_shares");
+  metricDataSource.type = JSON_FIELD_TYPE::STRING;
+  tabularDataSource.push_back(metricDataSource);
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.label.clear();
+  metricDataSource.fileName.clear();
+  metricDataSource.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularDataSource.push_back(metricDataSource);
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.fileName = "calculateData";
+  metricDataSource.label    = "Default spread (US)";
+  metricDataSource.fieldNames.push_back("data_recency");
+  metricDataSource.fieldNames.push_back("default_spread_usa");
+  metricDataSource.type = JSON_FIELD_TYPE::STRING;
+  tabularDataSource.push_back(metricDataSource);
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.fileName = "calculateData";
+  metricDataSource.label    = "Bond rates (US)";
+  metricDataSource.fieldNames.push_back("data_recency");
+  metricDataSource.fieldNames.push_back("bond_rates_usa");
+  metricDataSource.type = JSON_FIELD_TYPE::STRING;
+  tabularDataSource.push_back(metricDataSource);
+
+  metricDataSource.fieldNames.clear();
+  metricDataSource.fileName = "calculateData";
+  metricDataSource.label    = "Global tax rates hist.";
+  metricDataSource.fieldNames.push_back("data_recency");
+  metricDataSource.fieldNames.push_back("global_corporate_tax_rates_historical");
+  metricDataSource.type = JSON_FIELD_TYPE::STRING;
+  tabularDataSource.push_back(metricDataSource);
 
   std::vector< JsonFieldAddress > tabularMetrics;
   JsonFieldAddress metric;
@@ -980,10 +1257,27 @@ bool generateLaTeXReport(
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
+  std::string firstDate("");
+  JsonFunctions::getJsonString(calculateData["metric_data"].front()["date"],
+                               firstDate);
+  std::string lastDate("");
+  JsonFunctions::getJsonString(calculateData["metric_data"].back()["date"],
+                               lastDate);
+  
+  std::string recentDate("");
+
+  if(DateFunctions::convertToFractionalYear(firstDate)
+      > DateFunctions::convertToFractionalYear(lastDate)){
+    recentDate = firstDate;
+  }else{
+    recentDate = lastDate;
+  }            
+
   metric.fieldNames.clear();
   metric.fileName = "calculateData";
   metric.label="Dividend yield growth (avg)";
   metric.fieldNames.push_back("metric_data");
+  metric.fieldNames.push_back(recentDate);
   metric.fieldNames.push_back("PriestDividendMetrics_dividendYieldGrowthAvg");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
@@ -992,6 +1286,7 @@ bool generateLaTeXReport(
   metric.fileName = "calculateData";
   metric.label="Dividends paid / Free cash flow (avg)";
   metric.fieldNames.push_back("metric_data");
+  metric.fieldNames.push_back(recentDate);
   metric.fieldNames.push_back("PriestDividendMetrics_dividendFreeCashFlowRatioTrailingAverage");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
@@ -1000,6 +1295,7 @@ bool generateLaTeXReport(
   metric.fileName = "calculateData";
   metric.label="Free cash flow growth (avg)";
   metric.fieldNames.push_back("metric_data");
+  metric.fieldNames.push_back(recentDate);
   metric.fieldNames.push_back("PriestDividendMetrics_freeCashFlowGrowthAvg");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
@@ -1260,161 +1556,23 @@ bool generateLaTeXReport(
     latexReport << std::endl;
 
 
+
+    //tabularDataSource    
+
     latexReport << "\\bigskip" << std::endl;
-    latexReport << "\\begin{tabular}{l l}" << std::endl;
-    latexReport << "\\multicolumn{2}{c}{\\textbf{Contextual Data}} \\\\" << std::endl;
+    std::string titleName("\\textbf{Data Sources}");
+    writeTabularMetrics(latexReport, tabularDataSource, titleName,
+                        fundamentalData, historicalData, calculateData,
+                        replaceNansWithMissingData);
 
-    for(size_t  indexTabularMetrics=0; 
-                indexTabularMetrics < tabularMetrics.size();
-              ++indexTabularMetrics)
-    {
-      JsonFieldAddress entryMetric = tabularMetrics[indexTabularMetrics];
-      std::string lastFieldName("");
+    latexReport << "\\bigskip" << std::endl;
 
-      if(entryMetric.fieldNames.size()>0){
-        lastFieldName = entryMetric.fieldNames.back();
-        ReportingFunctions::convertCamelCaseToSpacedText(lastFieldName);
-      }
+    titleName = "\\textbf{Contextual Data}";
+    writeTabularMetrics(latexReport, tabularMetrics, titleName,
+                        fundamentalData, historicalData, calculateData,
+                        replaceNansWithMissingData);
 
 
-      bool fieldExists = false;
-      if(entryMetric.fileName.compare("calculateData")==0){
-
-        double value = JsonFunctions::getJsonFloat(calculateData,
-                          entryMetric.fieldNames,false);
-
-        if(!JsonFunctions::isJsonFloatValid(value) 
-          && entryMetric.fieldNames.size()==2){
-
-            try{
-              auto &el = calculateData[entryMetric.fieldNames[0]].front(); 
-              std::vector< std::string > lastField;
-              lastField.push_back(entryMetric.fieldNames[1]);
-              value = JsonFunctions::getJsonFloat(el,lastField,false);
-              fieldExists=true;
-            }catch(nlohmann::json_abi_v3_12_0::detail::invalid_iterator &e){
-              fieldExists=false;
-            }
-            
-        } 
-
-        latexReport << entryMetric.label  
-                    << " & " << value << "\\\\" << std::endl;  
-
-        
-      }
-
-      if(entryMetric.fileName.compare("historicalData")==0){
-        double value=-1;
-        std::string todaysDate;
-        DateFunctions::getTodaysDate(todaysDate);
-
-        int closestDifferenceDays=std::numeric_limits<int>::infinity();
-        int indexStart=0;
-        int indexNext = 1;
-        int indexEnd = historicalData.size()-1;
-
-        std::string dateStart("");
-        JsonFunctions::getJsonString(historicalData.front()["date"],dateStart);
-        std::string dateEnd("");
-        JsonFunctions::getJsonString(historicalData.back()["date"],dateEnd);
-      
-        int differenceStart = 
-          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
-              todaysDate,"%Y-%m-%d",dateStart,"%Y-%m-%d");
-
-        int differenceEnd = 
-          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
-              todaysDate,"%Y-%m-%d",dateEnd,"%Y-%m-%d");
-
-        if(std::abs(differenceEnd) < std::abs(differenceStart)){
-          indexStart = historicalData.size()-1;
-          indexNext = -1;
-          indexEnd = 0;
-        }
-
-        int differenceBest = std::numeric_limits<int>::max();
-        std::string dateBest("");
-        int previousDifference = -1;
-
-        for(int index=indexStart; index != indexEnd;index=index+indexNext){
-          
-          std::string dateString("");
-          JsonFunctions::getJsonString(historicalData.at(index)["date"],dateString);
-          int differenceDays = 
-          DateFunctions::calcDifferenceInDaysBetweenTwoDates(
-              todaysDate,"%Y-%m-%d",dateString,"%Y-%m-%d");
-
-          if(differenceDays >= 0 && differenceDays < differenceBest){
-            differenceBest = differenceDays;
-            dateBest=dateString;
-            value = JsonFunctions::getJsonFloat(
-                      historicalData.at(index)[entryMetric.fieldNames[0]],false);
-          }
-          if(previousDifference > -1 
-              && std::abs(previousDifference) < std::abs(differenceDays)){
-            break;
-          }
-          previousDifference = std::abs(differenceDays);
-
-        }  
-
-        latexReport << "Price (" << dateBest << ")" 
-                    << " & " << value << "\\\\" << std::endl;  
-        fieldExists=true;                        
-              
-      }
-
-      if(entryMetric.fileName.compare("fundamentalData")==0 
-        && lastFieldName.length()>0){
-
-        if(lastFieldName.length()>0){
-          fieldExists = JsonFunctions::doesFieldExist(fundamentalData, 
-                                                  entryMetric.fieldNames);
-        }
-
-        if(fieldExists){
-          switch(entryMetric.type){
-            case JSON_FIELD_TYPE::BOOL : {
-              bool value = JsonFunctions::getJsonBool(fundamentalData,
-                                entryMetric.fieldNames);
-
-              latexReport << entryMetric.label << " & " << value  << "\\\\" << std::endl;                          
-            }
-            break;
-            case JSON_FIELD_TYPE::FLOAT : {
-              double value = JsonFunctions::getJsonFloat(fundamentalData,
-                              entryMetric.fieldNames, 
-                              replaceNansWithMissingData);
-
-              latexReport << entryMetric.label << " & " 
-                          << ReportingFunctions::formatJsonEntry( value ) 
-                          << "\\\\" << std::endl;                          
-            }
-            break;
-            case JSON_FIELD_TYPE::STRING : {
-              std::string value;
-              JsonFunctions::getJsonString(fundamentalData,
-                                entryMetric.fieldNames, 
-                                value);
-
-              latexReport << entryMetric.label << " & " << value << "\\\\" << std::endl;                          
-            }
-            break;
-            case JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE :{
-              latexReport  << " & \\\\" << std::endl;
-            }
-            break;
-          };
-        }
-      }
-
-      if(!fieldExists){
-        latexReport << lastFieldName << " & "  << "\\\\" << std::endl;
-      }
-
-    }
-    latexReport << "\\end{tabular}" << std::endl << std::endl;
     latexReport << "\\bigskip" << std::endl;
     //std::string date = calculateData.begin().key();
 
@@ -1570,12 +1728,17 @@ bool generateLaTeXReport(
       date,
       verbose);
     
+    std::cout << "Add appendReturnOnCapitalDeployed. You are here" << std::endl;
+    std::abort();
+
+    /*
     ReportingFunctions::appendReturnOnInvestedCapitalTableForValuation(
       latexReport,
       tickerMetaData.primaryTicker,
       calculateData["metric_data"],
       date,
       verbose);
+    */
 
     ReportingFunctions::appendOperatingIncomeGrowthTableForValuation(
       latexReport,

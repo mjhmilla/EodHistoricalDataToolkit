@@ -159,104 +159,54 @@
             "boxWhiskerColor": "magenta",
             "boxWhiskerPosition": -0.5
         },
-        "returnOnInvestedFinancialCapitalLessCostOfCapital":
+        "returnOnCapitalDeployedLessCostOfCapital":
         {
-            "row": 1,
-            "column": 0,
+            "row": 0,
+            "column": 1,
             "jsonData_x": "calculateData",
             "address_x":
             [
                 "metric_data"
             ],
             "fieldName_x": "date",
-            "fieldName_y": "returnOnInvestedFinancialCapitalLessCostOfCapital",
+            "fieldName_y": "returnOnCapitalDeployedLessCostOfCapital",
             "isArray": false,
-            "legendEntry": "Fin",
-            "lineColor": "grey20",
+            "legendEntry": "ROCD-CC",
+            "lineColor": "black",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
-            "yAxisLabel": "ROIC-CC",
+            "yAxisLabel": "ROCD-CC",
             "xMin": null,
             "xMax": null,
             "yMin": 0.0,
             "yMax": null,
             "useLogScale": false,
-            "boxWhiskerColor": "grey20",
+            "boxWhiskerColor": "black",
             "boxWhiskerPosition": -0.5
         },
-        "returnOnInvestedOperatingCapitalLessCostOfCapital":
+        "returnOnEquityLessCostOfCapital":
         {
-            "row": 1,
-            "column": 0,
+            "row": 0,
+            "column": 1,
             "jsonData_x": "calculateData",
             "address_x":
             [
                 "metric_data"
             ],
             "fieldName_x": "date",
-            "fieldName_y": "returnOnInvestedOperatingCapitalLessCostOfCapital",
+            "fieldName_y": "returnOnEquityLessCostOfCapital",
             "isArray": false,
             "legendEntry": "Op",
             "lineColor": "web-blue",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
-            "yAxisLabel": "ROIC-CC",
+            "yAxisLabel": "ROE-CC",
             "xMin": null,
             "xMax": null,
             "yMin": 0.0,
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "web-blue",
-            "boxWhiskerPosition": -0.5
-        },
-        "returnOnInvestedCapitalLessCostOfCapitalEmpiricalAvg":
-        {
-            "row": 1,
-            "column": 0,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "atoiEmpiricalAvg_ReturnOnInvestedCapitalLessCostOfCapital",
-            "isArray": false,
-            "legendEntry": "Emp Avg",
-            "lineColor": "orange",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "ROIC-CC",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "orange",
-            "boxWhiskerPosition": -0.5
-        },
-        "returnOnInvestedCapitalLessCostOfCapitalEmpirical":
-        {
-            "row": 1,
-            "column": 0,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "atoiEmpirical_ReturnOnInvestedCapitalLessCostOfCapital",
-            "isArray": false,
-            "legendEntry": "Emp",
-            "lineColor": "red",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "ROIC-CC",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "red",
             "boxWhiskerPosition": -0.5
         },
         "revenueVsFcfData":

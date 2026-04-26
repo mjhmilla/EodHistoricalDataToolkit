@@ -24,7 +24,7 @@
             "field":
             [
                 "metric_data",
-                "returnOnInvestedFinancialCapitalLessCostOfCapital"
+                "returnOnCapitalDeployedLessCostOfCapital"
             ],
             "isDateSeries": true,
             "condition": ">=",
@@ -246,7 +246,7 @@
             "field":
             [
                 "metric_data",
-                "returnOnInvestedFinancialCapitalLessCostOfCapital"
+                "returnOnCapitalDeployedLessCostOfCapital"
             ],
             "isDateSeries": true,
             "measure": "recent",

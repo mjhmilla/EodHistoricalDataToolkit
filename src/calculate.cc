@@ -3158,8 +3158,9 @@ int main (int argc, char* argv[]) {
 
 
 
-        double roce = FinancialAnalysisFunctions::
-          calcReturnOnCapitalDeployed(  fundamentalData,
+        double returnOnCapitalDeployed = FinancialAnalysisFunctions::
+          calcReturnOnCapitalDeployed(  debtInfo,
+                                        fundamentalData,
                                         dateSet,
                                         timePeriod.c_str(), 
                                         appendTermRecord, 
@@ -3167,6 +3168,12 @@ int main (int argc, char* argv[]) {
                                         setNansToMissingValue,
                                         termNames, 
                                         termValues);
+
+        double returnOnCapitalDeployedLessCostOfCapital 
+          = returnOnCapitalDeployed - costOfCapitalMature;  
+
+        termNames.push_back("returnOnCapitalDeployedLessCostOfCapital");
+        termValues.push_back(returnOnCapitalDeployedLessCostOfCapital);                                           
 
         double grossMargin = FinancialAnalysisFunctions::
           calcGrossMargin(  fundamentalData,
@@ -3346,6 +3353,12 @@ int main (int argc, char* argv[]) {
                                 termNames, 
                                 termValues);
 
+        double returnOnEquityLessCostOfCapital 
+          = returnOnEquity - costOfCapitalMature;  
+
+        termNames.push_back("returnOnEquityLessCostOfCapital");
+        termValues.push_back(returnOnEquityLessCostOfCapital);  
+
         double netIncomeGrowth = retentionRatio*returnOnEquity;                                
 
         if(appendTermRecord){
@@ -3378,6 +3391,9 @@ int main (int argc, char* argv[]) {
         termNames.push_back("returnOnInvestedFinancialCapitalLessCostOfCapital");
         termValues.push_back(roicFinLessCostOfCapital);                                    
 
+                                 
+
+        
         double reinvestmentRate = 
                 FinancialAnalysisFunctions::
                       calcReinvestmentRate( fundamentalData,
@@ -3391,9 +3407,8 @@ int main (int argc, char* argv[]) {
                                             termNames,
                                             termValues);
 
-        double afterTaxOperatingIncomeGrowth=
-                reinvestmentRate
-                *returnOnInvestedCapitalFinanical;
+        double afterTaxOperatingIncomeGrowth 
+          = reinvestmentRate*returnOnCapitalDeployed;
 
         termNames.push_back("afterTaxOperatingIncomeGrowth");
         termValues.push_back(afterTaxOperatingIncomeGrowth); 
@@ -3457,7 +3472,7 @@ int main (int argc, char* argv[]) {
               taxRate,
               afterTaxOperatingIncomeGrowth,
               reinvestmentRate,
-              returnOnInvestedCapitalFinanical,
+              returnOnCapitalDeployed,
               marketCapitalization,
               numberOfYearsOfGrowthForDcmValuation,
               appendTermRecord,
@@ -3850,8 +3865,8 @@ int main (int argc, char* argv[]) {
         //
         if(analysisDates.isAnnualReport[indexDate]){
 
-          double excessReturnOnInvestedCapital = 
-            returnOnInvestedCapitalFinanical-costOfCapital;
+          double excessReturnOnInvestedCapital 
+            = returnOnCapitalDeployed-costOfCapital;
 
           if((excessReturnOnInvestedCapital)>0){
             ++annualMilestones.yearsOfPositiveValueCreation;
