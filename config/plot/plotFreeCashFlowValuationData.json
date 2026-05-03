@@ -58,7 +58,7 @@
             "yMin": 0.0,
             "yMax": 4.0,
             "useLogScale": false,
-            "boxWhiskerColor": "red",
+            "boxWhiskerColor": "blue",
             "boxWhiskerPosition": -0.5
         },
         "priceToValueFcf50":
@@ -108,7 +108,7 @@
             "yMin": 0.0,
             "yMax": 4.0,
             "useLogScale": false,
-            "boxWhiskerColor": "blue",
+            "boxWhiskerColor": "red",
             "boxWhiskerPosition": -0.5
         },
         "historicalData":
@@ -159,54 +159,104 @@
             "boxWhiskerColor": "magenta",
             "boxWhiskerPosition": -0.5
         },
-        "returnOnCapitalDeployedLessCostOfCapital":
+        "returnOnCapitalDeployed":
         {
-            "row": 0,
-            "column": 1,
+            "row": 1,
+            "column": 0,
             "jsonData_x": "calculateData",
             "address_x":
             [
                 "metric_data"
             ],
             "fieldName_x": "date",
-            "fieldName_y": "returnOnCapitalDeployedLessCostOfCapital",
+            "fieldName_y": "returnOnCapitalDeployed",
             "isArray": false,
-            "legendEntry": "ROCD-CC",
+            "legendEntry": "ROCD",
             "lineColor": "black",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
-            "yAxisLabel": "ROCD-CC",
+            "yAxisLabel": "Return",
             "xMin": null,
             "xMax": null,
             "yMin": 0.0,
-            "yMax": null,
+            "yMax": 1.01,
             "useLogScale": false,
             "boxWhiskerColor": "black",
             "boxWhiskerPosition": -0.5
         },
-        "returnOnEquityLessCostOfCapital":
+        "returnOnEquity":
         {
-            "row": 0,
-            "column": 1,
+            "row": 1,
+            "column": 0,
             "jsonData_x": "calculateData",
             "address_x":
             [
                 "metric_data"
             ],
             "fieldName_x": "date",
-            "fieldName_y": "returnOnEquityLessCostOfCapital",
+            "fieldName_y": "returnOnEquity",
             "isArray": false,
-            "legendEntry": "Op",
+            "legendEntry": "ROE",
             "lineColor": "web-blue",
             "lineWidth": 1.0,
             "xAxisLabel": "Years",
-            "yAxisLabel": "ROE-CC",
+            "yAxisLabel": "Return",
             "xMin": null,
             "xMax": null,
             "yMin": 0.0,
-            "yMax": null,
+            "yMax": 1.01,
             "useLogScale": false,
             "boxWhiskerColor": "web-blue",
+            "boxWhiskerPosition": -0.5
+        },
+        "returnOnInvestedCaptial":
+        {
+            "row": 1,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "returnOnInvestedFinancialCapital",
+            "isArray": false,
+            "legendEntry": "ROIC",
+            "lineColor": "red",
+            "lineWidth": 1.0,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Return",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0.0,
+            "yMax": 1.01,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },
+        "costOfCapital":
+        {
+            "row": 1,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "priceToValue_costOfCapital",
+            "isArray": false,
+            "legendEntry": "CC",
+            "lineColor": "black",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Return",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": 1.01,
+            "useLogScale": false,
+            "boxWhiskerColor": "grey70",
             "boxWhiskerPosition": -0.5
         },
         "revenueVsFcfData":
@@ -575,58 +625,54 @@
             "boxWhiskerColor": "grey40",
             "boxWhiskerPosition": -0.5
         },
-        "longTermDebtQ":
+        "longTermDebt":
         {
             "row": 4,
             "column": 1,
-            "jsonData_x": "fundamentalData",
+            "jsonData_x": "calculateData",
             "address_x":
             [
-                "Financials",
-                "Balance_Sheet",
-                "quarterly"
+                "metric_data"
             ],
             "fieldName_x": "date",
-            "fieldName_y": "longTermDebt",
+            "fieldName_y": "debt_longTermDebtEstimate",
             "isArray": false,
-            "legendEntry": "EOD-quarterly-long",
-            "lineColor": "grey",
+            "legendEntry": "Long-term debt",
+            "lineColor": "black",
             "lineWidth": 0.5,
             "xAxisLabel": "Years",
-            "yAxisLabel": "Long Term Debt (@CurrencyCodeLaTeX)",
+            "yAxisLabel": "Debt (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "black",
+            "boxWhiskerPosition": -0.5
+        },
+        "shortTermDebtA":
+        {
+            "row": 4,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "debt_shortTermDebtEstimate",
+            "isArray": false,
+            "legendEntry": "Short-term debt",
+            "lineColor": "grey70",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Debt (@CurrencyCodeLaTeX)",
             "xMin": null,
             "xMax": null,
             "yMin": 0,
             "yMax": null,
             "useLogScale": false,
             "boxWhiskerColor": "grey70",
-            "boxWhiskerPosition": -0.5
-        },
-        "longTermDebtA":
-        {
-            "row": 4,
-            "column": 1,
-            "jsonData_x": "fundamentalData",
-            "address_x":
-            [
-                "Financials",
-                "Balance_Sheet",
-                "yearly"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "longTermDebt",
-            "isArray": false,
-            "legendEntry": "EOD-annual-long",
-            "lineColor": "black",
-            "lineWidth": 0.5,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "Long Term Debt (@CurrencyCodeLaTeX)",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "grey40",
             "boxWhiskerPosition": -0.5
         }
     }

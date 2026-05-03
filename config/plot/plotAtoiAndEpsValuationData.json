@@ -6,14 +6,190 @@
         "plotWidthCm": 9.0,
         "plotHeightCm": 4.5,
         "fileName": "fig_@PrimaryTicker_AtoiEpsDcm.pdf",
-        "title": "@CompanyNameLaTeX Prof. Aswath Damodaran (ATOI) and Phil Town Valuation (EPS) Data",
+        "title": "@CompanyNameLaTeX Acquirers Multiple, Prof. Aswath Damodaran (ATOI) valuation, and Phil Town valuation (EPS) Data",
         "caption": "@PrimaryTickerLaTeX (@URL) Valuation using ATOI and EPS data"
     },
     "plots":
     {
-        "priceToValue":
+
+        "acquirersMultiple":
         {
             "row": 0,
+            "column": 0,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "acquirersMultiple",
+            "isArray": false,
+            "legendEntry": "AM",
+            "lineColor": "black",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Acq. Mult.",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": 20.01,
+            "useLogScale": false,
+            "boxWhiskerColor": "black",
+            "boxWhiskerPosition": -0.5
+        },        
+        "acquirersMultipleEV":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "acquirersMultiple_enterpriseValue",
+            "isArray": false,
+            "legendEntry": "EV",
+            "lineColor": "black",
+            "lineWidth": 1,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "black",
+            "boxWhiskerPosition": -0.5
+        },
+        "acquirersMultipleOI":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "acquirersMultiple_operatingIncome",
+            "isArray": false,
+            "legendEntry": "Op. Income",
+            "lineColor": "web-blue",
+            "lineWidth": 1,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "web-blue",
+            "boxWhiskerPosition": -0.5
+        },                
+        "acquirersMultipleEVMktCap":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "enterpriseValue_marketCapitalization",
+            "isArray": false,
+            "legendEntry": "EV:Mkt Cap",
+            "lineColor": "sea-green",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "sea-green",
+            "boxWhiskerPosition": -0.5
+        },
+        "acquirersMultipleEVDebt":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "enterpriseValue_debtBookValue",
+            "isArray": false,
+            "legendEntry": "EV:Debt",
+            "lineColor": "brown",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "brown",
+            "boxWhiskerPosition": -0.5
+        },
+        "acquirersMultipleEVMinInt":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "enterpriseValue_minorityInterest",
+            "isArray": false,
+            "legendEntry": "EV:Min.Int",
+            "lineColor": "olive",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "olive",
+            "boxWhiskerPosition": -0.5
+        },   
+        "acquirersMultipleEVCash":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "enterpriseValue_cashAndEquivalentsEntry",
+            "isArray": false,
+            "legendEntry": "EV:Cash",
+            "lineColor": "red",
+            "lineWidth": 0.5,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "red",
+            "boxWhiskerPosition": -0.5
+        },                
+        "priceToValue":
+        {
+            "row": 1,
             "column": 0,
             "jsonData_x": "calculateData",
             "address_x":
@@ -38,7 +214,7 @@
         },
         "priceToValueEmpirical":
         {
-            "row": 0,
+            "row": 1,
             "column": 0,
             "jsonData_x": "calculateData",
             "address_x":
@@ -63,7 +239,7 @@
         },
         "priceToValueEmpiricalAvg":
         {
-            "row": 0,
+            "row": 1,
             "column": 0,
             "jsonData_x": "calculateData",
             "address_x":
@@ -84,81 +260,6 @@
             "yMax": 4.0,
             "useLogScale": false,
             "boxWhiskerColor": "orange",
-            "boxWhiskerPosition": -0.5
-        },
-        "returnOnCapitalDeployedLessCostOfCapital":
-        {
-            "row": 0,
-            "column": 1,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "returnOnCapitalDeployedLessCostOfCapital",
-            "isArray": false,
-            "legendEntry": "ROCD-CC",
-            "lineColor": "black",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "ROCD-CC",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "black",
-            "boxWhiskerPosition": -0.5
-        },
-        "returnOnEquityLessCostOfCapital":
-        {
-            "row": 0,
-            "column": 1,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "returnOnEquityLessCostOfCapital",
-            "isArray": false,
-            "legendEntry": "Op",
-            "lineColor": "web-blue",
-            "lineWidth": 1.0,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "ROE-CC",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0.0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "web-blue",
-            "boxWhiskerPosition": -0.5
-        },
-        "costOfCapital":
-        {
-            "row": 1,
-            "column": 0,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "priceToValue_costOfCapital",
-            "isArray": false,
-            "legendEntry": "Fin",
-            "lineColor": "black",
-            "lineWidth": 0.5,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "Cost of Capital",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "grey40",
             "boxWhiskerPosition": -0.5
         },
         "reinvestmentRate":

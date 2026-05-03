@@ -1099,6 +1099,22 @@ bool generateLaTeXReport(
               << tickerMetaData.primaryTicker  << std::endl; 
   }
 
+  std::string firstDate("");
+  JsonFunctions::getJsonString(calculateData["metric_data"].front()["date"],
+                               firstDate);
+  std::string lastDate("");
+  JsonFunctions::getJsonString(calculateData["metric_data"].back()["date"],
+                               lastDate);
+  
+  std::string recentDate("");
+
+  if(DateFunctions::convertToFractionalYear(firstDate)
+      > DateFunctions::convertToFractionalYear(lastDate)){
+    recentDate = firstDate;
+  }else{
+    recentDate = lastDate;
+  }      
+
   std::vector< JsonFieldAddress > tabularDataSource;
 
   JsonFieldAddress metricDataSource;
@@ -1213,10 +1229,10 @@ bool generateLaTeXReport(
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
-  metric.fileName = "fundamentalData";
-  metric.label="Market Cap (Mln)";
-  metric.fieldNames.push_back("Highlights");
-  metric.fieldNames.push_back("MarketCapitalizationMln");
+  metric.fileName = "calculateData";
+  metric.label="Market Cap (recent)";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("marketCapitalization_current");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
@@ -1236,12 +1252,82 @@ bool generateLaTeXReport(
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
-  metric.fileName = "fundamentalData";
-  metric.label="EV/EBITA";
-  metric.fieldNames.push_back("Valuation");
-  metric.fieldNames.push_back("EnterpriseValueEbitda");
+  metric.label.clear();
+  metric.fileName.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Price";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("price");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Price (recent)";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("price_current");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Mkt Cap Scale Factor";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("scaleFactor");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
+  metric.label.clear();
+  metric.fileName.clear();
+  metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
+  tabularMetrics.push_back(metric);
+
+  //metric.fieldNames.clear();
+  //metric.fileName = "fundamentalData";
+  //metric.label="EV/EBITA";
+  //metric.fieldNames.push_back("Valuation");
+  //metric.fieldNames.push_back("EnterpriseValueEbitda");
+  //metric.type = JSON_FIELD_TYPE::FLOAT;
+  //tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Acq. Mult. (recent)";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("acquirersMultiple_current");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="P/V FCF (recent)";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("priceToValueRevenueToFcfAvg_price_to_value_current");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);  
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="P/V Damodaran (recent)";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("priceToValue_current");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);  
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="P/V EPS (recent)";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("priceToValueEpsGrowth_price_to_value");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);  
+
 
   metric.fieldNames.clear();
   metric.label.clear();
@@ -1257,21 +1343,7 @@ bool generateLaTeXReport(
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
 
-  std::string firstDate("");
-  JsonFunctions::getJsonString(calculateData["metric_data"].front()["date"],
-                               firstDate);
-  std::string lastDate("");
-  JsonFunctions::getJsonString(calculateData["metric_data"].back()["date"],
-                               lastDate);
-  
-  std::string recentDate("");
-
-  if(DateFunctions::convertToFractionalYear(firstDate)
-      > DateFunctions::convertToFractionalYear(lastDate)){
-    recentDate = firstDate;
-  }else{
-    recentDate = lastDate;
-  }            
+      
 
   metric.fieldNames.clear();
   metric.fileName = "calculateData";
@@ -1461,37 +1533,37 @@ bool generateLaTeXReport(
   tabularMetrics.push_back(metric);
 
 
-  metric.fieldNames.clear();
-  metric.fileName = "fundamentalData";
-  metric.label = "Shares Short";
-  metric.fieldNames.push_back("Technicals");
-  metric.fieldNames.push_back("SharesShort");
-  metric.type = JSON_FIELD_TYPE::FLOAT;
-  tabularMetrics.push_back(metric);
+  //metric.fieldNames.clear();
+  //metric.fileName = "fundamentalData";
+  //metric.label = "Shares Short";
+  //metric.fieldNames.push_back("Technicals");
+  //metric.fieldNames.push_back("SharesShort");
+  //metric.type = JSON_FIELD_TYPE::FLOAT;
+  //tabularMetrics.push_back(metric);
 
-  metric.fieldNames.clear();
-  metric.fileName = "fundamentalData";
-  metric.label = "Shares Short Prior Month";
-  metric.fieldNames.push_back("Technicals");
-  metric.fieldNames.push_back("SharesShortPriorMonth");
-  metric.type = JSON_FIELD_TYPE::FLOAT;
-  tabularMetrics.push_back(metric);
+  //metric.fieldNames.clear();
+  //metric.fileName = "fundamentalData";
+  //metric.label = "Shares Short Prior Month";
+  //metric.fieldNames.push_back("Technicals");
+  //metric.fieldNames.push_back("SharesShortPriorMonth");
+  //metric.type = JSON_FIELD_TYPE::FLOAT;
+  //tabularMetrics.push_back(metric);
 
-  metric.fieldNames.clear();
-  metric.fileName = "fundamentalData";
-  metric.label = "Short Ratio";
-  metric.fieldNames.push_back("Technicals");
-  metric.fieldNames.push_back("ShortRatio");
-  metric.type = JSON_FIELD_TYPE::FLOAT;
-  tabularMetrics.push_back(metric);
+  //metric.fieldNames.clear();
+  //metric.fileName = "fundamentalData";
+  //metric.label = "Short Ratio";
+  //metric.fieldNames.push_back("Technicals");
+  //metric.fieldNames.push_back("ShortRatio");
+  //metric.type = JSON_FIELD_TYPE::FLOAT;
+  //tabularMetrics.push_back(metric);
 
-  metric.fieldNames.clear();
-  metric.fileName = "fundamentalData";
-  metric.label = "Short Percent";
-  metric.fieldNames.push_back("Technicals");
-  metric.fieldNames.push_back("ShortPercent");
-  metric.type = JSON_FIELD_TYPE::FLOAT;
-  tabularMetrics.push_back(metric);
+  //metric.fieldNames.clear();
+  //metric.fileName = "fundamentalData";
+  //metric.label = "Short Percent";
+  //metric.fieldNames.push_back("Technicals");
+  //metric.fieldNames.push_back("ShortPercent");
+  //metric.type = JSON_FIELD_TYPE::FLOAT;
+  //tabularMetrics.push_back(metric);
 
   std::string latexReportPath(outputReportPath);
   std::ofstream latexReport;
@@ -1728,8 +1800,15 @@ bool generateLaTeXReport(
       date,
       verbose);
     
-    std::cout << "Add appendReturnOnCapitalDeployed. You are here" << std::endl;
-    std::abort();
+    //std::cout << "Add appendReturnOnCapitalDeployed. You are here" << std::endl;
+    //std::abort();
+
+    ReportingFunctions::appendReturnOnCapitalDeployedTableForValuation(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData["metric_data"],
+      date,
+      verbose);
 
     /*
     ReportingFunctions::appendReturnOnInvestedCapitalTableForValuation(

@@ -500,7 +500,8 @@ class FinancialAnalysisFunctions {
                                     const DataStructures::DebtInfo &debtInfo,
                                     const nlohmann::ordered_json &jsonData,                                     
                                     const DateFunctions::DateSetTTM &dateSet, 
-                                    const char *timeUnit,                                    
+                                    const char *timeUnit,  
+                                    double taxRate,                                  
                                     bool appendTermRecord,
                                     const std::string &parentCategoryName,
                                     bool setNansToMissingValue,
@@ -531,7 +532,8 @@ class FinancialAnalysisFunctions {
       double operatingIncome = 
         sumFundamentalDataOverDates(
           jsonData,FIN,IS,timeUnit,dateSet,"operatingIncome",
-          setNansToMissingValue);      
+          setNansToMissingValue);  
+      double afterTaxOperatingIncome = operatingIncome*(1.0-taxRate);
 
       //There are two definitions for capital depoloyed, and they should
       //be the same. These values are not the same for Apple, but are within
@@ -540,17 +542,21 @@ class FinancialAnalysisFunctions {
       //2. capitalDeployed = (totalAssets-currentTotalLiabilities);
 
       double returnOnCapitalDeployed = 
-        operatingIncome / (longTermDebt+totalStockholderEquity);
+        afterTaxOperatingIncome / (longTermDebt+totalStockholderEquity);
 
       if(appendTermRecord){
         termNames.push_back(parentCategoryName+"returnOnCapitalDeployed_longTermDebt");
         termNames.push_back(parentCategoryName+"returnOnCapitalDeployed_totalStockholderEquity");
         termNames.push_back(parentCategoryName+"returnOnCapitalDeployed_operatingIncome");
+        termNames.push_back(parentCategoryName+"returnOnCapitalDeployed_taxRate");
+        termNames.push_back(parentCategoryName+"returnOnCapitalDeployed_afterTaxOperatingIncome");
         termNames.push_back(parentCategoryName+"returnOnCapitalDeployed");
 
         termValues.push_back(longTermDebt);
         termValues.push_back(totalStockholderEquity);
         termValues.push_back(operatingIncome);
+        termValues.push_back(taxRate);
+        termValues.push_back(afterTaxOperatingIncome);
         termValues.push_back(returnOnCapitalDeployed);
       }
 
@@ -2384,10 +2390,7 @@ class FinancialAnalysisFunctions {
           std::vector< std::string> &termNames,
           std::vector< double > &termValues){
 
-      double debtBookValue = debtInfo.shortLongTermDebtTotal;      
-      if(!JsonFunctions::isJsonFloatValid(debtBookValue)){
-        debtBookValue = debtInfo.totalDebtEstimate;
-      }
+      double debtBookValue = debtInfo.longTermDebt;      
       if(!JsonFunctions::isJsonFloatValid(debtBookValue)){
         debtBookValue = debtInfo.longTermDebtEstimate;
       }

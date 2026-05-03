@@ -3163,6 +3163,7 @@ int main (int argc, char* argv[]) {
                                         fundamentalData,
                                         dateSet,
                                         timePeriod.c_str(), 
+                                        taxRate,
                                         appendTermRecord, 
                                         emptyParentName,
                                         setNansToMissingValue,
