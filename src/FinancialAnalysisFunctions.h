@@ -2683,6 +2683,7 @@ class FinancialAnalysisFunctions {
                     double costOfCapital,
                     double costOfCapitalMature,
                     double taxRate,
+                    double organicGrowth,
                     double afterTaxOperatingIncomeGrowth,
                     double reinvestmentRate,
                     double returnOnInvestedCapital,
@@ -2709,11 +2710,13 @@ class FinancialAnalysisFunctions {
           termNames.push_back(parentName+"reinvestmentRate");
           termNames.push_back(parentName+"returnOnInvestedCapital");
           termNames.push_back(parentName+"afterTaxOperatingIncomeGrowth");
+          termNames.push_back(parentName+"organicGrowth");
 
           termValues.push_back(taxRate);
           termValues.push_back(reinvestmentRate);
           termValues.push_back(returnOnInvestedCapital);
           termValues.push_back(afterTaxOperatingIncomeGrowth);
+          termValues.push_back(organicGrowth);
     
       }
       
@@ -2751,7 +2754,7 @@ class FinancialAnalysisFunctions {
         }else{
           afterTaxOperatingIncomeVector[i] = 
             afterTaxOperatingIncomeVector[i-1]
-            *(1.0+afterTaxOperatingIncomeGrowth);
+            *(1.0+afterTaxOperatingIncomeGrowth+organicGrowth);
           
             reinvestmentVector[i]=
             afterTaxOperatingIncomeVector[i]*reinvestmentRate;

@@ -223,7 +223,10 @@ class DataStructures {
       std::vector< double > reinvestmentRate;
       std::vector< double > reinvestmentRateSD;
       std::vector< double > returnOnInvestedCapital;
-      std::vector< EmpiricalGrowthModel > model;
+      std::vector< EmpiricalGrowthModel > afterTaxOperatingIncomeModel;
+      std::vector< EmpiricalGrowthModel > reinvestmentRateModel;
+      std::vector< EmpiricalGrowthModel > returnOnCapitalDeployedModel;
+      std::vector< EmpiricalGrowthModel > organicGrowthModel;
     };
 
     //==========================================================================
@@ -232,6 +235,7 @@ class DataStructures {
       double growthIntervalInYears;
       double maxOutlierProportionInEmpiricalModel;
       double minCycleDurationInYears;
+      bool forceZeroSlopeOnLinearModel;
       double exponentialModelR2Preference;
       bool calcOneGrowthRateForAllData;
       bool includeTimeUnitInAddress;

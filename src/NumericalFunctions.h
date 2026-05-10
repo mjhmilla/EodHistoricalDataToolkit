@@ -255,7 +255,7 @@ class NumericalFunctions {
     static void fitCyclicalModel(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
-                  double minTimeResolutionInYears,
+                  double minXPeriodOfCyclicalFit,
                   DataStructures::EmpiricalGrowthModel &modelUpd){
 
 
@@ -285,7 +285,7 @@ class NumericalFunctions {
           modelUpd.y[i] = 0.;
         }
 
-        int n = static_cast<int>(std::round(xSpan/minTimeResolutionInYears));
+        int n = static_cast<int>(std::round(xSpan/minXPeriodOfCyclicalFit));
 
         //index into parameters
         modelUpd.parameters.resize(2*n);
@@ -358,7 +358,7 @@ class NumericalFunctions {
     static void fitCyclicalModelWithLinearBaseline(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
-                  double minTimeResolutionInYears,
+                  double minXPeriodOfCyclicalFit,
                   bool forceZeroSlope,
                   DataStructures::EmpiricalGrowthModel &modelUpd){
 
@@ -373,7 +373,7 @@ class NumericalFunctions {
         }
 
         DataStructures::EmpiricalGrowthModel cyclicalModel;
-        fitCyclicalModel(x,yC,minTimeResolutionInYears,cyclicalModel);
+        fitCyclicalModel(x,yC,minXPeriodOfCyclicalFit,cyclicalModel);
 
         //Form and evaluate the linear+cyclical model
         std::vector<double> yM(y.size());
@@ -533,13 +533,13 @@ class NumericalFunctions {
     static void fitCyclicalModelWithExponentialBaseline(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
-                  double minTimeResolutionInYears,
-                  double maxProportionOfNegativeAtoi,
+                  double minXPeriodOfCyclicalFit,
+                  double maxProportionOfNegativeValues,
                   DataStructures::EmpiricalGrowthModel &modelUpd){
 
       if(x.size() == y.size() && x.size() > 2){
         DataStructures::EmpiricalGrowthModel exponentialModel;
-        fitExponentialGrowthModel(x,y,maxProportionOfNegativeAtoi,
+        fitExponentialGrowthModel(x,y,maxProportionOfNegativeValues,
                                   exponentialModel);
 
         //Subtract off the base line then call            
@@ -549,7 +549,7 @@ class NumericalFunctions {
         }
 
         DataStructures::EmpiricalGrowthModel cyclicalModel;
-        fitCyclicalModel(x,yC,minTimeResolutionInYears,cyclicalModel);
+        fitCyclicalModel(x,yC,minXPeriodOfCyclicalFit,cyclicalModel);
 
         //Form and evaluate the linear+cyclical model
         std::vector<double> yM(y.size());
@@ -600,7 +600,7 @@ class NumericalFunctions {
     static void fitExponentialGrowthModel(
                   const std::vector< double > &x,
                   const std::vector< double > &y,
-                  double maxProportionOfNegativeAtoi,
+                  double maxProportionOfNegativeValues,
                   DataStructures::EmpiricalGrowthModel &modelUpd){
 
       //Remove the bias on x
@@ -633,7 +633,7 @@ class NumericalFunctions {
             static_cast<double>(modelUpd.outlierCount)
           / static_cast<double>(y.size());
 
-        if(invalidEntryProportion > maxProportionOfNegativeAtoi){
+        if(invalidEntryProportion > maxProportionOfNegativeValues){
           modelUpd.validFitting=false;
         }
 
@@ -700,6 +700,122 @@ class NumericalFunctions {
       }
 
     };
+    //==========================================================================    
+    static void fitToModelWithLowestR2Error(
+                  const std::vector< double > &x,
+                  const std::vector< double > &y,
+                  const DataStructures::EmpiricalGrowthSettings &settings,
+                  DataStructures::EmpiricalGrowthModel &modelUpd)
+    {
+
+      if(    x.size() >= 2 && (x.size()==y.size())){
+
+        DataStructures::EmpiricalGrowthModel modelUpd;
+        bool validFitting = false;
+          
+        if(settings.typeOfEmpiricalModel==-1){
+          DataStructures::EmpiricalGrowthModel exponentialModel, linearModel;
+
+          fitExponentialGrowthModel(x,y,
+                        settings.maxOutlierProportionInEmpiricalModel,
+                        exponentialModel);
+
+          fitLinearGrowthModel(x,y,settings.forceZeroSlopeOnLinearModel,
+                                linearModel);
+
+          validFitting = 
+              (exponentialModel.validFitting || linearModel.validFitting);
+
+          int modelType = -1;
+          int linearModelType = 
+              static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
+          int exponentialModelType = 
+              static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel);
+            
+
+          //A linear model is used unless the exponential model
+          //is both valid and has a higher R2
+          if(exponentialModel.validFitting==true){
+            double exponentialModelR2Upd = 
+              exponentialModel.r2 + settings.exponentialModelR2Preference;
+            if(exponentialModelR2Upd > linearModel.r2 
+                || !linearModel.validFitting){
+              modelType=static_cast<int>(
+                  EmpiricalGrowthModelTypes::ExponentialModel);
+            }
+          }else if(linearModel.validFitting){
+            modelType = 
+              static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
+          }
+
+          switch(modelType){
+
+            case static_cast<int>(EmpiricalGrowthModelTypes::ExponentialModel):
+            {
+              fitCyclicalModelWithExponentialBaseline(
+                x,
+                y,
+                settings.minCycleDurationInYears,
+                settings.maxOutlierProportionInEmpiricalModel,
+                modelUpd);                
+            } break;
+
+            case static_cast<int>(EmpiricalGrowthModelTypes::LinearModel):
+            {
+              fitCyclicalModelWithLinearBaseline(
+                x,
+                y,
+                settings.minCycleDurationInYears,
+                forceZeroSlopeOnLinearModel,
+                modelUpd);
+            } break;
+          };
+
+        }else{
+          switch(settings.typeOfEmpiricalModel){
+            case 0:
+            {
+              fitExponentialGrowthModel(x,y,
+                      settings.maxOutlierProportionInEmpiricalModel,modelUpd);
+              validFitting=modelUpd.validFitting;
+            }break;
+            case 1:
+            {                
+              fitCyclicalModelWithExponentialBaseline(
+                x,
+                y,
+                settings.minCycleDurationInYears,
+                settings.maxOutlierProportionInEmpiricalModel,
+                modelUpd);
+              validFitting=modelUpd.validFitting;
+            }break;
+            case 2:
+            {
+              fitLinearGrowthModel(x,y,
+                  forceZeroSlopeOnLinearModel, modelUpd);
+              validFitting=modelUpd.validFitting;
+            }break;
+            case 3:
+            {
+              fitCyclicalModelWithLinearBaseline(
+                x,
+                y,
+                settings.minCycleDurationInYears,
+                forceZeroSlopeOnLinearModel,
+                modelUpd);
+                validFitting=modelUpd.validFitting;
+            }break;
+            default:
+              std::cout <<"Error: settings.typeOfEmpiricalModel"
+                        <<" must be [0,1,2,3]"
+                        <<std::endl;
+              std::abort();
+          };
+        }      
+
+    };
+
+
     //==========================================================================
     static void extractDividendInfo(  
               const nlohmann::ordered_json &fundamentalData,
@@ -1701,10 +1817,9 @@ class NumericalFunctions {
           std::string &timePeriod,
           int indexLastCommonDate,  
           bool quarterlyTTMAnalysis,
-          bool approximateReinvestmentRate,
           const DataStructures::EmpiricalGrowthSettings &settings)
     {
-
+      //    bool approximateReinvestmentRate,
       //    int maxDayErrorTTM,
       //    double growthIntervalInYears,
       //    double maxPropOfOutliersInExpModel,
@@ -1715,8 +1830,7 @@ class NumericalFunctions {
       //    bool approximateReinvestmentRate
 
       int indexDate       = -1;
-      bool validDateSet    = true;
-      bool forceZeroSlopeOnLinearModel =false;    
+      bool validDateSet    = true; 
 
       //A value of 0.1 means a 10% preference for an exponential model
       //over a linear model. In this case the exponential model will still
@@ -1724,14 +1838,18 @@ class NumericalFunctions {
       double preferenceForAnExponentialModel = 
         settings.exponentialModelR2Preference;  
 
+      std::string dateRecent;
       std::vector < double > dateNumV;    //Fractional year
-      std::vector < std::string > dateV;  //string yer
+      std::vector < std::string > dateV;  //string yer    
       std::vector < double > atoiV;       //after tax operating income 
       std::vector < double > rrV;         //reinvestment rate
+      std::vector < double > rocdV;       //return on capital deployed
+
 
       std::string previousTimePeriod("");
       DateFunctions::DateSetTTM previousDateSet;
       
+      DataStructures::DebtInfo debtInfo;
 
       double maxYearErrorTTM = settings.maxDateErrorInDays 
                              / DateFunctions::DAYS_PER_YEAR;
@@ -1747,6 +1865,7 @@ class NumericalFunctions {
         DateFunctions::DateSetTTM dateSetTTM;
         std::vector < double > dateSetTTMWeight;
 
+        dateRecent = analysisDates.common[indexDate];
         validDateSet = 
           DateFunctions::extractTTM( indexDate,
                                       analysisDates.common,
@@ -1817,6 +1936,7 @@ class NumericalFunctions {
 
             std::string parentName("");
 
+            /*
             bool ignoreDepreciation=true;
             double capitalExpenditures =
               FinancialAnalysisFunctions::
@@ -1856,24 +1976,61 @@ class NumericalFunctions {
                                                     setNansToMissingValue,
                                                     termNames,
                                                     termValues); 
+                                                                
             double rrEntry = (netCapitalExpenditures
                         +changeInNonCashWorkingCapital)
                         /atoiEntry;
-            if(approximateReinvestmentRate){
-              rrEntry = (capitalExpenditures)
-                        /atoiEntry;
-            }
+            */
 
-            bool rrEntryValid   = JsonFunctions::isJsonFloatValid(rrEntry);
+            double rrEntry = FinancialAnalysisFunctions::
+                              calcReinvestmentRate( fundamentalData,
+                                                    dateSetTTM,
+                                                    previousDateSet,
+                                                    timePeriod.c_str(),
+                                                    taxRate,
+                                                    appendTermRecord,
+                                                    parentName,
+                                                    setNansToMissingValue,
+                                                    termNames,
+                                                    termValues);
+            
+            FinancialAnalysisFunctions::getDebtInfo(fundamentalData,
+                                                    timePeriod._c_str(),
+                                                    dateRecent.c_str(),
+                                                    debtInfo,
+                                                    appendTermRecord,
+                                                    parentName,
+                                                    termNames,
+                                                    termValues,
+                                                    setNansToMissingValue);                                                  
+
+
+            double rocdEntry = FinancialAnalysisFunctions::
+                                calcReturnOnCapitalDeployed(
+                                  debtInfo,
+                                  fundamentaData,
+                                  dateSetTTM,
+                                  timePeriod.c_str(),
+                                  taxRate,
+                                  appendTermRecord,
+                                  parentName,
+                                  setNansToMissingValue,
+                                  termNames,
+                                  termValues);                                                    
+
             bool dateEntryValid = JsonFunctions::isJsonFloatValid(dateEntry);
+            bool rrEntryValid   = JsonFunctions::isJsonFloatValid(rrEntry);
+            bool rocdEntryValid = JsonFunctions::isJsonFloatValid(rocdEntry);
             bool atoiEntryValid = JsonFunctions::isJsonFloatValid(atoiEntry);
 
-            if(    rrEntryValid   && dateEntryValid 
-                && atoiEntryValid && atoiEntry > 0.){
+            if(    dateEntryValid && rrEntryValid
+                && atoiEntryValid && rocdEntryValid 
+                && atoiEntry > 0.){
               dateV.push_back(analysisDates.common[indexDate]);
               dateNumV.push_back(dateEntry);
               atoiV.push_back(atoiEntry);
-              rrV.push_back(rrEntry);              
+              rrV.push_back(rrEntry); 
+              rocdV.push_back(rocdEntry);             
             }
           }
         }
@@ -1899,6 +2056,7 @@ class NumericalFunctions {
         std::vector< double > dateSubV; //date sub vector
         std::vector< double > atoiSubV; // after-tax operating income sub vector
         std::vector< double > rrSubV; //rate of return sub vector
+        std::vector< double > rocdSubV; //return on capital deployed sub vector
 
         //
         //Extract the sub interval
@@ -1906,6 +2064,7 @@ class NumericalFunctions {
         dateSubV.push_back(dateNumV[indexDate]);
         atoiSubV.push_back(atoiV[indexDate]);
         rrSubV.push_back(rrV[indexDate]);
+        rocdSubV.push_back(rocdV[indexDate]);
 
         int indexDateStart=indexDate+1;
         bool foundStartDate=false;
@@ -1922,6 +2081,7 @@ class NumericalFunctions {
               dateSubV.push_back(dateNumV[indexDateStart]);
               atoiSubV.push_back(atoiV[indexDateStart]);
               rrSubV.push_back(rrV[indexDateStart]); 
+              rocdSubV.push_back(rocdV[indexDateStart]);
             }else{
               foundStartDate = true;
             }       
@@ -1949,10 +2109,33 @@ class NumericalFunctions {
           if(dateSubV.front() > dateSubV.back()){
             std::reverse(dateSubV.begin(),dateSubV.end());
             std::reverse(atoiSubV.begin(),atoiSubV.end());
+            std::reverse(rrSubV.begin(),rrSubV.end());
+            std::reverse(rocdSubV.begin(),rocdSubV.end());            
           }
 
+          DataStructures::EmpiricalGrowthModel atoiModel;
+          DataStructures::EmpiricalGrowthModel rrModel;
+          DataStructures::EmpiricalGrowthModel rocdModel;
 
+          fitToModelWithLowestR2Error(
+              dateSubV,
+              atoiSubV,
+              settings,
+              atoiModel);
 
+          fitToModelWithLowestR2Error(
+              dateSubV,
+              atoiSubV,
+              settings,
+              rrModel);
+
+          fitToModelWithLowestR2Error(
+              dateSubV,
+              atoiSubV,
+              settings,
+              rocdModel);
+
+          /*
           DataStructures::EmpiricalGrowthModel empModel;
           bool validFitting = false;
           
@@ -2056,12 +2239,20 @@ class NumericalFunctions {
                           <<std::endl;
                 std::abort();
             };
+            */
 
           }
 
           
 
           if(validFitting){
+
+            //
+            // You are hre
+            //
+            std::abort();
+            
+
             //
             //Evaluate the average rate of reinvestment
             //
