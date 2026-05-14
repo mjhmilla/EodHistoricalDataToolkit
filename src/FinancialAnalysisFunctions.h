@@ -2894,7 +2894,136 @@ class FinancialAnalysisFunctions {
 
     };
 
+    /*
+      This is a metric inspired by a chapter in Daniel Gladiš book Hidden
+      Investment Treasures. In the chapter he noted the following facts
 
+      1. Roughly 50% of all investment in the U.S. is in passive index funds,
+         mostly in the S&P 500
+      2. When people start selling shares, the passive fund is obligated to sell
+         its assets in direct proportion so that the price of the share tracks
+         the price of the index. This puts passive indices in the position of
+         being a forced seller.
+      3. Some of the companies in the index have low daily trading volumes 
+         relative to the shares that a passive fund may be forced to sell.
+      4. During a draw down, passive funds may flood the market with more 
+         shares that can possibly be purchased and the price of that security
+         will drop temporarily.
+
+      This metric is an effort to identify companies that are illiquid in the
+      event of a passive fund draw down. The metric is straight forward:
+
+      passiveFundLiquidity = averageDailyTradingVolume 
+                           / totalSharesOwnedByPassiveFunds
+      
+      To keep this simple, I'm going to focus just on the largest funds. 
+      According to etfdb.com (see config/data/etfdb.csv) nearly 30% of all
+      ETF funds are in S&P500 indices. Since many other indicies (Vanguards
+      total stock market index, the Russel 2000, MSCI world index) will also
+      contain the S&P500 index the proportion of all passive money invested
+      in the S&P500 is likely well above 30%.
+
+      https://etfdb.com/compare/market-cap/
+    */
+    //calcFundLiquidityIndex
+    static double calcStockLiquidityRelativeToFundHoldings(
+          const std::string &fundKeyWord,
+          const nlohmann::ordered_json &fundamentalData, 
+          const nlohmann::ordered_json &historicalData,
+          int daysToAverageTradingVolumeOver,
+          const char *timeUnit, 
+          bool appendTermRecord,                                      
+          const std::string &parentName,
+          bool setNansToMissingValue,
+          std::vector< std::string> &termNames,
+          std::vector< double > &termValues){
+
+
+      double totalFundShares        = std::nan("1");
+      double avgDailyTradingVolume  = std::nan("1");
+      double liqudityIndex          = std::nan("1");
+        
+      //
+      // Evaluate the total number of shares held by funds that contain
+      // the keyword in their name.
+      //
+      if(fundamentalData[HLDRS].contains(std::string(FNDS))){
+        for(auto& el: fundamentalData[HLDRS][FNDS]){
+          std::string fundName;
+          JsonFunctions::getJsonString(el["name"],fundName);
+          size_t idxKeyWord = fundName.find(fundKeyWord); 
+          if(idxKeyWord != std::string::npos){
+            double currentShares = 
+              JsonFunctions::getJsonFloat(el["currentShares"]);
+            if(JsonFunctions::isJsonFloatValid(currentShares)){
+              if(std::isnan(totalFundShares)){
+                totalFundShares=currentShares;
+              }else{
+                totalFundShares+=currentShares;
+              }
+            }
+          }
+        }
+      }
+
+      //
+      // Evaluate the average daily trading volume
+      //
+      if( daysToAverageTradingVolumeOver > 0){
+
+        int index = static_cast<int>(historicalData.size());
+        index--;
+
+        std::string dateStart,dateEnd;
+        JsonFunctions::getJsonString(historicalData.at(0)["date"],dateStart);
+        JsonFunctions::getJsonString(historicalData.at(index)["date"],dateEnd);
+
+        double dateStartNum = DateFunctions::convertToFractionalYear(dateStart);
+        double dateEndNum = DateFunctions::convertToFractionalYear(dateEnd);
+
+        int indexA = 0;
+        int indexB = 0;
+        if(dateEndNum > dateStartNum){
+          indexB = index;
+          indexA = indexB-daysToAverageTradingVolumeOver;
+          if(indexA < 0){
+            indexA=0;
+          }
+        }else{
+          indexA = 0;
+          indexB = daysToAverageTradingVolumeOver;
+        }
+
+
+        double count = 0.;
+        double volume = 0.;
+        for(int index = indexA; index < indexB; ++index){
+          double dailyVolume = 
+            JsonFunctions::getJsonFloat(historicalData.at(index)["volume"]);
+          if(JsonFunctions::isJsonFloatValid(dailyVolume)){
+            volume+=dailyVolume;
+            count = count+1.0;
+          }
+        }
+        avgDailyTradingVolume = volume/count;
+
+        liqudityIndex = avgDailyTradingVolume / totalFundShares;
+
+      }
+
+      if(appendTermRecord){
+        termNames.push_back(parentName+"totalFundShares");
+        termNames.push_back(parentName+"averageDailyTradingVolume");
+        termNames.push_back(parentName+"liquidityIndex");
+
+        termValues.push_back(totalFundShares);
+        termValues.push_back(avgDailyTradingVolume);
+        termValues.push_back(liqudityIndex);
+
+      }      
+      return liqudityIndex;
+
+    };
 
 };
 

@@ -2575,7 +2575,28 @@ int main (int argc, char* argv[]) {
       annualMilestones.yearsSinceIPO = recentDate-ipoDateNumerical;
       annualMilestones.yearsOnRecord = std::abs(firstRecordDate-lastRecordDate);
 
+      //=======================================================================
+      //
+      // Evaluate the liquidity of the stock in the context of S&P 500 Holdings
+      //
+      //=======================================================================
 
+      std::string fundKeyWord(" 500");
+      int daysToAverageTradingVolumeOver=28; //trailing four weeks
+      std::string parentNameFund("sp500_");
+      double liquidityIndex = 
+        FinancialAnalysisFunctions::
+          calcStockLiquidityRelativeToFundHoldings(
+            fundKeyWord,
+            fundamentalData,
+            historicalData,
+            daysToAverageTradingVolumeOver,
+            timePeriod.c_str(),
+            true,
+            parentNameFund,
+            setNansToMissingValue,
+            termNames,
+            termValues);
 
       //=======================================================================
       //
@@ -3444,11 +3465,11 @@ int main (int argc, char* argv[]) {
               "freeCashFlow", setNansToMissingValue); 
 
           valuationMetricSummary.marketCapitalization=marketCapitalization;
-          valuationMetricSummary.enterpriseValue   = enterpriseValue;
-          valuationMetricSummary.freeCashFlow      = freeCashFlow;
-          valuationMetricSummary.operatingIncome = operatingIncome;
-          valuationMetricSummary.acquirersMultiple = acquirersMultiple;
-          valuationMetricSummary.residualCashFlow  = residualCashFlow;
+          valuationMetricSummary.enterpriseValue    = enterpriseValue;
+          valuationMetricSummary.freeCashFlow       = freeCashFlow;
+          valuationMetricSummary.operatingIncome    = operatingIncome;
+          valuationMetricSummary.acquirersMultiple  = acquirersMultiple;
+          valuationMetricSummary.residualCashFlow   = residualCashFlow;
 
           bool success=NumericalFunctions::evaluateRecentValuationMetrics(
                                               fundamentalData,
