@@ -2136,10 +2136,10 @@ int main (int argc, char* argv[]) {
                                   quarterlyTTMAnalysis,
                                   atoiGrowthMdlSettings);  
 
-      if(empiricalGrowthDataAll.model.size()>0){
-        if(empiricalGrowthDataAll.model[0].validFitting){
+      if(empiricalGrowthDataAll.afterTaxOperatingIncomeModel.size()>0){
+        if(empiricalGrowthDataAll.afterTaxOperatingIncomeModel[0].validFitting){
           atoiGrowthMdlSettings.typeOfEmpiricalModel 
-            = empiricalGrowthDataAll.model[0].modelType;
+            = empiricalGrowthDataAll.afterTaxOperatingIncomeModel[0].modelType;
         }
       }
       //Evaluate the growth rate data over the same relatively short
@@ -3405,8 +3405,10 @@ int main (int argc, char* argv[]) {
                                             termNames,
                                             termValues);
 
+        double organicGrowth=0.;
+
         double afterTaxOperatingIncomeGrowth 
-          = reinvestmentRate*returnOnCapitalDeployed;
+          = reinvestmentRate*returnOnCapitalDeployed + organicGrowth;
 
         termNames.push_back("afterTaxOperatingIncomeGrowth");
         termValues.push_back(afterTaxOperatingIncomeGrowth); 
@@ -3456,7 +3458,7 @@ int main (int argc, char* argv[]) {
         }
 
         parentName="priceToValue_";
-        double organicGrowth=0.;
+
 
         //Valuation (discounted cash flow)
         double presentValue = FinancialAnalysisFunctions::
@@ -3469,10 +3471,10 @@ int main (int argc, char* argv[]) {
               costOfCapital,
               costOfCapitalMature,
               taxRate,
-              organicGrowth,
               afterTaxOperatingIncomeGrowth,
               reinvestmentRate,
               returnOnCapitalDeployed,
+              organicGrowth,
               marketCapitalization,
               numberOfYearsOfGrowthForDcmValuation,
               appendTermRecord,
@@ -3531,14 +3533,6 @@ int main (int argc, char* argv[]) {
           if(indexGrowth < empiricalGrowthData.datesNumerical.size()){
             parentName="priceToValueEmpirical_";
 
-            //double roicEmp = 
-            //  empiricalGrowthData.afterTaxOperatingIncomeGrowth[indexGrowth]
-            //  /empiricalGrowthData.reinvestmentRate[indexGrowth];
-            
-            std::abort(); //"You are here"
-            //organicGrowth = 
-            //  empiricalGrowthData.afterTaxOperatingIncomeGrowth[indexGrowth]
-
 
             //Valuation (discounted cash flow) using empirical growth
             double presentValueEmpirical = 
@@ -3554,7 +3548,8 @@ int main (int argc, char* argv[]) {
                   taxRate,
                   empiricalGrowthData.afterTaxOperatingIncomeGrowth[indexGrowth],
                   empiricalGrowthData.reinvestmentRate[indexGrowth],
-                  returnOnCapitalDeployed,
+                  empiricalGrowthData.returnOnCapitalDeployed[indexGrowth],
+                  empiricalGrowthData.organicGrowth[indexGrowth],
                   marketCapitalization,
                   numberOfYearsOfGrowthForDcmValuation,
                   appendTermRecord,
@@ -3625,7 +3620,8 @@ int main (int argc, char* argv[]) {
                   taxRate,
                   empiricalGrowthDataAll.afterTaxOperatingIncomeGrowth[0],
                   empiricalGrowthDataAll.reinvestmentRate[0],
-                  roicEmpAvg,                
+                  empiricalGrowthDataAll.returnOnCapitalDeployed[0],                
+                  empiricalGrowthDataAll.organicGrowth[0],
                   marketCapitalization,   
                   numberOfYearsOfGrowthForDcmValuation,
                   appendTermRecord,

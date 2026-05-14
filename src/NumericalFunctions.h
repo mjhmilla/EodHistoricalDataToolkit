@@ -710,7 +710,6 @@ class NumericalFunctions {
 
       if(    x.size() >= 2 && (x.size()==y.size())){
 
-        DataStructures::EmpiricalGrowthModel modelUpd;
         bool validFitting = false;
           
         if(settings.typeOfEmpiricalModel==-1){
@@ -742,6 +741,10 @@ class NumericalFunctions {
                 || !linearModel.validFitting){
               modelType=static_cast<int>(
                   EmpiricalGrowthModelTypes::ExponentialModel);
+            }else if(exponentialModelR2Upd < linearModel.r2 
+                  && linearModel.validFitting){
+              modelType = 
+                static_cast<int>(EmpiricalGrowthModelTypes::LinearModel);
             }
           }else if(linearModel.validFitting){
             modelType = 
@@ -766,7 +769,7 @@ class NumericalFunctions {
                 x,
                 y,
                 settings.minCycleDurationInYears,
-                forceZeroSlopeOnLinearModel,
+                settings.forceZeroSlopeOnLinearModel,
                 modelUpd);
             } break;
           };
@@ -791,8 +794,8 @@ class NumericalFunctions {
             }break;
             case 2:
             {
-              fitLinearGrowthModel(x,y,
-                  forceZeroSlopeOnLinearModel, modelUpd);
+              fitLinearGrowthModel(x,y, settings.forceZeroSlopeOnLinearModel, 
+                                  modelUpd);
               validFitting=modelUpd.validFitting;
             }break;
             case 3:
@@ -801,7 +804,7 @@ class NumericalFunctions {
                 x,
                 y,
                 settings.minCycleDurationInYears,
-                forceZeroSlopeOnLinearModel,
+                settings.forceZeroSlopeOnLinearModel,
                 modelUpd);
                 validFitting=modelUpd.validFitting;
             }break;
@@ -812,7 +815,7 @@ class NumericalFunctions {
               std::abort();
           };
         }      
-
+      }
     };
 
 
@@ -1995,7 +1998,7 @@ class NumericalFunctions {
                                                     termValues);
             
             FinancialAnalysisFunctions::getDebtInfo(fundamentalData,
-                                                    timePeriod._c_str(),
+                                                    timePeriod.c_str(),
                                                     dateRecent.c_str(),
                                                     debtInfo,
                                                     appendTermRecord,
@@ -2008,7 +2011,7 @@ class NumericalFunctions {
             double rocdEntry = FinancialAnalysisFunctions::
                                 calcReturnOnCapitalDeployed(
                                   debtInfo,
-                                  fundamentaData,
+                                  fundamentalData,
                                   dateSetTTM,
                                   timePeriod.c_str(),
                                   taxRate,
@@ -2125,15 +2128,19 @@ class NumericalFunctions {
 
           fitToModelWithLowestR2Error(
               dateSubV,
-              atoiSubV,
+              rrSubV,
               settings,
               rrModel);
 
           fitToModelWithLowestR2Error(
               dateSubV,
-              atoiSubV,
+              rocdSubV,
               settings,
               rocdModel);
+
+          bool validFitting = (atoiModel.validFitting  
+                            && rrModel.validFitting
+                            && rocdModel.validFitting);  
 
           /*
           DataStructures::EmpiricalGrowthModel empModel;
@@ -2241,41 +2248,66 @@ class NumericalFunctions {
             };
             */
 
-          }
+          //}
 
           
 
           if(validFitting){
 
-            //
-            // You are hre
-            //
-            std::abort();
-            
 
+          
             //
-            //Evaluate the average rate of reinvestment
+            //Evaluate the average rate of reinvestment and rocd
             //
             double count=0.;
             double rrAvg = 0.;
-
+            
+            
             for(size_t i=0; i < rrSubV.size();++i){
               if(JsonFunctions::isJsonFloatValid(rrSubV[i])){
                 rrAvg += rrSubV[i];
                 count += 1.0;
               }
             }
-
             rrAvg = rrAvg/count;
-
-            double rrSd = 0;
-            for(size_t i=0; i<rrSubV.size();++i){
-              double rrError = (rrSubV[i]-rrAvg);
-              rrSd += rrError*rrError;
+            double rrSD = 0.;
+            count = 0.;
+            for(size_t i=0; i < rrSubV.size();++i){
+              if(JsonFunctions::isJsonFloatValid(rrSubV[i])){
+                double t0=(rrSubV[i]-rrAvg);
+                rrSD += t0*t0;
+                count += 1.0;
+              }
+            }            
+            rrSD = std::sqrt(rrSD/count);
+            //
+            //
+            //
+            double rocdAvg = 0.;
+            
+            count = 0.;
+            for(size_t i=0; i < rocdSubV.size();++i){
+              if(JsonFunctions::isJsonFloatValid(rocdSubV[i])){
+                rocdAvg += rocdSubV[i];
+                count += 1.0;
+              }
             }
-            rrSd = std::sqrt(rrSd / count);
+            rocdAvg = rocdAvg/count;
+            double rocdSD = 0.;
+            count = 0.;
+            for(size_t i=0; i < rocdSubV.size();++i){
+              if(JsonFunctions::isJsonFloatValid(rocdSubV[i])){
+                double t0=(rocdSubV[i]-rocdAvg);
+                rocdSD += t0*t0;
+                count += 1.0;
+              }
+            }            
+            rocdSD = std::sqrt(rocdSD/count);
 
-            double roic = empModel.annualGrowthRateOfTrendline/rrAvg;
+
+            double atoiGrowth = atoiModel.annualGrowthRateOfTrendline;
+            double organicGrowth = atoiGrowth - (rrAvg*rocdAvg);
+
 
             //
             // Store the model results
@@ -2283,18 +2315,25 @@ class NumericalFunctions {
             if(count > 0 && !std::isnan(rrAvg) && !std::isinf(rrAvg)){
 
               empiricalGrowthDataUpd.afterTaxOperatingIncomeGrowth.push_back(
-                  empModel.annualGrowthRateOfTrendline);
+                  atoiModel.annualGrowthRateOfTrendline);
 
               empiricalGrowthDataUpd.reinvestmentRate.push_back(rrAvg);
-              empiricalGrowthDataUpd.reinvestmentRateSD.push_back(rrSd);
-              empiricalGrowthDataUpd.returnOnInvestedCapital.push_back(roic);
+              empiricalGrowthDataUpd.reinvestmentRateSD.push_back(rrSD);
+
+              empiricalGrowthDataUpd.returnOnCapitalDeployed.push_back(rocdAvg);
+              empiricalGrowthDataUpd.returnOnCapitalDeployedSD.push_back(rocdSD);
+
+              empiricalGrowthDataUpd.organicGrowth.push_back(organicGrowth);
+
 
               empiricalGrowthDataUpd.dates.push_back(
                   dateV[indexDate]);
               empiricalGrowthDataUpd.datesNumerical.push_back(
                   dateNumV[indexDate]);
 
-              empiricalGrowthDataUpd.model.push_back(empModel);     
+              empiricalGrowthDataUpd.afterTaxOperatingIncomeModel.push_back(atoiModel);     
+              empiricalGrowthDataUpd.reinvestmentRateModel.push_back(rrModel);
+              empiricalGrowthDataUpd.returnOnCapitalDeployedModel.push_back(rocdModel);
 
             } 
           } 
@@ -2940,7 +2979,7 @@ class NumericalFunctions {
         int index = NumericalFunctions::getIndexOfMostRecentDate(
                                         empiricalDataSet);      
 
-        if(empiricalDataSet.model[index].validFitting){
+        if(empiricalDataSet.afterTaxOperatingIncomeModel[index].validFitting){
 
           /*
           size_t indexRecentEntry = 0;
@@ -2953,7 +2992,7 @@ class NumericalFunctions {
 
         appendEmpiricalGrowthModelRecent(
           jsonStruct,
-          empiricalDataSet.model[index],
+          empiricalDataSet.afterTaxOperatingIncomeModel[index],
           nameToPrepend);
           //empiricalDataSet.model[indexRecentEntry],
           
@@ -3055,16 +3094,20 @@ class NumericalFunctions {
           empiricalGrowthData.afterTaxOperatingIncomeGrowth[index]);
 
       termNames.push_back(nameToPrepend+"r2");
-      termValues.push_back(empiricalGrowthData.model[index].r2); 
+      termValues.push_back(
+          empiricalGrowthData.afterTaxOperatingIncomeModel[index].r2); 
 
       termNames.push_back(nameToPrepend+"r2Trendline");
-      termValues.push_back(empiricalGrowthData.model[index].r2Trendline); 
+      termValues.push_back(
+          empiricalGrowthData.afterTaxOperatingIncomeModel[index].r2Trendline); 
 
       termNames.push_back(nameToPrepend+"r2Cyclic");
-      termValues.push_back(empiricalGrowthData.model[index].r2Cyclic); 
+      termValues.push_back(
+          empiricalGrowthData.afterTaxOperatingIncomeModel[index].r2Cyclic); 
 
       termNames.push_back(nameToPrepend+"ModelType");
-      termValues.push_back(empiricalGrowthData.model[index].modelType); 
+      termValues.push_back(
+          empiricalGrowthData.afterTaxOperatingIncomeModel[index].modelType); 
 
       termNames.push_back(nameToPrepend+"ReinvestmentRateMean");
       termValues.push_back(empiricalGrowthData.reinvestmentRate[index]);
@@ -3072,19 +3115,24 @@ class NumericalFunctions {
       termNames.push_back(nameToPrepend+"ReinvestmentRateStandardDeviation");
       termValues.push_back(empiricalGrowthData.reinvestmentRateSD[index]);
 
-      termNames.push_back(nameToPrepend+"ReturnOnInvestedCapital");
-      termValues.push_back(empiricalGrowthData.returnOnInvestedCapital[index]);
+      termNames.push_back(nameToPrepend+"ReturnOnCapitalDeployed");
+      termValues.push_back(empiricalGrowthData.returnOnCapitalDeployed[index]);
+
+      termNames.push_back(nameToPrepend+"ReturnOnCapitalDeployedStandardDeviation");
+      termValues.push_back(empiricalGrowthData.returnOnCapitalDeployedSD[index]);
+
 
       termNames.push_back(nameToPrepend
                           +"ReturnOnInvestedCapitalLessCostOfCapital");
 
-      double roicEmpLCC = empiricalGrowthData.returnOnInvestedCapital[index]
+      double roicEmpLCC = empiricalGrowthData.returnOnCapitalDeployed[index]
                           -costOfCapitalMature;          
 
       termValues.push_back(roicEmpLCC);
 
       termNames.push_back(nameToPrepend+"Duration");
-      termValues.push_back(empiricalGrowthData.model[index].duration); 
+      termValues.push_back(
+          empiricalGrowthData.afterTaxOperatingIncomeModel[index].duration); 
 
       termNames.push_back(nameToPrepend+"ModelDateError");
       double dateError = 
@@ -3092,7 +3140,8 @@ class NumericalFunctions {
       termValues.push_back(dateError); 
 
       termNames.push_back(nameToPrepend+"OutlierCount");
-      termValues.push_back(empiricalGrowthData.model[index].outlierCount); 
+      termValues.push_back(
+          empiricalGrowthData.afterTaxOperatingIncomeModel[index].outlierCount); 
 
     };   
     //==========================================================================

@@ -749,7 +749,7 @@ class FinancialAnalysisFunctions {
       debt and a lot of cash will have a completely skewed value for the 
       invested capital. I'm switching to use return on capital deployed which
       returns a sensible value regardless of a company's debt or cash level.
-      It also has the advantage that the fields it requires are well covere
+      It also has the advantage that the fields it requires are well covered
       by EOD.
 
      source:
@@ -2683,10 +2683,10 @@ class FinancialAnalysisFunctions {
                     double costOfCapital,
                     double costOfCapitalMature,
                     double taxRate,
-                    double organicGrowth,
                     double afterTaxOperatingIncomeGrowth,
                     double reinvestmentRate,
-                    double returnOnInvestedCapital,
+                    double returnOnCapitalDeployed,
+                    double organicGrowth,
                     double marketCapitalization,
                     int numberOfYearsForTerminalValuation,
                     bool appendTermRecord,
@@ -2708,15 +2708,15 @@ class FinancialAnalysisFunctions {
       if(appendTermRecord){
           termNames.push_back(parentName+"taxRate");
           termNames.push_back(parentName+"reinvestmentRate");
-          termNames.push_back(parentName+"returnOnInvestedCapital");
-          termNames.push_back(parentName+"afterTaxOperatingIncomeGrowth");
+          termNames.push_back(parentName+"returnOnCapitalDeployed");
           termNames.push_back(parentName+"organicGrowth");
+          termNames.push_back(parentName+"afterTaxOperatingIncomeGrowth");
 
           termValues.push_back(taxRate);
           termValues.push_back(reinvestmentRate);
-          termValues.push_back(returnOnInvestedCapital);
-          termValues.push_back(afterTaxOperatingIncomeGrowth);
+          termValues.push_back(returnOnCapitalDeployed);
           termValues.push_back(organicGrowth);
+          termValues.push_back(afterTaxOperatingIncomeGrowth);
     
       }
       
@@ -2754,7 +2754,7 @@ class FinancialAnalysisFunctions {
         }else{
           afterTaxOperatingIncomeVector[i] = 
             afterTaxOperatingIncomeVector[i-1]
-            *(1.0+afterTaxOperatingIncomeGrowth+organicGrowth);
+            *(1.0+afterTaxOperatingIncomeGrowth);
           
             reinvestmentVector[i]=
             afterTaxOperatingIncomeVector[i]*reinvestmentRate;
@@ -2804,7 +2804,7 @@ class FinancialAnalysisFunctions {
 
 
       if(    !JsonFunctions::isJsonFloatValid( reinvestmentRate)
-          || !JsonFunctions::isJsonFloatValid( returnOnInvestedCapital)
+          || !JsonFunctions::isJsonFloatValid( returnOnCapitalDeployed)
           || !JsonFunctions::isJsonFloatValid( operatingIncome)
           || !JsonFunctions::isJsonFloatValid( taxRate)){
 

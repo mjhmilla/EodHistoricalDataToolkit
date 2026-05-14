@@ -222,11 +222,12 @@ class DataStructures {
       std::vector< double > afterTaxOperatingIncomeGrowth;
       std::vector< double > reinvestmentRate;
       std::vector< double > reinvestmentRateSD;
-      std::vector< double > returnOnInvestedCapital;
+      std::vector< double > returnOnCapitalDeployed;
+      std::vector< double > returnOnCapitalDeployedSD;
+      std::vector< double > organicGrowth;
       std::vector< EmpiricalGrowthModel > afterTaxOperatingIncomeModel;
       std::vector< EmpiricalGrowthModel > reinvestmentRateModel;
       std::vector< EmpiricalGrowthModel > returnOnCapitalDeployedModel;
-      std::vector< EmpiricalGrowthModel > organicGrowthModel;
     };
 
     //==========================================================================
