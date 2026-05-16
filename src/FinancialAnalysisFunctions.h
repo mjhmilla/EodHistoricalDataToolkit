@@ -2888,7 +2888,7 @@ class FinancialAnalysisFunctions {
 
       }
 
-      return presentValue;
+      return priceToValue;
 
 
 
@@ -2932,17 +2932,21 @@ class FinancialAnalysisFunctions {
           const nlohmann::ordered_json &historicalData,
           int daysToAverageTradingVolumeOver,
           const char *timeUnit, 
-          bool appendTermRecord,                                      
-          const std::string &parentName,
           bool setNansToMissingValue,
-          std::vector< std::string> &termNames,
-          std::vector< double > &termValues){
+          const std::string &parentName,
+          nlohmann::ordered_json &liqudityMetricJson){
 
 
       double totalFundShares        = std::nan("1");
       double avgDailyTradingVolume  = std::nan("1");
       double liqudityIndex          = std::nan("1");
-        
+
+      if(setNansToMissingValue){
+        totalFundShares       = JsonFunctions::MISSING_VALUE;
+        avgDailyTradingVolume = JsonFunctions::MISSING_VALUE;
+        liqudityIndex         = JsonFunctions::MISSING_VALUE;
+      }
+      
       //
       // Evaluate the total number of shares held by funds that contain
       // the keyword in their name.
@@ -3011,16 +3015,23 @@ class FinancialAnalysisFunctions {
 
       }
 
-      if(appendTermRecord){
-        termNames.push_back(parentName+"totalFundShares");
-        termNames.push_back(parentName+"averageDailyTradingVolume");
-        termNames.push_back(parentName+"liquidityIndex");
+      liqudityMetricJson[parentName+"totalFundShares"]
+        =totalFundShares;
+      liqudityMetricJson[parentName+"averageDailyTradingVolumeDays"]
+        =daysToAverageTradingVolumeOver;
+      liqudityMetricJson[parentName+"averageDailyTradingVolume"]
+        =avgDailyTradingVolume;
+      liqudityMetricJson[parentName+"liquidityIndex"]
+        =liqudityIndex;
 
-        termValues.push_back(totalFundShares);
-        termValues.push_back(avgDailyTradingVolume);
-        termValues.push_back(liqudityIndex);
-
-      }      
+      //if(appendTermRecord){
+      //  termNames.push_back(parentName+"totalFundShares");
+      //  termNames.push_back(parentName+"averageDailyTradingVolume");
+      //  termNames.push_back(parentName+"liquidityIndex");
+      //  termValues.push_back(totalFundShares);
+      //  termValues.push_back(avgDailyTradingVolume);
+      //  termValues.push_back(liqudityIndex);
+      //}      
       return liqudityIndex;
 
     };

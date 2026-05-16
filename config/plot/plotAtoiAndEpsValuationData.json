@@ -32,12 +32,12 @@
             "xMin": null,
             "xMax": null,
             "yMin": 0,
-            "yMax": 20.01,
+            "yMax": 30.01,
             "useLogScale": false,
             "boxWhiskerColor": "black",
             "boxWhiskerPosition": -0.5
         },        
-        "acquirersMultipleEV":
+        "priceToValueGrowthFactorsA":
         {
             "row": 0,
             "column": 1,
@@ -47,13 +47,13 @@
                 "metric_data"
             ],
             "fieldName_x": "date",
-            "fieldName_y": "acquirersMultiple_enterpriseValue",
+            "fieldName_y": "priceToValue_returnOnCapitalDeployed",
             "isArray": false,
-            "legendEntry": "EV",
+            "legendEntry": "ROCD",
             "lineColor": "black",
             "lineWidth": 1,
             "xAxisLabel": "Years",
-            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
+            "yAxisLabel": "Growth Factors",
             "xMin": null,
             "xMax": null,
             "yMin": 0,
@@ -62,7 +62,7 @@
             "boxWhiskerColor": "black",
             "boxWhiskerPosition": -0.5
         },
-        "acquirersMultipleOI":
+        "priceToValueGrowthFactorsB":
         {
             "row": 0,
             "column": 1,
@@ -72,113 +72,13 @@
                 "metric_data"
             ],
             "fieldName_x": "date",
-            "fieldName_y": "acquirersMultiple_operatingIncome",
+            "fieldName_y": "priceToValueEmpirical_organicGrowth",
             "isArray": false,
-            "legendEntry": "Op. Income",
-            "lineColor": "web-blue",
+            "legendEntry": "Organic Growth",
+            "lineColor": "red",
             "lineWidth": 1,
             "xAxisLabel": "Years",
-            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "web-blue",
-            "boxWhiskerPosition": -0.5
-        },                
-        "acquirersMultipleEVMktCap":
-        {
-            "row": 0,
-            "column": 1,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "enterpriseValue_marketCapitalization",
-            "isArray": false,
-            "legendEntry": "EV:Mkt Cap",
-            "lineColor": "sea-green",
-            "lineWidth": 0.5,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "sea-green",
-            "boxWhiskerPosition": -0.5
-        },
-        "acquirersMultipleEVDebt":
-        {
-            "row": 0,
-            "column": 1,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "enterpriseValue_debtBookValue",
-            "isArray": false,
-            "legendEntry": "EV:Debt",
-            "lineColor": "brown",
-            "lineWidth": 0.5,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "brown",
-            "boxWhiskerPosition": -0.5
-        },
-        "acquirersMultipleEVMinInt":
-        {
-            "row": 0,
-            "column": 1,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "enterpriseValue_minorityInterest",
-            "isArray": false,
-            "legendEntry": "EV:Min.Int",
-            "lineColor": "olive",
-            "lineWidth": 0.5,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
-            "xMin": null,
-            "xMax": null,
-            "yMin": 0,
-            "yMax": null,
-            "useLogScale": false,
-            "boxWhiskerColor": "olive",
-            "boxWhiskerPosition": -0.5
-        },   
-        "acquirersMultipleEVCash":
-        {
-            "row": 0,
-            "column": 1,
-            "jsonData_x": "calculateData",
-            "address_x":
-            [
-                "metric_data"
-            ],
-            "fieldName_x": "date",
-            "fieldName_y": "enterpriseValue_cashAndEquivalentsEntry",
-            "isArray": false,
-            "legendEntry": "EV:Cash",
-            "lineColor": "red",
-            "lineWidth": 0.5,
-            "xAxisLabel": "Years",
-            "yAxisLabel": "Acq. Mult. Detail (@CurrencyCodeLaTeX)",
+            "yAxisLabel": "Growth Factors",
             "xMin": null,
             "xMax": null,
             "yMin": 0,
@@ -186,7 +86,32 @@
             "useLogScale": false,
             "boxWhiskerColor": "red",
             "boxWhiskerPosition": -0.5
-        },                
+        },
+        "priceToValueGrowthFactorsC":
+        {
+            "row": 0,
+            "column": 1,
+            "jsonData_x": "calculateData",
+            "address_x":
+            [
+                "metric_data"
+            ],
+            "fieldName_x": "date",
+            "fieldName_y": "priceToValueEmpiricalAvg_organicGrowth",
+            "isArray": false,
+            "legendEntry": "Organic Growth Avg",
+            "lineColor": "orange",
+            "lineWidth": 1,
+            "xAxisLabel": "Years",
+            "yAxisLabel": "Growth",
+            "xMin": null,
+            "xMax": null,
+            "yMin": 0,
+            "yMax": null,
+            "useLogScale": false,
+            "boxWhiskerColor": "orange",
+            "boxWhiskerPosition": -0.5
+        },        
         "priceToValue":
         {
             "row": 1,
@@ -281,7 +206,7 @@
             "yAxisLabel": "Reinvestment Rate",
             "xMin": null,
             "xMax": null,
-            "yMin": -1,
+            "yMin": 0,
             "yMax": 1,
             "useLogScale": false,
             "boxWhiskerColor": "grey40",
@@ -306,7 +231,7 @@
             "yAxisLabel": "Reinvestment Rate",
             "xMin": null,
             "xMax": null,
-            "yMin": -1,
+            "yMin": 0,
             "yMax": 1,
             "useLogScale": false,
             "boxWhiskerColor": "orange",
@@ -331,7 +256,7 @@
             "yAxisLabel": "Reinvestment Rate",
             "xMin": null,
             "xMax": null,
-            "yMin": -1,
+            "yMin": 0,
             "yMax": 1,
             "useLogScale": false,
             "boxWhiskerColor": "red",

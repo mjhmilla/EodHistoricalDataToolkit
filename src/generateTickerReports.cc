@@ -1252,6 +1252,15 @@ bool generateLaTeXReport(
   tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="(Avg. daily vol) / (S\\&P500 Holdings) ";
+  metric.fieldNames.push_back("fund_liquidity_index");
+  metric.fieldNames.push_back("sp500_liquidityIndex");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
   metric.label.clear();
   metric.fileName.clear();
   metric.type = JSON_FIELD_TYPE::JSON_FIELD_TYPE_SIZE;
@@ -1402,21 +1411,21 @@ bool generateLaTeXReport(
   tabularMetrics.push_back(metric);
 
 
-  metric.fieldNames.clear();
-  metric.fileName = "calculateData";
-  metric.label="Avg. Price Growth";
-  metric.fieldNames.push_back("price_growth_model");
-  metric.fieldNames.push_back("annualGrowthRateOfTrendline");
-  metric.type = JSON_FIELD_TYPE::FLOAT;
-  tabularMetrics.push_back(metric);
+  //metric.fieldNames.clear();
+  //metric.fileName = "calculateData";
+  //metric.label="Avg. Price Growth";
+  //metric.fieldNames.push_back("price_growth_model");
+  //metric.fieldNames.push_back("annualGrowthRateOfTrendline");
+  //metric.type = JSON_FIELD_TYPE::FLOAT;
+  //tabularMetrics.push_back(metric);
 
-  metric.fieldNames.clear();
-  metric.fileName = "calculateData";
-  metric.label="Cyclic Price Percentile";
-  metric.fieldNames.push_back("price_growth_model");
-  metric.fieldNames.push_back("yCyclicNormDataPercentilesRecent");
-  metric.type = JSON_FIELD_TYPE::FLOAT;
-  tabularMetrics.push_back(metric);
+  //metric.fieldNames.clear();
+  //metric.fileName = "calculateData";
+  //metric.label="Cyclic Price Percentile";
+  //metric.fieldNames.push_back("price_growth_model");
+  //metric.fieldNames.push_back("yCyclicNormDataPercentilesRecent");
+  //metric.type = JSON_FIELD_TYPE::FLOAT;
+  //tabularMetrics.push_back(metric);
 
 
   metric.fieldNames.clear();
@@ -1745,7 +1754,28 @@ bool generateLaTeXReport(
       date,
       verbose);      
 
-    ReportingFunctions::appendResidualCashflowToEnterpriseValueTable(
+    ReportingFunctions::appendAcquirersMultipleTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData["metric_data"],
+      date,
+      verbose);
+
+    ReportingFunctions::appendEnterpriseValueTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData["metric_data"],
+      date,
+      verbose);
+
+    ReportingFunctions::appendResidualCashflowTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData["metric_data"],
+      date,
+      verbose);
+
+    ReportingFunctions::appendNormalizedResidualCashflowTable(
       latexReport,
       tickerMetaData.primaryTicker,
       calculateData["metric_data"],

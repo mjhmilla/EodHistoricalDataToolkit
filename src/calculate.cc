@@ -2575,28 +2575,7 @@ int main (int argc, char* argv[]) {
       annualMilestones.yearsSinceIPO = recentDate-ipoDateNumerical;
       annualMilestones.yearsOnRecord = std::abs(firstRecordDate-lastRecordDate);
 
-      //=======================================================================
-      //
-      // Evaluate the liquidity of the stock in the context of S&P 500 Holdings
-      //
-      //=======================================================================
 
-      std::string fundKeyWord(" 500");
-      int daysToAverageTradingVolumeOver=28; //trailing four weeks
-      std::string parentNameFund("sp500_");
-      double liquidityIndex = 
-        FinancialAnalysisFunctions::
-          calcStockLiquidityRelativeToFundHoldings(
-            fundKeyWord,
-            fundamentalData,
-            historicalData,
-            daysToAverageTradingVolumeOver,
-            timePeriod.c_str(),
-            true,
-            parentNameFund,
-            setNansToMissingValue,
-            termNames,
-            termValues);
 
       //=======================================================================
       //
@@ -3482,7 +3461,7 @@ int main (int argc, char* argv[]) {
 
 
         //Valuation (discounted cash flow)
-        double presentValue = FinancialAnalysisFunctions::
+        double priceToValue = FinancialAnalysisFunctions::
             calcPriceToValueUsingDamodaranDiscountedCashflowModel(  
               fundamentalData,
               dateSet,
@@ -3510,7 +3489,6 @@ int main (int argc, char* argv[]) {
           //recentPriceToValue;
           DataStructures::RecentPriceToValue pvUpd;
 
-          double priceToValue = presentValue / marketCapitalization;
           std::string fieldName = parentName.substr(0,parentName.size()-1);
           bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                                   fundamentalData,
@@ -3556,7 +3534,7 @@ int main (int argc, char* argv[]) {
 
 
             //Valuation (discounted cash flow) using empirical growth
-            double presentValueEmpirical = 
+            double priceToValueEmpirical = 
             FinancialAnalysisFunctions::
                 calcPriceToValueUsingDamodaranDiscountedCashflowModel(  
                   fundamentalData,
@@ -3582,14 +3560,13 @@ int main (int argc, char* argv[]) {
             if(indexDate == 0){
               //recentPriceToValue;
               DataStructures::RecentPriceToValue pvUpd;
-              double priceToValue = presentValueEmpirical / marketCapitalization;
               std::string fieldName = parentName.substr(0,parentName.size()-1);
               bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                     fundamentalData,
                                     historicalData,
                                     adjustedClosePrice,
                                     outstandingShares,
-                                    priceToValue,
+                                    priceToValueEmpirical,
                                     fieldName,
                                     pvUpd);
               if(success){
@@ -3628,7 +3605,7 @@ int main (int argc, char* argv[]) {
             parentName="priceToValueEmpiricalAvg_";
 
             //Valuation (discounted cash flow) using empirical growth
-            double presentValueEmpiricalAvg = 
+            double priceToValueEmpiricalAvg = 
               FinancialAnalysisFunctions::
                 calcPriceToValueUsingDamodaranDiscountedCashflowModel(  
                   fundamentalData,
@@ -3654,14 +3631,13 @@ int main (int argc, char* argv[]) {
             if(indexDate == 0){
               //recentPriceToValue;
               DataStructures::RecentPriceToValue pvUpd;
-              double priceToValue = presentValueEmpiricalAvg / marketCapitalization;
               std::string fieldName = parentName.substr(0,parentName.size()-1);
               bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                     fundamentalData,
                                     historicalData,
                                     adjustedClosePrice,
                                     outstandingShares,
-                                    priceToValue,
+                                    priceToValueEmpiricalAvg,
                                     fieldName,
                                     pvUpd);
               if(success){
@@ -3901,6 +3877,22 @@ int main (int argc, char* argv[]) {
         ++entryCount;
       }
 
+
+      nlohmann::ordered_json sp500LiqudityMetricJson;
+      std::string fundKeyWord(" 500");
+      int daysToAverageTradingVolumeOver=28; //trailing four weeks
+      std::string parentNameFund("sp500_");
+      double liquidityIndex = 
+        FinancialAnalysisFunctions::
+          calcStockLiquidityRelativeToFundHoldings(
+            fundKeyWord,
+            fundamentalData,
+            historicalData,
+            daysToAverageTradingVolumeOver,
+            timePeriod.c_str(),
+            setNansToMissingValue,
+            parentNameFund,
+            sp500LiqudityMetricJson);
 
       nlohmann::ordered_json dataDatesReport;
       dataDatesReport["cash_flow"]         = analysisDates.recentCashFlowDate;
@@ -4255,6 +4247,7 @@ int main (int argc, char* argv[]) {
       analysis["country_data"] = stringDataReport;
       analysis["annual_milestones"] = annualMilestoneReport;
       analysis["price_to_value_current"] = recentPriceToValueJson;
+      analysis["fund_liquidity_index"] = sp500LiqudityMetricJson;
       analysis["metric_data"]                     = metricAnalysisJson;
       analysis["dividend_yield_growth_model"]     = dividendYieldGrowthModelJson;
       analysis["dividend_yield_growth_model_avg"] = dividendYieldGrowthModelAvgJson;
@@ -4277,6 +4270,8 @@ int main (int argc, char* argv[]) {
 
       analysis["revenue_to_fcf_model_avg"]    = revenueFcfModelAvgJson;
       analysis["revenue_to_fcf_model_recent"] = revenueFcfModelJson;
+
+
 
       std::string outputFilePath(analyseFolder);
       std::string outputFileName(fileName.c_str());    
