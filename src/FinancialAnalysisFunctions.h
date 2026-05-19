@@ -277,6 +277,18 @@ class FinancialAnalysisFunctions {
       updEodFileName.append(".json");
     };
     //==========================================================================
+    /*
+      2026/05/19 
+      When a company has zero debt, EOD sometimes fills these entries with null
+      rather than zero. This is a bit annoying: 0 is not the same as null. This
+      leaves me with a choice: initialize the debt entries with 0's, and risk
+      letting some companies through which do have debt (but for which EOD lacks
+      data); or initialize debt entries with nan's and ignore potentially 
+      excellent companies that actually have 0 debt. Since I'm always going to
+      follow up and look at the financial reports I am going with the second 
+      option.
+      
+    */
     static void getDebtInfo(
                     const nlohmann::ordered_json &fundamentalData,
                     const char *timeUnit,
@@ -336,15 +348,15 @@ class FinancialAnalysisFunctions {
 
 
       //Evaluate the shortTermDebtEstimate
-      debtInfoUpd.shortTermDebtEstimate = std::nan("1");
-      debtInfoUpd.longTermDebtEstimate  = std::nan("1");
-      debtInfoUpd.totalDebtEstimate     = std::nan("1");
+      debtInfoUpd.shortTermDebtEstimate = 0.;//std::nan("1");
+      debtInfoUpd.longTermDebtEstimate  = 0.;//std::nan("1");
+      debtInfoUpd.totalDebtEstimate     = 0.;//std::nan("1");
 
-      if(setNansToMissingValue){
-        debtInfoUpd.shortTermDebtEstimate = JsonFunctions::MISSING_VALUE;     
-        debtInfoUpd.longTermDebtEstimate  = JsonFunctions::MISSING_VALUE;     
-        debtInfoUpd.totalDebtEstimate     = JsonFunctions::MISSING_VALUE;     
-      }
+      //if(setNansToMissingValue){
+      //  debtInfoUpd.shortTermDebtEstimate = JsonFunctions::MISSING_VALUE;     
+      //  debtInfoUpd.longTermDebtEstimate  = JsonFunctions::MISSING_VALUE;     
+      //  debtInfoUpd.totalDebtEstimate     = JsonFunctions::MISSING_VALUE;     
+      //}
 
       if(JsonFunctions::isJsonFloatValid(debtInfoUpd.shortTermDebt)){
         debtInfoUpd.shortTermDebtEstimate = debtInfoUpd.shortTermDebt;

@@ -503,27 +503,44 @@ static void appendAcquirersMultipleTable(
         bool verbose)
 {
   if(!calculateData.is_null()){
-    latexReport << "\\begin{tabular}{l l}" << std::endl;
-    latexReport << "\\hline \\multicolumn{2}{c}{Acquirer's Multiple} \\\\" 
-          << std::endl;
-    latexReport << "\\hline " << std::endl;          
-    latexReport << "$A$. Enterprise Value & "
-          << formatJsonEntry(JsonFunctions::getJsonFloat(
-            calculateData[date]["acquirersMultiple_enterpriseValue"],true))
-          << " \\\\" << std::endl;
-    latexReport << "$B$. Operating Income & "
-          << formatJsonEntry(JsonFunctions::getJsonFloat(
-            calculateData[date]["acquirersMultiple_operatingIncome"],true))
-          << " \\\\" << std::endl;
-    latexReport << "$C$. Acquirer's Multiple & "
-          << formatJsonEntry(JsonFunctions::getJsonFloat(
-            calculateData[date]["acquirersMultiple"],true))
-          << " \\\\" << std::endl;
-      latexReport << "\\multicolumn{2}{c}{ $C = A/B$} \\\\" 
-            << std::endl;  
-      latexReport << "\\end{tabular}" << std::endl 
-            << "\\bigskip" << std::endl<< std::endl;  
+    if(calculateData.contains(date)){
 
+      bool valid=true;
+      std::vector< std::string > fields;
+      fields.push_back("acquirersMultiple_enterpriseValue");
+      fields.push_back("acquirersMultiple_operatingIncome");
+      fields.push_back("acquirersMultiple");
+
+
+      for(size_t i=0; i<fields.size();++i){
+        if(!calculateData[date].contains(fields[i])){
+          valid=false;
+        }
+      }
+
+      if(valid){
+        latexReport << "\\begin{tabular}{l l}" << std::endl;
+        latexReport << "\\hline \\multicolumn{2}{c}{Acquirer's Multiple} \\\\" 
+              << std::endl;
+        latexReport << "\\hline " << std::endl;          
+        latexReport << "$A$. Enterprise Value & "
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                calculateData[date]["acquirersMultiple_enterpriseValue"],true))
+              << " \\\\" << std::endl;
+        latexReport << "$B$. Operating Income & "
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                calculateData[date]["acquirersMultiple_operatingIncome"],true))
+              << " \\\\" << std::endl;
+        latexReport << "$C$. Acquirer's Multiple & "
+              << formatJsonEntry(JsonFunctions::getJsonFloat(
+                calculateData[date]["acquirersMultiple"],true))
+              << " \\\\" << std::endl;
+        latexReport << "\\multicolumn{2}{c}{ $C = A/B$} \\\\" 
+              << std::endl;  
+        latexReport << "\\end{tabular}" << std::endl 
+              << "\\bigskip" << std::endl<< std::endl;  
+      }
+    }
   }
 
 };

@@ -1705,6 +1705,27 @@ bool generateLaTeXReport(
     std::vector< std::string > fieldsToTest;
     fieldsToTest.push_back("priceToValue");
 
+    //auto& itemFront = calculateData["metric_data"].begin().key();
+    //auto& itemBack = calculateData["metric_data"].back();
+    size_t metricEntries = calculateData["metric_data"].size();
+
+    std::string dateFront,dateBack;
+
+    JsonFunctions::getJsonString(calculateData["metric_data"].front()["date"],
+                                 dateFront);
+    JsonFunctions::getJsonString(calculateData["metric_data"].back()["date"],
+                                 dateBack);
+
+    double dateFrontNum = DateFunctions::convertToFractionalYear(dateFront);
+    double dateBackNum = DateFunctions::convertToFractionalYear(dateBack);
+    if(dateFrontNum > dateBackNum){
+      date = dateFront;
+    }else{
+      date=dateBack;
+    }
+    dateFound=true;
+    /*
+    int count =0;
     for(const auto& item : calculateData["metric_data"].items()){
       date = item.key();
       bool valid = true;
@@ -1721,10 +1742,12 @@ bool generateLaTeXReport(
         }
       }
       
-      if(valid){
+      if(valid || count > 0){
         break;
       }          
-    }
+      ++count;
+    }   
+    */
 
     latexReport << "\\begin{center}" << std::endl;    
     latexReport << "\\begin{tabular}{c}" << std::endl;

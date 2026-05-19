@@ -2702,12 +2702,11 @@ int main (int argc, char* argv[]) {
 
           //It would be nice to replace this with a historical table of
           //inflation data by country.
-          if(riskTableFound && !std::isnan(riskTable.inflation_2019_2023)
-                            && !std::isnan(riskTable.inflation_2024_2028)){
-
-            if(dateYear >= 2024){
+          if(riskTableFound){
+            if(dateYear >= 2024 && !std::isnan(riskTable.inflation_2024_2028)){
               inflation = riskTable.inflation_2024_2028;
-            }else{
+            }
+            if(dateYear < 2024 && !std::isnan(riskTable.inflation_2019_2023)){
               inflation = riskTable.inflation_2019_2023;
             }
           }        
