@@ -2,6 +2,6 @@
 #SPDX-FileCopyrightText: 2023 Matthew Millard millard.matthew@gmail.com
 #SPDX-License-Identifier: MIT
 
-cd build
+cd ${EOD_TOOLKIT_HOME}/build
 ./fetch -f ${EOD_TOOLKIT_HOME}/data/ -u ${EOD_EXCHANGES} -k ${EOD_API_TOKEN} -l exchanges.json
 cd ..

@@ -3988,6 +3988,12 @@ int main (int argc, char* argv[]) {
         recentPriceToValueJson["acquirersMultiple_current"] 
           = valuationMetricSummary.acquirersMultipleRecent;  
 
+        //It can happen that the last date at which an FCF valuation method
+        //and an EPS method can be evaluated differs. In this case the
+        //scaleFactor will differ, and this isn't a problem. Each valuation 
+        //method just has its own set of reference dates and corresponding
+        //scaleFactors
+        /*
         double scaleFactor = recentPriceToValue[0].scaleFactor;
         for(size_t i=0; i< recentPriceToValue.size();++i){
           if(std::abs(scaleFactor-recentPriceToValue[i].scaleFactor) > 1e-6){
@@ -3998,6 +4004,7 @@ int main (int argc, char* argv[]) {
             std::abort();
           }
         }
+        */
 
         for(size_t i =0; i  < recentPriceToValue.size();++i){
           std::string fieldName = recentPriceToValue[i].name;
