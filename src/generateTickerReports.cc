@@ -1307,6 +1307,15 @@ bool generateLaTeXReport(
 
   metric.fieldNames.clear();
   metric.fileName = "calculateData";
+  metric.label="Acq. Mult. EOD (recent)";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("acquirersMultipleEOD_current");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
   metric.label="Acq. Mult. (recent)";
   metric.fieldNames.push_back("price_to_value_current");
   metric.fieldNames.push_back("acquirersMultiple_current");
@@ -1780,14 +1789,14 @@ bool generateLaTeXReport(
     ReportingFunctions::appendAcquirersMultipleTable(
       latexReport,
       tickerMetaData.primaryTicker,
-      calculateData["metric_data"],
+      calculateData,
       date,
       verbose);
 
     ReportingFunctions::appendEnterpriseValueTable(
       latexReport,
       tickerMetaData.primaryTicker,
-      calculateData["metric_data"],
+      calculateData,
       date,
       verbose);
 

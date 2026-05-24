@@ -3200,7 +3200,15 @@ class NumericalFunctions {
         valMetricUpd.acquirersMultipleRecent =           
             valMetricUpd.enterpriseValueRecent
             /valMetricUpd.operatingIncome;
-          
+
+        valMetricUpd.acquirersMultipleEODRecent = 
+          (valMetricUpd.enterpriseValueEOD + deltaMarketCap)
+          /valMetricUpd.operatingIncome;
+        
+        valMetricUpd.enterpriseValueEbitdaEODRecent = 
+            valMetricUpd.enterpriseValueRecent
+            /valMetricUpd.ebitda;
+
       }catch( std::invalid_argument const& ex){
         std::cout << ex.what() << std::endl;
         passed=false;

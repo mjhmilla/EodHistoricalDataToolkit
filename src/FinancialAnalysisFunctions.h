@@ -1282,14 +1282,16 @@ class FinancialAnalysisFunctions {
     /**
      https://www.investopedia.com/terms/i/interestcoverageratio.asp
     */
-    static double calcInterestCover(const nlohmann::ordered_json &jsonData, 
-                                    const DateFunctions::DateSetTTM &dateSet,
-                                    double defaultInterestCover,
-                                    const char *timeUnit,                                    
-                                    bool appendTermRecord,                                    
-                                    bool setNansToMissingValue,
-                                    std::vector< std::string> &termNames,
-                                    std::vector< double > &termValues){
+    static double calcInterestCover(
+                          const nlohmann::ordered_json &jsonData, 
+                          const DateFunctions::DateSetTTM &dateSet,
+                          double defaultInterestCover,
+                          const nlohmann::ordered_json &jsonDefaultSpread,
+                          const char *timeUnit,                                    
+                          bool appendTermRecord,                                    
+                          bool setNansToMissingValue,
+                          std::vector< std::string> &termNames,
+                          std::vector< double > &termValues){
 
                                       
       double operatingIncome = 
@@ -1300,7 +1302,26 @@ class FinancialAnalysisFunctions {
         sumFundamentalDataOverDates(jsonData,FIN,IS,timeUnit,dateSet,
                                   "interestExpense",setNansToMissingValue);
 
-      double interestCover=operatingIncome/interestExpense;
+      int tableSize = jsonDefaultSpread["US"]["default_spread"].size();
+
+      double interestCoverLowestValue = JsonFunctions::getJsonFloat(
+            jsonDefaultSpread["US"]["default_spread"].at(0).at(0),
+            setNansToMissingValue);
+      double interestCoverHighestValue = JsonFunctions::getJsonFloat(
+            jsonDefaultSpread["US"]["default_spread"].at(tableSize-1).at(1),
+            setNansToMissingValue);
+
+
+      double interestCover= std::nan("1");
+
+      if(   JsonFunctions::isJsonFloatValid(operatingIncome)
+         && JsonFunctions::isJsonFloatValid(interestExpense)){
+          if(std::abs(interestExpense) > 0){
+            interestCover = operatingIncome/interestExpense;
+          }else{
+            interestCover = interestCoverHighestValue;
+          }
+      }      
 
       if(   !JsonFunctions::isJsonFloatValid(operatingIncome)
          || !JsonFunctions::isJsonFloatValid(interestExpense)){
@@ -1343,6 +1364,7 @@ class FinancialAnalysisFunctions {
           calcInterestCover(jsonData,
                             dateSet,
                             meanInterestCover,
+                            jsonDefaultSpread,
                             timeUnit,
                             appendTermRecord,
                             setNansToMissingValue,

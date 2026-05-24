@@ -62,6 +62,14 @@ class DataStructures {
       double acquirersMultiple;
       double acquirersMultipleRecent;
 
+      double enterpriseValueEOD;
+      double enterpriseValueEbitdaEOD;
+      double enterpriseValueEbitdaEODRecent;
+      double acquirersMultipleEOD;      
+      double acquirersMultipleEODRecent;
+
+
+      double ebitda;
       double freeCashFlow;
       double residualCashFlow;
       double operatingIncome;
@@ -73,6 +81,12 @@ class DataStructures {
                                enterpriseValueRecent(std::nan("1")),
                                acquirersMultiple(std::nan("1")),
                                acquirersMultipleRecent(std::nan("1")),
+                               enterpriseValueEOD(std::nan("1")),
+                               enterpriseValueEbitdaEOD(std::nan("1")),
+                               enterpriseValueEbitdaEODRecent(std::nan("1")),
+                               acquirersMultipleEOD(std::nan("1")),
+                               acquirersMultipleEODRecent(std::nan("1")),
+                               ebitda(std::nan("1")),
                                freeCashFlow(std::nan("1")),
                                residualCashFlow(std::nan("1")),
                                operatingIncome(std::nan("1")){};

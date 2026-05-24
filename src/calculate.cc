@@ -1006,6 +1006,7 @@ double calcAverageInterestCover(
           const DataStructures::AnalysisDates &analysisDates,
           const nlohmann::ordered_json &fundamentalData,
           double defaultInterestCover,
+          const nlohmann::ordered_json &jsonDefaultSpread,
           const std::string &timePeriod,
           bool quarterlyTTMAnalysis,
           int maxDayErrorTTM,
@@ -1051,13 +1052,14 @@ double calcAverageInterestCover(
         calcInterestCover(fundamentalData,
                           dateSet,
                           defaultInterestCover,
+                          jsonDefaultSpread,
                           timePeriod.c_str(),
                           appendTermRecord,
                           setNansToMissingValue,
                           localTermNames,
                           localTermValues);
+                  
     meanInterestCover += interestCover;                          
-
     meanInterestCoverEntryCount += 1.0; 
 
   }
@@ -1406,6 +1408,7 @@ int main (int argc, char* argv[]) {
     defaultSpreadJsonFile = defaultSpreadJsonFileInput.getValue();
     bondYieldJsonFile     = bondYieldJsonFileInput.getValue();
     defaultInterestCover  = defaultInterestCoverInput.getValue();
+    
 
     matureFirmFractionOfDebtCapital = 
       matureFirmFractionOfDebtCapitalInput.getValue();
@@ -1987,16 +1990,19 @@ int main (int argc, char* argv[]) {
         meanTaxRate=defaultTaxRate;
       }
 
+
       double meanInterestCover = 
         calcAverageInterestCover(  
           analysisDates,
           fundamentalData,
           defaultInterestCover,
+          jsonDefaultSpread,
           timePeriod,
           quarterlyTTMAnalysis,
           maxDayErrorTTM,
           setNansToMissingValue,
           appendTermRecord);
+
 
       //========================================================================
       // Evaluate the last valid index
@@ -2752,6 +2758,7 @@ int main (int argc, char* argv[]) {
                                         fundamentalData,
                                         dateSet,
                                         defaultInterestCover,
+                                        jsonDefaultSpread,
                                         timePeriod.c_str(),
                                         appendTermRecord,
                                         setNansToMissingValue,
@@ -3238,6 +3245,7 @@ int main (int argc, char* argv[]) {
         //
         //Residual cash flow to enterprise value
         //
+
         double enterpriseValue = FinancialAnalysisFunctions::
             calcEnterpriseValue(fundamentalData, 
                                 marketCapitalization, 
@@ -3437,6 +3445,16 @@ int main (int argc, char* argv[]) {
         //Valuation metrics
         if(indexDate ==0 ){
 
+          double ebitda = 
+            JsonFunctions::getJsonFloat(fundamentalData["Valuation"]["EBITDA"]);
+
+          if(!JsonFunctions::isJsonFloatValid(ebitda) 
+             || std::abs(ebitda) < 1e-3){
+            ebitda = FinancialAnalysisFunctions::sumFundamentalDataOverDates(
+                        fundamentalData,FIN,IS,timePeriod.c_str(),dateSet,
+                        "ebitda", setNansToMissingValue); 
+          }
+
           double freeCashFlow = 
             FinancialAnalysisFunctions::sumFundamentalDataOverDates(
               fundamentalData,FIN,CF,timePeriod.c_str(),dateSet,
@@ -3445,9 +3463,26 @@ int main (int argc, char* argv[]) {
           valuationMetricSummary.marketCapitalization=marketCapitalization;
           valuationMetricSummary.enterpriseValue    = enterpriseValue;
           valuationMetricSummary.freeCashFlow       = freeCashFlow;
+          valuationMetricSummary.ebitda             = ebitda;
           valuationMetricSummary.operatingIncome    = operatingIncome;
           valuationMetricSummary.acquirersMultiple  = acquirersMultiple;
           valuationMetricSummary.residualCashFlow   = residualCashFlow;
+
+          valuationMetricSummary.enterpriseValueEOD = 
+            JsonFunctions::getJsonFloat(fundamentalData["Valuation"]["EnterpriseValue"]);
+
+          valuationMetricSummary.enterpriseValueEbitdaEOD = 
+            JsonFunctions::getJsonFloat(fundamentalData["Valuation"]["EnterpriseValueEbitda"]);
+          
+          if(!JsonFunctions::isJsonFloatValid(valuationMetricSummary.enterpriseValueEbitdaEOD)
+            || std::abs(valuationMetricSummary.enterpriseValueEbitdaEOD) < 1e-3){
+            valuationMetricSummary.enterpriseValueEbitdaEOD=
+              valuationMetricSummary.enterpriseValueEOD/valuationMetricSummary.ebitda;
+          }
+
+          valuationMetricSummary.acquirersMultipleEOD = 
+              valuationMetricSummary.enterpriseValueEOD
+              /valuationMetricSummary.operatingIncome;
 
           bool success=NumericalFunctions::evaluateRecentValuationMetrics(
                                               fundamentalData,
@@ -3975,6 +4010,8 @@ int main (int argc, char* argv[]) {
           = recentPriceToValue[0].recentMarketCapitalization;           
         recentPriceToValueJson["scaleFactor"] 
           = recentPriceToValue[0].scaleFactor;
+        recentPriceToValueJson["enterpriseValueEOD"] 
+          = valuationMetricSummary.enterpriseValueEOD;  
         recentPriceToValueJson["enterpriseValue"] 
           = valuationMetricSummary.enterpriseValue;  
         recentPriceToValueJson["enterpriseValueRecent"] 
@@ -3987,6 +4024,16 @@ int main (int argc, char* argv[]) {
           = valuationMetricSummary.acquirersMultiple;  
         recentPriceToValueJson["acquirersMultiple_current"] 
           = valuationMetricSummary.acquirersMultipleRecent;  
+
+        recentPriceToValueJson["acquirersMultipleEOD"] 
+          = valuationMetricSummary.acquirersMultipleEOD;  
+        recentPriceToValueJson["acquirersMultipleEOD_current"] 
+          = valuationMetricSummary.acquirersMultipleEODRecent;  
+
+        recentPriceToValueJson["enterpriseValueEbitdaEOD"] 
+          = valuationMetricSummary.enterpriseValueEbitdaEOD;  
+        recentPriceToValueJson["enterpriseValueEbitdaEOD_current"] 
+          = valuationMetricSummary.enterpriseValueEbitdaEODRecent;  
 
         //It can happen that the last date at which an FCF valuation method
         //and an EPS method can be evaluated differs. In this case the

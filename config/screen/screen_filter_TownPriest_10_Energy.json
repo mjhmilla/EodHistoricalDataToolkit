@@ -111,7 +111,7 @@
                 "price_to_value_current",
                 "priceToValueRevenueToFcf_price_to_value_current"            
             ],
-            "isDateSeries": true,
+            "isDateSeries": false,
             "condition": ">",
             "operator": "",
             "valueType": "float",
@@ -128,7 +128,7 @@
                 "price_to_value_current",
                 "priceToValueRevenueToFcf_price_to_value_current"            
             ],
-            "isDateSeries": true,
+            "isDateSeries": false,
             "condition": "<",
             "operator": "",
             "valueType": "float",

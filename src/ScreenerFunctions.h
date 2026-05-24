@@ -508,9 +508,11 @@ class ScreenerFunctions {
           std::string gicSector("");
           std::string gicGroup("");
 
-          JsonFunctions::getJsonString(
-              fundamentalData["General"]["AddressData"]["Country"],
-              country);
+          if(fundamentalData["General"]["AddressData"].contains("Country")){
+            JsonFunctions::getJsonString(
+                fundamentalData["General"]["AddressData"]["Country"],
+                country);
+          }
           JsonFunctions::getJsonString(fundamentalData["General"]["Name"],
                                        companyName);
           JsonFunctions::getJsonString(fundamentalData["General"]["GicSector"],
