@@ -19,41 +19,7 @@
                 0.001
             ]
         },
-        "revenueGrowth":
-        {
-            "folder": "calculateData",
-            "field":
-            [
-                "revenue_growth_model_avg",
-                "annualGrowthRateOfTrendline"
-            ],
-            "isDateSeries": false,
-            "condition": ">=",
-            "operator": "",
-            "valueType": "float",
-            "values":
-            [
-                0.05
-            ]
-        },
-        "equityGrowth":
-        {
-            "folder": "calculateData",
-            "field":
-            [
-                "equity_growth_model_avg",
-                "annualGrowthRateOfTrendline"
-            ],
-            "isDateSeries": false,
-            "condition": ">=",
-            "operator": "",
-            "valueType": "float",
-            "values":
-            [
-                0.05
-            ]
-        },
-        "fcfGrowth":
+        "fcfGrowthAvg":
         {
             "folder": "calculateData",
             "field":
@@ -69,7 +35,41 @@
             [
                 0.05
             ]
-        }
+        },
+        "fcfGrowthRecent":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "fcf_growth_model_recent",
+                "annualGrowthRateOfTrendline"
+            ],
+            "isDateSeries": false,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        },
+        "ROCD":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "metric_data",
+                "returnOnCapitalDeployed"
+            ],
+            "isDateSeries": true,
+            "condition": ">=",
+            "operator": "",
+            "valueType": "float",
+            "values":
+            [
+                0.05
+            ]
+        }        
     },
     "ranking":
     {
@@ -98,38 +98,13 @@
                 "addPlot": true
             }
         },
-        "P/DCM-V":
-        {
-            "folder": "calculateData",
-            "field":
-            [
-                "price_to_value_current",
-                "priceToValueRevenueToFcf_price_to_value_current"
-            ],
-            "isDateSeries": true,
-            "measure": "recent",
-            "direction": "smallestIsBest",
-            "lowerBound": 0,
-            "upperBound": null,
-            "weight": 1.0,
-            "plotSettings":
-            {
-                "threshold": 0.75,
-                "lowerBound": -0.01,
-                "upperBound": 5.0,
-                "logarithmic": false,
-                "width": 18.0,
-                "height": 3.5,
-                "addPlot": true
-            }
-        },
-        "RevenueToFreeCashFlowR2":
+        "ROCD":
         {
             "folder": "calculateData",
             "field":
             [
                 "metric_data",
-                "priceToValueRevenueToFcf_revenueToFcfModel_r2"
+                "returnOnCapitalDeployed"
             ],
             "isDateSeries": true,
             "measure": "recent",
@@ -139,9 +114,9 @@
             "weight": 1.0,
             "plotSettings":
             {
-                "threshold": 0.75,
+                "threshold": 0.05,
                 "lowerBound": -0.01,
-                "upperBound": 5.0,
+                "upperBound": 1.01,
                 "logarithmic": false,
                 "width": 18.0,
                 "height": 3.5,

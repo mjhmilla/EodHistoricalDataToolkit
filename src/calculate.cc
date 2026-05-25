@@ -1876,12 +1876,13 @@ int main (int argc, char* argv[]) {
         std::cout << '\t' << companyName << std::endl;
       }
 
-      if(!fundamentalData[GEN].contains("IsDelisted")){
-        validInput=false;
-        if(verbose){
-          std::cout << "    Skipping: isDelisted field does not exist." << std::endl;
-        }
-      }else{
+      //if(!fundamentalData[GEN].contains("IsDelisted")){
+      //  validInput=false;
+      //  if(verbose){
+      //    std::cout << "    Skipping: isDelisted field does not exist." << std::endl;
+      //  }
+      //}else{
+      if(fundamentalData[GEN].contains("IsDelisted")){
         bool isDelisted = 
           JsonFunctions::getJsonBool(fundamentalData[GEN]["IsDelisted"]);
         if(isDelisted){
