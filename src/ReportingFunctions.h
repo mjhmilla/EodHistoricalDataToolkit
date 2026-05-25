@@ -314,6 +314,70 @@ static void appendCashFlowConversionTable(
   }
 };
 //==============================================================================
+static void appendMarketCapitalizationTable(
+        std::ofstream &latexReport, 
+        const std::string &primaryTicker, 
+        const nlohmann::ordered_json &calculateData,
+        const std::string &date,
+        bool verbose)
+{   
+  if(!calculateData.is_null()){
+    if(!calculateData["data_recency"].is_null()){
+      std::string dateOutstandingShares;
+      std::string dateHistoricalData;
+      JsonFunctions::getJsonString(
+          calculateData["data_recency"]["outstanding_shares"],
+          dateOutstandingShares);
+      JsonFunctions::getJsonString(
+          calculateData["data_recency"]["historical_data"],
+          dateHistoricalData);
+
+
+          
+      latexReport << "\\begin{tabular}{l l}" << std::endl;
+      latexReport << "\\hline \\multicolumn{2}{c}{" 
+                        << " Market Capitalization } \\\\" << std::endl;
+      latexReport << "\\hline \\multicolumn{2}{c}{" 
+                        << dateOutstandingShares<< " } \\\\" 
+            << std::endl;
+      latexReport << "$A$. Outstanding shares & "
+            << formatJsonEntry(JsonFunctions::getJsonFloat(
+              calculateData["price_to_value_current"]["outstandingShares"],true))
+            << " \\\\" << std::endl;
+
+      latexReport << "$B$. Price & "
+            << formatJsonEntry(JsonFunctions::getJsonFloat(
+              calculateData["price_to_value_current"]["price"],true))
+            << " \\\\" << std::endl;
+      latexReport << "$C$. Mkt Cap & "
+            << formatJsonEntry(JsonFunctions::getJsonFloat(
+              calculateData["price_to_value_current"]["marketCapitalization"],true))
+            << " \\\\" << std::endl;
+
+      latexReport << "\\hline \\multicolumn{2}{c}{" 
+                        << dateHistoricalData << " } \\\\" 
+            << std::endl;
+
+
+      latexReport << "$D$. Outstanding shares & "
+            << formatJsonEntry(JsonFunctions::getJsonFloat(
+              calculateData["price_to_value_current"]["outstandingShares_current"],true))
+            << " \\\\" << std::endl;
+      latexReport << "$E$. Price  (recent) & "
+            << formatJsonEntry(JsonFunctions::getJsonFloat(
+              calculateData["price_to_value_current"]["price_current"],true))
+            << " \\\\" << std::endl;
+      latexReport << "$F$. Mkt Cap (recent)  & "
+            << formatJsonEntry(JsonFunctions::getJsonFloat(
+              calculateData["price_to_value_current"]["marketCapitalization_current"],true))
+            << " \\\\" << std::endl;
+
+      latexReport << "\\end{tabular}" << std::endl 
+            << "\\bigskip" << std::endl<< std::endl;  
+    }
+  }
+};
+//==============================================================================
 static void appendOperatingMarginTable(
         std::ofstream &latexReport, 
         const std::string &primaryTicker, 
@@ -387,6 +451,38 @@ static void appendOperatingMarginTable(
       }               
     }
   };
+
+//==============================================================================
+static void appendEnterpriseValueEbitdaTable(
+        std::ofstream &latexReport, 
+        const std::string &primaryTicker, 
+        const nlohmann::ordered_json &calculateData,
+        const std::string &date,
+        bool verbose){
+
+    if(!calculateData["metric_data"].is_null()){
+      latexReport << "\\begin{tabular}{l l}" << std::endl;
+      latexReport << "\\hline \\multicolumn{2}{c}{Enterprise Value} \\\\" 
+            << std::endl;
+      latexReport << "\\hline " << std::endl;          
+
+      latexReport << "$A$. Enterprise Value (EOD) & "
+            << formatJsonEntry(JsonFunctions::getJsonFloat(
+              calculateData["price_to_value_current"]["enterpriseValueEOD"],true))
+            << " \\\\" << std::endl;        
+      latexReport << "$B$. EBITDA & "
+            << formatJsonEntry(JsonFunctions::getJsonFloat(
+              calculateData["price_to_value_current"]["ebitda"],true))
+            << " \\\\" << std::endl;        
+      latexReport << "$C$. Enterprise Value / EBITDA & "
+            << formatJsonEntry(JsonFunctions::getJsonFloat(
+              calculateData["price_to_value_current"]["enterpriseValueEbitdaEOD"],true))
+            << " \\\\" << std::endl;        
+      latexReport << "\\end{tabular}" << std::endl 
+            << "\\bigskip" << std::endl<< std::endl;        
+    }
+
+};
 //==============================================================================
 static void appendEnterpriseValueTable(
         std::ofstream &latexReport, 
@@ -431,12 +527,28 @@ static void appendEnterpriseValueTable(
             calculateData["metric_data"][date]["enterpriseValue"],true))
           << " \\\\" << std::endl;         
     latexReport << "\\multicolumn{2}{c}{ $E = A+B+C-D$} \\\\" 
-          << std::endl;  
-    latexReport << "$F$. Enterprise Value EOD & "
+          << std::endl;
+
+    latexReport << "\\multicolumn{2}{l}{F. Using Mkt Cap (recent)} \\\\" 
+          << std::endl;          
+    latexReport << "Enterprise Value (recent) & "
+          << formatJsonEntry(JsonFunctions::getJsonFloat(
+            calculateData["price_to_value_current"]["enterpriseValue_current"],true))
+          << " \\\\" << std::endl;                  
+          
+    latexReport << "$G$. Enterprise Value EOD & "
           << formatJsonEntry(JsonFunctions::getJsonFloat(
             calculateData["price_to_value_current"]["enterpriseValueEOD"],true))
           << " \\\\" << std::endl;         
-    
+  
+    latexReport << "\\multicolumn{2}{l}{H. Using Mkt Cap (recent)} \\\\" 
+          << std::endl;          
+
+    latexReport << "$I$. Enterprise Value EOD & "
+          << formatJsonEntry(JsonFunctions::getJsonFloat(
+            calculateData["price_to_value_current"]["enterpriseValueEOD_current"],true))
+          << " \\\\" << std::endl;         
+
     latexReport << "\\end{tabular}" << std::endl 
           << "\\bigskip" << std::endl<< std::endl;  
   }

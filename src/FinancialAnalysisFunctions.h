@@ -306,57 +306,62 @@ class FinancialAnalysisFunctions {
 
       //Copy over all of the debt fields in EOD's records
       debtInfoUpd.shortTermDebt = 
+        std::abs(
         JsonFunctions::getJsonFloat( 
           fundamentalData[FIN][BAL][timeUnit][date]["shortTermDebt"], 
-          setNansToMissingValue);
+          setNansToMissingValue));
 
       debtInfoUpd.shortLongTermDebt = 
+        std::abs(
         JsonFunctions::getJsonFloat( 
           fundamentalData[FIN][BAL][timeUnit][date]["shortLongTermDebt"], 
-          setNansToMissingValue);
+          setNansToMissingValue));
 
       debtInfoUpd.shortLongTermDebtTotal = 
+        std::abs(
         JsonFunctions::getJsonFloat( 
           fundamentalData[FIN][BAL][timeUnit][date]["shortLongTermDebtTotal"], 
-          setNansToMissingValue);
+          setNansToMissingValue));
 
       debtInfoUpd.longTermDebt = 
+        std::abs(
         JsonFunctions::getJsonFloat( 
           fundamentalData[FIN][BAL][timeUnit][date]["longTermDebt"], 
-          setNansToMissingValue);
+          setNansToMissingValue));
+
       debtInfoUpd.longTermDebtEstimate = debtInfoUpd.longTermDebt;
 
       debtInfoUpd.longTermDebtTotal = 
+        std::abs(
         JsonFunctions::getJsonFloat( 
           fundamentalData[FIN][BAL][timeUnit][date]["longTermDebtTotal"], 
-          setNansToMissingValue);
+          setNansToMissingValue));
 
       debtInfoUpd.capitalLeaseObligations = 
-      JsonFunctions::getJsonFloat( 
-                fundamentalData[FIN][BAL][timeUnit][date]["capitalLeaseObligations"], 
-                setNansToMissingValue);     
+        std::abs(
+        JsonFunctions::getJsonFloat( 
+                  fundamentalData[FIN][BAL][timeUnit][date]["capitalLeaseObligations"], 
+                  setNansToMissingValue));     
 
       debtInfoUpd.netDebt = 
+        std::abs(
         JsonFunctions::getJsonFloat( 
           fundamentalData[FIN][BAL][timeUnit][date]["netDebt"], 
-          setNansToMissingValue);
+          setNansToMissingValue));
 
       debtInfoUpd.cash = 
+        std::abs(
         JsonFunctions::getJsonFloat( 
           fundamentalData[FIN][BAL][timeUnit][date]["cash"], 
-          setNansToMissingValue);
+          setNansToMissingValue));
 
 
       //Evaluate the shortTermDebtEstimate
-      debtInfoUpd.shortTermDebtEstimate = 0.;//std::nan("1");
-      debtInfoUpd.longTermDebtEstimate  = 0.;//std::nan("1");
-      debtInfoUpd.totalDebtEstimate     = 0.;//std::nan("1");
+      debtInfoUpd.shortTermDebtEstimate = 0.;
+      debtInfoUpd.longTermDebtEstimate  = 0.;
+      debtInfoUpd.totalDebtEstimate     = 0.;
 
-      //if(setNansToMissingValue){
-      //  debtInfoUpd.shortTermDebtEstimate = JsonFunctions::MISSING_VALUE;     
-      //  debtInfoUpd.longTermDebtEstimate  = JsonFunctions::MISSING_VALUE;     
-      //  debtInfoUpd.totalDebtEstimate     = JsonFunctions::MISSING_VALUE;     
-      //}
+
 
       if(JsonFunctions::isJsonFloatValid(debtInfoUpd.shortTermDebt)){
         debtInfoUpd.shortTermDebtEstimate = debtInfoUpd.shortTermDebt;
@@ -365,6 +370,7 @@ class FinancialAnalysisFunctions {
       }else{
         bool shortTermDebtSet=false;
 
+        /*
         if(!shortTermDebtSet 
           && JsonFunctions::isJsonFloatValid(debtInfoUpd.shortLongTermDebtTotal)){
           debtInfoUpd.shortTermDebtEstimate = debtInfoUpd.shortLongTermDebtTotal;
@@ -372,34 +378,55 @@ class FinancialAnalysisFunctions {
           shortTermDebtEstimateMethod=1.;
           shortTermDebtSet=true;
         }
+        */
 
         if(JsonFunctions::isJsonFloatValid(debtInfoUpd.longTermDebt)
            && JsonFunctions::isJsonFloatValid(debtInfoUpd.shortLongTermDebtTotal)){
-          debtInfoUpd.shortTermDebtEstimate = 
-              debtInfoUpd.shortLongTermDebtTotal
+            double shortTermDebtEstimate = 
+            debtInfoUpd.shortLongTermDebtTotal
               -debtInfoUpd.longTermDebt;
-          debtInfoUpd.shortTermDebtInfo = "shortLongTermDebtTotal-longTermDebt";
-          
+
+          bool method2=true;
+          if(shortTermDebtEstimate >= 0){
+            debtInfoUpd.shortTermDebtEstimate=shortTermDebtEstimate;
+            debtInfoUpd.shortTermDebtInfo = "shortLongTermDebtTotal-longTermDebt";            
+          }else{
+            method2=false;
+          }
 
           if(JsonFunctions::isJsonFloatValid(debtInfoUpd.capitalLeaseObligations)){
-            debtInfoUpd.shortTermDebtEstimate = 
-              debtInfoUpd.shortTermDebtEstimate
+            shortTermDebtEstimate = 
+              shortTermDebtEstimate
               -debtInfoUpd.capitalLeaseObligations;
-            debtInfoUpd.shortTermDebtInfo.append("-capitalLeaseObligations");
+            if(shortTermDebtEstimate >= 0){
+              debtInfoUpd.shortTermDebtEstimate=shortTermDebtEstimate;
+              debtInfoUpd.shortTermDebtInfo.append("-capitalLeaseObligations");
+            }else{
+              method2=false;
+              debtInfoUpd.shortTermDebtInfo = "";
+            }
           }
-          shortTermDebtEstimateMethod=2.;
-          shortTermDebtSet=true;
+          if(method2){
+            shortTermDebtEstimateMethod=2.;
+            shortTermDebtSet=true;
+          }
         }
 
         if(!shortTermDebtSet 
           && JsonFunctions::isJsonFloatValid(debtInfoUpd.longTermDebt)
           && JsonFunctions::isJsonFloatValid(debtInfoUpd.netDebt)
           && JsonFunctions::isJsonFloatValid(debtInfoUpd.cash)){
-          debtInfoUpd.shortTermDebtEstimate = 
-            debtInfoUpd.netDebt-(debtInfoUpd.longTermDebt-debtInfoUpd.cash);
-          debtInfoUpd.shortTermDebtInfo = "netDebt-(longTermDebt-cash)";
-          shortTermDebtEstimateMethod=3.;
-          shortTermDebtSet=true;
+            double shortTermDebtEstimate = 
+              debtInfoUpd.netDebt-(debtInfoUpd.longTermDebt-debtInfoUpd.cash);
+            if(shortTermDebtEstimate >= 0){
+              debtInfoUpd.shortTermDebtEstimate = shortTermDebtEstimate;
+              debtInfoUpd.shortTermDebtInfo = "netDebt-(longTermDebt-cash)";
+              shortTermDebtEstimateMethod=3.;
+              shortTermDebtSet=true;
+            }else{
+              shortTermDebtSet=false;
+            }
+
         }
 
 
@@ -419,32 +446,54 @@ class FinancialAnalysisFunctions {
           debtInfoUpd.longTermDebtInfo = "longTermDebtTotal";
           
           if(JsonFunctions::isJsonFloatValid(debtInfoUpd.capitalLeaseObligations)){
-            debtInfoUpd.longTermDebtEstimate = 
+
+            double longTermDebtEstimate = 
               debtInfoUpd.longTermDebtEstimate
               -debtInfoUpd.capitalLeaseObligations;
-            debtInfoUpd.longTermDebtInfo.append("-capitalLeaseObligations");
+
+            if(longTermDebtEstimate >= 0){
+              debtInfoUpd.longTermDebtEstimate = longTermDebtEstimate;
+              debtInfoUpd.longTermDebtInfo.append("-capitalLeaseObligations");
+            }
           }
           longTermDebtEstimateMethod=1.;
           longTermDebtSet=true;
         }
 
-        if(JsonFunctions::isJsonFloatValid(debtInfoUpd.shortTermDebtEstimate)
+        if(!longTermDebtSet 
+           &&JsonFunctions::isJsonFloatValid(debtInfoUpd.shortTermDebtEstimate)
            && JsonFunctions::isJsonFloatValid(debtInfoUpd.shortLongTermDebtTotal)){
 
-          debtInfoUpd.longTermDebtEstimate = 
+          double longTermDebtEstimate = 
               debtInfoUpd.shortLongTermDebtTotal
               -debtInfoUpd.shortTermDebtEstimate;
-          debtInfoUpd.longTermDebtInfo = 
-            "shortLongTermDebtTotal-shortTermDebtEstimate";
+          bool validLongTermDebtEstimate=true;
 
-          if(JsonFunctions::isJsonFloatValid(debtInfoUpd.capitalLeaseObligations)){
-            debtInfoUpd.longTermDebtEstimate = 
+          if(longTermDebtEstimate >= 0){
+            debtInfoUpd.longTermDebtEstimate = longTermDebtEstimate;
+            debtInfoUpd.longTermDebtInfo = 
+              "shortLongTermDebtTotal-shortTermDebtEstimate";
+          }else{
+            validLongTermDebtEstimate=false;
+          }
+          if(JsonFunctions::isJsonFloatValid(debtInfoUpd.capitalLeaseObligations)
+             && validLongTermDebtEstimate){
+
+            longTermDebtEstimate = 
               debtInfoUpd.longTermDebtEstimate
               -debtInfoUpd.capitalLeaseObligations;
-            debtInfoUpd.longTermDebtInfo.append("-capitalLeaseObligations");
+
+            if(longTermDebtEstimate >= 0){
+              debtInfoUpd.longTermDebtEstimate = longTermDebtEstimate;
+              debtInfoUpd.longTermDebtInfo.append("-capitalLeaseObligations");
+            }else{
+              validLongTermDebtEstimate=false;
+            }
           }
-          longTermDebtEstimateMethod=2.;
-          longTermDebtSet=true;
+          if(validLongTermDebtEstimate){
+            longTermDebtEstimateMethod=2.;
+            longTermDebtSet=true;
+          }
         }
         
         if( !longTermDebtSet
@@ -452,11 +501,16 @@ class FinancialAnalysisFunctions {
             && JsonFunctions::isJsonFloatValid(debtInfoUpd.netDebt)
             && JsonFunctions::isJsonFloatValid(debtInfoUpd.cash)){
           
-          debtInfoUpd.longTermDebtEstimate = 
+          double longTermDebtEstimate = 
             debtInfoUpd.netDebt -(debtInfoUpd.shortTermDebtEstimate-debtInfoUpd.cash);
-          debtInfoUpd.info="netDebt-(shortTermDebtEstimate-cash)";                              
-          longTermDebtEstimateMethod=3.;
-          longTermDebtSet=true;
+          if(longTermDebtEstimate >= 0){
+            debtInfoUpd.longTermDebtEstimate=longTermDebtEstimate;
+            debtInfoUpd.info="netDebt-(shortTermDebtEstimate-cash)";                              
+            longTermDebtEstimateMethod=3.;
+            longTermDebtSet=true;
+          }else{
+            longTermDebtSet=false;
+          }
         }
         
 
@@ -464,7 +518,11 @@ class FinancialAnalysisFunctions {
       }
 
       //Set totalDebtEstimate
-      if(JsonFunctions::isJsonFloatValid(debtInfoUpd.shortTermDebtEstimate)
+      if(JsonFunctions::isJsonFloatValid(debtInfoUpd.shortLongTermDebtTotal)){
+        debtInfoUpd.totalDebtEstimate     = debtInfoUpd.shortLongTermDebtTotal;
+        debtInfoUpd.totalDebtInfo = "shortLongTermDebtTotal";                                   
+
+      }else if(JsonFunctions::isJsonFloatValid(debtInfoUpd.shortTermDebtEstimate)
          && JsonFunctions::isJsonFloatValid(debtInfoUpd.longTermDebtEstimate)){
         debtInfoUpd.totalDebtEstimate     = debtInfoUpd.shortTermDebtEstimate 
                                           + debtInfoUpd.longTermDebtEstimate;

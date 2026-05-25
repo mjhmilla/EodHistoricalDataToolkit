@@ -830,6 +830,8 @@ class ScreenerFunctions {
 
         if( !std::filesystem::exists(tickerLaTeXReportPath)  ){
           valueFilter = false;
+          std::cout << "  Skipping: cannot find " 
+                    << tickerLaTeXReportPath << std::endl;
         }
       }  
 

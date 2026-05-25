@@ -1871,10 +1871,26 @@ int main (int argc, char* argv[]) {
                                    countryISO2);
       JsonFunctions::getJsonString(fundamentalData[GEN]["Name"],
                                    companyName);  
+      
       if(verbose){
         std::cout << '\t' << companyName << std::endl;
-      }                                
+      }
 
+      if(!fundamentalData[GEN].contains("IsDelisted")){
+        validInput=false;
+        if(verbose){
+          std::cout << "    Skipping: isDelisted field does not exist." << std::endl;
+        }
+      }else{
+        bool isDelisted = 
+          JsonFunctions::getJsonBool(fundamentalData[GEN]["IsDelisted"]);
+        if(isDelisted){
+          validInput = false;
+          if(verbose){
+            std::cout << "    Skipping: ticker has been delisted." << std::endl;
+          }
+        }
+      }                                  
     }
 
     //==========================================================================
@@ -4010,15 +4026,19 @@ int main (int argc, char* argv[]) {
           = recentPriceToValue[0].recentMarketCapitalization;           
         recentPriceToValueJson["scaleFactor"] 
           = recentPriceToValue[0].scaleFactor;
-        recentPriceToValueJson["enterpriseValueEOD"] 
-          = valuationMetricSummary.enterpriseValueEOD;  
         recentPriceToValueJson["enterpriseValue"] 
           = valuationMetricSummary.enterpriseValue;  
-        recentPriceToValueJson["enterpriseValueRecent"] 
+        recentPriceToValueJson["enterpriseValue_current"] 
           = valuationMetricSummary.enterpriseValueRecent;
+        recentPriceToValueJson["enterpriseValueEOD"] 
+          = valuationMetricSummary.enterpriseValueEOD;  
+        recentPriceToValueJson["enterpriseValueEOD_current"] 
+          = valuationMetricSummary.enterpriseValueEODRecent;  
 
         recentPriceToValueJson["operatingIncome"] 
           = valuationMetricSummary.operatingIncome;  
+        recentPriceToValueJson["ebitda"] 
+          = valuationMetricSummary.ebitda;  
 
         recentPriceToValueJson["acquirersMultiple"] 
           = valuationMetricSummary.acquirersMultiple;  
@@ -4034,6 +4054,22 @@ int main (int argc, char* argv[]) {
           = valuationMetricSummary.enterpriseValueEbitdaEOD;  
         recentPriceToValueJson["enterpriseValueEbitdaEOD_current"] 
           = valuationMetricSummary.enterpriseValueEbitdaEODRecent;  
+
+        recentPriceToValueJson["acquirersMultipleAbs"] 
+          = std::abs(valuationMetricSummary.acquirersMultiple);  
+        recentPriceToValueJson["acquirersMultipleAbs_current"] 
+          = std::abs(valuationMetricSummary.acquirersMultipleRecent);  
+
+        recentPriceToValueJson["acquirersMultipleAbsEOD"] 
+          = std::abs(valuationMetricSummary.acquirersMultipleEOD);  
+        recentPriceToValueJson["acquirersMultipleAbsEOD_current"] 
+          = std::abs(valuationMetricSummary.acquirersMultipleEODRecent);  
+
+        recentPriceToValueJson["enterpriseValueEbitdaAbsEOD"] 
+          = std::abs(valuationMetricSummary.enterpriseValueEbitdaEOD);  
+        recentPriceToValueJson["enterpriseValueEbitdaAbsEOD_current"] 
+          = std::abs(valuationMetricSummary.enterpriseValueEbitdaEODRecent);  
+
 
         //It can happen that the last date at which an FCF valuation method
         //and an EPS method can be evaluated differs. In this case the

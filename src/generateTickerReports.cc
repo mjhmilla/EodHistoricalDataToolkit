@@ -1228,13 +1228,6 @@ bool generateLaTeXReport(
   metric.type = JSON_FIELD_TYPE::STRING;
   tabularMetrics.push_back(metric);
 
-  metric.fieldNames.clear();
-  metric.fileName = "calculateData";
-  metric.label="Market Cap (recent)";
-  metric.fieldNames.push_back("price_to_value_current");
-  metric.fieldNames.push_back("marketCapitalization_current");
-  metric.type = JSON_FIELD_TYPE::FLOAT;
-  tabularMetrics.push_back(metric);
 
   metric.fieldNames.clear();
   metric.label.clear();
@@ -1281,6 +1274,25 @@ bool generateLaTeXReport(
   metric.fieldNames.push_back("price_current");
   metric.type = JSON_FIELD_TYPE::FLOAT;
   tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Market Cap";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("marketCapitalization");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
+
+  metric.fieldNames.clear();
+  metric.fileName = "calculateData";
+  metric.label="Market Cap (recent)";
+  metric.fieldNames.push_back("price_to_value_current");
+  metric.fieldNames.push_back("marketCapitalization_current");
+  metric.type = JSON_FIELD_TYPE::FLOAT;
+  tabularMetrics.push_back(metric);
+
 
   metric.fieldNames.clear();
   metric.fileName = "calculateData";
@@ -1771,6 +1783,12 @@ bool generateLaTeXReport(
     latexReport << "\\end{center}" 
                 << std::endl << std::endl;   
 
+    ReportingFunctions::appendMarketCapitalizationTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData,
+      date,
+      verbose);
 
     ReportingFunctions::appendOperatingMarginTable(
       latexReport,
@@ -1799,6 +1817,14 @@ bool generateLaTeXReport(
       calculateData,
       date,
       verbose);
+
+    ReportingFunctions::appendEnterpriseValueEbitdaTable(
+      latexReport,
+      tickerMetaData.primaryTicker,
+      calculateData,
+      date,
+      verbose);
+
 
     ReportingFunctions::appendResidualCashflowTable(
       latexReport,

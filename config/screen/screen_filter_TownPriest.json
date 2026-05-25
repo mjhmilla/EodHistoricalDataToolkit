@@ -321,6 +321,6 @@
     {
         "number_of_tickers_per_report": 50,
         "number_of_reports": 3,
-        "title": "Phil Town's Big Five and William Priest's ShareholderYield and free-cashflow DCM"
+        "title": "Phil Town's Big Five + ShareholderYield + FCF DCM + AM"
     }
 }

@@ -140,6 +140,31 @@
     },
     "ranking":
     {
+        "acquirersMultiple":
+        {
+            "folder": "calculateData",
+            "field":
+            [
+                "price_to_value_current",
+                "acquirersMultipleAbsEOD_current"
+            ],
+            "isDateSeries": false,
+            "measure": "recent",
+            "direction": "smallestIsBest",
+            "lowerBound": null,
+            "upperBound": null,
+            "weight": 1.0,
+            "plotSettings":
+            {
+                "threshold": null,
+                "lowerBound": null,
+                "upperBound": null,
+                "logarithmic": true,
+                "width": 18.0,
+                "height": 3.5,
+                "addPlot": true
+            }
+        },
         "P/DCM-V":
         {
             "folder": "calculateData",
@@ -355,6 +380,6 @@
     {
         "number_of_tickers_per_report": 50,
         "number_of_reports": 3,
-        "title": "Phil Town's Big Five and William Priest's ShareholderYield and free-cashflow DCM"
+        "title": "Phil Town's Big Five + ShareholderYield + FCF DCM + AM"
     }
 }

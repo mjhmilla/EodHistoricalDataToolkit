@@ -3196,6 +3196,10 @@ class NumericalFunctions {
         valMetricUpd.enterpriseValueRecent = 
             valMetricUpd.enterpriseValue
             + deltaMarketCap;
+
+        valMetricUpd.enterpriseValueEODRecent = 
+            valMetricUpd.enterpriseValueEOD
+            + deltaMarketCap;            
         
         valMetricUpd.acquirersMultipleRecent =           
             valMetricUpd.enterpriseValueRecent
