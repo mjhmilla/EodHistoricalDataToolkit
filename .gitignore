@@ -12,7 +12,6 @@ data/STU_test/*
 build/*
 !build/.gitkeep
 *.txt
-working.sh
 !config/*
 !data/exchanges.json
 !data/STU.json

@@ -916,10 +916,17 @@ class NumericalFunctions {
         //
         // Evaluate all yield values for this year
         //
+      
         double stockPrice = 
-          JsonFunctions::getJsonFloat(
+          FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
             historicalData[indexHistoricalData]["adjusted_close"],
+            fundamentalData,
             setNansToMissingValue);
+            
+        //double stockPrice = 
+        //  JsonFunctions::getJsonFloat(
+        //    historicalData[indexHistoricalData]["adjusted_close"],
+        //    setNansToMissingValue);            
 
         double outstandingShares = 
           FinancialAnalysisFunctions::getOutstandingSharesClosestToDate(
@@ -1252,13 +1259,25 @@ class NumericalFunctions {
           double adjustedClosePrice = std::nan("1");
           double closePrice = std::nan("1");
           try{
-            adjustedClosePrice = JsonFunctions::getJsonFloat(
-                        historicalData[ indexHistoricalData ]["adjusted_close"],
-                        setNansToMissingValue); 
+            adjustedClosePrice = 
+              FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+                historicalData[ indexHistoricalData ]["adjusted_close"],
+                fundamentalData,
+                setNansToMissingValue);
 
-            closePrice = JsonFunctions::getJsonFloat(
-                        historicalData[ indexHistoricalData ]["close"],
-                        setNansToMissingValue);                       
+            //adjustedClosePrice = JsonFunctions::getJsonFloat(
+            //            historicalData[ indexHistoricalData ]["adjusted_close"],
+            //            setNansToMissingValue); 
+
+            closePrice = 
+              FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+                historicalData[ indexHistoricalData ]["close"],
+                fundamentalData,
+                setNansToMissingValue);
+
+            //closePrice = JsonFunctions::getJsonFloat(
+            //            historicalData[ indexHistoricalData ]["close"],
+            //            setNansToMissingValue);                       
 
           }catch( std::invalid_argument const& ex){
             std::cout << " Historical record (" << closestHistoricalDate << ")"
@@ -3175,12 +3194,17 @@ class NumericalFunctions {
           index = indexB;
           valMetricUpd.date = dateB;
         }
-        
 
-        double recentAdjustedClosePrice 
-          = JsonFunctions::getJsonFloat(
-                            historicalData[ index ]["adjusted_close"],
-                            false); 
+        double recentAdjustedClosePrice =
+          FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+            historicalData[ index ]["adjusted_close"],
+            fundamentalData,
+            false);
+
+        //double recentAdjustedClosePrice 
+        //  = JsonFunctions::getJsonFloat(
+        //                    historicalData[ index ]["adjusted_close"],
+        //                    false); 
 
         double recentNumberOfShares  
           = FinancialAnalysisFunctions::getOutstandingSharesClosestToDate(
@@ -3257,11 +3281,16 @@ class NumericalFunctions {
           pvUpd.recentDate = dateB;
         }
         
+        pvUpd.recentAdjustedClosePrice  =
+          FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+            historicalData[ index ]["adjusted_close"],
+            fundamentalData,
+            false);         
 
-        pvUpd.recentAdjustedClosePrice 
-          = JsonFunctions::getJsonFloat(
-                            historicalData[ index ]["adjusted_close"],
-                            false); 
+        //pvUpd.recentAdjustedClosePrice 
+        //  = JsonFunctions::getJsonFloat(
+        //                    historicalData[ index ]["adjusted_close"],
+        //                    false); 
 
         pvUpd.recentNumberOfShares  
           = FinancialAnalysisFunctions::getOutstandingSharesClosestToDate(

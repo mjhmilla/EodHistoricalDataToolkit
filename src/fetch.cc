@@ -17,13 +17,14 @@
 unsigned int MODE_FETCH_SINGLE_FILE               = 0;
 unsigned int MODE_FETCH_MULTIPLE_TICKER_FILES     = 1;
 unsigned int MODE_FETCH_MULTIPLE_EXCHANGE_FILES   = 2;
-
+unsigned int MODE_FETCH_FOREX_FILES_FROM_LIST         = 3;
 
 
 int main (int argc, char* argv[]) {
 
   std::string apiKey;
   std::string eodUrlTemplate;
+  std::string forexListFileName;
   std::string exchangeCode;
   std::string exchangeListFileName;
   std::string tickerFileListPath;
@@ -64,7 +65,13 @@ int main (int argc, char* argv[]) {
       "The exchange code. For example: US",
       false,"","string");
 
-    cmd.add(exchangeCodeInput);    
+    cmd.add(exchangeCodeInput);   
+    
+    TCLAP::ValueArg<std::string> forexListFileNameInput("r","forex_list_file_name", 
+      "The list of foreign exchange codes to download. One entry per line",
+      false,"","string");
+
+    cmd.add(forexListFileNameInput);       
 
 
     TCLAP::ValueArg<std::string> fundamentalDataFolderInput("d","fundamental_data_folder", 
@@ -127,6 +134,7 @@ int main (int argc, char* argv[]) {
     apiKey                    = apiKeyInput.getValue();
     eodUrlTemplate            = eodUrlInput.getValue();
     exchangeCode              = exchangeCodeInput.getValue();
+    forexListFileName                 = forexListFileNameInput.getValue();
     fundamentalDataFolder     = fundamentalDataFolderInput.getValue();
     exchangeListFileName      = exchangeListFileNameInput.getValue();
     tickerFileListPath        = tickerFileListPathInput.getValue();
@@ -178,9 +186,10 @@ int main (int argc, char* argv[]) {
     if(singleTickerNameToFetch.length()==0){
       if(tickerFileListPath.length() > 0){
         mode = MODE_FETCH_MULTIPLE_TICKER_FILES;
-      }
-      if(exchangeListFileName.length() > 0){
+      }else if(exchangeListFileName.length() > 0){
         mode = MODE_FETCH_MULTIPLE_EXCHANGE_FILES;
+      }else if(forexListFileName.length() > 0){
+        mode = MODE_FETCH_FOREX_FILES_FROM_LIST;
       }
     }
 
@@ -196,6 +205,9 @@ int main (int argc, char* argv[]) {
 
       std::cout << "  EOD Url Template" << std::endl;
       std::cout << "    " << eodUrlTemplate << std::endl;
+
+      std::cout << "  FOREX Code" << std::endl;
+      std::cout << "    " << forexListFileName << std::endl;
 
       std::cout << "  Exchange Code" << std::endl;
       std::cout << "    " << exchangeCode << std::endl;
@@ -526,6 +538,51 @@ int main (int argc, char* argv[]) {
       }      
       ++count;
     }
+  }
+
+  if(mode == MODE_FETCH_FOREX_FILES_FROM_LIST){
+    std::ifstream csvFile(forexListFileName);
+    if(csvFile.is_open()){
+      std::string line;
+      int count = 1;
+      while(std::getline(csvFile,line)){
+        std::string eodUrl = eodUrlTemplate;
+        StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+        StringFunctions::findAndReplaceString(eodUrl,"{FOREX_CODE}",line); 
+         
+        std::string forexFilePath=outputFolder;
+        std::string forexFileName = line+".FOREX.json";
+        forexFilePath.append(forexFileName);        
+
+        bool fileExists=false;
+
+        if(gapFillPartialDownload == true){
+          //Check if the file has been downloaded already.
+          fileExists = std::filesystem::exists(forexFilePath.c_str());
+        }
+
+        bool successForexDownload=false;
+        if( (!fileExists && gapFillPartialDownload) || !gapFillPartialDownload){ 
+                                  
+          successForexDownload = 
+            CurlToolkit::downloadJsonFile(eodUrl,forexFilePath,false);
+
+          if(successForexDownload == false){
+            std::cout << count << "." 
+                      << '\t' << forexFileName << std::endl 
+                      << '\t' << "Error: failed to download" << std::endl
+                      << '\t' << eodUrl << std::endl;
+          } 
+          if(verbose && successForexDownload == true){
+            std::cout << count << "." << '\t' << forexFileName << std::endl;
+          }         
+          ++count;
+        }        
+
+      }
+
+    }
+    
   }
 
   if(verbose){

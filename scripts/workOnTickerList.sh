@@ -27,7 +27,7 @@ echo "List Name: $2"
 folderName="$3"
 echo "Dest. Folder: $3"
 
-count=0
+count=1
 
 while IFS=, read -r ex pex hc tkA tkB y
 do

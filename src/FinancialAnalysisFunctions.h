@@ -17,8 +17,8 @@
 #include "DataStructures.h"
 #include "DateFunctions.h"
 
-
-
+const static std::vector< std::string > CurrencyPairs = {"GBX","GBP"};
+const static std::vector< double > CurrencyScale = { 0.01 };
 
 
 class FinancialAnalysisFunctions {
@@ -276,6 +276,57 @@ class FinancialAnalysisFunctions {
       updEodFileName.append(exchangeCode);
       updEodFileName.append(".json");
     };
+    //==========================================================================
+
+    static double getHistoricalDataInFundamentalUnit(
+                    const nlohmann::ordered_json &historicalDataEntry,
+                    const nlohmann::ordered_json &fundamentalData,
+                    bool setNansToMissingValue){
+
+      double value = JsonFunctions::getJsonFloat(historicalDataEntry,
+                                                 setNansToMissingValue);
+
+      std::string historicalCurrency;
+      JsonFunctions::getJsonString( fundamentalData[GEN]["CurrencyCode"],
+                                    historicalCurrency);
+
+      std::string fundamentalCurrency;                                                 
+      JsonFunctions::getJsonString( fundamentalData[FIN][BAL]["currency_symbol"],
+                                    fundamentalCurrency);
+
+
+      if(fundamentalCurrency.compare(historicalCurrency) != 0){
+
+        bool converted=false;
+        for(int i=0; i<CurrencyScale.size();++i){
+          int j = i*2;
+          int k = j+1;
+
+          if(  (CurrencyPairs[j].compare(historicalCurrency)==0
+             && CurrencyPairs[k].compare(fundamentalCurrency)==0)){
+            value = value * CurrencyScale[i];
+            converted=true;
+          }
+          if(   CurrencyPairs[k].compare(historicalCurrency)==0
+             && CurrencyPairs[j].compare(fundamentalCurrency)==0){
+            value = value * (1.0/CurrencyScale[i]);            
+            converted=true;
+          }
+        }
+        if(!converted){
+
+          std::cerr << "getHistoricalDataInFundamentalUnit" << std::endl;
+          std::cerr << "Error: could not find this pair of currency units "
+                    << " in CurrencyPairs: " << historicalCurrency 
+                    << " " << fundamentalCurrency << std::endl;
+          std::abort();          
+        }
+
+      }
+
+      return value;
+    };
+
     //==========================================================================
     /*
       2026/05/19 
@@ -2679,8 +2730,13 @@ class FinancialAnalysisFunctions {
                           "%Y-%m-%d",
                           false);
         for (int i=indexB; i<indexA;++i){
-          double stockPrice = JsonFunctions::getJsonFloat(
-              historicalData[i]["adjusted_close"],false);
+          double stockPrice = getHistoricalDataInFundamentalUnit(
+                                historicalData[i]["adjusted_close"],
+                                fundamentalData,
+                                false);            
+          //double stockPrice = JsonFunctions::getJsonFloat(
+          //    historicalData[i]["adjusted_close"],false);
+
           if(!std::isnan(stockPrice)){
             sharePriceAvg += stockPrice;
             sharePriceCount++;
@@ -2706,8 +2762,14 @@ class FinancialAnalysisFunctions {
                         "%Y-%m-%d",
                         false);
 
-        double stockPrice = JsonFunctions::getJsonFloat(
-              historicalData[index]["adjusted_close"],false);
+        double stockPrice = 
+          getHistoricalDataInFundamentalUnit(
+            historicalData[index]["adjusted_close"],
+            fundamentalData,
+            false);
+
+        //double stockPrice = JsonFunctions::getJsonFloat(
+        //      historicalData[index]["adjusted_close"],false);
 
         double marketCap = stockPrice*outstandingShares;              
 

@@ -2198,7 +2198,12 @@ int main (int argc, char* argv[]) {
       double price;
       for(auto &el : historicalData){
         JsonFunctions::getJsonString(el["date"],dateStr);
-        price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);  
+        //price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);
+        price = FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+                  el["adjusted_close"],
+                  fundamentalData,
+                  false);
+        
         if(price > minPriceAllowedInPriceModel){      
           double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);          
           datesHistorical.push_back(dateNumerical);
@@ -2914,12 +2919,23 @@ int main (int argc, char* argv[]) {
         double adjustedClosePrice = std::nan("1");
         double closePrice = std::nan("1");
         try{
-          adjustedClosePrice = JsonFunctions::getJsonFloat(
-                      historicalData[ indexHistoricalData ]["adjusted_close"],
-                      setNansToMissingValue); 
-          closePrice = JsonFunctions::getJsonFloat(
-                      historicalData[ indexHistoricalData ]["close"],
-                      setNansToMissingValue);                       
+          adjustedClosePrice = 
+            FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+              historicalData[ indexHistoricalData ]["adjusted_close"],
+              fundamentalData,
+              setNansToMissingValue);
+          closePrice = 
+            FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+              historicalData[ indexHistoricalData ]["close"],
+              fundamentalData,
+              setNansToMissingValue);          
+
+          //adjustedClosePrice = JsonFunctions::getJsonFloat(
+          //            historicalData[ indexHistoricalData ]["adjusted_close"],
+          //            setNansToMissingValue); 
+          //closePrice = JsonFunctions::getJsonFloat(
+          //            historicalData[ indexHistoricalData ]["close"],
+          //            setNansToMissingValue);                       
 
         }catch( std::invalid_argument const& ex){
           std::cout << " Historical record (" << closestHistoricalDate << ")"
