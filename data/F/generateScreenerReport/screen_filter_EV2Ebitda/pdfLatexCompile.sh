@@ -1,6 +1,0 @@
-pdflatex report_screen_filter_EV2Ebitda_json_000.tex
-pdflatex report_screen_filter_EV2Ebitda_json_000.tex
-pdflatex report_screen_filter_EV2Ebitda_json_001.tex
-pdflatex report_screen_filter_EV2Ebitda_json_001.tex
-pdflatex report_screen_filter_EV2Ebitda_json_002.tex
-pdflatex report_screen_filter_EV2Ebitda_json_002.tex
