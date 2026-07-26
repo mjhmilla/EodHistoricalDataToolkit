@@ -1,0 +1,20 @@
+[
+    {
+        "Name": "London Exchange",
+        "Code": "LSE",
+        "StockPriceCurrencyCode": "GBX",
+        "StockPriceCurrencyName": "Pence sterling",
+        "StockPriceCurrencySymbol": "p",        
+        "Currency": "GBP",
+        "StockPriceToCurrencyScale": 0.01
+    },
+    {
+        "Name": "Johannesburg Exchange",
+        "Code": "JSE",
+        "StockPriceCurrencyCode": "ZAC",
+        "StockPriceCurrencyName": "South African Rand cents",
+        "StockPriceCurrencySymbol": "R",        
+        "Currency": "ZAR",
+        "StockPriceToCurrencyScale": 0.01
+    }
+]

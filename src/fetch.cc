@@ -14,11 +14,15 @@
 #include "JsonFunctions.h"
 #include "CurlToolkit.h"
 
-unsigned int MODE_FETCH_SINGLE_FILE               = 0;
-unsigned int MODE_FETCH_MULTIPLE_TICKER_FILES     = 1;
-unsigned int MODE_FETCH_MULTIPLE_EXCHANGE_FILES   = 2;
-unsigned int MODE_FETCH_FOREX_FILES_FROM_LIST         = 3;
+unsigned int MODE_INVALID                     = 0;
 
+unsigned int MODE_FETCH_SINGLE_TICKER         = 10;
+unsigned int MODE_FETCH_SINGLE_EXCHANGE       = 20;
+unsigned int MODE_FETCH_EXCHANGE_LIST         = 30;
+
+unsigned int MODE_FETCH_MULTIPLE_TICKER_FILES     = 100;
+unsigned int MODE_FETCH_MULTIPLE_EXCHANGE_FILES   = 110;
+unsigned int MODE_FETCH_FOREX_FILES_FROM_LIST     = 120;
 
 int main (int argc, char* argv[]) {
 
@@ -181,18 +185,31 @@ int main (int argc, char* argv[]) {
 
 
 
-    mode=MODE_FETCH_SINGLE_FILE;
+    mode = MODE_INVALID;
 
     if(singleTickerNameToFetch.length()==0){
+
       if(tickerFileListPath.length() > 0){
         mode = MODE_FETCH_MULTIPLE_TICKER_FILES;
       }else if(exchangeListFileName.length() > 0){
         mode = MODE_FETCH_MULTIPLE_EXCHANGE_FILES;
       }else if(forexListFileName.length() > 0){
         mode = MODE_FETCH_FOREX_FILES_FROM_LIST;
+      }else if(exchangeCode.length()>0){
+        mode = MODE_FETCH_SINGLE_EXCHANGE;
+      }else{ 
+        mode = MODE_FETCH_EXCHANGE_LIST;
       }
+
+    }else{
+      mode = MODE_FETCH_SINGLE_TICKER;
     }
 
+    if(mode == MODE_INVALID){
+      std::cerr << "Error: inputs not consistent with any of files that "
+                << "could be fetched from EOD." << std::endl;
+      std::abort();                
+    }
   
 
     if(verbose){
@@ -253,7 +270,63 @@ int main (int argc, char* argv[]) {
     abort();
   }
 
-  if(mode == MODE_FETCH_SINGLE_FILE){
+
+  if( mode == MODE_FETCH_EXCHANGE_LIST ){
+      std::string eodUrl = eodUrlTemplate;
+   
+      StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+      std::string fileName("exchange-list.json");
+
+      std::stringstream ss;
+      ss << outputFolder << fileName;
+      std::string outputFilePath = ss.str();
+      std::string removeStr("\"");
+      StringFunctions::removeFromString(outputFilePath,removeStr); 
+
+      bool success = 
+        CurlToolkit::downloadJsonFile(eodUrl,outputFilePath,verbose);
+
+      if(verbose && success == true){
+        std::cout << '\t' << fileName << std::endl;
+      }    
+      if( success == false){
+        std::cerr << "Error: CurlToolkit::downloadJsonFile failed to get" 
+                  << std::endl;
+        std::cerr << '\t' << eodUrl << std::endl;
+        std::cerr << '\t' << fileName << std::endl;
+      }
+  }
+
+  if( mode == MODE_FETCH_SINGLE_EXCHANGE){
+
+    std::string eodUrl = eodUrlTemplate;
+  
+    StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);      
+    StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+
+    std::string fileName(exchangeCode+".json");
+
+    std::stringstream ss;
+    ss << outputFolder << fileName;
+    std::string outputFilePath = ss.str();
+    std::string removeStr("\"");
+    StringFunctions::removeFromString(outputFilePath,removeStr); 
+
+    bool success = 
+      CurlToolkit::downloadJsonFile(eodUrl,outputFilePath,verbose);
+
+    if(verbose && success == true){
+      std::cout << '\t' << fileName << std::endl;
+    }    
+    if( success == false){
+      std::cerr << "Error: CurlToolkit::downloadJsonFile failed to get" 
+                << std::endl;
+      std::cerr << '\t' << eodUrl << std::endl;
+      std::cerr << '\t' << fileName << std::endl;
+    }
+  }
+
+  if(   mode == MODE_FETCH_SINGLE_TICKER){
 
     std::vector< std::string > tickerNames;
     tickerNames.push_back(singleTickerNameToFetch);
@@ -275,25 +348,17 @@ int main (int argc, char* argv[]) {
 
     for(auto& ticker : tickerNames){
       std::string eodUrl = eodUrlTemplate;
-
       std::string fileName;
 
-      if(ticker.length()>0){
-        unsigned int idx = ticker.find(".");
-        std::string tickerCode = ticker.substr(0,idx);          
-        std::string tickerExchange = ticker.substr(idx+1,ticker.length()-1);      
+      unsigned int idx = ticker.find(".");
+      std::string tickerCode = ticker.substr(0,idx);          
+      std::string tickerExchange = ticker.substr(idx+1,ticker.length()-1);      
 
-        StringFunctions::findAndReplaceString(eodUrl,"{TICKER_CODE}",tickerCode);
-        StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-        StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",tickerExchange);
-        fileName=ticker;
-        fileName.append(".json");
-      }else{
-        StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-        StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
-        fileName = exchangeCode;
-        fileName.append(".json");
-      }
+      StringFunctions::findAndReplaceString(eodUrl,"{TICKER_CODE}",tickerCode);
+      StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
+      StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",tickerExchange);
+      fileName=ticker;
+      fileName.append(".json");
 
 
       std::stringstream ss;
@@ -316,9 +381,6 @@ int main (int argc, char* argv[]) {
       }
     }
     
-
-    
-
   }
 
   if(mode==MODE_FETCH_MULTIPLE_TICKER_FILES){

@@ -1,0 +1,18 @@
+{
+    "eod_toolkit_config_folder": "/home/mjhmilla/Work/code/investing/eodhistoricaldata/cpp/EodHistoricalDataToolkit/config/", 
+    "default_spread_json_file": "data/defaultSpreadTable.json",
+    "bond_yield_file": "data/bondYieldTable.json",
+    "world_corporate_tax_rate_file": "data/1980_2023_Corporate_Tax_Rates_Around_the_World_Tax_Foundation.csv",
+    "equity_risk_premium_by_country": "data/countryRisk2026.json",
+    "default_interest_cover": 2.5,
+    "default_tax_rate": 0.256,
+    "default_risk_free_rate": 0.025,
+    "default_beta": 1.0,
+    "equity_risk_premium_usa": 0.0412,        
+    "discount_rate": 0.10,
+    "mature_firm_fraction_debt_to_capital": 0.2,
+    "number_of_years_to_average_capital_expenditures": 3,
+    "number_of_years_of_growth": 5,
+    "number_of_years_used_in_growth_rate_calculation": 5,
+    "max_day_error": 35
+}
