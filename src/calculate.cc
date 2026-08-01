@@ -1172,50 +1172,21 @@ int main (int argc, char* argv[]) {
   std::string exchangeCode;
   std::string fundamentalFolder;
   std::string historicalFolder;
+  std::string forexFolder;
   std::string configurationFile;
   std::string eodFolder;
   std::string analyseFolder;
-  bool quarterlyTTMAnalysis;
   std::string timePeriod;
-  
-  std::string configFolder;
-  std::string corpTaxesWorldFile;
-  std::string riskByCountryFile;
-  std::string defaultSpreadJsonFile;  
-  std::string bondYieldJsonFile;  
-
-  
-
-  std::string nameOfHomeCountryISO3;
-
-  //double defaultInterestCover;
-
-
-  //double erpUSADefault;
-  //double defaultBeta;
-
   std::string singleFileToEvaluate;
 
-  
-  //int numberOfYearsToAverageCapitalExpenditures;
-
-  //int numberOfYearsUsedInGrowthRateCalculation;
-  //int numberOfYearsOfGrowthForDcmValuation;
-  //int maxDayErrorTabularData;
+  bool quarterlyTTMAnalysis;
   bool relaxedCalculation;
-  //double matureFirmFractionOfDebtToCapital=0;
+  
+  DataStructures::CalculationConfiguration cc;
 
-  double discountRate;
-  double defaultTaxRate;
-  double defaultRiskFreeRate;  
-  double defaultBeta;
-  double defaultInterestCover;
-  double erpUSADefault;
-  double matureFirmFractionOfDebtToCapital;
-  int numberOfYearsToAverageCapitalExpenditures;
-  int numberOfYearsOfGrowthForDcmValuation;
-  int numberOfYearsUsedInGrowthRateCalculation;
-  int maxDayErrorTabularData;
+  nlohmann::ordered_json currencyUnits;
+  std::string nameOfHomeCountryISO3;
+
 
   bool verbose;
 
@@ -1240,6 +1211,14 @@ int main (int argc, char* argv[]) {
       true,"","string");
     cmd.add(historicalFolderInput);
 
+    TCLAP::ValueArg<std::string> forexFolderInput("r",
+      "forex_data_folder_path", 
+      "The path to the folder that contains the FOREX"
+      " data json files from https://eodhistoricaldata.com/",
+      true,"","string");
+    cmd.add(forexFolderInput);
+
+
     TCLAP::ValueArg<std::string> configurationFileInput("c",
       "configuration_file_input", 
       "The path to the json file that contains default parameter settings"
@@ -1258,42 +1237,7 @@ int main (int argc, char* argv[]) {
       "The exchange code. For example: US",
       false,"","string");
     cmd.add(exchangeCodeInput);  
-
-    //TCLAP::ValueArg<std::string> defaultSpreadJsonFileInput("d",
-    //  "default_spread_json_file_input", 
-    //  "The path to the json file that contains a table relating interest"
-    //  " coverage to default spread",false,"","string");
-    //cmd.add(defaultSpreadJsonFileInput);  
-
-    //TCLAP::ValueArg<std::string> bondYieldJsonFileInput("y",
-    //  "bond_yield_file_input", 
-    //  "The path to the json file that contains a long historical record"
-    //  " of 10 year bond yield values",false,"","string");
-    //cmd.add(bondYieldJsonFileInput);  
-    
-
-    //TCLAP::ValueArg<double> defaultInterestCoverInput("c",
-    //  "default_interest_cover", 
-    //  "The default interest cover that is used if an average value cannot"
-    //  "be computed from the data provided. This can happen with older "
-    //  "EOD records",
-    //  false,2.5,"double");
-    //cmd.add(defaultInterestCoverInput);  
-
-    //TCLAP::ValueArg<double> defaultTaxRateInput("t",
-    //  "default_tax_rate", 
-    //  "The tax rate used if the tax rate cannot be found in tabular data."
-    //  " The default is 0.256 (25.6%) which is the world wide average"
-    //  "weighted by GDP reported by the tax foundation.",
-    //  false,0.256,"double");
-    //cmd.add(defaultTaxRateInput);  
-
-    //TCLAP::ValueArg<double> defaultInflationRateInput("g",
-    //  "default_inflation_rate", 
-    //  "The default inflation rate in the country that you are investing in."
-    //  " In my case this is 0.0248 (2.48 percent) in Germany.",
-    //  false,0.0248,"double");
-    //cmd.add(defaultInflationRateInput);      
+     
 
     TCLAP::ValueArg<std::string> nameOfHomeCountryISO3Input("n",
       "iso3_name_of_home_country", 
@@ -1301,92 +1245,6 @@ int main (int argc, char* argv[]) {
       " United States of America, DEU for Germany, etc)",
       false,"","string");
     cmd.add(nameOfHomeCountryISO3Input);  
-
-
-    //TCLAP::ValueArg<std::string> corpTaxesWorldFileInput("w","global_corporate_tax_rate_file", 
-    //  "Corporate taxes reported around the world from the tax foundation"
-    //  " in csv format (https://taxfoundation.org/data/all/global/corporate-tax-rates-by-country-2023/)",
-    //  false,"","string");
-    //cmd.add(corpTaxesWorldFileInput);  
-
-    //TCLAP::ValueArg<double> defaultDiscountRateInput("s",
-    //  "discount_rate", 
-    //  "The discount rate used in more basic evaluation methods in which "
-    //  "the cost of capital is not estimated.",
-    //  false,0.10,"double");
-    //cmd.add(defaultDiscountRateInput);  
-
-
-    //TCLAP::ValueArg<double> defaultRiskFreeRateInput("r",
-    //  "default_risk_free_rate", 
-    //  "The risk free rate of return, which is often set to the return on "
-    //  "a 10 year or 30 year bond as noted from Ch. 3 of Damodran.",
-    //  false,0.025,"double");
-    //cmd.add(defaultRiskFreeRateInput);  
-
-    //TCLAP::ValueArg<double> equityRiskPremiumUSAInput("e",
-    //  "equity_risk_premium", 
-    //  "The extra return that the stock should return given its risk in the USA."
-    //  " During 2024 this is somewhere around 4 percent between 1928 and 2010 as"
-    //  " noted in Ch. 3 Damodran.",
-    //  false,0.05,"double");
-    //cmd.add(equityRiskPremiumUSAInput);  
-
-    
-    //TCLAP::ValueArg<std::string> riskByCountryFileInput("k",
-    //  "equity_risk_premium_by_country", 
-    //  "The extra return that the stock should return given its country "
-    //  "dependent risk. This json file is typically "
-    //  "data/equityRiskPremiumByCountry2024.json which has been extracted from"
-    //  "the webpage of Professor Aswath Damodaran (see ctryprem.xlsx):" 
-    //  "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html",
-    //  false,"","string");
-    //cmd.add(riskByCountryFileInput);  
-
-    //TCLAP::ValueArg<double> defaultBetaInput("b",
-    //  "default_beta", 
-    //  "The default beta value to use when one is not reported",
-    //  false,1.0,"double");
-    //cmd.add(defaultBetaInput);  
-
-    //Default value from Ch. 3 Damodaran
-    //TCLAP::ValueArg<double> matureFirmFractionOfDebtToCapitalInput("u",
-    //  "mature_firm_fraction_debt_capital", 
-    //  "The fraction of capital from debt for a mature firm.",
-    //  false,0.2,"double");
-    //cmd.add(matureFirmFractionOfDebtToCapitalInput);  
-
-    //TCLAP::ValueArg<int> numberOfYearsToAverageCapitalExpendituresInput("n",
-    //  "number_of_years_to_average_capital_expenditures", 
-    //  "Number of years used to evaluate capital expenditures."
-    //  " Default value of 3 taken from Ch. 12 of Lev and Gu.",
-    //  false,3,"int");
-    //cmd.add(numberOfYearsToAverageCapitalExpendituresInput);  
-
-    //TCLAP::ValueArg<int>numberOfYearsOfGrowthForDcmValuationInput("n",
-    //  "number_of_years_of_growth", 
-    //  "Number of years of growth prior to terminal valuation calculation "
-    //  "in the discounted cash flow valuation."
-    //  " Default value of 5 taken from Ch. 3 of Damodran.",
-    //  false,5,"int");
-    //cmd.add(numberOfYearsOfGrowthForDcmValuationInput); 
-
-    //TCLAP::ValueArg<int>numberOfYearsUsedInGrowthRateCalculationInput("r",
-    //  "number_of_years_used_in_growth_rate_calculation", 
-    //  "Number of years of trailing data to use when evaluating the growth rate",
-    //  false,5,"int");
-    //cmd.add(numberOfYearsUsedInGrowthRateCalculationInput); 
-
-
-    //TCLAP::ValueArg<int>maxDayErrorTabularDataInput("a",
-    //  "day_error", 
-    //  "The bond value and stock value tables do not have entries for"
-    //  " every day. This parameter specifies the maximum amount of error"
-    //  " that is acceptable. Note: the bond table is sometimes missing a "
-    //  " 30 days of data while the stock value tables are sometimes missing"
-    //  " 10 days of data.",
-    //  false,35,"int");
-    //cmd.add(maxDayErrorTabularDataInput); 
 
     TCLAP::SwitchArg relaxedCalculationInput("l","relaxed",
       "Relaxed calculation: nulls for some values (short term debt,"
@@ -1414,6 +1272,7 @@ int main (int argc, char* argv[]) {
 
     fundamentalFolder     = fundamentalFolderInput.getValue();
     historicalFolder      = historicalFolderInput.getValue();
+    forexFolder           = forexFolderInput.getValue();
     configurationFile     = configurationFileInput.getValue();
 
     singleFileToEvaluate  = singleFileToEvaluateInput.getValue();
@@ -1430,108 +1289,8 @@ int main (int argc, char* argv[]) {
     }else{
       timePeriod          = Y;
     }   
-
-    nlohmann::ordered_json configData;
-    bool validConfigFile = JsonFunctions::loadJsonFile(configurationFile,
-                                                    configData, verbose);
     
-    if(!validConfigFile){
-      std::cerr << "Error: could not load the configration file " 
-                <<  configurationFile << std::endl;
-      std::abort();
-    }
-
-    //
-    // Load the configuration data
-    //
-    JsonFunctions::getJsonString(configData["eod_toolkit_config_folder"],
-                                configFolder);
-
-    //discountRate        = defaultDiscountRateInput.getValue();
-    discountRate = 
-      JsonFunctions::getJsonFloat(configData["discount_rate"]);
-
-    //defaultTaxRate      = defaultTaxRateInput.getValue();    
-    defaultTaxRate = 
-      JsonFunctions::getJsonFloat(configData["default_tax_rate"],false);
-    
-    //corpTaxesWorldFile  = corpTaxesWorldFileInput.getValue();
-    JsonFunctions::getJsonString( configData["world_corporate_tax_rate_file"],
-                                  corpTaxesWorldFile);
-    corpTaxesWorldFile = configFolder+corpTaxesWorldFile;
-
-
-    //defaultRiskFreeRate = defaultRiskFreeRateInput.getValue();
-
-    defaultRiskFreeRate = 
-      JsonFunctions::getJsonFloat(configData["default_risk_free_rate"]);
-
-    //defaultBeta         = defaultBetaInput.getValue();
-    defaultBeta = 
-      JsonFunctions::getJsonFloat(configData["default_beta"]);
-        
-    //erpUSADefault       = equityRiskPremiumUSAInput.getValue();
-    erpUSADefault =
-      JsonFunctions::getJsonFloat(configData["equity_risk_premium_usa"]);
-
-    //riskByCountryFile= riskByCountryFileInput.getValue();
-    //std::string riskByCountryFile;    
-    JsonFunctions::getJsonString(configData["equity_risk_premium_by_country"],
-                                 riskByCountryFile);
-    riskByCountryFile = configFolder+riskByCountryFile;
-
-    //defaultSpreadJsonFile = defaultSpreadJsonFileInput.getValue();
-    //std::string defaultSpreadJsonFile;      
-    JsonFunctions::getJsonString(configData["default_spread_json_file"],
-                                 defaultSpreadJsonFile);
-    defaultSpreadJsonFile = configFolder+defaultSpreadJsonFile;
-    
-
-    //bondYieldJsonFile     = bondYieldJsonFileInput.getValue();
-    //std::string bondYieldJsonFile;    
-    JsonFunctions::getJsonString(configData["bond_yield_file"],
-                                  bondYieldJsonFile);
-    bondYieldJsonFile = configFolder+bondYieldJsonFile;
-        
-    //defaultInterestCover  = defaultInterestCoverInput.getValue();
-
-    defaultInterestCover = 
-      JsonFunctions::getJsonFloat(configData["default_interest_cover"]);
-
-    //matureFirmFractionOfDebtToCapital = 
-    //  matureFirmFractionOfDebtToCapitalInput.getValue();
-    matureFirmFractionOfDebtToCapital = 
-      JsonFunctions::getJsonFloat(configData["mature_firm_fraction_debt_to_capital"]);
-      
-    //numberOfYearsToAverageCapitalExpenditures 
-    //  = numberOfYearsToAverageCapitalExpendituresInput.getValue();              
-    numberOfYearsToAverageCapitalExpenditures = 
-      static_cast<int>(
-        JsonFunctions::getJsonFloat(
-          configData["number_of_years_to_average_capital_expenditures"])
-      );
-
-
-    numberOfYearsOfGrowthForDcmValuation =
-      static_cast<int>(
-        JsonFunctions::getJsonFloat(
-          configData["number_of_years_of_growth"])
-      );
-
-    numberOfYearsUsedInGrowthRateCalculation =
-      static_cast<int>(
-        JsonFunctions::getJsonFloat(
-          configData["number_of_years_used_in_growth_rate_calculation"])
-      );      
-
-    //maxDayErrorTabularData
-    //  = maxDayErrorTabularDataInput.getValue();
-    maxDayErrorTabularData =
-      static_cast<int>(
-        JsonFunctions::getJsonFloat(
-          configData["max_day_error"])
-      );
-
+    cc.load(configurationFile);
 
 
     if(verbose){
@@ -1568,51 +1327,56 @@ int main (int argc, char* argv[]) {
       std::cout << "----------------------------------------" << std::endl;
 
       std::cout << "  Default Spread Json File" << std::endl;
-      std::cout << "    " << defaultSpreadJsonFile << std::endl;
+      std::cout << "    " << cc.default_spread_json_file << std::endl;
 
       std::cout << "  Bond Yield Json File" << std::endl;
-      std::cout << "    " << bondYieldJsonFile << std::endl;
+      std::cout << "    " << cc.bond_yield_json_file << std::endl;
 
       std::cout << "  Corporate tax rate file from https://taxfoundation.org"
                 << std:: endl;
-      std::cout << "    " << corpTaxesWorldFile << std::endl;
+      std::cout << "    " << cc.world_corporate_tax_rate_csv_file << std::endl;
 
       std::cout << "  Risk by country" << std::endl;
-      std::cout << "    " << riskByCountryFile << std::endl;
+      std::cout << "    " << cc.equity_risk_premium_by_country_json_file 
+                          << std::endl;
 
       std::cout << "  Default interest cover value" << std::endl;
-      std::cout << "    " << defaultInterestCover << std::endl;
+      std::cout << "    " << cc.default_interest_cover << std::endl;
       
       std::cout << "  Default tax rate" << std::endl;
-      std::cout << "    " << defaultTaxRate << std::endl;
+      std::cout << "    " << cc.default_tax_rate << std::endl;
 
       std::cout << "  Annual default risk free rate" << std::endl;
-      std::cout << "    " << defaultRiskFreeRate << std::endl;
+      std::cout << "    " << cc.default_risk_free_rate << std::endl;
 
       std::cout << "  Default beta value" << std::endl;
-      std::cout << "    " << defaultBeta << std::endl;
+      std::cout << "    " << cc.default_beta << std::endl;
 
       std::cout << "  Equity risk premium (U.S.A.)" << std::endl;
-      std::cout << "    " << erpUSADefault << std::endl;
+      std::cout << "    " << cc.equity_risk_premium_usa << std::endl;
 
       std::cout << "  Assumed mature firm fraction of debt to capital" << std::endl;
-      std::cout << "    " << matureFirmFractionOfDebtToCapital << std::endl;
+      std::cout << "    " << cc.mature_firm_fraction_debt_to_capital << std::endl;
 
       std::cout << "  Number of years of growth in the DCM valuation " 
                 << std::endl;
-      std::cout << "    " << numberOfYearsOfGrowthForDcmValuation 
+      std::cout << "    " << cc.number_of_years_of_growth 
                 << std::endl;
 
       std::cout << "  Number of years of data used to evaluate growth rates " 
                 << std::endl;
-      std::cout << "    " << numberOfYearsUsedInGrowthRateCalculation 
+      std::cout << "    " << cc.number_of_years_used_in_growth_rate_calculation 
+                << std::endl;
+
+      std::cout << "  TO DO: Update code to use  number_of_years_used_in"
+                   "_growth_rate_calculation" 
                 << std::endl;
 
 
       std::cout << "  Maximum number of days in error allowed for tabular " 
                 << "data of bond yields and historical stock prices " 
                 << std::endl;                
-      std::cout << "    " << maxDayErrorTabularData 
+      std::cout << "    " << cc.max_day_error 
                 << std::endl;    
 
       std::cout << "  Using relaxed calculations?" << std::endl;
@@ -1632,13 +1396,13 @@ int main (int argc, char* argv[]) {
   //to approximate the tax of this year.
 
 
-  int maxDayErrorHistoricalData = maxDayErrorTabularData; 
+  int maxDayErrorHistoricalData = cc.max_day_error; 
   // Historical data has a resolution of 1 day
   
-  int maxDayErrorBondYieldData  = maxDayErrorTabularData; 
+  int maxDayErrorBondYieldData  = cc.max_day_error; 
   // Bond yield data has a resolution of 1 month
 
-  int maxDayErrorTTM = maxDayErrorTabularData;
+  int maxDayErrorTTM = cc.max_day_error;
 
   int maxDayErrorOutstandingShareData = 365; 
 
@@ -1708,19 +1472,33 @@ int main (int argc, char* argv[]) {
   unsigned int count=0;
 
   //============================================================================
+  // Load the curency unit table
+  //============================================================================
+  bool validConfigCurrencyUnitsFile 
+        = JsonFunctions::loadJsonFile(cc.currency_units_json_file,
+                                      currencyUnits, verbose);                                                    
+  
+  if(!validConfigCurrencyUnitsFile){
+    std::cerr << "Error: could not load the configration file " 
+              <<  configurationFile << std::endl;
+    std::abort();
+  }  
+  
+  //============================================================================
   // Load the corporate tax rate table
   //============================================================================
   bool usingTaxTable=false;
   TaxFoundationDataSet corpWorldTaxTable;
-  if(corpTaxesWorldFile.length() > 0){
+  if(cc.world_corporate_tax_rate_csv_file.length() > 0){
     usingTaxTable=true;
     bool validFormat = 
-      loadTaxFoundationDataSet(corpTaxesWorldFile,corpWorldTaxTable);
+      loadTaxFoundationDataSet(cc.world_corporate_tax_rate_csv_file,
+                               corpWorldTaxTable);
 
     if(!validFormat){
       usingTaxTable=false;
       std::cout << "Warning: could not load the world corporate tax rate file "
-                << corpTaxesWorldFile << std::endl;
+                << cc.world_corporate_tax_rate_csv_file << std::endl;
       std::cout << "Reverting to the default rate " << std::endl;
     }
   }
@@ -1729,7 +1507,7 @@ int main (int argc, char* argv[]) {
   //============================================================================
   using json = nlohmann::ordered_json;    
 
-  std::ifstream defaultSpreadFileStream(defaultSpreadJsonFile.c_str());
+  std::ifstream defaultSpreadFileStream(cc.default_spread_json_file.c_str());
   json jsonDefaultSpread = 
     nlohmann::ordered_json::parse(defaultSpreadFileStream);
   //std::cout << jsonDefaultSpread.at(1).at(2);
@@ -1760,7 +1538,7 @@ int main (int argc, char* argv[]) {
   //============================================================================
   using json = nlohmann::ordered_json;    
 
-  std::ifstream bondYieldFileStream(bondYieldJsonFile.c_str());
+  std::ifstream bondYieldFileStream(cc.bond_yield_json_file.c_str());
   json jsonBondYield = nlohmann::ordered_json::parse(bondYieldFileStream);
 
   if(verbose){
@@ -1797,7 +1575,7 @@ int main (int argc, char* argv[]) {
   nlohmann::ordered_json riskByCountryData;
 
   bool validRiskTable = JsonFunctions::loadJsonFile( 
-                                riskByCountryFile, 
+                                cc.equity_risk_premium_by_country_json_file, 
                                 riskByCountryData, 
                                 verbose);
 
@@ -1810,7 +1588,7 @@ int main (int argc, char* argv[]) {
   if(!validRiskTable && verbose){
     std::cout << std::endl;
     std::cout << "Error: failed to load the equity-risk-premium by country table:"
-              << riskByCountryFile 
+              << cc.equity_risk_premium_by_country_json_file
               << std::endl;
   }                                
 
@@ -2045,12 +1823,12 @@ int main (int argc, char* argv[]) {
           allowRepeatedDates);    
 
       bool sufficientData=true;
-      if(analysisDates.durationInYears < numberOfYearsOfGrowthForDcmValuation){
+      if(analysisDates.durationInYears < cc.number_of_years_of_growth){
         sufficientData=false;
       }
       int minNumberOfEntries = 
         std::max(static_cast<int>(
-                  std::round(numberOfYearsOfGrowthForDcmValuation*0.5)),
+                  std::round(cc.number_of_years_of_growth*0.5)),
                 3);
 
       if(analysisDates.common.size() < minNumberOfEntries){
@@ -2103,7 +1881,7 @@ int main (int argc, char* argv[]) {
       double betaUnlevered = 
         JsonFunctions::getJsonFloat(fundamentalData[TECH]["Beta"]);
       if(std::isnan(betaUnlevered)){
-        betaUnlevered=defaultBeta;
+        betaUnlevered=cc.default_beta;
       }
 
       //========================================================================
@@ -2116,13 +1894,13 @@ int main (int argc, char* argv[]) {
         calcAverageTaxRate( analysisDates,
                             countryISO2, 
                             corpWorldTaxTable,
-                            defaultTaxRate,                            
+                            cc.default_tax_rate,                            
                             acceptableBackwardsYearErrorForTaxRate,
                             quarterlyTTMAnalysis,
-                            maxDayErrorTabularData);        
+                            cc.max_day_error);        
 
       }else{
-        meanTaxRate=defaultTaxRate;
+        meanTaxRate=cc.default_tax_rate;
       }
 
 
@@ -2130,7 +1908,7 @@ int main (int argc, char* argv[]) {
         calcAverageInterestCover(  
           analysisDates,
           fundamentalData,
-          defaultInterestCover,
+          cc.default_interest_cover,
           jsonDefaultSpread,
           timePeriod,
           quarterlyTTMAnalysis,
@@ -2155,7 +1933,7 @@ int main (int argc, char* argv[]) {
         CountryRiskDataSet riskTable;        
         bool riskTableFound=false;
 
-        double equityRiskPremium=erpUSADefault;
+        double equityRiskPremium=cc.equity_risk_premium_usa;
         double inflation = defaultInflationRate;
 
         if(validRiskTable){
@@ -2229,7 +2007,7 @@ int main (int argc, char* argv[]) {
                       countryISO2,
                       corpWorldTaxTable,
                       meanTaxRate,
-                      defaultTaxRate,
+                      cc.default_tax_rate,
                       acceptableBackwardsYearErrorForTaxRate,
                       usingTaxTable,
                       riskTableFound);
@@ -2242,7 +2020,7 @@ int main (int argc, char* argv[]) {
       DataStructures::EmpiricalGrowthDataSet empiricalGrowthDataAll;
 
       double growthIntervalInYears = 
-        static_cast<double>(numberOfYearsOfGrowthForDcmValuation);
+        static_cast<double>(cc.number_of_years_of_growth);
 
       double totalNumberOfYearsInDataSet = 
         DateFunctions::convertToFractionalYear(analysisDates.common.front())
@@ -2317,7 +2095,8 @@ int main (int argc, char* argv[]) {
       for(auto &el : historicalData){
         JsonFunctions::getJsonString(el["date"],dateStr);
         //price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);
-        price = FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+        price = FinancialAnalysisFunctions::
+                getHistoricalDataInFundamentalUnit(
                   el["adjusted_close"],
                   fundamentalData,
                   false);
@@ -2803,7 +2582,7 @@ int main (int argc, char* argv[]) {
         bool validPreviousDateSet = true;
 
         for(unsigned int i=0; 
-                         i<(numberOfYearsToAverageCapitalExpenditures); 
+                         i<(cc.number_of_years_to_average_capital_expenditures); 
                        ++i)
         {
 
@@ -2843,7 +2622,7 @@ int main (int argc, char* argv[]) {
         if(validRiskTable){
           //Calculate the country-specific equity risk premium
           if(riskTableFound && !std::isnan(riskTable.CRP)){
-            equityRiskPremium = riskTable.CRP + erpUSADefault;
+            equityRiskPremium = riskTable.CRP + cc.equity_risk_premium_usa;
           }
 
           //It would be nice to replace this with a historical table of
@@ -2879,7 +2658,7 @@ int main (int argc, char* argv[]) {
                     << " is missing a value. Reverting to the default"
                     << " risk free rate."
                     << std::endl;
-          bondYield=defaultRiskFreeRate;
+          bondYield=cc.default_risk_free_rate;
         }        
 
         double riskFreeRate = bondYield;
@@ -2897,7 +2676,7 @@ int main (int argc, char* argv[]) {
           FinancialAnalysisFunctions::calcInterestCover(
                                         fundamentalData,
                                         dateSet,
-                                        defaultInterestCover,
+                                        cc.default_interest_cover,
                                         jsonDefaultSpread,
                                         timePeriod.c_str(),
                                         appendTermRecord,
@@ -2934,7 +2713,7 @@ int main (int argc, char* argv[]) {
                       countryISO2,
                       corpWorldTaxTable,
                       meanTaxRate,
-                      defaultTaxRate,
+                      cc.default_tax_rate,
                       acceptableBackwardsYearErrorForTaxRate,
                       usingTaxTable,
                       riskTableFound);        
@@ -3038,15 +2817,17 @@ int main (int argc, char* argv[]) {
         double closePrice = std::nan("1");
         try{
           adjustedClosePrice = 
-            FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
-              historicalData[ indexHistoricalData ]["adjusted_close"],
-              fundamentalData,
-              setNansToMissingValue);
+            FinancialAnalysisFunctions::
+              getHistoricalDataInFundamentalUnit(
+                historicalData[ indexHistoricalData ]["adjusted_close"],
+                fundamentalData,
+                setNansToMissingValue);
           closePrice = 
-            FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
-              historicalData[ indexHistoricalData ]["close"],
-              fundamentalData,
-              setNansToMissingValue);          
+            FinancialAnalysisFunctions::
+              getHistoricalDataInFundamentalUnit(
+                historicalData[ indexHistoricalData ]["close"],
+                fundamentalData,
+                setNansToMissingValue);          
 
           //adjustedClosePrice = JsonFunctions::getJsonFloat(
           //            historicalData[ indexHistoricalData ]["adjusted_close"],
@@ -3136,7 +2917,7 @@ int main (int argc, char* argv[]) {
         termNames.push_back("costOfCapital_marketCapitalization");
         termNames.push_back("costOfCapital_costOfEquityAsAPercentage");
         termNames.push_back("costOfCapital_afterTaxCostOfDebt");
-        termNames.push_back("costOfCapital");
+      termNames.push_back("costOfCapital");
 
         termValues.push_back(debtInfo.longTermDebtEstimate);
         termValues.push_back(outstandingShares);
@@ -3149,8 +2930,8 @@ int main (int argc, char* argv[]) {
 
         //As companies mature they use cheaper forms of capital: debt.
         double costOfCapitalMature = 
-          (costOfEquityAsAPercentage*(1-matureFirmFractionOfDebtToCapital) 
-          + afterTaxCostOfDebt*matureFirmFractionOfDebtToCapital);
+          (costOfEquityAsAPercentage*(1-cc.mature_firm_fraction_debt_to_capital) 
+          + afterTaxCostOfDebt*cc.mature_firm_fraction_debt_to_capital);
 
         if(costOfCapitalMature > costOfCapital){
           costOfCapitalMature=costOfCapital;
@@ -3161,7 +2942,7 @@ int main (int argc, char* argv[]) {
         termNames.push_back("costOfCapitalMature_afterTaxCostOfDebt");
         termNames.push_back("costOfCapitalMature");
 
-        termValues.push_back(matureFirmFractionOfDebtToCapital);
+        termValues.push_back(cc.mature_firm_fraction_debt_to_capital);
         termValues.push_back(costOfEquityAsAPercentage);
         termValues.push_back(afterTaxCostOfDebt);        
         termValues.push_back(costOfCapitalMature);
@@ -3661,7 +3442,7 @@ int main (int argc, char* argv[]) {
               returnOnCapitalDeployed,
               organicGrowth,
               marketCapitalization,
-              numberOfYearsOfGrowthForDcmValuation,
+              cc.number_of_years_of_growth,
               appendTermRecord,
               setNansToMissingValue,
               parentName,
@@ -3735,7 +3516,7 @@ int main (int argc, char* argv[]) {
                   empiricalGrowthData.returnOnCapitalDeployed[indexGrowth],
                   empiricalGrowthData.organicGrowth[indexGrowth],
                   marketCapitalization,
-                  numberOfYearsOfGrowthForDcmValuation,
+                  cc.number_of_years_of_growth,
                   appendTermRecord,
                   setNansToMissingValue,
                   parentName,
@@ -3806,7 +3587,7 @@ int main (int argc, char* argv[]) {
                   empiricalGrowthDataAll.returnOnCapitalDeployed[0],                
                   empiricalGrowthDataAll.organicGrowth[0],
                   marketCapitalization,   
-                  numberOfYearsOfGrowthForDcmValuation,
+                  cc.number_of_years_of_growth,
                   appendTermRecord,
                   setNansToMissingValue,
                   parentName,
@@ -3843,8 +3624,8 @@ int main (int argc, char* argv[]) {
             equityGrowthModel,
             financialRatios,
             peMarketVariationUpperBound,
-            discountRate,
-            numberOfYearsOfGrowthForDcmValuation,
+            cc.discount_rate,
+            cc.number_of_years_of_growth,
             appendTermRecord,
             setNansToMissingValue,
             parentName,
@@ -3882,8 +3663,8 @@ int main (int argc, char* argv[]) {
             revenueGrowthModel,
             revenueFcfModel,
             marketCapitalization,
-            discountRate,
-            numberOfYearsOfGrowthForDcmValuation,
+            cc.discount_rate,
+            cc.number_of_years_of_growth,
             appendTermRecord,
             setNansToMissingValue,
             parentName,
@@ -3917,8 +3698,8 @@ int main (int argc, char* argv[]) {
             revenueGrowthModelAvg,
             revenueFcfModelAvg,
             marketCapitalization,
-            discountRate,
-            numberOfYearsOfGrowthForDcmValuation,
+            cc.discount_rate,
+            cc.number_of_years_of_growth,
             appendTermRecord,
             setNansToMissingValue,
             parentName,

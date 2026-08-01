@@ -4,6 +4,7 @@
 #ifndef DATA_STRUCTURES
 #define DATA_STRUCTURES
 
+#include "JsonFunctions.h"
 
 const char *GEN = "General";
 const char *EARN = "Earnings";
@@ -49,6 +50,153 @@ enum EmpiricalGrowthModelTypes{
 class DataStructures {
 
   public:
+    //============================================================================
+    struct CurrencyConversion{
+      std::string historicalDataCurrency;
+      double historicalCurrencyScaling;
+      std::string fundamentalDataCurrency;
+      double historicalToFundamentalCurrencyConversion;
+      std::string date;
+      double dateNum;
+      CurrencyConversion():historicalDataCurrency(""),
+                           historicalCurrencyScaling(std::nan("1")),
+                           fundamentalDataCurrency(""),
+                           historicalToFundamentalCurrencyConversion(0.0),
+                           date(""),
+                           dateNum(std::nan("1")){};                           
+    };
+    //============================================================================
+    struct CalculationConfiguration{
+      std::string eod_toolkit_config_folder;
+      std::string default_spread_json_file;
+      std::string bond_yield_json_file;
+      std::string world_corporate_tax_rate_csv_file;
+      std::string equity_risk_premium_by_country_json_file;
+      std::string currency_units_json_file;
+      double default_interest_cover;
+      double default_tax_rate;
+      double default_risk_free_rate;
+      double default_beta;
+      double equity_risk_premium_usa;       
+      double discount_rate;
+      double mature_firm_fraction_debt_to_capital;
+      int number_of_years_to_average_capital_expenditures;
+      int number_of_years_of_growth;
+      int number_of_years_used_in_growth_rate_calculation;
+      int max_day_error;
+
+      CalculationConfiguration():
+        eod_toolkit_config_folder(""),
+        default_spread_json_file(""),
+        bond_yield_json_file(""),
+        world_corporate_tax_rate_csv_file(""),
+        equity_risk_premium_by_country_json_file(""),
+        currency_units_json_file(""),
+        default_interest_cover(std::nan("1")),
+        default_tax_rate(std::nan("1")),
+        default_risk_free_rate(std::nan("1")),
+        default_beta(std::nan("1")),
+        equity_risk_premium_usa(std::nan("1")),       
+        discount_rate(std::nan("1")),
+        mature_firm_fraction_debt_to_capital(std::nan("1")),
+        number_of_years_to_average_capital_expenditures(-1),
+        number_of_years_of_growth(-1),
+        number_of_years_used_in_growth_rate_calculation(-1),
+        max_day_error(-1)
+        {};
+      
+      void load( const std::string &configurationFile, 
+                 bool verbose=false)
+      {          
+        
+        nlohmann::ordered_json configData;
+        bool validConfigFile = JsonFunctions::loadJsonFile(configurationFile,
+                                                           configData, verbose);
+
+        JsonFunctions::getJsonString(
+            configData["eod_toolkit_config_folder"],
+                        eod_toolkit_config_folder);  
+        JsonFunctions::getJsonString(
+            configData["default_spread_json_file"],
+                        default_spread_json_file);  
+        JsonFunctions::getJsonString(
+            configData["bond_yield_json_file"],
+                        bond_yield_json_file);  
+        JsonFunctions::getJsonString(
+            configData["world_corporate_tax_rate_csv_file"],
+                        world_corporate_tax_rate_csv_file);  
+        JsonFunctions::getJsonString(
+            configData["equity_risk_premium_by_country_json_file"],
+                        equity_risk_premium_by_country_json_file);  
+        JsonFunctions::getJsonString(
+            configData["currency_units_json_file"],
+                        currency_units_json_file);  
+        //Add EOD full path
+
+        default_spread_json_file    = eod_toolkit_config_folder 
+                                      + default_spread_json_file;
+
+        bond_yield_json_file        = eod_toolkit_config_folder 
+                                      + bond_yield_json_file;
+
+        world_corporate_tax_rate_csv_file   
+                                    = eod_toolkit_config_folder 
+                                    + world_corporate_tax_rate_csv_file;
+
+        equity_risk_premium_by_country_json_file 
+                                    = eod_toolkit_config_folder 
+                                    + equity_risk_premium_by_country_json_file;
+
+        currency_units_json_file    = eod_toolkit_config_folder 
+                                    + currency_units_json_file;
+        
+
+        default_interest_cover                          = 
+          JsonFunctions::getJsonFloat(configData["default_interest_cover"]);
+
+        default_tax_rate                                = 
+          JsonFunctions::getJsonFloat(configData["default_tax_rate"]);
+
+        default_risk_free_rate                          = 
+          JsonFunctions::getJsonFloat(configData["default_risk_free_rate "]);
+
+        default_beta                                    = 
+          JsonFunctions::getJsonFloat(configData["default_beta"]);
+        
+        equity_risk_premium_usa                         = 
+          JsonFunctions::getJsonFloat(configData["equity_risk_premium_usa"]);       
+        
+        discount_rate                                   = 
+          JsonFunctions::getJsonFloat(configData["discount_rate"]);
+        
+        mature_firm_fraction_debt_to_capital            = 
+          JsonFunctions::getJsonFloat(
+              configData["mature_firm_fraction_debt_to_capital"]);
+        
+        number_of_years_to_average_capital_expenditures = 
+          static_cast<int>(
+            JsonFunctions::getJsonFloat(
+                configData["number_of_years_to_average_capital_expenditures"])
+          );
+        
+        number_of_years_of_growth                       = 
+          static_cast<int>(
+            JsonFunctions::getJsonFloat(configData["number_of_years_of_growth"])
+          );
+
+        number_of_years_used_in_growth_rate_calculation = 
+          static_cast<int>(
+            JsonFunctions::getJsonFloat(
+                configData["number_of_years_used_in_growth_rate_calculation"])
+          );
+        
+        max_day_error                                   = 
+          static_cast<int>(
+            JsonFunctions::getJsonFloat(configData["max_day_error"])
+          );
+
+      };
+    };
     //============================================================================
     struct ValuationMetricSummary{
       std::string date;

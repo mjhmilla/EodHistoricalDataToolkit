@@ -278,10 +278,16 @@ class FinancialAnalysisFunctions {
     };
     //==========================================================================
 
+
+    
     static double getHistoricalDataInFundamentalUnit(
                     const nlohmann::ordered_json &historicalDataEntry,
                     const nlohmann::ordered_json &fundamentalData,
                     bool setNansToMissingValue){
+
+
+      nlohmann::ordered_json currencyUnits;
+      //This will cause an error when used. This is a temporary placeholder.
 
       double value = JsonFunctions::getJsonFloat(historicalDataEntry,
                                                  setNansToMissingValue);
@@ -293,11 +299,40 @@ class FinancialAnalysisFunctions {
       std::string fundamentalCurrency;                                                 
       JsonFunctions::getJsonString( fundamentalData[FIN][BAL]["currency_symbol"],
                                     fundamentalCurrency);
-
+      
 
       if(fundamentalCurrency.compare(historicalCurrency) != 0){
 
-        bool converted=false;
+        //
+        // Check to see if the stock price is reported in fractions of the 
+        // base currency
+        //
+        bool scaleConverted=false;
+        for(auto &el : currencyUnits){
+          std::string currencyCode;
+          JsonFunctions::getJsonString(el["StockPriceCurrencyCode"],currencyCode);
+          if(currencyCode.compare(historicalCurrency)==0){
+
+            //Update the price scale
+            double currencyScale = 
+              JsonFunctions::getJsonFloat(el["StockPriceToCurrencyScale"]);
+            value = value*currencyScale;
+
+            //Update the currency name
+            JsonFunctions::getJsonString(el["Currency"],historicalCurrency);
+            scaleConverted=true;
+          }
+        }
+
+        bool currencyConverted=false;
+        if(fundamentalCurrency.compare(historicalCurrency) != 0){        
+          std::cout << "You are here" << std::endl;
+          std::abort();
+        }else{
+          currencyConverted=true;
+        }
+
+        /*
         for(int i=0; i<CurrencyScale.size();++i){
           int j = i*2;
           int k = j+1;
@@ -313,7 +348,8 @@ class FinancialAnalysisFunctions {
             converted=true;
           }
         }
-        if(!converted){
+        */
+        if(!currencyConverted){
 
           std::cerr << "getHistoricalDataInFundamentalUnit" << std::endl;
           std::cerr << "Error: could not find this pair of currency units "
