@@ -58,6 +58,8 @@ class DataStructures {
       double historicalToFundamentalCurrencyConversion;
       bool requiresForexConversion;
       nlohmann::ordered_json forexData;
+      std::vector<double> forexDataDates;
+
       std::string date;
       double dateNum;
       CurrencyConversion():historicalDataCurrency(""),
@@ -116,7 +118,7 @@ class DataStructures {
 
 
             bool found=false;
-            for(const auto & entry:std::filesystem::directory_iterator(
+            for(const auto &entry:std::filesystem::directory_iterator(
                                                       forexFolderPath)){
               std::string forexFileName(entry.path().filename().c_str());                                                        
               if( forexFileName.find(histFundForexName)!= std::string::npos){
@@ -130,6 +132,15 @@ class DataStructures {
             if(found){
               validConversion = 
                 JsonFunctions::loadJsonFile(histFundForexPath,forexData,true);
+              if(validConversion){
+                for(auto &el:forexData){
+                  std::string dateStr;
+                  JsonFunctions::getJsonString(el["date"],dateStr);
+                  double dateNum = 
+                    DateFunctions::convertToFractionalYear(dateStr);
+                  forexDataDates.push_back(dateNum);
+                }
+              }
             }else{
               validConversion=false;
             }
@@ -141,6 +152,37 @@ class DataStructures {
         return validConversion;
                       
       };
+
+      double convertHistoricalToFundamentalCurrency(
+                double price,
+                const std::string& date,              
+                bool setNansToMissingValue){
+        
+        double priceUpd = price*historicalCurrencyScaling;
+
+        if(requiresForexConversion){
+          //Go find the closest date in the Forex record
+          double dateNum = DateFunctions::convertToFractionalYear(date);
+          if(    dateNum <= forexDataDates[0] 
+              && dateNum >= forexDataDates[forexDataDates.size()-1]){
+
+            int indexDate = 
+              DateFunctions::getIndexClosestToDate(dateNum,forexDataDates);
+            double conversionRate = 
+              JsonFunctions::getJsonFloat(
+                forexData[indexDate]["adjusted_close"],false);
+            priceUpd = priceUpd*conversionRate;
+
+          }else{
+            priceUpd = std::nan("1");
+          }
+          if(std::isnan(priceUpd) && setNansToMissingValue){
+            priceUpd = JsonFunctions::MISSING_VALUE;
+          }          
+        }
+        return priceUpd;
+      };
+
     };
     //============================================================================
     struct CalculationConfiguration{

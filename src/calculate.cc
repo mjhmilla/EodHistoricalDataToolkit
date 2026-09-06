@@ -1802,6 +1802,24 @@ int main (int argc, char* argv[]) {
       }                                            
     }
 
+    //==========================================================================
+    // Load the necessary files to resolve the historical data and 
+    // fundamental data into the units of the fundamental data
+    //==========================================================================
+    DataStructures::CurrencyConversion currencyData;
+    if(validInput){
+      validInput = currencyData.initialize( fundamentalData,
+                                            historicalData,
+                                            currencyUnits,
+                                            forexFolder);                                                  
+    }
+
+    //==========================================================================
+    // Extract a set of common dates among all relevant data sets to analyze
+    //==========================================================================
+    std::cout << "You are here" << std::endl;
+    std::abort();
+
     std::vector< std::string > datesBondYields;
     
     DataStructures::AnalysisDates analysisDates;
@@ -1850,17 +1868,7 @@ int main (int argc, char* argv[]) {
       }
     }
 
-    //==========================================================================
-    // Load the necessary files to resolve the historical data and 
-    // fundamental data into the units of the fundamental data
-    //==========================================================================
-    DataStructures::CurrencyConversion currencyData;
-    if(validInput){
-      validInput = currencyData.initialize( fundamentalData,
-                                            historicalData,
-                                            currencyUnits,
-                                            forexFolder);
-    }
+
 
     //==========================================================================
     //
@@ -2106,17 +2114,16 @@ int main (int argc, char* argv[]) {
       double price;
       for(auto &el : historicalData){
         JsonFunctions::getJsonString(el["date"],dateStr);
-        //price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);
-        price = FinancialAnalysisFunctions::
-                getHistoricalDataInFundamentalUnit(
-                  el["adjusted_close"],
-                  fundamentalData,
-                  false);
-        
+
+        price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);
+        double priceUpd = currencyData.convertHistoricalToFundamentalCurrency(
+                              price,dateStr,setNansToMissingValue);
+
         if(price > minPriceAllowedInPriceModel){      
-          double dateNumerical = DateFunctions::convertToFractionalYear(dateStr);          
-          datesHistorical.push_back(dateNumerical);
-          priceHistorical.push_back(price);
+          double dateNumerical = 
+            DateFunctions::convertToFractionalYear(dateStr);          
+              datesHistorical.push_back(dateNumerical);
+              priceHistorical.push_back(priceUpd);
         }
       }
 
@@ -2828,18 +2835,28 @@ int main (int argc, char* argv[]) {
         double adjustedClosePrice = std::nan("1");
         double closePrice = std::nan("1");
         try{
+
+          //double price = 
+          //  FinancialAnalysisFunctions::
+          //    getHistoricalDataInFundamentalUnit(
+          //      historicalData[ indexHistoricalData ]["adjusted_close"],
+          //      fundamentalData,
+          //      setNansToMissingValue);
+
+          double price = JsonFunctions::getJsonFloat(
+                        historicalData[indexHistoricalData]["adjusted_close"],
+                        setNansToMissingValue);
+
           adjustedClosePrice = 
-            FinancialAnalysisFunctions::
-              getHistoricalDataInFundamentalUnit(
-                historicalData[ indexHistoricalData ]["adjusted_close"],
-                fundamentalData,
-                setNansToMissingValue);
-          closePrice = 
-            FinancialAnalysisFunctions::
-              getHistoricalDataInFundamentalUnit(
-                historicalData[ indexHistoricalData ]["close"],
-                fundamentalData,
-                setNansToMissingValue);          
+            currencyData.convertHistoricalToFundamentalCurrency(
+              price,closestHistoricalDate,setNansToMissingValue);
+
+          //closePrice = 
+          //  FinancialAnalysisFunctions::
+          //    getHistoricalDataInFundamentalUnit(
+          //      historicalData[ indexHistoricalData ]["close"],
+          //      fundamentalData,
+          //      setNansToMissingValue);          
 
           //adjustedClosePrice = JsonFunctions::getJsonFloat(
           //            historicalData[ indexHistoricalData ]["adjusted_close"],
