@@ -58,7 +58,8 @@ class DataStructures {
       double historicalToFundamentalCurrencyConversion;
       bool requiresForexConversion;
       nlohmann::ordered_json forexData;
-      std::vector<double> forexDataDates;
+      std::vector<double> forexDataDatesNum;
+      std::vector<std::string> forexDataDates;
 
       std::string date;
       double dateNum;
@@ -138,7 +139,8 @@ class DataStructures {
                   JsonFunctions::getJsonString(el["date"],dateStr);
                   double dateNum = 
                     DateFunctions::convertToFractionalYear(dateStr);
-                  forexDataDates.push_back(dateNum);
+                  forexDataDates.push_back(dateStr);
+                  forexDataDatesNum.push_back(dateNum);
                 }
               }
             }else{
@@ -160,14 +162,14 @@ class DataStructures {
         
         double priceUpd = price*historicalCurrencyScaling;
 
-        if(requiresForexConversion){
+        if(requiresForexConversion && !std::isnan(price)){
           //Go find the closest date in the Forex record
           double dateNum = DateFunctions::convertToFractionalYear(date);
-          if(    dateNum <= forexDataDates[0] 
-              && dateNum >= forexDataDates[forexDataDates.size()-1]){
+          if(    dateNum <= forexDataDatesNum[0] 
+              && dateNum >= forexDataDatesNum[forexDataDatesNum.size()-1]){
 
             int indexDate = 
-              DateFunctions::getIndexClosestToDate(dateNum,forexDataDates);
+              DateFunctions::getIndexClosestToDate(dateNum,forexDataDatesNum);
             double conversionRate = 
               JsonFunctions::getJsonFloat(
                 forexData[indexDate]["adjusted_close"],false);
@@ -417,12 +419,14 @@ class DataStructures {
       std::vector< std::string > outstandingShares;
       std::vector< std::string > historical;
       std::vector< std::string > bond;
+      std::vector< std::string > forex; 
       double durationInYears;
       std::vector< unsigned int > indicesFinancial;
       std::vector< unsigned int > indicesEarningsHistory;
       std::vector< unsigned int > indicesOutstandingShares;
       std::vector< unsigned int > indicesHistorical;
       std::vector< unsigned int > indicesBond;
+      std::vector< unsigned int > indicesForex;
 
       std::vector< bool > isAnnualReport;
 
@@ -433,6 +437,7 @@ class DataStructures {
       std::string recentOutstandingSharesDate;
       std::string recentHistoricalDate;
       std::string recentBondDate;      
+      std::string recentForexDate;
     };
 
     //==========================================================================

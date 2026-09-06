@@ -283,6 +283,7 @@ bool extractAnalysisDates(
       const nlohmann::ordered_json &fundamentalData,
       const nlohmann::ordered_json &historicalData,
       const nlohmann::ordered_json &bondData,
+      const DataStructures::CurrencyConversion &currencyData,
       const std::string &timePeriod,
       const std::string &timePeriodOutstandingShares,
       int maxDayErrorHistoricalData,
@@ -299,11 +300,13 @@ bool extractAnalysisDates(
   analysisDates.outstandingShares.clear();
   analysisDates.historical.clear();
   analysisDates.bond.clear();
+  analysisDates.forex.clear();
   analysisDates.indicesFinancial.clear();
   analysisDates.indicesEarningsHistory.clear();  
   analysisDates.indicesOutstandingShares.clear();
   analysisDates.indicesHistorical.clear();
   analysisDates.indicesBond.clear();
+  analysisDates.indicesForex.clear();
 
   analysisDates.recentCashFlowDate.clear();
   analysisDates.recentIncomeStatementDate.clear();
@@ -312,6 +315,7 @@ bool extractAnalysisDates(
   analysisDates.recentOutstandingSharesDate.clear();
   analysisDates.recentHistoricalDate.clear();
   analysisDates.recentBondDate.clear();
+  analysisDates.recentForexDate.clear();
 
   analysisDates.durationInYears=0.;
 
@@ -395,6 +399,21 @@ bool extractAnalysisDates(
         common=false;
       }
 
+      if(currencyData.requiresForexConversion){
+        size_t n=0;
+        found=false;
+        while(!found && n < currencyData.forexDataDates.size()){
+          if(datesBAL[i].compare(currencyData.forexDataDates[n])==0){
+            found=true;
+          }else{
+            ++n;
+          }
+        }
+        if(n==currencyData.forexDataDates.size()){
+          common=false;
+        }
+      }
+      
       if(common){
         analysisDates.financial.push_back(datesBAL[i]);
       }
@@ -440,6 +459,13 @@ bool extractAnalysisDates(
       analysisDates.bond.push_back(el.key());
     }
     validDates = (validDates && analysisDates.bond.size() > 0);
+
+    if(currencyData.requiresForexConversion){
+      analysisDates.forex=currencyData.forexDataDates;
+      validDates = (validDates && analysisDates.forex.size() > 0);
+      analysisDates.recentForexDate 
+        = extractMostRecentDate(analysisDates.forex);
+    }
 
     analysisDates.recentHistoricalDate 
       = extractMostRecentDate(analysisDates.historical);
@@ -538,6 +564,7 @@ bool extractAnalysisDates(
         }                                    
       }
     }
+    
 
     //Extract common dates between
     // financial
@@ -649,6 +676,56 @@ bool extractAnalysisDates(
     }
 
 
+   if(validDates && currencyData.requiresForexConversion){
+      std::vector< std::string > commonAB;
+      std::vector< unsigned int> indicesA;
+
+      validDates =     
+        extractDatesOfClosestMatch(
+          analysisDates.common,
+          "%Y-%m-%d",
+          analysisDates.forex,
+          "%Y-%m-%d",
+          maxDayErrorHistoricalData,
+          commonAB,
+          indicesA,
+          analysisDates.indicesForex,
+          allowRepeatedDates);
+
+      //Go through commonAB and common and erase any entries in common that
+      //don't exist in commonAB;
+      if(commonAB.size() < analysisDates.common.size() && validDates){
+        size_t indexA = 0;
+        while(indexA < analysisDates.common.size()){
+          std::string dateA = analysisDates.common[indexA];
+          bool found = false;
+          for(auto& dateB :commonAB){
+            if(dateA.compare(dateB) == 0){
+              found = true;
+              break;
+            }
+          }
+          if(found == false){
+            analysisDates.common.erase(
+                analysisDates.common.begin()+indexA);
+            analysisDates.indicesFinancial.erase(
+                analysisDates.indicesFinancial.begin()+indexA);
+            analysisDates.indicesHistorical.erase(
+                analysisDates.indicesHistorical.begin()+indexA);
+            analysisDates.indicesOutstandingShares.erase(
+                analysisDates.indicesOutstandingShares.begin()+indexA);
+            analysisDates.indicesBond.erase(
+                analysisDates.indicesBond.begin()+indexA);
+            analysisDates.indicesEarningsHistory.erase(
+                analysisDates.indicesEarningsHistory.begin()+indexA);                
+          }else{
+            ++indexA;
+          }        
+        }                                    
+      }
+    }
+
+
     //Check to make sure that all date and index vectors are the same
     //length. Note that they won't all necessarily have the same date
     //because some error is allowed to accomodate for the fact that
@@ -674,6 +751,13 @@ bool extractAnalysisDates(
       validDates = validDates 
         && (analysisDates.common.size()
             ==analysisDates.indicesEarningsHistory.size());
+
+      if(currencyData.requiresForexConversion){
+        validDates = validDates 
+          && (analysisDates.common.size()
+              ==analysisDates.indicesForex.size());
+      }
+
     }
 
     //Go through all of the common dates and mark which ones coincide with
@@ -1817,8 +1901,7 @@ int main (int argc, char* argv[]) {
     //==========================================================================
     // Extract a set of common dates among all relevant data sets to analyze
     //==========================================================================
-    std::cout << "You are here" << std::endl;
-    std::abort();
+
 
     std::vector< std::string > datesBondYields;
     
@@ -1833,6 +1916,7 @@ int main (int argc, char* argv[]) {
           fundamentalData,
           historicalData,
           jsonBondYield["US"]["10y_bond_yield"],
+          currencyData,
           timePeriod,
           timePeriodOS,
           maxDayErrorHistoricalData,
@@ -2119,11 +2203,13 @@ int main (int argc, char* argv[]) {
         double priceUpd = currencyData.convertHistoricalToFundamentalCurrency(
                               price,dateStr,setNansToMissingValue);
 
-        if(price > minPriceAllowedInPriceModel){      
-          double dateNumerical = 
-            DateFunctions::convertToFractionalYear(dateStr);          
-              datesHistorical.push_back(dateNumerical);
-              priceHistorical.push_back(priceUpd);
+        if(!std::isnan(priceUpd)){
+          if(priceUpd > minPriceAllowedInPriceModel){      
+            double dateNumerical = 
+              DateFunctions::convertToFractionalYear(dateStr);          
+                datesHistorical.push_back(dateNumerical);
+                priceHistorical.push_back(priceUpd);
+          }
         }
       }
 
@@ -2401,6 +2487,7 @@ int main (int argc, char* argv[]) {
           fundamentalData,
           historicalData,
           jsonBondYield["US"]["10y_bond_yield"],
+          currencyData,
           Y,
           A,
           maxDayErrorHistoricalData,
