@@ -277,8 +277,6 @@ class FinancialAnalysisFunctions {
       updEodFileName.append(".json");
     };
     //==========================================================================
-
-
     
     static double getHistoricalDataInFundamentalUnit(
                     const nlohmann::ordered_json &historicalDataEntry,

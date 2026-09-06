@@ -56,14 +56,91 @@ class DataStructures {
       double historicalCurrencyScaling;
       std::string fundamentalDataCurrency;
       double historicalToFundamentalCurrencyConversion;
+      bool requiresForexConversion;
+      nlohmann::ordered_json forexData;
       std::string date;
       double dateNum;
       CurrencyConversion():historicalDataCurrency(""),
                            historicalCurrencyScaling(std::nan("1")),
                            fundamentalDataCurrency(""),
                            historicalToFundamentalCurrencyConversion(0.0),
+                           requiresForexConversion(false),
                            date(""),
-                           dateNum(std::nan("1")){};                           
+                           dateNum(std::nan("1")){}; 
+
+      bool initialize(const nlohmann::ordered_json &fundamentalData,
+                      const nlohmann::ordered_json &historicalDataEntry,                      
+                      const nlohmann::ordered_json &currencyUnits,
+                      const std::string& forexFolderPath)
+      {
+        bool validConversion=true;
+
+        JsonFunctions::getJsonString( 
+            fundamentalData[GEN]["CurrencyCode"], historicalDataCurrency);
+                                              
+        JsonFunctions::getJsonString( 
+            fundamentalData[FIN][BAL]["currency_symbol"], fundamentalDataCurrency);
+        
+        historicalCurrencyScaling=1.0;
+        historicalToFundamentalCurrencyConversion=1.0;
+
+        if(fundamentalDataCurrency.compare(historicalDataCurrency) != 0){
+          
+          //scale the stock price if its from the same currency but listed in 
+          //different units (e.g. pence and GBP)
+          for(auto &el : currencyUnits){
+            std::string currencyCode;
+            JsonFunctions::getJsonString(el["StockPriceCurrencyCode"],currencyCode);
+            if(currencyCode.compare(historicalDataCurrency)==0){
+              //Update the price scale
+              historicalCurrencyScaling = 
+                JsonFunctions::getJsonFloat(el["StockPriceToCurrencyScale"]);
+              //Update the currency name
+              JsonFunctions::getJsonString(el["Currency"],historicalDataCurrency);
+
+              break;
+            }
+          }
+
+          //If the fundamental and historical currencies still differ, then
+          //we have to fetch the correct FOREX data.
+          if(fundamentalDataCurrency.compare(historicalDataCurrency) != 0){
+
+            requiresForexConversion=true;
+
+            //Check to see if a direct conversion exists between these
+            //currencies
+            std::string histFundForexName(historicalDataCurrency);
+            histFundForexName.append(fundamentalDataCurrency);
+            std::string histFundForexPath("");
+
+
+            bool found=false;
+            for(const auto & entry:std::filesystem::directory_iterator(
+                                                      forexFolderPath)){
+              std::string forexFileName(entry.path().filename().c_str());                                                        
+              if( forexFileName.find(histFundForexName)!= std::string::npos){
+                histFundForexPath = entry.path().c_str();
+                found=true;
+                break;
+              }
+            }
+            
+            //If a FOREX conversion file was found, load it
+            if(found){
+              validConversion = 
+                JsonFunctions::loadJsonFile(histFundForexPath,forexData,true);
+            }else{
+              validConversion=false;
+            }
+
+
+          }    
+        
+        }
+        return validConversion;
+                      
+      };
     };
     //============================================================================
     struct CalculationConfiguration{

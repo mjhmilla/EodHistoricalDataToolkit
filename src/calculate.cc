@@ -1851,6 +1851,18 @@ int main (int argc, char* argv[]) {
     }
 
     //==========================================================================
+    // Load the necessary files to resolve the historical data and 
+    // fundamental data into the units of the fundamental data
+    //==========================================================================
+    DataStructures::CurrencyConversion currencyData;
+    if(validInput){
+      validInput = currencyData.initialize( fundamentalData,
+                                            historicalData,
+                                            currencyUnits,
+                                            forexFolder);
+    }
+
+    //==========================================================================
     //
     // Process these files, if all of the inputs are valid
     //
