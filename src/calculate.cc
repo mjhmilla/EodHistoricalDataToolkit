@@ -2200,7 +2200,7 @@ int main (int argc, char* argv[]) {
         JsonFunctions::getJsonString(el["date"],dateStr);
 
         price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);
-        double priceUpd = currencyData.convertHistoricalToFundamentalCurrency(
+        double priceUpd = currencyData.convertToFundamentalCurrency(
                               price,dateStr,setNansToMissingValue);
 
         if(!std::isnan(priceUpd)){
@@ -2930,13 +2930,14 @@ int main (int argc, char* argv[]) {
           //      fundamentalData,
           //      setNansToMissingValue);
 
-          double price = JsonFunctions::getJsonFloat(
-                        historicalData[indexHistoricalData]["adjusted_close"],
-                        setNansToMissingValue);
+          //double price = JsonFunctions::getJsonFloat(
+          //              historicalData[indexHistoricalData]["adjusted_close"],
+          //              setNansToMissingValue);
 
           adjustedClosePrice = 
-            currencyData.convertHistoricalToFundamentalCurrency(
-              price,closestHistoricalDate,setNansToMissingValue);
+            currencyData.convertToFundamentalCurrency(
+                        indexHistoricalData,historicalData,"adjusted_close",
+                        setNansToMissingValue);
 
           //closePrice = 
           //  FinancialAnalysisFunctions::
@@ -3476,6 +3477,7 @@ int main (int argc, char* argv[]) {
                 FinancialAnalysisFunctions::
                   calcShareholderYield( fundamentalData, 
                                         historicalData,
+                                        currencyData,                                        
                                         dateSet,
                                         previousDateSet,
                                         timePeriod.c_str(), 

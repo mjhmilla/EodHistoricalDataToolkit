@@ -2609,6 +2609,7 @@ class FinancialAnalysisFunctions {
     static double calcShareholderYield(
           const nlohmann::ordered_json &fundamentalData, 
           const nlohmann::ordered_json &historicalData,
+          const DataStructures::CurrencyConversion& currencyData,          
           const DateFunctions::DateSetTTM &dateSet,
           const DateFunctions::DateSetTTM &previousDateSet,
           const char *timeUnit, 
@@ -2665,6 +2666,7 @@ class FinancialAnalysisFunctions {
         //
         double sharePriceAvg = 0.;
         int sharePriceCount = 0;
+        std::string dateStr;
         int indexA = FinancialAnalysisFunctions::
                     calcIndexOfClosestDateInHistoricalData(
                           dateSet.dates[0],
@@ -2680,12 +2682,10 @@ class FinancialAnalysisFunctions {
                           "%Y-%m-%d",
                           false);
         for (int i=indexB; i<indexA;++i){
-          double stockPrice = getHistoricalDataInFundamentalUnit(
-                                historicalData[i]["adjusted_close"],
-                                fundamentalData,
-                                false);            
-          //double stockPrice = JsonFunctions::getJsonFloat(
-          //    historicalData[i]["adjusted_close"],false);
+
+          double stockPrice = conversionData.convertToFundamentalCurrency(
+                                      i,historicalData,"adjusted_close",
+                                      setNansToMissingValue);
 
           if(!std::isnan(stockPrice)){
             sharePriceAvg += stockPrice;
@@ -2712,14 +2712,20 @@ class FinancialAnalysisFunctions {
                         "%Y-%m-%d",
                         false);
 
-        double stockPrice = 
-          getHistoricalDataInFundamentalUnit(
-            historicalData[index]["adjusted_close"],
-            fundamentalData,
-            false);
+        //double stockPrice = 
+        //  getHistoricalDataInFundamentalUnit(
+        //    historicalData[index]["adjusted_close"],
+        //    fundamentalData,
+        //    false);
+        //double stockPrice = conversionData.convertToFundamentalCurrency(
+        //                        index,historicalData,setNansToMissingValue);
 
-        //double stockPrice = JsonFunctions::getJsonFloat(
+        //double stockPriceHD = JsonFunctions::getJsonFloat(
         //      historicalData[index]["adjusted_close"],false);
+        //JsonFunctions::getJsonString(historicalData[index]["date"],dateStr);
+        double stockPrice = conversionData.convertToFundamentalCurrency(
+                              index,historicalData,"adjusted_close",
+                              setNansToMissingValue);
 
         double marketCap = stockPrice*outstandingShares;              
 

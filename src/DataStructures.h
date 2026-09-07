@@ -55,7 +55,6 @@ class DataStructures {
       std::string historicalDataCurrency;
       double historicalCurrencyScaling;
       std::string fundamentalDataCurrency;
-      double historicalToFundamentalCurrencyConversion;
       bool requiresForexConversion;
       nlohmann::ordered_json forexData;
       std::vector<double> forexDataDatesNum;
@@ -66,7 +65,6 @@ class DataStructures {
       CurrencyConversion():historicalDataCurrency(""),
                            historicalCurrencyScaling(std::nan("1")),
                            fundamentalDataCurrency(""),
-                           historicalToFundamentalCurrencyConversion(0.0),
                            requiresForexConversion(false),
                            date(""),
                            dateNum(std::nan("1")){}; 
@@ -155,14 +153,15 @@ class DataStructures {
                       
       };
 
-      double convertHistoricalToFundamentalCurrency(
-                double price,
+
+      double convertToFundamentalCurrency(
+                double stockPrice,
                 const std::string& date,              
                 bool setNansToMissingValue){
         
-        double priceUpd = price*historicalCurrencyScaling;
+        double stockPriceUpd = stockPrice*historicalCurrencyScaling;
 
-        if(requiresForexConversion && !std::isnan(price)){
+        if(requiresForexConversion && !std::isnan(stockPrice)){
           //Go find the closest date in the Forex record
           double dateNum = DateFunctions::convertToFractionalYear(date);
           if(    dateNum <= forexDataDatesNum[0] 
@@ -173,17 +172,38 @@ class DataStructures {
             double conversionRate = 
               JsonFunctions::getJsonFloat(
                 forexData[indexDate]["adjusted_close"],false);
-            priceUpd = priceUpd*conversionRate;
+            stockPriceUpd = stockPriceUpd*conversionRate;
 
           }else{
-            priceUpd = std::nan("1");
+            stockPriceUpd = std::nan("1");
           }
-          if(std::isnan(priceUpd) && setNansToMissingValue){
-            priceUpd = JsonFunctions::MISSING_VALUE;
+          if(std::isnan(stockPriceUpd) && setNansToMissingValue){
+            stockPriceUpd = JsonFunctions::MISSING_VALUE;
           }          
         }
-        return priceUpd;
+        return stockPriceUpd;
       };
+
+      double convertToFundamentalCurrency(
+                int indexHistoricalData,
+                const nlohmann::ordered_json& historicalData,
+                const char* priceFieldName,
+                bool setNansToMissingValue){
+
+        std::string dateStr;
+
+        JsonFunctions::getJsonString(
+            historicalData[indexHistoricalData]["date"],dateStr);
+
+        double stockPriceHD = JsonFunctions::getJsonFloat(
+            historicalData[indexHistoricalData][priceFieldName],false);
+
+        double stockPrice = convertToFundamentalCurrency(
+                stockPriceHD,dateStr,setNansToMissingValue);
+
+        return stockPrice;
+      };
+
 
     };
     //============================================================================
