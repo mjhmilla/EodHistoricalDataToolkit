@@ -24,7 +24,65 @@ const static std::vector< double > CurrencyScale = { 0.01 };
 class FinancialAnalysisFunctions {
 
   public:
-    
+
+    //==========================================================================
+
+      static double convertToFundamentalCurrency(
+                    const DataStructures::CurrencyConversion &currencyData,
+                    double stockPrice,
+                    const std::string& date,              
+                    bool setNansToMissingValue){
+        
+        double stockPriceUpd = 
+          stockPrice*currencyData.historicalCurrencyScaling;
+
+        if(currencyData.requiresForexConversion && !std::isnan(stockPrice)){
+          //Go find the closest date in the Forex record
+          double dateNum = DateFunctions::convertToFractionalYear(date);
+          if(    dateNum <= currencyData.forexDataDatesNum[0] 
+              && dateNum >= currencyData.forexDataDatesNum[
+                              currencyData.forexDataDatesNum.size()-1]){
+
+            int indexDate = 
+              DateFunctions::getIndexClosestToDate(dateNum,
+                              currencyData.forexDataDatesNum);
+            double conversionRate = 
+              JsonFunctions::getJsonFloat(
+                currencyData.forexData[indexDate]["adjusted_close"],false);
+            stockPriceUpd = stockPriceUpd*conversionRate;
+
+          }else{
+            stockPriceUpd = std::nan("1");
+          }
+          if(std::isnan(stockPriceUpd) && setNansToMissingValue){
+            stockPriceUpd = JsonFunctions::MISSING_VALUE;
+          }          
+        }
+        return stockPriceUpd;
+      };
+
+    //==========================================================================
+
+      static double convertToFundamentalCurrency(
+                      const DataStructures::CurrencyConversion &currencyData,
+                      unsigned int indexHistoricalData,
+                      const nlohmann::ordered_json& historicalData,
+                      const char* priceFieldName,
+                      bool setNansToMissingValue){
+
+        std::string dateStr;
+
+        JsonFunctions::getJsonString(
+            historicalData[indexHistoricalData]["date"],dateStr);
+
+        double stockPriceHD = JsonFunctions::getJsonFloat(
+            historicalData[indexHistoricalData][priceFieldName],false);
+
+        double stockPrice = convertToFundamentalCurrency(
+                currencyData,stockPriceHD,dateStr,setNansToMissingValue);
+
+        return stockPrice;
+      };
 
 
     //==========================================================================
@@ -90,12 +148,12 @@ class FinancialAnalysisFunctions {
     };
 
     //==========================================================================
-    static int calcIndexOfClosestDateInHistoricalData(
-                  const std::string &targetDate,
-                  const char* targetDateFormat,
-                  const nlohmann::ordered_json &historicalData,
-                  const char* dateSetFormat,
-                  bool verbose){
+    static unsigned int calcIndexOfClosestDateInHistoricalData(
+                          const std::string &targetDate,
+                          const char* targetDateFormat,
+                          const nlohmann::ordered_json &historicalData,
+                          const char* dateSetFormat,
+                          bool verbose){
 
       int indexA = 0;
       int indexB = historicalData.size()-1;
@@ -138,9 +196,9 @@ class FinancialAnalysisFunctions {
       }
 
       if(std::abs(indexAError) <= std::abs(indexBError)){
-        return indexA;
+        return static_cast<unsigned int>(indexA);
       }else{
-        return indexB;
+        return static_cast<unsigned int>(indexB);
       }
 
 
@@ -2667,23 +2725,24 @@ class FinancialAnalysisFunctions {
         double sharePriceAvg = 0.;
         int sharePriceCount = 0;
         std::string dateStr;
-        int indexA = FinancialAnalysisFunctions::
+        unsigned int indexA = FinancialAnalysisFunctions::
                     calcIndexOfClosestDateInHistoricalData(
                           dateSet.dates[0],
                           "%Y-%m-%d",
                           historicalData,
                           "%Y-%m-%d",
                           false);
-        int indexB = FinancialAnalysisFunctions::
+        unsigned int indexB = FinancialAnalysisFunctions::
                       calcIndexOfClosestDateInHistoricalData(
                           previousDateSet.dates[0],
                           "%Y-%m-%d",
                           historicalData,
                           "%Y-%m-%d",
                           false);
-        for (int i=indexB; i<indexA;++i){
+        for (unsigned int i=indexB; i<indexA;++i){
 
-          double stockPrice = conversionData.convertToFundamentalCurrency(
+          double stockPrice = convertToFundamentalCurrency(
+                                      currencyData,
                                       i,historicalData,"adjusted_close",
                                       setNansToMissingValue);
 
@@ -2704,13 +2763,13 @@ class FinancialAnalysisFunctions {
         double changeInDebt =  debtInfo.longTermDebtEstimate
                               -previousDebtInfo.longTermDebtEstimate;
 
-        int index = FinancialAnalysisFunctions::
-                      calcIndexOfClosestDateInHistoricalData(
-                        dateSet.dates[0],
-                        "%Y-%m-%d",
-                        historicalData,
-                        "%Y-%m-%d",
-                        false);
+        unsigned int index = FinancialAnalysisFunctions::
+                                calcIndexOfClosestDateInHistoricalData(
+                                  dateSet.dates[0],
+                                  "%Y-%m-%d",
+                                  historicalData,
+                                  "%Y-%m-%d",
+                                  false);
 
         //double stockPrice = 
         //  getHistoricalDataInFundamentalUnit(
@@ -2723,7 +2782,9 @@ class FinancialAnalysisFunctions {
         //double stockPriceHD = JsonFunctions::getJsonFloat(
         //      historicalData[index]["adjusted_close"],false);
         //JsonFunctions::getJsonString(historicalData[index]["date"],dateStr);
-        double stockPrice = conversionData.convertToFundamentalCurrency(
+
+        double stockPrice = convertToFundamentalCurrency(
+                              currencyData,
                               index,historicalData,"adjusted_close",
                               setNansToMissingValue);
 

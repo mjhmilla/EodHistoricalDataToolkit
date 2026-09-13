@@ -282,8 +282,8 @@ bool extractAnalysisDates(
       DataStructures::AnalysisDates &analysisDates,
       const nlohmann::ordered_json &fundamentalData,
       const nlohmann::ordered_json &historicalData,
-      const nlohmann::ordered_json &bondData,
       const DataStructures::CurrencyConversion &currencyData,
+      const nlohmann::ordered_json &bondData,
       const std::string &timePeriod,
       const std::string &timePeriodOutstandingShares,
       int maxDayErrorHistoricalData,
@@ -1915,8 +1915,8 @@ int main (int argc, char* argv[]) {
           analysisDates,
           fundamentalData,
           historicalData,
+          currencyData,          
           jsonBondYield["US"]["10y_bond_yield"],
-          currencyData,
           timePeriod,
           timePeriodOS,
           maxDayErrorHistoricalData,
@@ -2200,8 +2200,9 @@ int main (int argc, char* argv[]) {
         JsonFunctions::getJsonString(el["date"],dateStr);
 
         price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);
-        double priceUpd = currencyData.convertToFundamentalCurrency(
-                              price,dateStr,setNansToMissingValue);
+        double priceUpd = 
+            FinancialAnalysisFunctions::convertToFundamentalCurrency(
+                    currencyData,price,dateStr,setNansToMissingValue);
 
         if(!std::isnan(priceUpd)){
           if(priceUpd > minPriceAllowedInPriceModel){      
@@ -2467,6 +2468,7 @@ int main (int argc, char* argv[]) {
       NumericalFunctions::extractFinancialRatios(
                           fundamentalData,
                           historicalData,
+                          currencyData,
                           analysisDates,
                           timePeriod,
                           timePeriodOS,
@@ -2486,8 +2488,8 @@ int main (int argc, char* argv[]) {
           analysisDatesYearly,
           fundamentalData,
           historicalData,
+          currencyData,          
           jsonBondYield["US"]["10y_bond_yield"],
-          currencyData,
           Y,
           A,
           maxDayErrorHistoricalData,
@@ -2501,6 +2503,7 @@ int main (int argc, char* argv[]) {
       NumericalFunctions::extractDividendInfo(
                             fundamentalData,
                             historicalData,
+                            currencyData,                            
                             analysisDatesYearly,
                             Y,
                             A,
@@ -2935,9 +2938,9 @@ int main (int argc, char* argv[]) {
           //              setNansToMissingValue);
 
           adjustedClosePrice = 
-            currencyData.convertToFundamentalCurrency(
-                        indexHistoricalData,historicalData,"adjusted_close",
-                        setNansToMissingValue);
+          FinancialAnalysisFunctions::convertToFundamentalCurrency(
+              currencyData,indexHistoricalData,historicalData,"adjusted_close",
+              setNansToMissingValue);
 
           //closePrice = 
           //  FinancialAnalysisFunctions::
@@ -3537,6 +3540,7 @@ int main (int argc, char* argv[]) {
           bool success=NumericalFunctions::evaluateRecentValuationMetrics(
                                               fundamentalData,
                                               historicalData,
+                                              currencyData,
                                               valuationMetricSummary);
           
         }
@@ -3577,6 +3581,7 @@ int main (int argc, char* argv[]) {
           bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                                   fundamentalData,
                                                   historicalData,
+                                                  currencyData,
                                                   adjustedClosePrice,
                                                   outstandingShares,
                                                   priceToValue,
@@ -3647,7 +3652,8 @@ int main (int argc, char* argv[]) {
               std::string fieldName = parentName.substr(0,parentName.size()-1);
               bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                     fundamentalData,
-                                    historicalData,
+                                    historicalData,                                    
+                                    currencyData,
                                     adjustedClosePrice,
                                     outstandingShares,
                                     priceToValueEmpirical,
@@ -3719,6 +3725,7 @@ int main (int argc, char* argv[]) {
               bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                     fundamentalData,
                                     historicalData,
+                                    currencyData,
                                     adjustedClosePrice,
                                     outstandingShares,
                                     priceToValueEmpiricalAvg,
@@ -3758,6 +3765,7 @@ int main (int argc, char* argv[]) {
             bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                   fundamentalData,
                                   historicalData,
+                                  currencyData,
                                   pvSummary[idxPV].adjustedClosePrice,
                                   pvSummary[idxPV].numberOfShares,
                                   pvSummary[idxPV].priceToValue,
@@ -3797,6 +3805,7 @@ int main (int argc, char* argv[]) {
             bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                   fundamentalData,
                                   historicalData,
+                                  currencyData,
                                   adjustedClosePrice,
                                   outstandingShares,
                                   pvSummary[idxPV].priceToValue,
@@ -3831,6 +3840,7 @@ int main (int argc, char* argv[]) {
           bool success = NumericalFunctions::evaluateRecentPriceToValue(
                                 fundamentalData,
                                 historicalData,
+                                currencyData,
                                 adjustedClosePrice,
                                 outstandingShares,
                                 pvSummary[0].priceToValue,

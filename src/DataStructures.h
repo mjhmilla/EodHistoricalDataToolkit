@@ -83,7 +83,6 @@ class DataStructures {
             fundamentalData[FIN][BAL]["currency_symbol"], fundamentalDataCurrency);
         
         historicalCurrencyScaling=1.0;
-        historicalToFundamentalCurrencyConversion=1.0;
 
         if(fundamentalDataCurrency.compare(historicalDataCurrency) != 0){
           
@@ -152,58 +151,6 @@ class DataStructures {
         return validConversion;
                       
       };
-
-
-      double convertToFundamentalCurrency(
-                double stockPrice,
-                const std::string& date,              
-                bool setNansToMissingValue){
-        
-        double stockPriceUpd = stockPrice*historicalCurrencyScaling;
-
-        if(requiresForexConversion && !std::isnan(stockPrice)){
-          //Go find the closest date in the Forex record
-          double dateNum = DateFunctions::convertToFractionalYear(date);
-          if(    dateNum <= forexDataDatesNum[0] 
-              && dateNum >= forexDataDatesNum[forexDataDatesNum.size()-1]){
-
-            int indexDate = 
-              DateFunctions::getIndexClosestToDate(dateNum,forexDataDatesNum);
-            double conversionRate = 
-              JsonFunctions::getJsonFloat(
-                forexData[indexDate]["adjusted_close"],false);
-            stockPriceUpd = stockPriceUpd*conversionRate;
-
-          }else{
-            stockPriceUpd = std::nan("1");
-          }
-          if(std::isnan(stockPriceUpd) && setNansToMissingValue){
-            stockPriceUpd = JsonFunctions::MISSING_VALUE;
-          }          
-        }
-        return stockPriceUpd;
-      };
-
-      double convertToFundamentalCurrency(
-                int indexHistoricalData,
-                const nlohmann::ordered_json& historicalData,
-                const char* priceFieldName,
-                bool setNansToMissingValue){
-
-        std::string dateStr;
-
-        JsonFunctions::getJsonString(
-            historicalData[indexHistoricalData]["date"],dateStr);
-
-        double stockPriceHD = JsonFunctions::getJsonFloat(
-            historicalData[indexHistoricalData][priceFieldName],false);
-
-        double stockPrice = convertToFundamentalCurrency(
-                stockPriceHD,dateStr,setNansToMissingValue);
-
-        return stockPrice;
-      };
-
 
     };
     //============================================================================

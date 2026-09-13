@@ -823,6 +823,7 @@ class NumericalFunctions {
     static void extractDividendInfo(  
               const nlohmann::ordered_json &fundamentalData,
               const nlohmann::ordered_json &historicalData,
+              const DataStructures::CurrencyConversion &currencyData,
               const DataStructures::AnalysisDates &analysisDates,
               const char *timePeriod,
               const char *timePeriodOS,
@@ -884,8 +885,8 @@ class NumericalFunctions {
           = DateFunctions::convertToFractionalYear(datePrevious);
 
 
-        int indexHistoricalData = analysisDates.indicesHistorical[indexDate];
-
+        unsigned int indexHistoricalData 
+          = analysisDates.indicesHistorical[indexDate];
 
         // Go and get dividendsPaid, the stock price, freeCashFlow
         double dividendsPaid = JsonFunctions::getJsonFloat(
@@ -917,12 +918,17 @@ class NumericalFunctions {
         // Evaluate all yield values for this year
         //
       
+        //double stockPrice = 
+        //  FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+        //    historicalData[indexHistoricalData]["adjusted_close"],
+        //    fundamentalData,
+        //    setNansToMissingValue);
         double stockPrice = 
-          FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
-            historicalData[indexHistoricalData]["adjusted_close"],
-            fundamentalData,
-            setNansToMissingValue);
-            
+          FinancialAnalysisFunctions::convertToFundamentalCurrency(
+                        currencyData,
+                        indexHistoricalData,historicalData,"adjusted_close",
+                        setNansToMissingValue);
+
         //double stockPrice = 
         //  JsonFunctions::getJsonFloat(
         //    historicalData[indexHistoricalData]["adjusted_close"],
@@ -1145,6 +1151,7 @@ class NumericalFunctions {
     static void extractFinancialRatios(
               const nlohmann::ordered_json &fundamentalData,
               const nlohmann::ordered_json &historicalData,
+              const DataStructures::CurrencyConversion &currencyData,
               const DataStructures::AnalysisDates &analysisDates,
               const std::string &timePeriod,
               const std::string &timePeriodOS,
@@ -1260,20 +1267,31 @@ class NumericalFunctions {
           double closePrice = std::nan("1");
           try{
             adjustedClosePrice = 
-              FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
-                historicalData[ indexHistoricalData ]["adjusted_close"],
-                fundamentalData,
+              FinancialAnalysisFunctions::convertToFundamentalCurrency(
+                currencyData,
+                indexHistoricalData,historicalData,"adjusted_close",
                 setNansToMissingValue);
+
+            //adjustedClosePrice = 
+            //  FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+            //    historicalData[ indexHistoricalData ]["adjusted_close"],
+            //    fundamentalData,
+            //    setNansToMissingValue);
 
             //adjustedClosePrice = JsonFunctions::getJsonFloat(
             //            historicalData[ indexHistoricalData ]["adjusted_close"],
             //            setNansToMissingValue); 
 
+            //closePrice = 
+            //  FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+            //    historicalData[ indexHistoricalData ]["close"],
+            //    fundamentalData,
+            //    setNansToMissingValue);
             closePrice = 
-              FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
-                historicalData[ indexHistoricalData ]["close"],
-                fundamentalData,
-                setNansToMissingValue);
+              FinancialAnalysisFunctions::convertToFundamentalCurrency(
+                  currencyData,indexHistoricalData,historicalData,"close",
+                  setNansToMissingValue);
+
 
             //closePrice = JsonFunctions::getJsonFloat(
             //            historicalData[ indexHistoricalData ]["close"],
@@ -3167,13 +3185,14 @@ class NumericalFunctions {
     static bool evaluateRecentValuationMetrics(
                   const nlohmann::ordered_json &fundamentalData, 
                   const nlohmann::ordered_json &historicalData, 
+                  const DataStructures::CurrencyConversion &currencyData,
                   DataStructures::ValuationMetricSummary &valMetricUpd)
     {
       bool passed=true;
 
       try{
-        int indexA = 0;
-        int indexB = historicalData.size()-1;
+        unsigned int indexA = 0;
+        unsigned int indexB = historicalData.size()-1;
         std::string dateA;
         std::string dateB;
         double dateANum;
@@ -3186,7 +3205,7 @@ class NumericalFunctions {
                                      dateB);
         dateBNum = DateFunctions::convertToFractionalYear(dateB);
 
-        int index=0;        
+        unsigned int index=0;        
         if(dateANum > dateBNum){
           index = indexA;
           valMetricUpd.date = dateA;
@@ -3195,11 +3214,16 @@ class NumericalFunctions {
           valMetricUpd.date = dateB;
         }
 
-        double recentAdjustedClosePrice =
-          FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
-            historicalData[ index ]["adjusted_close"],
-            fundamentalData,
-            false);
+        double recentAdjustedClosePrice = 
+          FinancialAnalysisFunctions::convertToFundamentalCurrency(
+              currencyData, index,historicalData,"adjusted_close",
+              false);
+
+        //double recentAdjustedClosePrice =
+        //  FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+        //    historicalData[ index ]["adjusted_close"],
+        //    fundamentalData,
+        //    false);
 
         //double recentAdjustedClosePrice 
         //  = JsonFunctions::getJsonFloat(
@@ -3250,6 +3274,7 @@ class NumericalFunctions {
     static bool evaluateRecentPriceToValue(
             const nlohmann::ordered_json &fundamentalData, 
             const nlohmann::ordered_json &historicalData, 
+            const DataStructures::CurrencyConversion &currencyData,
             double adjustedClosePrice,
             double outstandingShares,
             double priceToValue,
@@ -3272,7 +3297,7 @@ class NumericalFunctions {
                                      dateB);
         dateBNum = DateFunctions::convertToFractionalYear(dateB);
 
-        int index=0;        
+        unsigned int index=0;        
         if(dateANum > dateBNum){
           index = indexA;
           pvUpd.recentDate = dateA;
@@ -3281,11 +3306,15 @@ class NumericalFunctions {
           pvUpd.recentDate = dateB;
         }
         
-        pvUpd.recentAdjustedClosePrice  =
-          FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
-            historicalData[ index ]["adjusted_close"],
-            fundamentalData,
-            false);         
+        pvUpd.recentAdjustedClosePrice = 
+          FinancialAnalysisFunctions::convertToFundamentalCurrency(
+            currencyData,index,historicalData,"adjusted_close",false);
+          
+        //pvUpd.recentAdjustedClosePrice  =
+        //  FinancialAnalysisFunctions::getHistoricalDataInFundamentalUnit(
+        //    historicalData[ index ]["adjusted_close"],
+        //    fundamentalData,
+        //    false);         
 
         //pvUpd.recentAdjustedClosePrice 
         //  = JsonFunctions::getJsonFloat(
