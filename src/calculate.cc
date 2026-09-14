@@ -2200,16 +2200,13 @@ int main (int argc, char* argv[]) {
         JsonFunctions::getJsonString(el["date"],dateStr);
 
         price = JsonFunctions::getJsonFloat(el["adjusted_close"],false);
-        double priceUpd = 
-            FinancialAnalysisFunctions::convertToFundamentalCurrency(
-                    currencyData,price,dateStr,setNansToMissingValue);
-
-        if(!std::isnan(priceUpd)){
-          if(priceUpd > minPriceAllowedInPriceModel){      
+        
+        if(!std::isnan(price)){
+          if(price > minPriceAllowedInPriceModel){      
             double dateNumerical = 
               DateFunctions::convertToFractionalYear(dateStr);          
                 datesHistorical.push_back(dateNumerical);
-                priceHistorical.push_back(priceUpd);
+                priceHistorical.push_back(price);
           }
         }
       }

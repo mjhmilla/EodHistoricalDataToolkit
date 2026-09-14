@@ -50,7 +50,8 @@ struct JsonMetaData{
 struct TickerMetaData{
   std::string primaryTicker;
   std::string companyName;
-  std::string currencyCode;
+  std::string currencyCode;   //The currency of the stock price 
+  std::string currencySymbol; //The currency used in the finanicals
   std::string country;
   std::string isin;
   std::string url;
@@ -58,6 +59,7 @@ struct TickerMetaData{
     primaryTicker(""),
     companyName(""),
     currencyCode(""),
+    currencySymbol(""),
     country(""),
     isin(""),
     url(""){}
@@ -111,6 +113,9 @@ void getTickerMetaData(
   JsonFunctions::getJsonString( fundamentalData[GEN]["CurrencyCode"],
                                 tickerMetaDataUpd.currencyCode);
 
+  JsonFunctions::getJsonString( fundamentalData[FIN][BAL]["currency_symbol"],
+                                tickerMetaDataUpd.currencySymbol);
+
   //ReportingFunctions::sanitizeStringForLaTeX(tickerMetaDataUpd.currencyCode);
 
   JsonFunctions::getJsonString(fundamentalData[GEN]["CountryName"],
@@ -155,30 +160,37 @@ void getFindAndReplacementVectors(const TickerMetaData &tickerMetaData,
   keywordsUpd.push_back("@URL");
   keywordsUpd.push_back("@CompanyNameLaTeX");
   keywordsUpd.push_back("@PrimaryTickerLaTeX");
-  keywordsUpd.push_back("@CurrencyCodeLaTeX");
-  keywordsUpd.push_back("@CountryNameLaTeX");
+  keywordsUpd.push_back("@CurrencyCodeLaTeX");    
+  keywordsUpd.push_back("@CurrencySymbolLaTeX");
+  keywordsUpd.push_back("@CountryNameLaTeX");    
   keywordsUpd.push_back("@CompanyName");
   keywordsUpd.push_back("@PrimaryTicker");
   keywordsUpd.push_back("@CurrencyCode");
+  keywordsUpd.push_back("@CurrencySymbol");
   keywordsUpd.push_back("@CountryName");
+  
 
   std::string companyNameLatex(tickerMetaData.companyName);
   std::string primaryTickerLatex(tickerMetaData.primaryTicker);
   std::string currencyCodeLatex(tickerMetaData.currencyCode);
+  std::string currencySymbolLatex(tickerMetaData.currencySymbol);
   std::string countryNameLatex(tickerMetaData.country);
   std::string companyName(tickerMetaData.companyName);
   std::string primaryTicker(tickerMetaData.primaryTicker);
   std::string currencyCode(tickerMetaData.currencyCode);
+  std::string currencySymbol(tickerMetaData.currencySymbol);
   std::string countryName(tickerMetaData.country);
 
   ReportingFunctions::sanitizeStringForLaTeX(companyNameLatex);
   ReportingFunctions::sanitizeStringForLaTeX(primaryTickerLatex);
   ReportingFunctions::sanitizeStringForLaTeX(currencyCodeLatex);
+  ReportingFunctions::sanitizeStringForLaTeX(currencySymbolLatex);
   ReportingFunctions::sanitizeStringForLaTeX(countryNameLatex);
 
   ReportingFunctions::sanitizeFolderName(companyName,true);
   ReportingFunctions::sanitizeFolderName(primaryTicker);
   ReportingFunctions::sanitizeFolderName(currencyCode);
+  ReportingFunctions::sanitizeFolderName(currencySymbol);
   ReportingFunctions::sanitizeFolderName(countryName);
 
   replacementUpd.push_back(tickerMetaData.url);      
@@ -186,11 +198,13 @@ void getFindAndReplacementVectors(const TickerMetaData &tickerMetaData,
   replacementUpd.push_back(companyNameLatex);
   replacementUpd.push_back(primaryTickerLatex);
   replacementUpd.push_back(currencyCodeLatex);
+  replacementUpd.push_back(currencySymbolLatex);
   replacementUpd.push_back(countryNameLatex);
 
   replacementUpd.push_back(companyName);
   replacementUpd.push_back(primaryTicker);
   replacementUpd.push_back(currencyCode);
+  replacementUpd.push_back(currencySymbol);
   replacementUpd.push_back(countryName);
 
 
