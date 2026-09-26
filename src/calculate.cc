@@ -1271,6 +1271,8 @@ int main (int argc, char* argv[]) {
   nlohmann::ordered_json currencyUnits;
   std::string nameOfHomeCountryISO3;
 
+  int numberOfYearsUsedInGrowthRateCalcOverride=-1;
+
 
   bool verbose;
 
@@ -1323,12 +1325,19 @@ int main (int argc, char* argv[]) {
     cmd.add(exchangeCodeInput);  
      
 
-    TCLAP::ValueArg<std::string> nameOfHomeCountryISO3Input("n",
+    TCLAP::ValueArg<std::string> nameOfHomeCountryISO3Input("m",
       "iso3_name_of_home_country", 
       "Name of your home country in ISO3 format (e.g. USA for the"
       " United States of America, DEU for Germany, etc)",
       false,"","string");
     cmd.add(nameOfHomeCountryISO3Input);  
+
+    
+    TCLAP::ValueArg<int> numberOfYearsUsedInGrowthRateCalcOverrideInput("n",
+      "number_years_used_in_growth_rate_calc",
+      "Number of years of past data used to estimate the growth rate",
+      false,-1,"int");
+    cmd.add(numberOfYearsUsedInGrowthRateCalcOverrideInput);
 
     TCLAP::SwitchArg relaxedCalculationInput("l","relaxed",
       "Relaxed calculation: nulls for some values (short term debt,"
@@ -1364,6 +1373,8 @@ int main (int argc, char* argv[]) {
     analyseFolder         = analyseFolderOutput.getValue();
     quarterlyTTMAnalysis  = quarterlyTTMAnalysisInput.getValue();
     nameOfHomeCountryISO3 = nameOfHomeCountryISO3Input.getValue(); 
+    numberOfYearsUsedInGrowthRateCalcOverride 
+      = numberOfYearsUsedInGrowthRateCalcOverrideInput.getValue();
 
     relaxedCalculation    = relaxedCalculationInput.getValue() ;
     verbose               = verboseInput.getValue();
@@ -1451,6 +1462,13 @@ int main (int argc, char* argv[]) {
                 << std::endl;
       std::cout << "    " << cc.number_of_years_used_in_growth_rate_calculation 
                 << std::endl;
+
+      if(numberOfYearsUsedInGrowthRateCalcOverride > 0){
+        std::cout << "  **Default overridden** " 
+                  << std::endl;
+        std::cout << "    " << numberOfYearsUsedInGrowthRateCalcOverride 
+                  << std::endl;
+      }
 
       std::cout << "  TO DO: Update code to use  number_of_years_used_in"
                    "_growth_rate_calculation" 
@@ -1902,7 +1920,14 @@ int main (int argc, char* argv[]) {
     // Extract a set of common dates among all relevant data sets to analyze
     //==========================================================================
 
+    int numberOfYearsUsedInGrowthRateCalc = 
+     cc.number_of_years_used_in_growth_rate_calculation;
 
+    if(numberOfYearsUsedInGrowthRateCalcOverride > 0){
+      numberOfYearsUsedInGrowthRateCalc 
+        = numberOfYearsUsedInGrowthRateCalcOverride;
+    }
+    
     std::vector< std::string > datesBondYields;
     
     DataStructures::AnalysisDates analysisDates;
@@ -1925,13 +1950,14 @@ int main (int argc, char* argv[]) {
           allowRepeatedDates);    
 
       bool sufficientData=true;
-      if(analysisDates.durationInYears < cc.number_of_years_of_growth){
+      if(analysisDates.durationInYears 
+          < numberOfYearsUsedInGrowthRateCalc){
         sufficientData=false;
       }
       int minNumberOfEntries = 
         std::max(static_cast<int>(
-                  std::round(cc.number_of_years_of_growth*0.5)),
-                3);
+                  std::round(numberOfYearsUsedInGrowthRateCalc)),
+                  2);
 
       if(analysisDates.common.size() < minNumberOfEntries){
         sufficientData=false;
@@ -2895,23 +2921,7 @@ int main (int argc, char* argv[]) {
               fundamentalData, 
               date,
               timePeriodOS.c_str());
-        /*
-        double outstandingShares = std::nan("1");
-        int smallestDateDifference=std::numeric_limits<int>::max();        
-        std::string closestDate("");
-        for(auto& el : fundamentalData[OS][timePeriodOS.c_str()]){
-          std::string dateOS("");
-          JsonFunctions::getJsonString(el["dateFormatted"],dateOS);         
-          int dateDifference = 
-            DateFunctions::calcDifferenceInDaysBetweenTwoDates(
-              date,"%Y-%m-%d",dateOS,"%Y-%m-%d");
-          if(std::abs(dateDifference)<smallestDateDifference){
-            closestDate = dateOS;
-            smallestDateDifference=std::abs(dateDifference);
-            outstandingShares = JsonFunctions::getJsonFloat(el["shares"]);
-          }
-        }
-        */
+
 
         unsigned int indexHistoricalData = 
           analysisDates.indicesHistorical[indexDate];   
@@ -2923,35 +2933,10 @@ int main (int argc, char* argv[]) {
         double closePrice = std::nan("1");
         try{
 
-          //double price = 
-          //  FinancialAnalysisFunctions::
-          //    getHistoricalDataInFundamentalUnit(
-          //      historicalData[ indexHistoricalData ]["adjusted_close"],
-          //      fundamentalData,
-          //      setNansToMissingValue);
-
-          //double price = JsonFunctions::getJsonFloat(
-          //              historicalData[indexHistoricalData]["adjusted_close"],
-          //              setNansToMissingValue);
-
           adjustedClosePrice = 
           FinancialAnalysisFunctions::convertToFundamentalCurrency(
               currencyData,indexHistoricalData,historicalData,"adjusted_close",
               setNansToMissingValue);
-
-          //closePrice = 
-          //  FinancialAnalysisFunctions::
-          //    getHistoricalDataInFundamentalUnit(
-          //      historicalData[ indexHistoricalData ]["close"],
-          //      fundamentalData,
-          //      setNansToMissingValue);          
-
-          //adjustedClosePrice = JsonFunctions::getJsonFloat(
-          //            historicalData[ indexHistoricalData ]["adjusted_close"],
-          //            setNansToMissingValue); 
-          //closePrice = JsonFunctions::getJsonFloat(
-          //            historicalData[ indexHistoricalData ]["close"],
-          //            setNansToMissingValue);                       
 
         }catch( std::invalid_argument const& ex){
           std::cout << " Historical record (" << closestHistoricalDate << ")"
@@ -2984,9 +2969,7 @@ int main (int argc, char* argv[]) {
           *((1.0+inflation)/(1.0+defaultInflationRate)) - 1.0;
 
          double costOfEquityAsAPercentage=annualCostOfEquityAsAPercentage;
-        //if(quarterlyTTMAnalysis){
-        //  costOfEquityAsAPercentage = costOfEquityAsAPercentage/4.0;
-        //}        
+
 
         termNames.push_back("costOfEquityAsAPercentage_riskFreeRate");
         termNames.push_back("costOfEquityAsAPercentage_equityRiskPremium");

@@ -1976,51 +1976,6 @@ class NumericalFunctions {
 
             std::string parentName("");
 
-            /*
-            bool ignoreDepreciation=true;
-            double capitalExpenditures =
-              FinancialAnalysisFunctions::
-                calcNetCapitalExpenditures( fundamentalData, 
-                                            dateSetTTM,
-                                            previousDateSet,
-                                            timePeriod.c_str(),
-                                            appendTermRecord,
-                                            parentName,
-                                            setNansToMissingValue,
-                                            ignoreDepreciation,
-                                            termNames,
-                                            termValues);            
-
-            ignoreDepreciation=false;
-            double netCapitalExpenditures = 
-            FinancialAnalysisFunctions::
-              calcNetCapitalExpenditures( fundamentalData, 
-                                          dateSetTTM,
-                                          previousDateSet,
-                                          timePeriod.c_str(),
-                                          appendTermRecord,
-                                          parentName,
-                                          setNansToMissingValue,
-                                          ignoreDepreciation,
-                                          termNames,
-                                          termValues);
-
-            double changeInNonCashWorkingCapital = 
-              FinancialAnalysisFunctions::
-                calcChangeInNonCashWorkingCapital(  fundamentalData, 
-                                                    dateSetTTM,
-                                                    previousDateSet,
-                                                    timePeriod.c_str(),
-                                                    appendTermRecord,
-                                                    parentName,
-                                                    setNansToMissingValue,
-                                                    termNames,
-                                                    termValues); 
-                                                                
-            double rrEntry = (netCapitalExpenditures
-                        +changeInNonCashWorkingCapital)
-                        /atoiEntry;
-            */
 
             double rrEntry = FinancialAnalysisFunctions::
                               calcReinvestmentRate( fundamentalData,
@@ -3245,9 +3200,10 @@ class NumericalFunctions {
             valMetricUpd.enterpriseValue
             + deltaMarketCap;
 
+        //This gets updated by EOD and is current with the (?) download date
         valMetricUpd.enterpriseValueEODRecent = 
-            valMetricUpd.enterpriseValueEOD
-            + deltaMarketCap;            
+            valMetricUpd.enterpriseValueEOD;
+            //+ deltaMarketCap;            
         
         valMetricUpd.acquirersMultipleRecent =           
             valMetricUpd.enterpriseValueRecent
