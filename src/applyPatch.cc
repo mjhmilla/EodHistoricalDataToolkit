@@ -121,6 +121,12 @@ int main (int argc, char* argv[]) {
   }
 
 
+  std::string fileType("");
+  size_t i0 = patchFileName.find_last_of(".");
+  if(i0 != std::string::npos){
+    fileType = patchFileName.substr(i0, patchFileName.size()-i0);
+  }  
+
   std::ifstream patchFileStream(patchFileName.c_str());
 
   using json = nlohmann::ordered_json;
@@ -196,7 +202,7 @@ int main (int argc, char* argv[]) {
 
     std::string primaryFileName;
     FinancialAnalysisFunctions::
-      createEodJsonFileName(eodTicker,eodExchange,primaryFileName);
+      createEodFileName(eodTicker,eodExchange,fileType,primaryFileName);
 
     std::string jsonFilePath;
     StringFunctions::
@@ -210,7 +216,7 @@ int main (int argc, char* argv[]) {
     bool successTickerDownload=false;
     if(!fileExists && gapFillPartialDownload || !gapFillPartialDownload){
        successTickerDownload = 
-        CurlToolkit::downloadJsonFile(eodUrl,jsonFilePath, false);
+        CurlToolkit::downloadFile(eodUrl,jsonFilePath,fileType, false);
     }
     if(verbose){
       if(successTickerDownload){

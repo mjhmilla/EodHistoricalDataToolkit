@@ -41,12 +41,7 @@ do
   fi 
 
   if [ $scriptMode == 1 ] ; then
-    if [ $y == 5 ] ; then
-      ./calculateSingleTicker.sh "${ex}" "${hc}" "${tkB}.${pex}.json"
-    fi
-    if [ $y == 3 ] ; then 
-      ./calculateSingleTickerOver3Years.sh "${ex}" "${hc}" "${tkB}.${pex}.json"
-    fi 
+      ./calculateSingleTicker.sh "${ex}" "${hc}" "${tkB}.${pex}.json" "${y}"
   fi
 
   if [ $scriptMode == 2 ] ; then
@@ -65,6 +60,10 @@ do
     fi
 
     cp ${EOD_TOOLKIT_HOME}/data/"${ex}"/generateTickerReports/"${tkB}_${pex}"/report_"${tkB}_${pex}".pdf ${EOD_TOOLKIT_HOME}/data/"${folderName}"
+  fi
+  if [ $scriptMode == 5 ] ; then
+    ./fetchFundamentalDataOfSingleTickerSaveToFolder.sh  "${ex}"  "${tkA}.${ex}" ${EOD_TOOLKIT_HOME}/data/"${folderName}"/fundamentalData/
+    ./fetchHistoricalDataOfSingleTickerSaveToFolder.sh  "${ex}"  "${tkA}.${ex}" ${EOD_TOOLKIT_HOME}/data/"${folderName}"/historicalData/
   fi
   count=$((count+1))
 done < "${listName}"

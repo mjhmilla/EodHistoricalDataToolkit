@@ -325,15 +325,17 @@ class FinancialAnalysisFunctions {
     };
 
     //==========================================================================
-    static void createEodJsonFileName(const std::string &ticker, 
+    static void createEodFileName(const std::string &ticker, 
                                       const std::string &exchangeCode,
+                                      const std::string &fileFormat,
                                       std::string &updEodFileName)
     {
       updEodFileName=ticker;
       updEodFileName.append(".");
       updEodFileName.append(exchangeCode);
-      updEodFileName.append(".json");
+      updEodFileName.append(fileFormat);
     };
+
 
     //==========================================================================
     /*

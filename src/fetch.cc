@@ -212,6 +212,7 @@ int main (int argc, char* argv[]) {
     }
   
 
+
     if(verbose){
       std::cout << "************" <<std::endl;
       std::cout << "Todo: Remove gapFillPartialDownload" << std::endl;
@@ -270,12 +271,20 @@ int main (int argc, char* argv[]) {
     abort();
   }
 
+  std::string fileType(".json");
+  std::string formatTag("&fmt=");
+  size_t i0 = eodUrlTemplate.find(formatTag);
+  if(i0 != std::string::npos){
+    fileType = "." + eodUrlTemplate.substr(i0+formatTag.size(), 
+                                             eodUrlTemplate.size()-i0);
+  }  
 
   if( mode == MODE_FETCH_EXCHANGE_LIST ){
       std::string eodUrl = eodUrlTemplate;
    
       StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
-      std::string fileName("exchange-list.json");
+
+      std::string fileName("exchange-list"+fileType);
 
       std::stringstream ss;
       ss << outputFolder << fileName;
@@ -284,13 +293,13 @@ int main (int argc, char* argv[]) {
       StringFunctions::removeFromString(outputFilePath,removeStr); 
 
       bool success = 
-        CurlToolkit::downloadJsonFile(eodUrl,outputFilePath,verbose);
+        CurlToolkit::downloadFile(eodUrl,outputFilePath,fileType,verbose);
 
       if(verbose && success == true){
         std::cout << '\t' << fileName << std::endl;
       }    
       if( success == false){
-        std::cerr << "Error: CurlToolkit::downloadJsonFile failed to get" 
+        std::cerr << "Error: CurlToolkit::downloadFile failed to get" 
                   << std::endl;
         std::cerr << '\t' << eodUrl << std::endl;
         std::cerr << '\t' << fileName << std::endl;
@@ -304,7 +313,8 @@ int main (int argc, char* argv[]) {
     StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);      
     StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
 
-    std::string fileName(exchangeCode+".json");
+    std::string fileName(exchangeCode+fileType);
+
 
     std::stringstream ss;
     ss << outputFolder << fileName;
@@ -313,13 +323,13 @@ int main (int argc, char* argv[]) {
     StringFunctions::removeFromString(outputFilePath,removeStr); 
 
     bool success = 
-      CurlToolkit::downloadJsonFile(eodUrl,outputFilePath,verbose);
+      CurlToolkit::downloadFile(eodUrl,outputFilePath,fileType,verbose);
 
     if(verbose && success == true){
       std::cout << '\t' << fileName << std::endl;
     }    
     if( success == false){
-      std::cerr << "Error: CurlToolkit::downloadJsonFile failed to get" 
+      std::cerr << "Error: CurlToolkit::downloadFile failed to get" 
                 << std::endl;
       std::cerr << '\t' << eodUrl << std::endl;
       std::cerr << '\t' << fileName << std::endl;
@@ -358,7 +368,9 @@ int main (int argc, char* argv[]) {
       StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
       StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",tickerExchange);
       fileName=ticker;
-      fileName.append(".json");
+
+      fileName.append(fileType);
+
 
 
       std::stringstream ss;
@@ -368,13 +380,13 @@ int main (int argc, char* argv[]) {
       StringFunctions::removeFromString(outputFilePath,removeStr); 
 
       bool success = 
-        CurlToolkit::downloadJsonFile(eodUrl,outputFilePath,verbose);
+        CurlToolkit::downloadFile(eodUrl,outputFilePath,fileType,verbose);
 
       if(verbose && success == true){
         std::cout << '\t' << fileName << std::endl;
       }    
       if( success == false){
-        std::cerr << "Error: CurlToolkit::downloadJsonFile failed to get" 
+        std::cerr << "Error: CurlToolkit::downloadFile failed to get" 
                   << std::endl;
         std::cerr << '\t' << eodUrl << std::endl;
         std::cerr << '\t' << fileName << std::endl;
@@ -415,23 +427,23 @@ int main (int argc, char* argv[]) {
 
         std::string eodFileName;
         FinancialAnalysisFunctions::
-          createEodJsonFileName(ticker,exchangeCode,eodFileName);
+          createEodFileName(ticker,exchangeCode,fileType,eodFileName);
 
-        std::string jsonFilePath;
+        std::string filePath;
         StringFunctions::
-          createFilePath(outputFolder,eodFileName,jsonFilePath);
+          createFilePath(outputFolder,eodFileName,filePath);
 
         bool fileExists=false;
         if(gapFillPartialDownload == true){
           //Check if the file has been downloaded already.
-          fileExists = std::filesystem::exists(jsonFilePath.c_str());
+          fileExists = std::filesystem::exists(filePath.c_str());
         }
 
         bool successTickerDownload=false;
         if( (!fileExists && gapFillPartialDownload) || !gapFillPartialDownload){ 
                                   
           successTickerDownload = 
-            CurlToolkit::downloadJsonFile(eodUrl, jsonFilePath, false);        
+            CurlToolkit::downloadFile(eodUrl,filePath,fileType, false);        
 
           if(successTickerDownload == false){
             std::cout << count << "." 
@@ -493,8 +505,9 @@ int main (int argc, char* argv[]) {
             //std::string fileNamePrimary = primaryEodTickerName; //This will include the exchange code
             //fileNamePrimary.append(".json");
             std::string fileNamePrimary;
-            FinancialAnalysisFunctions::createEodJsonFileName(tickerPrimaryCode,
-                                        exchangeCodePrimary,fileNamePrimary);
+            FinancialAnalysisFunctions::createEodFileName(tickerPrimaryCode,
+                                        exchangeCodePrimary,fileType,
+                                        fileNamePrimary);
 
             bool filePrimaryExists=false;
             std::string primaryFilePath;
@@ -511,12 +524,12 @@ int main (int argc, char* argv[]) {
 
             if((!filePrimaryExists && gapFillPartialDownload) 
                 || !gapFillPartialDownload ){           
-              bool successPrimaryDownload = CurlToolkit::downloadJsonFile(
-                                      eodUrlPrimary,primaryFilePath,false);  
+              bool successPrimaryDownload = CurlToolkit::downloadFile(
+                              eodUrlPrimary,primaryFilePath,fileType,false);  
                  
 
               if( successPrimaryDownload == false ){
-                std::cerr << "Error: CurlToolkit::downloadJsonFile: " 
+                std::cerr << "Error: CurlToolkit::downloadFile: " 
                           << std::endl;
                 std::cerr << '\t' << fileNamePrimary << std::endl;
                 std::cerr << '\t' << eodUrlPrimary << std::endl;
@@ -567,8 +580,7 @@ int main (int argc, char* argv[]) {
         StringFunctions::findAndReplaceString(eodUrl,"{YOUR_API_TOKEN}",apiKey);  
         StringFunctions::findAndReplaceString(eodUrl,"{EXCHANGE_CODE}",exchangeCode);
 
-        std::string exchangeFileName = exchangeCode;
-        exchangeFileName.append(".json");
+        std::string exchangeFileName = exchangeCode+fileType;        
 
         std::string exchangeFilePath=outputFolder;
         exchangeFilePath.append(exchangeFileName);
@@ -584,7 +596,7 @@ int main (int argc, char* argv[]) {
         if( (!fileExists && gapFillPartialDownload) || !gapFillPartialDownload){ 
                                   
           successTickerDownload = 
-            CurlToolkit::downloadJsonFile(eodUrl,exchangeFilePath,false);
+            CurlToolkit::downloadFile(eodUrl,exchangeFilePath,fileType,false);
 
           if(successTickerDownload == false){
             std::cout << count << "." 
@@ -613,7 +625,7 @@ int main (int argc, char* argv[]) {
         StringFunctions::findAndReplaceString(eodUrl,"{FOREX_CODE}",line); 
          
         std::string forexFilePath=outputFolder;
-        std::string forexFileName = line+".FOREX.json";
+        std::string forexFileName = line+".FOREX"+fileType;
         forexFilePath.append(forexFileName);        
 
         bool fileExists=false;
@@ -627,7 +639,7 @@ int main (int argc, char* argv[]) {
         if( (!fileExists && gapFillPartialDownload) || !gapFillPartialDownload){ 
                                   
           successForexDownload = 
-            CurlToolkit::downloadJsonFile(eodUrl,forexFilePath,false);
+            CurlToolkit::downloadFile(eodUrl,forexFilePath,fileType,false);
 
           if(successForexDownload == false){
             std::cout << count << "." 

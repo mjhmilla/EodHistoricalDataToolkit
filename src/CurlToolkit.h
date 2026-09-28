@@ -38,8 +38,9 @@ class CurlToolkit {
 
 
 
-    static bool downloadJsonFile( std::string &eodUrl, 
+    static bool downloadFile( std::string &eodUrl, 
                                   std::string &outputFilePath, 
+                                  std::string &fileType,
                                   bool verbose){
 
       bool success = false;
@@ -108,22 +109,37 @@ class CurlToolkit {
 
         if (httpCode == 200)
         {
-          success=true;
-          //read out all of the json keys
-          using json = nlohmann::ordered_json;
-          //std::ifstream f("../json/AAPL.US.json");
-          json jsonData = json::parse(*httpData.get());
-  
-  
+          if(fileType.find("json")!=std::string::npos){
+            success=true;
+
+            //read out all of the json keys
+            using json = nlohmann::ordered_json;
+            //std::ifstream f("../json/AAPL.US.json");
+            json jsonData = json::parse(*httpData.get());
     
-          //Write the file
-          std::ofstream file(outputFilePath);
-          file << jsonData;
-          file.close();
-          if(verbose){    
-            std::cout << "    Wrote json to" << std::endl;
-            std::cout << "    " << outputFilePath << std::endl;
+    
+      
+            //Write the file
+            std::ofstream file(outputFilePath);
+            file << jsonData;
+            file.close();
+            if(verbose){    
+              std::cout << "    Wrote json to" << std::endl;
+              std::cout << "    " << outputFilePath << std::endl;
+            }
           }
+          if(fileType.find("csv")!=std::string::npos){
+            success=true;
+            std::ofstream file(outputFilePath);
+            file << *httpData.get();
+            file.close();
+            if(verbose){    
+              std::cout << "    Wrote json to" << std::endl;
+              std::cout << "    " << outputFilePath << std::endl;
+            }
+
+          }
+
   
         }else{
           success=false;
